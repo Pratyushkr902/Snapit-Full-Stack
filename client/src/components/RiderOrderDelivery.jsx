@@ -1,8 +1,12 @@
 import { io } from "socket.io-client";
 import { useEffect } from "react";
 
-// 1. Connect to your 8080 Tracking Server
-const socket = io("http://localhost:8080"); 
+// 1. UPDATED: Connect to your NEW Render Tracking Server
+// We use the Render URL instead of localhost to make it live for users
+const socket = io("https://snapit-full-stack.onrender.com", {
+    transports: ["websocket", "polling"],
+    withCredentials: true
+}); 
 
 const RiderGPS = ({ orderId }) => {
 
@@ -17,6 +21,7 @@ const RiderGPS = ({ orderId }) => {
         console.log("Rider sending location:", latitude, longitude);
 
         // 3. EMIT: Send the location to the server
+        // Keeping your exact event name "update_location"
         socket.emit("update_location", {
           orderId: orderId,
           latitude: latitude,

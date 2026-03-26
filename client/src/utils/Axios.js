@@ -2,11 +2,13 @@ import axios from "axios";
 import SummaryApi , { baseURL } from "../common/SummaryApi";
 
 const Axios = axios.create({
-    baseURL : "http://127.0.0.1:8080",
+    // --- PRODUCTION API FIX ---
+    // Changed from 127.0.0.1 to your live Render Backend
+    baseURL : "https://snapit-full-stack.onrender.com",
     withCredentials : true
 })
 
-//sending access token in the header
+// sending access token in the header
 Axios.interceptors.request.use(
     async(config)=>{
         const accessToken = localStorage.getItem('accesstoken')
@@ -22,16 +24,16 @@ Axios.interceptors.request.use(
     }
 )
 
-//extend the life span of access token with 
+// extend the life span of access token with 
 // the help refresh
-Axios.interceptors.request.use(
+Axios.interceptors.response.use( // Fixed typo: This should be interceptors.response
     (response)=>{
         return response
     },
     async(error)=>{
         let originRequest = error.config 
 
-        if(error.response.status === 401 && !originRequest.retry){
+        if(error.response && error.response.status === 401 && !originRequest.retry){
             originRequest.retry = true
 
             const refreshToken = localStorage.getItem("refreshToken")
@@ -49,7 +51,6 @@ Axios.interceptors.request.use(
         return Promise.reject(error)
     }
 )
-
 
 const refreshAccessToken = async(refreshToken)=>{
     try {

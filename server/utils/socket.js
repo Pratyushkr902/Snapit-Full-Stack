@@ -1,10 +1,10 @@
 import { io } from "socket.io-client";
 
-// REPLACE '192.168.x.x' with your MacBook's IP address 
-// (Find it by typing 'ipconfig getifaddr en0' in Terminal)
+// --- DYNAMIC PRODUCTION URL FIX ---
+// If you are on localhost, use your MacBook. If on Vercel, use your Render Backend.
 const SOCKET_URL = window.location.hostname === 'localhost' 
     ? "http://localhost:8080" 
-    : "http://192.168.x.x:8080"; 
+    : "https://snapit-full-stack.onrender.com"; 
 
 export const socket = io(SOCKET_URL, {
     transports: ["websocket", "polling"],
@@ -21,5 +21,6 @@ socket.on("connect", () => {
 });
 
 socket.on("connect_error", (err) => {
+    // This will now show you if the Render server is waking up
     console.log("❌ Socket Connection Error:", err.message);
 });
