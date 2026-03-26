@@ -6,7 +6,12 @@ import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
+
+// --- FIXED DOTENV PATH ---
+// We now check for .env in the same folder, and ONLY if we aren't on Vercel
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config(); 
+}
 
 import express from 'express';
 import cors from 'cors';
@@ -123,7 +128,7 @@ const PORT = process.env.PORT || 8080;
 
 app.get("/", (request, response) => {
     response.json({
-        message: "Server is running on " + PORT,
+        message: "Snapit Server is Live on " + PORT,
         tracking_enabled: true
     });
 });
@@ -139,8 +144,10 @@ app.use('/api/order', orderRouter);
 app.use('/api/store', storeRouter); 
 
 // --- VERCEL & LOCAL LOGIC ---
-// Connect DB and listen only if not on Vercel production
+// Connect DB first. Vercel will handle the 'app' export.
 connectDB().then(() => {
+    console.log("Database Connected Successfully");
+    // Only call .listen() if we are running locally
     if (process.env.NODE_ENV !== 'production') {
         server.listen(PORT, () => { 
             console.log("Snapit Server & Tracking running locally on port " + PORT);

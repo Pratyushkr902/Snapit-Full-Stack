@@ -1,7 +1,6 @@
 {
   "name": "snapit-backend",
   "version": "1.0.0",
-  "description": "Snapit Backend for Paliganj Mart",
   "main": "index.js",
   "type": "module",
   "scripts": {
