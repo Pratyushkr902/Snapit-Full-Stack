@@ -13,21 +13,26 @@ import Axios from './utils/Axios';
 import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
 import CartMobileLink from './components/CartMobile';
-import RiderDashboard from './pages/RiderDashboard';
+// import RiderDashboard from './pages/RiderDashboard'; // Keep if used in routes
 
 function App() {
   const dispatch = useDispatch()
   const location = useLocation()
 
+  // 1. Fetch User (Fixes Admin/Login state)
   const fetchUser = useCallback(async () => {
-    const userData = await fetchUserDetails()
-    if (userData?.success) { 
-      dispatch(setUserDetails(userData.data))
+    try {
+      const userData = await fetchUserDetails()
+      if (userData?.success) { 
+        dispatch(setUserDetails(userData.data))
+      }
+    } catch (error) {
+      // If 401, user will need to log in fresh
+      console.log("User session expired or invalid")
     }
   }, [dispatch])
 
-  // NEW: Fetch Orders globally so "My Orders" and "Tracking" always have data
-  // NOTE: Ensure your backend getOrderItems returns ALL orders if the user is an ADMIN
+  // 2. Fetch Orders globally
   const fetchOrder = useCallback(async () => {
     try {
       const response = await Axios({
@@ -81,17 +86,19 @@ function App() {
     }
   }, [dispatch])
 
+  // Initialize all data on mount
   useEffect(() => {
     fetchUser()
     fetchCategory()
     fetchSubCategory()
-    fetchOrder() // TRIGGERED: Load orders on app start
+    fetchOrder() 
   }, [fetchUser, fetchCategory, fetchSubCategory, fetchOrder])
 
-  // Global fix for broken images
+  // Global fix for broken images - KEEPING YOUR LOGIC
   useEffect(() => {
     const handleGlobalError = (event) => {
       if (event.target.tagName === 'IMG') {
+        // Fallback to a placeholder if Cloudinary fails
         event.target.src = "https://res.cloudinary.com/daso5ntlt/image/upload/v1773599668/Aashirvaad_Superior_MP_Whole_Wheat_Atta_z8tqsf.jpg";
       }
     };
@@ -99,7 +106,7 @@ function App() {
     return () => window.removeEventListener('error', handleGlobalError, true);
   }, []);
 
-  // FIXED: Added 'rider-panel' to the dashboard check so Footer/Cart are hidden for the Rider
+  // Dashboard check for UI hiding
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
 
   return (
