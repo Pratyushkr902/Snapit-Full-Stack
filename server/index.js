@@ -150,12 +150,9 @@ app.use('/api/store', storeRouter);
 // Connect DB first. Vercel will handle the 'app' export.
 connectDB().then(() => {
     console.log("Database Connected Successfully");
-    // Only call .listen() if we are running locally
-    if (process.env.NODE_ENV !== 'production') {
-        server.listen(PORT, () => { 
-            console.log("Snapit Server & Tracking running locally on port " + PORT);
-        });
-    }
+    server.listen(PORT, () => { 
+        console.log("Snapit Server running on port " + PORT);
+    });
 }).catch(err => {
     console.error("Database connection failed", err);
 });
