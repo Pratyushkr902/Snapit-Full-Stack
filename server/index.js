@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { Server } from 'socket.io'; 
 import http from 'http'; 
 // They should look like this now:
-import connectDB from './config/connectDB.js';
+
 import './models/user.model.js';
 import userRouter from './route/user.route.js';
 // ... and so on for all your routes and models
