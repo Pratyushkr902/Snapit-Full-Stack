@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Snapit</string>
+    <string name="title_activity_main">Snapit</string>
+    <string name="package_name">com.pratyush.snapit</string>
+    <string name="custom_url_scheme">com.pratyush.snapit</string>
+</resources>
