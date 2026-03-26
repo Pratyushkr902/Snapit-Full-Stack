@@ -1,0 +1,33 @@
+{
+  "name": "snapit-backend",
+  "version": "1.0.0",
+  "description": "Snapit Backend for Paliganj Mart",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "author": "Pratyush Kumar",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.9.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.2.3",
+    "morgan": "^1.10.1",
+    "multer": "^2.1.1",
+    "razorpay": "^2.9.6",
+    "resend": "^6.9.3",
+    "socket.io": "^4.8.3",
+    "stripe": "^20.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
