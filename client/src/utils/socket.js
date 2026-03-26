@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 // We use the Vercel URL for production, but keep the logic for local testing
 const URL = process.env.NODE_ENV === 'production' 
     ? "https://snapit-full-stack.vercel.app" 
-    : "http://localhost:8080";
+    : "https://snapit-full-stack.onrender.com";
 
 export const socket = io(URL, {
     transports: ["websocket", "polling"],

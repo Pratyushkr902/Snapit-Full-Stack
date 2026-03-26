@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { io } from "socket.io-client"
 
 // Connect to your 8080 Tracking Server
-const socket = io("http://localhost:8080");
+const socket = io("https://snapit-full-stack.onrender.com");
 
 const RiderSimulator = ({ orderId }) => {
     // Starting at Paliganj center
