@@ -1,2 +1,12 @@
 import { io } from "socket.io-client";
-export const socket = io("http://localhost:8080"); // Your MacBook Server Port
+
+// --- PRODUCTION SOCKET FIX ---
+// We use the Vercel URL for production, but keep the logic for local testing
+const URL = process.env.NODE_ENV === 'production' 
+    ? "https://snapit-full-stack.vercel.app" 
+    : "http://localhost:8080";
+
+export const socket = io(URL, {
+    transports: ["websocket", "polling"],
+    withCredentials: true
+});
