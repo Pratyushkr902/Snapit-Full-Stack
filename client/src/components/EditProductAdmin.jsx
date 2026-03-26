@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { IoClose } from 'react-icons/io5'
-import uploadImage from '../utils/uploadImage' 
+import uploadImage from '../utils/UploadImage' 
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
