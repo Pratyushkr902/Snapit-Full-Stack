@@ -28,3 +28,4 @@ dist/
 build/
 .DS_Store
 android/app/build/
+.env
