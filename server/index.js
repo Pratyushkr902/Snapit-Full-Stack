@@ -3,6 +3,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Server } from 'socket.io'; 
 import http from 'http'; 
+// They should look like this now:
+import connectDB from './config/connectDB.js';
+import './models/user.model.js';
+import userRouter from './route/user.route.js';
+// ... and so on for all your routes and models
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
