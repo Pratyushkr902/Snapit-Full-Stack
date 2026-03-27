@@ -25,6 +25,7 @@ const ProductDisplayPage = () => {
 
   const fetchProductDetails = async()=>{
     try {
+        setLoading(true) // Added loading state start
         const response = await Axios({
           ...SummaryApi.getProductDetails,
           data : {
@@ -55,12 +56,14 @@ const ProductDisplayPage = () => {
     imageContainer.current.scrollLeft -= 100
   }
   console.log("product data",data)
+  
   return (
     <section className='container mx-auto p-4 grid lg:grid-cols-2 '>
         <div className=''>
             <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded min-h-56 max-h-56 h-full w-full'>
                 <img
-                    src={data.image[image]}
+                    // UPDATED: Added safety check and forced https for Android/Mobile compatibility
+                    src={data.image[image]?.replace("http://", "https://")}
                     className='w-full h-full object-scale-down'
                 /> 
             </div>
@@ -80,7 +83,8 @@ const ProductDisplayPage = () => {
                           return(
                             <div className='w-20 h-20 min-h-20 min-w-20 scr cursor-pointer shadow-md' key={img+index}>
                               <img
-                                  src={img}
+                                  // UPDATED: Forced https for thumbnails
+                                  src={img?.replace("http://", "https://")}
                                   alt='min-product'
                                   onClick={()=>setImage(index)}
                                   className='w-full h-full object-scale-down' 
@@ -114,7 +118,7 @@ const ProductDisplayPage = () => {
                 {
                   data?.more_details && Object.keys(data?.more_details).map((element,index)=>{
                     return(
-                      <div>
+                      <div key={element+index}>
                           <p className='font-semibold'>{element}</p>
                           <p className='text-base'>{data?.more_details[element]}</p>
                       </div>
@@ -134,11 +138,14 @@ const ProductDisplayPage = () => {
               <p className=''>Price</p> 
               <div className='flex items-center gap-2 lg:gap-4'>
                 <div className='border border-green-600 px-4 py-2 rounded bg-green-50 w-fit'>
-                    <p className='font-semibold text-lg lg:text-xl'>{DisplayPriceInRupees(pricewithDiscount(data.price,data.discount))}</p>
+                    <p className='font-semibold text-lg lg:text-xl'>
+                      {/* UPDATED: Added 0 fallbacks to prevent NaN while data is loading */}
+                      {DisplayPriceInRupees(pricewithDiscount(Number(data.price || 0), Number(data.discount || 0)))}
+                    </p>
                 </div>
                 {
                   data.discount && (
-                    <p className='line-through'>{DisplayPriceInRupees(data.price)}</p>
+                    <p className='line-through'>{DisplayPriceInRupees(Number(data.price || 0))}</p>
                   )
                 }
                 {
@@ -156,7 +163,6 @@ const ProductDisplayPage = () => {
                   <p className='text-lg text-red-500 my-2'>Out of Stock</p>
                 ) 
                 : (
-                  // <button className='my-4 px-4 py-1 bg-green-600 hover:bg-green-700 text-white rounded'>Add</button>
                   <div className='my-4'>
                     <AddToCartButton data={data}/>
                   </div>
@@ -214,7 +220,7 @@ const ProductDisplayPage = () => {
                 {
                   data?.more_details && Object.keys(data?.more_details).map((element,index)=>{
                     return(
-                      <div>
+                      <div key={element+index+"mobile"}>
                           <p className='font-semibold'>{element}</p>
                           <p className='text-base'>{data?.more_details[element]}</p>
                       </div>
