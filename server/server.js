@@ -4,17 +4,20 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 
 const app = express();
-// UPDATED: Allow all origins for the express middleware to avoid CORS blocks
-app.use(cors()); 
+// UPDATED: Allow the specific frontend origin for API requests (Axios/Fetch)
+app.use(cors({
+    origin: ["http://localhost:5173", "https://snapit-full-stack.onrender.com", "https://snapit-full-stack-2.onrender.com"],
+    credentials: true
+})); 
 
 const server = http.createServer(app);
 
-// UPDATED: Dynamic CORS and Port for Deployment
+// UPDATED: Added the '-2' origin to the Socket.io CORS settings
 const io = new Server(server, {
     cors: { 
-        // Allow your local Vite dev server AND your deployed Snapit frontend
-        origin: ["http://localhost:5173", "https://snapit-full-stack.onrender.com"],
-        methods: ["GET", "POST"]
+        origin: ["http://localhost:5173", "https://snapit-full-stack.onrender.com", "https://snapit-full-stack-2.onrender.com"],
+        methods: ["GET", "POST"],
+        credentials: true
     }
 });
 
