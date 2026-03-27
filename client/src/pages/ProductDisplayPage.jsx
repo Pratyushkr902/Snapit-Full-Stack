@@ -63,7 +63,7 @@ const ProductDisplayPage = () => {
             <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded min-h-56 max-h-56 h-full w-full'>
                 <img
                     // UPDATED: Added safety check and forced https for Android/Mobile compatibility
-                    src={data.image[image]?.replace("http://", "https://")}
+                   src={data?.image?.length > 0 ? data.image[image]?.replace("http://", "https://") : ""}
                     className='w-full h-full object-scale-down'
                 /> 
             </div>
