@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 // --- DYNAMIC PRODUCTION URL FIX ---
-// If you are on localhost, use your MacBook. If on Vercel, use your Render Backend.
+// Using your provided Render URL for production
 const SOCKET_URL = window.location.hostname === 'localhost' 
     ? "http://localhost:8080" 
     : "https://snapit-full-stack.onrender.com"; 
@@ -11,8 +11,8 @@ export const socket = io(SOCKET_URL, {
     withCredentials: true,
     autoConnect: true,
     reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
+    reconnectionAttempts: 10, // Increased to account for Render's spin-up time
+    reconnectionDelay: 2000,
 });
 
 // Debugging helper to see connection status in your browser console
