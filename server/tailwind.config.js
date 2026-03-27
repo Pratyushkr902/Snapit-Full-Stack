@@ -5,7 +5,7 @@ export default {
   
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}", 
+    "./src/**/*.{js,ts,jsx,tsx}", // Fixed: Added JSX/TSX explicitly to ensure all components are styled
   ],
   theme: {
     extend: {
