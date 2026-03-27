@@ -25,7 +25,7 @@ const ProductDisplayPage = () => {
 
   const fetchProductDetails = async()=>{
     try {
-        setLoading(true) // Added loading state start
+        setLoading(true) 
         const response = await Axios({
           ...SummaryApi.getProductDetails,
           data : {
@@ -55,17 +55,25 @@ const ProductDisplayPage = () => {
   const handleScrollLeft = ()=>{
     imageContainer.current.scrollLeft -= 100
   }
-  console.log("product data",data)
   
   return (
     <section className='container mx-auto p-4 grid lg:grid-cols-2 '>
         <div className=''>
-            <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded min-h-56 max-h-56 h-full w-full'>
-                <img
-                    // UPDATED: Added safety check and forced https for Android/Mobile compatibility
-                   src={data?.image?.length > 0 ? data.image[image]?.replace("http://", "https://") : ""}
-                    className='w-full h-full object-scale-down'
-                /> 
+            <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded min-h-56 max-h-56 h-full w-full flex items-center justify-center overflow-hidden'>
+                {/* FIXED: Added a loading spinner or placeholder logic to prevent the white box */}
+                {
+                  !loading && data?.image?.length > 0 ? (
+                    <img
+                        src={data.image[image]?.replace("http://", "https://")}
+                        className='w-full h-full object-scale-down'
+                        alt={data.name}
+                    /> 
+                  ) : (
+                    <div className='w-full h-full bg-slate-100 animate-pulse flex items-center justify-center'>
+                       <p className='text-slate-400'>Loading Image...</p>
+                    </div>
+                  )
+                }
             </div>
             <div className='flex items-center justify-center gap-3 my-2'>
               {
@@ -83,7 +91,6 @@ const ProductDisplayPage = () => {
                           return(
                             <div className='w-20 h-20 min-h-20 min-w-20 scr cursor-pointer shadow-md' key={img+index}>
                               <img
-                                  // UPDATED: Forced https for thumbnails
                                   src={img?.replace("http://", "https://")}
                                   alt='min-product'
                                   onClick={()=>setImage(index)}
@@ -102,8 +109,6 @@ const ProductDisplayPage = () => {
                         <FaAngleRight/>
                     </button>
                 </div>
-            </div>
-            <div>
             </div>
 
             <div className='my-4  hidden lg:grid gap-3 '>
@@ -139,7 +144,6 @@ const ProductDisplayPage = () => {
               <div className='flex items-center gap-2 lg:gap-4'>
                 <div className='border border-green-600 px-4 py-2 rounded bg-green-50 w-fit'>
                     <p className='font-semibold text-lg lg:text-xl'>
-                      {/* UPDATED: Added 0 fallbacks to prevent NaN while data is loading */}
                       {DisplayPriceInRupees(pricewithDiscount(Number(data.price || 0), Number(data.discount || 0)))}
                     </p>
                 </div>
@@ -153,9 +157,7 @@ const ProductDisplayPage = () => {
                     <p className="font-bold text-green-600 lg:text-2xl">{data.discount}% <span className='text-base text-neutral-500'>Discount</span></p>
                   )
                 }
-                
               </div>
-
             </div> 
               
               {
@@ -173,33 +175,21 @@ const ProductDisplayPage = () => {
             <h2 className='font-semibold'>Why shop from Snapit? </h2>
             <div>
                   <div className='flex  items-center gap-4 my-4'>
-                      <img
-                        src={image1}
-                        alt='superfast delivery'
-                        className='w-20 h-20'
-                      />
+                      <img src={image1} alt='superfast delivery' className='w-20 h-20'/>
                       <div className='text-sm'>
                         <div className='font-semibold'>Superfast Delivery</div>
-                        <p>Get your orer delivered to your doorstep at the earliest from dark stores near you.</p>
+                        <p>Get your order delivered to your doorstep at the earliest from dark stores near you.</p>
                       </div>
                   </div>
                   <div className='flex  items-center gap-4 my-4'>
-                      <img
-                        src={image2}
-                        alt='Best prices offers'
-                        className='w-20 h-20'
-                      />
+                      <img src={image2} alt='Best prices offers' className='w-20 h-20'/>
                       <div className='text-sm'>
                         <div className='font-semibold'>Best Prices & Offers</div>
-                        <p>Best price destination with offers directly from the nanufacturers.</p>
+                        <p>Best price destination with offers directly from the manufacturers.</p>
                       </div>
                   </div>
                   <div className='flex  items-center gap-4 my-4'>
-                      <img
-                        src={image3}
-                        alt='Wide Assortment'
-                        className='w-20 h-20'
-                      />
+                      <img src={image3} alt='Wide Assortment' className='w-20 h-20'/>
                       <div className='text-sm'>
                         <div className='font-semibold'>Wide Assortment</div>
                         <p>Choose from 5000+ products across food personal care, household & other categories.</p>
@@ -207,7 +197,6 @@ const ProductDisplayPage = () => {
                   </div>
             </div>
 
-            {/****only mobile */}
             <div className='my-4 grid gap-3 '>
                 <div>
                     <p className='font-semibold'>Description</p>
