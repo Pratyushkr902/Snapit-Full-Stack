@@ -1,6 +1,12 @@
 import ProductModel from "../models/product.model.js";
 import mongoose from "mongoose"; // REQUIRED: For ID validation
 
+// HELPER: Ensures all image URLs are secure for Android/Mobile compatibility
+const secureImages = (images) => {
+    if (!Array.isArray(images)) return images;
+    return images.map(img => typeof img === 'string' ? img.replace("http://", "https://") : img);
+};
+
 export const createProductController = async(request,response)=>{
     try {
         const { 
@@ -26,10 +32,9 @@ export const createProductController = async(request,response)=>{
         }
 
         // FIXED: Mapping the 'stock' input to the new Multi-Mart store_inventory structure
-        // This prevents the 500 error caused by the 'required' store_name field in the model.
         const productData = {
             name ,
-            image ,
+            image : secureImages(image), // Apply HTTPS fix on creation
             category,
             subCategory,
             unit,
@@ -58,7 +63,6 @@ export const createProductController = async(request,response)=>{
         })
 
     } catch (error) {
-        // Detailed error logging in terminal for easier debugging on your MacBook
         console.error("CREATE PRODUCT ERROR:", error);
         return response.status(500).json({
             message : error.message || error,
@@ -70,21 +74,13 @@ export const createProductController = async(request,response)=>{
 
 export const getProductController = async(request,response)=>{
     try {
-        
         let { page, limit, search } = request.body 
 
-        if(!page){
-            page = 1
-        }
-
-        if(!limit){
-            limit = 10
-        }
+        if(!page) page = 1
+        if(!limit) limit = 10
 
         const query = search ? {
-            $text : {
-                $search : search
-            }
+            $text : { $search : search }
         } : {}
 
         const skip = (page - 1) * limit
@@ -94,13 +90,19 @@ export const getProductController = async(request,response)=>{
             ProductModel.countDocuments(query)
         ])
 
+        // Apply HTTPS fix to all images in the list
+        const securedData = data.map(prod => ({
+            ...prod._doc,
+            image: secureImages(prod.image)
+        }));
+
         return response.json({
             message : "Product data",
             error : false,
             success : true,
             totalCount : totalCount,
             totalNoPage : Math.ceil( totalCount / limit),
-            data : data
+            data : securedData
         })
     } catch (error) {
         return response.status(500).json({
@@ -123,7 +125,6 @@ export const getProductByCategory = async(request,response)=>{
             })
         }
 
-        // VALIDATION: Prevent crash if ID is malformed
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return response.status(400).json({
                 message: "Invalid Category ID",
@@ -136,9 +137,14 @@ export const getProductByCategory = async(request,response)=>{
             category : { $in : id }
         }).limit(15)
 
+        const securedData = product.map(prod => ({
+            ...prod._doc,
+            image: secureImages(prod.image)
+        }));
+
         return response.json({
             message : "category product list",
-            data : product,
+            data : securedData,
             error : false,
             success : true
         })
@@ -151,7 +157,6 @@ export const getProductByCategory = async(request,response)=>{
     }
 }
 
-// FIXED: Now handles the "All Products" scenario without 400 errors
 export const getProductByCategoryAndSubCategory  = async(request,response)=>{
     try {
         let { categoryId, subCategoryId, page, limit } = request.body
@@ -164,7 +169,6 @@ export const getProductByCategoryAndSubCategory  = async(request,response)=>{
             })
         }
 
-        // VALIDATION: Category ID must be a valid MongoDB ID
         if (!mongoose.Types.ObjectId.isValid(categoryId)) {
             return response.status(400).json({
                 message: "Invalid Category ID format",
@@ -176,7 +180,6 @@ export const getProductByCategoryAndSubCategory  = async(request,response)=>{
         if(!page) page = 1
         if(!limit) limit = 10
 
-        // DYNAMIC QUERY: If subCategoryId is 'all' or empty, fetch all products in that category
         const query = {
             category : { $in : [categoryId] }
         }
@@ -192,9 +195,14 @@ export const getProductByCategoryAndSubCategory  = async(request,response)=>{
             ProductModel.countDocuments(query)
         ])
 
+        const securedData = data.map(prod => ({
+            ...prod._doc,
+            image: secureImages(prod.image)
+        }));
+
         return response.json({
             message : "Product list",
-            data : data,
+            data : securedData,
             totalCount : dataCount,
             page : page,
             limit : limit,
@@ -223,7 +231,6 @@ export const getProductDetails = async(request,response)=>{
             })
         }
 
-        // FIXED: Using a more robust populate to prevent crashes on broken references
         const product = await ProductModel.findOne({ _id : productId }).populate('category').populate('subCategory');
 
         if(!product){
@@ -234,9 +241,15 @@ export const getProductDetails = async(request,response)=>{
             })
         }
 
+        // Apply HTTPS fix to single product details
+        const securedProduct = {
+            ...product._doc,
+            image: secureImages(product.image)
+        };
+
         return response.json({
             message : "product details",
-            data : product,
+            data : securedProduct,
             error : false,
             success : true
         })
@@ -263,8 +276,11 @@ export const updateProductDetails = async(request,response)=>{
             })
         }
 
-        // FIXED: Using findOneAndUpdate instead of updateOne to ensure hooks/middleware run correctly
-        // Added 'runValidators: true' to ensure the store_inventory rules are respected
+        // If images are updated, ensure they are secured
+        if(updateFields.image) {
+            updateFields.image = secureImages(updateFields.image);
+        }
+
         const updateProduct = await ProductModel.findOneAndUpdate(
             { _id : _id },
             { $set: updateFields },
@@ -316,7 +332,6 @@ export const deleteProductDetails = async(request,response)=>{
     }
 }
 
-// FIXED: Implemented the missing search controller with $regex to prevent 500 errors
 export const searchProduct = async(request,response)=>{
     try {
         let { search, page , limit } = request.body 
@@ -324,7 +339,6 @@ export const searchProduct = async(request,response)=>{
         if(!page) page = 1
         if(!limit) limit  = 10
 
-        // Using Regex so you don't need to create a text index manually
         const query = search ? {
             $or: [
                 { name: { $regex: search, $options: "i" } },
@@ -339,11 +353,16 @@ export const searchProduct = async(request,response)=>{
             ProductModel.countDocuments(query)
         ])
 
+        const securedData = data.map(prod => ({
+            ...prod._doc,
+            image: secureImages(prod.image)
+        }));
+
         return response.json({
             message : "Product data",
             error : false,
             success : true,
-            data : data,
+            data : securedData,
             totalCount :dataCount,
             totalPage : Math.ceil(dataCount/limit),
             page : page,
