@@ -45,10 +45,18 @@ const server = http.createServer(app);
 // Memory cache for latest rider positions
 const latestPositions = new Map(); 
 
+// --- PRODUCTION CORS LOGIC ---
+// Fixed 401: Explicitly allowing your frontend URL for cookies/tokens
+const allowedOrigins = [
+    process.env.FRONTEND_URL, // Your Vercel link
+    "https://snapit-full-stack-pwvnb.vercel.app",
+    "http://localhost:5173"
+];
+
 // Socket.io initialization
 const io = new Server(server, {
     cors: {
-        origin: true, 
+        origin: allowedOrigins, 
         methods: ["GET", "POST"],
         credentials: true
     },
@@ -57,9 +65,18 @@ const io = new Server(server, {
     allowEIO3: true 
 });
 
+// FIXED CORS: Added explicit headers to solve 401 status
 app.use(cors({
-    origin: true, 
-    credentials: true
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 
 app.use((req, res, next) => {
@@ -84,15 +101,13 @@ app.use(helmet({
     },
 }));
 
-// --- SOCKET.IO TRACKING LOGIC (MERGED & FIXED) ---
+// --- SOCKET.IO TRACKING LOGIC ---
 io.on('connection', (socket) => {
     console.log(`Tracking: Connected [ID: ${socket.id}]`);
 
-    // YOUR ORIGINAL LOGIC: Join a specific order room
     socket.on('join_order', (orderId) => {
         if (orderId) {
             socket.join(orderId);
-            // If we have a stored position, send it immediately
             if (latestPositions.has(orderId)) {
                 socket.emit('receive_location', latestPositions.get(orderId));
             }
@@ -100,19 +115,15 @@ io.on('connection', (socket) => {
         }
     });
 
-    // YOUR ORIGINAL LOGIC: Listen for Rider's GPS movement
     socket.on('send_location', (data) => {
         const { orderId, latitude, longitude } = data;
         if (orderId && latitude && longitude) {
             const movementData = { latitude, longitude };
-            // 1. Update memory cache
             latestPositions.set(orderId, movementData);
-            // 2. Broadcast only to the customer watching THIS order
             io.to(orderId).emit('receive_location', movementData);
         }
     });
 
-    // Keeping your previous events so nothing is removed
     socket.on('update_location', (data) => {
         const { orderId, latitude, longitude } = data;
         if (orderId && latitude && longitude) {
@@ -146,8 +157,6 @@ app.use('/api/store', storeRouter);
 // --- VERCEL & LOCAL LOGIC ---
 connectDB().then(() => {
     console.log("Database Connected Successfully");
-    // Removed duplicate .listen for Vercel compatibility, 
-    // it will use server.listen for local and export for Vercel.
     server.listen(PORT, () => { 
         console.log("Snapit Server running on port " + PORT);
     });
