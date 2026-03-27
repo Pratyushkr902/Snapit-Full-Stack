@@ -23,6 +23,16 @@ const ProductDisplayPage = () => {
   const [loading,setLoading] = useState(false)
   const imageContainer = useRef()
 
+  // --- NEW LOGIC: Check if Snapit is currently open (7 AM - 9 PM) ---
+  const [isOpen, setIsOpen] = useState(true)
+
+  const checkShopStatus = () => {
+    const now = new Date()
+    const hours = now.getHours()
+    // Shop is open if time is >= 7:00 and < 21:00 (9 PM)
+    setIsOpen(hours >= 7 && hours < 21)
+  }
+
   const fetchProductDetails = async()=>{
     try {
         setLoading(true) 
@@ -47,6 +57,11 @@ const ProductDisplayPage = () => {
 
   useEffect(()=>{
     fetchProductDetails()
+    checkShopStatus() // Check status on load
+    
+    // Optional: Re-check every minute to handle the 9 PM transition live
+    const timer = setInterval(checkShopStatus, 60000)
+    return () => clearInterval(timer)
   },[params])
   
   const handleScrollRight = ()=>{
@@ -60,7 +75,6 @@ const ProductDisplayPage = () => {
     <section className='container mx-auto p-4 grid lg:grid-cols-2 '>
         <div className=''>
             <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded min-h-56 max-h-56 h-full w-full flex items-center justify-center overflow-hidden'>
-                {/* FIXED: Added a loading spinner or placeholder logic to prevent the white box */}
                 {
                   !loading && data?.image?.length > 0 ? (
                     <img
@@ -160,8 +174,14 @@ const ProductDisplayPage = () => {
               </div>
             </div> 
               
+              {/* UPDATED: Only show AddToCartButton if Shop is Open AND Stock is > 0 */}
               {
-                data.stock === 0 ? (
+                !isOpen ? (
+                    <div className='bg-red-50 border border-red-200 text-red-600 p-3 rounded my-4 text-center'>
+                        <p className='font-bold'>🌙 Currently Closed</p>
+                        <p className='text-sm'>Orders resume at 7:00 AM</p>
+                    </div>
+                ) : data.stock === 0 ? (
                   <p className='text-lg text-red-500 my-2'>Out of Stock</p>
                 ) 
                 : (
