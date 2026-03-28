@@ -1,4 +1,5 @@
 import React from 'react'
+// STEP 1: Import the new sliding banner component instead of the static jpg
 import HomeBanner from '../components/HomeBanner' 
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
@@ -12,28 +13,33 @@ const Home = () => {
   const navigate = useNavigate()
 
   const handleRedirectProductListpage = (id,cat)=>{
+      console.log(id,cat)
       const subcategory = subCategoryData.find(sub =>{
         const filterData = sub.category.some(c => {
           return c._id == id
         })
+
         return filterData ? true : null
       })
       
+      // Safety check to prevent crash if subcategory isn't found
       if(subcategory) {
         const url = `/${valideURLConvert(cat)}-${id}/${valideURLConvert(subcategory?.name)}-${subcategory?._id}`
         navigate(url)
       } else {
+        // Fallback if no subcategory exists yet
         navigate(`/category/${id}`)
       }
   }
 
   return (
    <section className='bg-white min-h-screen'>
+      {/* STEP 2: Replaced the old static div/img with the HomeBanner component */}
       <div className='container mx-auto'>
           <HomeBanner />
       </div>
       
-      {/* Category Icons Grid - Styled for Edge-to-Edge "Snapit" Look */}
+      {/* Category Icons Grid - UPDATED FOR EDGE-TO-EDGE LOOK */}
       <div className='container mx-auto px-4 my-4 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3'>
           {
             loadingCategory ? (
@@ -53,16 +59,16 @@ const Home = () => {
                     className='w-full h-full cursor-pointer group' 
                     onClick={()=>handleRedirectProductListpage(cat._id,cat.name)}
                   >
-                    {/* Image Container: No padding, object-cover for full bleed */}
+                    {/* Image Container: Removed p-2 and bg-blue-50 to let image touch edges */}
                     <div className='w-full aspect-square rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-white transition-all group-hover:shadow-md'>
                         <img 
                           src={cat.image}
                           alt={cat.name}
-                          // object-cover makes the image touch all 4 edges perfectly
+                          // CHANGED: object-cover makes the image touch all 4 edges perfectly
                           className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-500'
                         />
                     </div>
-                    {/* Category Label */}
+                    {/* Category Name: Increased font-weight for a startup feel */}
                     <p className='text-center text-[10px] md:text-xs mt-1.5 font-bold text-slate-700 truncate px-1'>
                       {cat.name}
                     </p>
