@@ -9,9 +9,9 @@ import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
 // STEP 1: Import only the 3 new banners (Removing the old banner.jpg)
-import banner1 from '../assets/IMG_6118.png'; // Snapit is Now Live
-import banner2 from '../assets/IMG_6120.png'; // Exclusive Drinks
-import banner3 from '../assets/IMG_6127.png'; // Powerful Nutrition
+import banner1 from '../assets/banner1.png'; 
+import banner2 from '../assets/banner2.png'; 
+import banner3 from '../assets/banner3.png';
 
 const HomeBanner = () => {
     const navigate = useNavigate();
