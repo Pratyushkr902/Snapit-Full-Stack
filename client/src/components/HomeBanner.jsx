@@ -1,41 +1,61 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
+
+// Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
-// Import your banners
-import banner1 from '../assets/IMG_6118.png'; // Updated extensions based on your sidebar
-import banner2 from '../assets/IMG_6120.png';
-import banner3 from '../assets/IMG_6127.png';
+// STEP 1: Import only the 3 new banners (Removing the old banner.jpg)
+import banner1 from '../assets/IMG_6118.png'; // Snapit is Now Live
+import banner2 from '../assets/IMG_6120.png'; // Exclusive Drinks
+import banner3 from '../assets/IMG_6127.png'; // Powerful Nutrition
 
 const HomeBanner = () => {
-    const banners = [banner1, banner2, banner3];
+    const navigate = useNavigate();
+
+    // Mapping banners to search queries for your live demo
+    const bannerData = [
+        { image: banner1, link: "/search?q=grocery" },
+        { image: banner2, link: "/search?q=drinks" },
+        { image: banner3, link: "/search?q=nutrition" }
+    ];
 
     return (
-        // FIXED: Added max-h and rounded corners to keep it contained
-        <div className='w-full lg:max-h-80 md:max-h-64 max-h-48 overflow-hidden rounded-lg shadow-sm my-2 px-4'>
-            <Swiper
-                spaceBetween={0}
-                centeredSlides={true}
-                autoplay={{ delay: 3500, disableOnInteraction: false }}
-                pagination={{ clickable: true }}
-                navigation={true}
-                modules={[Autoplay, Pagination, Navigation]}
-                className="mySwiper h-full w-full"
-            >
-                {banners.map((image, index) => (
-                    <SwiperSlide key={index} className='h-full w-full'>
-                        <img 
-                            src={image} 
-                            alt={`Banner ${index + 1}`} 
-                            // FIXED: object-fill ensures the "Shop Now" text stays visible
-                            className='w-full h-full object-fill lg:object-cover'
-                        />
-                    </SwiperSlide>
-                ))}
-            </Swiper>
+        <div className='container mx-auto px-4 mt-2 lg:mt-4'>
+            {/* FIXED: Constrained height so it doesn't push products off-screen */}
+            <div className='w-full h-44 md:h-64 lg:h-80 rounded-2xl overflow-hidden shadow-sm group bg-slate-50'>
+                <Swiper
+                    spaceBetween={0}
+                    centeredSlides={true}
+                    loop={true}
+                    autoplay={{
+                        delay: 4000,
+                        disableOnInteraction: false,
+                    }}
+                    pagination={{ 
+                        clickable: true,
+                        dynamicBullets: true 
+                    }}
+                    navigation={true}
+                    modules={[Autoplay, Pagination, Navigation]}
+                    className="mySwiper h-full w-full"
+                >
+                    {bannerData.map((item, index) => (
+                        <SwiperSlide key={index} onClick={() => navigate(item.link)} className='cursor-pointer'>
+                            <img 
+                                src={item.image} 
+                                alt={`Snapit Promo ${index + 1}`} 
+                                // Using object-contain/fill so "Shop Now" text is never cut off
+                                className='w-full h-full object-fill lg:object-cover'
+                                loading="priority"
+                            />
+                        </SwiperSlide>
+                    ))}
+                </Swiper>
+            </div>
         </div>
     );
 };

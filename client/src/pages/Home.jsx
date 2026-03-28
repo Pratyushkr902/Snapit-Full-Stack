@@ -1,6 +1,6 @@
 import React from 'react'
-import banner from '../assets/banner.jpg'
-import bannerMobile from '../assets/banner.jpg'
+// STEP 1: Import the new sliding banner component instead of the static jpg
+import HomeBanner from '../components/HomeBanner' 
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import {Link, useNavigate} from 'react-router-dom'
@@ -21,31 +21,26 @@ const Home = () => {
 
         return filterData ? true : null
       })
-      const url = `/${valideURLConvert(cat)}-${id}/${valideURLConvert(subcategory.name)}-${subcategory._id}`
-
-      navigate(url)
-      console.log(url)
+      
+      // Safety check to prevent crash if subcategory isn't found
+      if(subcategory) {
+        const url = `/${valideURLConvert(cat)}-${id}/${valideURLConvert(subcategory?.name)}-${subcategory?._id}`
+        navigate(url)
+      } else {
+        // Fallback if no subcategory exists yet
+        navigate(`/category/${id}`)
+      }
   }
 
-
   return (
-   <section className='bg-white'>
+   <section className='bg-white min-h-screen'>
+      {/* STEP 2: Replaced the old static div/img with the HomeBanner component */}
       <div className='container mx-auto'>
-          <div className={`w-full h-full min-h-48 bg-blue-100 rounded ${!banner && "animate-pulse my-2" } `}>
-              <img
-                src={banner}
-                className='w-full h-full hidden lg:block'
-                alt='banner' 
-              />
-              <img
-                src={bannerMobile}
-                className='w-full h-full lg:hidden'
-                alt='banner' 
-              />
-          </div>
+          <HomeBanner />
       </div>
       
-      <div className='container mx-auto px-4 my-2 grid grid-cols-5 md:grid-cols-8 lg:grid-cols-10  gap-2'>
+      {/* Category Icons Grid */}
+      <div className='container mx-auto px-4 my-4 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3'>
           {
             loadingCategory ? (
               new Array(12).fill(null).map((c,index)=>{
@@ -59,36 +54,40 @@ const Home = () => {
             ) : (
               categoryData.map((cat,index)=>{
                 return(
-                  <div key={cat._id+"displayCategory"} className='w-full h-full' onClick={()=>handleRedirectProductListpage(cat._id,cat.name)}>
-                    <div>
+                  <div 
+                    key={cat._id+"displayCategory"} 
+                    className='w-full h-full cursor-pointer hover:scale-105 transition-transform' 
+                    onClick={()=>handleRedirectProductListpage(cat._id,cat.name)}
+                  >
+                    <div className='bg-blue-50 rounded-xl p-2'>
                         <img 
                           src={cat.image}
-                          className='w-full h-full object-scale-down'
+                          alt={cat.name}
+                          className='w-full h-full object-scale-down aspect-square'
                         />
                     </div>
+                    <p className='text-center text-xs mt-1 font-medium text-slate-700'>{cat.name}</p>
                   </div>
                 )
               })
-              
             )
           }
       </div>
 
-      {/***display category product */}
-      {
-        categoryData?.map((c,index)=>{
-          return(
-            <CategoryWiseProductDisplay 
-              key={c?._id+"CategorywiseProduct"} 
-              id={c?._id} 
-              name={c?.name}
-            />
-          )
-        })
-      }
-
-
-
+      {/*** Display category product sections ***/}
+      <div className='grid gap-6 pb-20'>
+        {
+          categoryData?.map((c,index)=>{
+            return(
+              <CategoryWiseProductDisplay 
+                key={c?._id+"CategorywiseProduct"} 
+                id={c?._id} 
+                name={c?.name}
+              />
+            )
+          })
+        }
+      </div>
    </section>
   )
 }
