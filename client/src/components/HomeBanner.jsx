@@ -9,9 +9,9 @@ import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
 // Import your high-quality assets
-import banner1 from '../assets/IMG_6118.PNG'; // Snapit is Now Live
-import banner2 from '../assets/IMG_6120.PNG'; // Exclusive Drinks
-import banner3 from '../assets/IMG_6127.PNG'; // Powerful Nutrition
+import banner1 from '../assets/IMG_6118.Png'; // Snapit is Now Live
+import banner2 from '../assets/IMG_6120.Png'; // Exclusive Drinks
+import banner3 from '../assets/IMG_6127.Png'; // Powerful Nutrition
 
 const HomeBanner = () => {
     const navigate = useNavigate();
