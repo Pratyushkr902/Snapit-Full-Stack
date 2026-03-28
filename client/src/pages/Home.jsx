@@ -1,5 +1,4 @@
 import React from 'react'
-// STEP 1: Import the new sliding banner component instead of the static jpg
 import HomeBanner from '../components/HomeBanner' 
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
@@ -13,41 +12,36 @@ const Home = () => {
   const navigate = useNavigate()
 
   const handleRedirectProductListpage = (id,cat)=>{
-      console.log(id,cat)
       const subcategory = subCategoryData.find(sub =>{
         const filterData = sub.category.some(c => {
           return c._id == id
         })
-
         return filterData ? true : null
       })
       
-      // Safety check to prevent crash if subcategory isn't found
       if(subcategory) {
         const url = `/${valideURLConvert(cat)}-${id}/${valideURLConvert(subcategory?.name)}-${subcategory?._id}`
         navigate(url)
       } else {
-        // Fallback if no subcategory exists yet
         navigate(`/category/${id}`)
       }
   }
 
   return (
    <section className='bg-white min-h-screen'>
-      {/* STEP 2: Replaced the old static div/img with the HomeBanner component */}
       <div className='container mx-auto'>
           <HomeBanner />
       </div>
       
-      {/* Category Icons Grid */}
+      {/* Category Icons Grid - Styled for Edge-to-Edge "Snapit" Look */}
       <div className='container mx-auto px-4 my-4 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3'>
           {
             loadingCategory ? (
               new Array(12).fill(null).map((c,index)=>{
                 return(
-                  <div key={index+"loadingcategory"} className='bg-white rounded p-4 min-h-36 grid gap-2 shadow animate-pulse'>
-                    <div className='bg-blue-100 min-h-24 rounded'></div>
-                    <div className='bg-blue-100 h-8 rounded'></div>
+                  <div key={index+"loadingcategory"} className='bg-white rounded-xl p-0 min-h-36 grid gap-2 shadow animate-pulse overflow-hidden'>
+                    <div className='bg-blue-50 aspect-square rounded-xl'></div>
+                    <div className='bg-blue-50 h-4 mx-2 rounded'></div>
                   </div>
                 )
               })
@@ -56,17 +50,22 @@ const Home = () => {
                 return(
                   <div 
                     key={cat._id+"displayCategory"} 
-                    className='w-full h-full cursor-pointer hover:scale-105 transition-transform' 
+                    className='w-full h-full cursor-pointer group' 
                     onClick={()=>handleRedirectProductListpage(cat._id,cat.name)}
                   >
-                    <div className='bg-blue-50 rounded-xl p-2'>
+                    {/* Image Container: No padding, object-cover for full bleed */}
+                    <div className='w-full aspect-square rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-white transition-all group-hover:shadow-md'>
                         <img 
                           src={cat.image}
                           alt={cat.name}
-                          className='w-full h-full object-scale-down aspect-square'
+                          // object-cover makes the image touch all 4 edges perfectly
+                          className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-500'
                         />
                     </div>
-                    <p className='text-center text-xs mt-1 font-medium text-slate-700'>{cat.name}</p>
+                    {/* Category Label */}
+                    <p className='text-center text-[10px] md:text-xs mt-1.5 font-bold text-slate-700 truncate px-1'>
+                      {cat.name}
+                    </p>
                   </div>
                 )
               })
