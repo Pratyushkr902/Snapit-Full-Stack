@@ -39,15 +39,15 @@ const Home = () => {
           <HomeBanner />
       </div>
       
-      {/* Category Icons Grid - UPDATED FOR EDGE-TO-EDGE LOOK */}
+      {/* Category Icons Grid */}
       <div className='container mx-auto px-4 my-4 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3'>
           {
             loadingCategory ? (
               new Array(12).fill(null).map((c,index)=>{
                 return(
-                  <div key={index+"loadingcategory"} className='bg-white rounded-xl p-0 min-h-36 grid gap-2 shadow animate-pulse overflow-hidden'>
-                    <div className='bg-blue-50 aspect-square rounded-xl'></div>
-                    <div className='bg-blue-50 h-4 mx-2 rounded'></div>
+                  <div key={index+"loadingcategory"} className='bg-white rounded p-4 min-h-36 grid gap-2 shadow animate-pulse'>
+                    <div className='bg-blue-100 min-h-24 rounded'></div>
+                    <div className='bg-blue-100 h-8 rounded'></div>
                   </div>
                 )
               })
@@ -56,22 +56,17 @@ const Home = () => {
                 return(
                   <div 
                     key={cat._id+"displayCategory"} 
-                    className='w-full h-full cursor-pointer group' 
+                    className='w-full h-full cursor-pointer hover:scale-105 transition-transform' 
                     onClick={()=>handleRedirectProductListpage(cat._id,cat.name)}
                   >
-                    {/* Image Container: Removed p-2 and bg-blue-50 to let image touch edges */}
-                    <div className='w-full aspect-square rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-white transition-all group-hover:shadow-md'>
+                    <div className='bg-blue-50 rounded-xl p-2'>
                         <img 
                           src={cat.image}
                           alt={cat.name}
-                          // CHANGED: object-cover makes the image touch all 4 edges perfectly
-                          className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-500'
+                          className='w-full h-full object-scale-down aspect-square'
                         />
                     </div>
-                    {/* Category Name: Increased font-weight for a startup feel */}
-                    <p className='text-center text-[10px] md:text-xs mt-1.5 font-bold text-slate-700 truncate px-1'>
-                      {cat.name}
-                    </p>
+                    <p className='text-center text-xs mt-1 font-medium text-slate-700'>{cat.name}</p>
                   </div>
                 )
               })
