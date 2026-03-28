@@ -1,84 +1,63 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'; // NEW: For navigation
-import { FaAngleLeft, FaAngleRight } from "react-icons/fa6";
-import banner1 from '../assets/banner.jpg'
-import banner2 from '../assets/Wide_Assortment-BbGMfwA2.png' 
-import banner3 from '../assets/RakshaBandhan.jpg'
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination, Navigation } from 'swiper/modules';
+
+// Import Swiper styles
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
+
+// Import your high-quality assets
+import banner1 from '../assets/IMG_6118.jpg'; // Snapit is Now Live
+import banner2 from '../assets/IMG_6120.jpg'; // Exclusive Drinks
+import banner3 from '../assets/IMG_6127.jpg'; // Powerful Nutrition
 
 const HomeBanner = () => {
     const navigate = useNavigate();
-    const [currentImage, setCurrentImage] = useState(0)
 
-    // NEW: Banners with specific routes
-    const banners = [
+    // Mapping banners to routes for your presentation demo
+    const bannerData = [
         { image: banner1, link: "/search?q=grocery" },
-        { image: banner2, link: "/vegetables-fruits" },
-        { image: banner3, link: "/festival-specials" }
-    ]
-
-    const nextImage = () => {
-        setCurrentImage((prev) => (prev === banners.length - 1 ? 0 : prev + 1))
-    }
-
-    const prevImage = () => {
-        setCurrentImage((prev) => (prev === 0 ? banners.length - 1 : prev - 1))
-    }
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            nextImage()
-        }, 5000)
-        return () => clearInterval(interval)
-    }, [banners.length])
+        { image: banner2, link: "/category/6745..." }, // Replace with your Energy Drinks Category ID
+        { image: banner3, link: "/category/6746..." }  // Replace with your Nutrition Category ID
+    ];
 
     return (
-        <div className='container mx-auto px-4 mt-4'>
-            <div className='relative w-full h-40 md:h-72 lg:h-96 rounded-xl overflow-hidden shadow-md group bg-blue-50'>
-                
-                {/* BANNERS CONTAINER */}
-                <div 
-                    className='flex transition-transform duration-700 ease-in-out h-full cursor-pointer'
-                    style={{ transform: `translateX(-${currentImage * 100}%)` }}
+        <div className='container mx-auto px-4 mt-2 lg:mt-4'>
+            {/* FIXED: Added responsive height constraints to prevent the 'too large' issue */}
+            <div className='w-full h-44 md:h-64 lg:h-80 rounded-2xl overflow-hidden shadow-sm group'>
+                <Swiper
+                    spaceBetween={0}
+                    centeredSlides={true}
+                    loop={true}
+                    autoplay={{
+                        delay: 4000,
+                        disableOnInteraction: false,
+                    }}
+                    pagination={{ 
+                        clickable: true,
+                        dynamicBullets: true 
+                    }}
+                    navigation={true}
+                    modules={[Autoplay, Pagination, Navigation]}
+                    className="mySwiper h-full w-full"
                 >
-                    {banners.map((item, index) => (
-                        <div 
-                            key={index} 
-                            className='w-full h-full flex-shrink-0'
-                            onClick={() => navigate(item.link)} // NEW: Click to navigate
-                        >
-                             <img 
-                                src={item.image}
-                                alt="Snapit Banner"
-                                className='w-full h-full object-cover banner-img-fade hover:scale-105 transition-transform duration-500' 
-                                loading="lazy"
+                    {bannerData.map((item, index) => (
+                        <SwiperSlide key={index} onClick={() => navigate(item.link)} className='cursor-pointer'>
+                            <img 
+                                src={item.image} 
+                                alt={`Snapit Promo ${index + 1}`} 
+                                // FIXED: object-fill ensures the 'Shop Now' text isn't cut off
+                                className='w-full h-full object-fill lg:object-cover'
+                                loading="priority"
                             />
-                        </div>
+                        </SwiperSlide>
                     ))}
-                </div>
-
-                {/* NAVIGATION BUTTONS */}
-                <div className='hidden group-hover:flex absolute inset-0 items-center justify-between px-4'>
-                    <button onClick={(e) => { e.stopPropagation(); prevImage(); }} className='bg-white/80 p-2 rounded-full shadow-lg hover:bg-white'>
-                        <FaAngleLeft size={20}/>
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); nextImage(); }} className='bg-white/80 p-2 rounded-full shadow-lg hover:bg-white'>
-                        <FaAngleRight size={20}/>
-                    </button>
-                </div>
-
-                {/* DOTS INDICATOR */}
-                <div className='absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2'>
-                    {banners.map((_, index) => (
-                        <button 
-                            key={index}
-                            onClick={(e) => { e.stopPropagation(); setCurrentImage(index); }}
-                            className={`h-2 rounded-full transition-all ${currentImage === index ? "bg-white w-5" : "bg-white/50 w-2"}`}
-                        ></button>
-                    ))}
-                </div>
+                </Swiper>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default HomeBanner
+export default HomeBanner;
