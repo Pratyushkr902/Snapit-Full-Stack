@@ -49,29 +49,28 @@ const latestPositions = new Map();
 const allowedOrigins = [
     process.env.FRONTEND_URL, 
     "https://snapit-full-stack-pwvnb.vercel.app",
+    "https://snapit-full-stack-0.onrender.com", // Add server's own URL for internal handshakes
     "http://localhost:5173",
     "capacitor://localhost", // REQUIRED for iOS
     "http://localhost"        // REQUIRED for Android
 ];
 
 // Socket.io initialization
-// FIXED: Added pingInterval to prevent Render from killing the WebSocket connection
 const io = new Server(server, {
     cors: {
         origin: allowedOrigins, 
         methods: ["GET", "POST"],
         credentials: true
     },
-    transports: ['websocket'], // Stick to websocket for Render
-    pingTimeout: 60000,        // 60 seconds
-    pingInterval: 25000,       // Send ping every 25 seconds to keep connection alive
+    transports: ['websocket'], 
+    pingTimeout: 60000,        
+    pingInterval: 25000,       
     allowEIO3: true 
 });
 
-// FIXED CORS: Updated logic to correctly validate mobile origins
+// FIXED CORS: Added additional headers for admin panel authorization
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) !== -1) {
@@ -83,7 +82,7 @@ app.use(cors({
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"]
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
 app.use((req, res, next) => {
@@ -95,7 +94,6 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
 
-// Updated Helmet to be less restrictive for the mobile WebView
 app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
