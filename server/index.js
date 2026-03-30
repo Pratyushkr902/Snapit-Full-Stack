@@ -46,7 +46,6 @@ const server = http.createServer(app);
 const latestPositions = new Map(); 
 
 // --- PRODUCTION CORS LOGIC ---
-// FIXED: Added Capacitor origins for iOS and Android support
 const allowedOrigins = [
     process.env.FRONTEND_URL, 
     "https://snapit-full-stack-pwvnb.vercel.app",
@@ -56,14 +55,16 @@ const allowedOrigins = [
 ];
 
 // Socket.io initialization
+// FIXED: Added pingInterval to prevent Render from killing the WebSocket connection
 const io = new Server(server, {
     cors: {
         origin: allowedOrigins, 
         methods: ["GET", "POST"],
         credentials: true
     },
-    transports: ['websocket', 'polling'],
-    pingTimeout: 60000, 
+    transports: ['websocket'], // Stick to websocket for Render
+    pingTimeout: 60000,        // 60 seconds
+    pingInterval: 25000,       // Send ping every 25 seconds to keep connection alive
     allowEIO3: true 
 });
 
@@ -97,7 +98,7 @@ app.use(morgan('dev'));
 // Updated Helmet to be less restrictive for the mobile WebView
 app.use(helmet({
     crossOriginResourcePolicy: false,
-    crossOriginEmbedderPolicy: false, // Mobile compatibility fix
+    crossOriginEmbedderPolicy: false, 
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
