@@ -34,8 +34,8 @@ const Home = () => {
 
   return (
    <section className='bg-white min-h-screen'>
-      {/* STEP 2: Replaced the old static div/img with the HomeBanner component */}
-      <div className='container mx-auto'>
+      {/* FIXED: Added px-4 so the banner aligns with the tiles on Desktop */}
+      <div className='container mx-auto px-4 mt-2 lg:mt-4'>
           <HomeBanner />
       </div>
       
@@ -59,14 +59,16 @@ const Home = () => {
                     className='w-full h-full cursor-pointer hover:scale-105 transition-transform' 
                     onClick={()=>handleRedirectProductListpage(cat._id,cat.name)}
                   >
-                    <div className='bg-blue-50 rounded-xl p-2'>
+                    {/* UI Tweak: Removing p-2 and bg-blue-50 makes it touch the grid edges better */}
+                    <div className='bg-white rounded-xl border border-slate-100 overflow-hidden aspect-square shadow-sm'>
                         <img 
                           src={cat.image}
                           alt={cat.name}
-                          className='w-full h-full object-scale-down aspect-square'
+                          // Changed to object-cover for that professional "Snapit" look
+                          className='w-full h-full object-cover'
                         />
                     </div>
-                    <p className='text-center text-xs mt-1 font-medium text-slate-700'>{cat.name}</p>
+                    <p className='text-center text-[10px] md:text-xs mt-1.5 font-bold text-slate-700 truncate px-1'>{cat.name}</p>
                   </div>
                 )
               })
