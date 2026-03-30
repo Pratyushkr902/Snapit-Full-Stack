@@ -49,14 +49,16 @@ const latestPositions = new Map();
 const allowedOrigins = [
     process.env.FRONTEND_URL, 
     "https://snapit-full-stack-pwvnb.vercel.app",
-    "https://snapit-full-stack-0.onrender.com", // Add server's own URL for internal handshakes
+    "https://snapit-full-stack-0.onrender.com", 
     "http://localhost:5173",
     "capacitor://localhost", // REQUIRED for iOS
     "http://localhost"        // REQUIRED for Android
 ];
 
 // Socket.io initialization
+// FIXED: Added path explicitly to ensure Render proxy routes the wss handshake correctly
 const io = new Server(server, {
+    path: '/socket.io/', // CRITICAL: Matches the client-side default
     cors: {
         origin: allowedOrigins, 
         methods: ["GET", "POST"],
@@ -161,12 +163,15 @@ app.use("/api/address", addressRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/store', storeRouter); 
 
-// --- VERCEL & LOCAL LOGIC ---
+// --- RENDER/VERCEL PERSISTENCE ---
 connectDB().then(() => {
     console.log("Database Connected Successfully");
-    server.listen(PORT, () => { 
-        console.log("Snapit Server running on port " + PORT);
-    });
+    // Only listen if not in a serverless environment that handles listening for you
+    if (process.env.NODE_ENV !== 'test') {
+        server.listen(PORT, () => { 
+            console.log("Snapit Server running on port " + PORT);
+        });
+    }
 }).catch(err => {
     console.error("Database connection failed", err);
 });
