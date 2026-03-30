@@ -33,11 +33,9 @@ const Home = () => {
   }
 
   return (
-   <section className='bg-white min-h-screen pt-14 lg:pt-2'> 
-      {/* FIXED: Added 'pt-14' to prevent the header/banner from hiding behind the iPhone notch.
-          Added 'px-4' for Desktop alignment as requested.
-      */}
-      <div className='container mx-auto px-4 mt-2 lg:mt-4'>
+   <section className='bg-white min-h-screen'>
+      {/* STEP 2: Replaced the old static div/img with the HomeBanner component */}
+      <div className='container mx-auto'>
           <HomeBanner />
       </div>
       
@@ -47,9 +45,9 @@ const Home = () => {
             loadingCategory ? (
               new Array(12).fill(null).map((c,index)=>{
                 return(
-                  <div key={index+"loadingcategory"} className='bg-white rounded-xl p-0 min-h-36 grid gap-2 shadow animate-pulse overflow-hidden'>
-                    <div className='bg-blue-50 aspect-square rounded-xl'></div>
-                    <div className='bg-blue-50 h-4 mx-2 rounded'></div>
+                  <div key={index+"loadingcategory"} className='bg-white rounded p-4 min-h-36 grid gap-2 shadow animate-pulse'>
+                    <div className='bg-blue-100 min-h-24 rounded'></div>
+                    <div className='bg-blue-100 h-8 rounded'></div>
                   </div>
                 )
               })
@@ -58,18 +56,17 @@ const Home = () => {
                 return(
                   <div 
                     key={cat._id+"displayCategory"} 
-                    className='w-full h-full cursor-pointer group' 
+                    className='w-full h-full cursor-pointer hover:scale-105 transition-transform' 
                     onClick={()=>handleRedirectProductListpage(cat._id,cat.name)}
                   >
-                    {/* UI Tweak: No padding and object-cover makes it touch the grid edges like Blinkit */}
-                    <div className='bg-white rounded-xl border border-slate-100 overflow-hidden aspect-square shadow-sm transition-all group-hover:shadow-md'>
+                    <div className='bg-blue-50 rounded-xl p-2'>
                         <img 
                           src={cat.image}
                           alt={cat.name}
-                          className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-500'
+                          className='w-full h-full object-scale-down aspect-square'
                         />
                     </div>
-                    <p className='text-center text-[10px] md:text-xs mt-1.5 font-bold text-slate-700 truncate px-1'>{cat.name}</p>
+                    <p className='text-center text-xs mt-1 font-medium text-slate-700'>{cat.name}</p>
                   </div>
                 )
               })
