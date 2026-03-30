@@ -13,13 +13,16 @@ import Axios from './utils/Axios';
 import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
 import CartMobileLink from './components/CartMobile';
-import { io } from "socket.io-client"; // ADDED for tracking fix
+import { io } from "socket.io-client"; 
 
-// GLOBAL SOCKET CONNECTION: Forced to websocket to stop 404 polling errors
+// GLOBAL SOCKET CONNECTION: Optimized with aggressive reconnection for Render
 export const socket = io("https://snapit-full-stack-0.onrender.com", {
   transports: ["websocket"],
   withCredentials: true,
-  path: "/socket.io/"
+  path: "/socket.io/",
+  reconnection: true,            // Enable reconnection
+  reconnectionAttempts: Infinity, // Keep trying during the demo
+  reconnectionDelay: 2000,       // Try every 2 seconds if it fails
 });
 
 function App() {
@@ -35,14 +38,12 @@ function App() {
         dispatch(setUserDetails(userData.data))
       }
     } catch (error) {
-      // Don't log as error to keep console clean for presentation
       console.log("Session Check: No active user found.")
     }
   }, [dispatch])
 
   // 2. Fetch Orders globally (Private Data)
   const fetchOrder = useCallback(async () => {
-    // Safety: Only fetch if user ID exists to prevent Axios 401 Network Errors
     if(!user?._id) return; 
 
     try {
@@ -122,6 +123,17 @@ function App() {
     };
     window.addEventListener('error', handleGlobalError, true);
     return () => window.removeEventListener('error', handleGlobalError, true);
+  }, []);
+
+  // SOCKET LOGGING: Verify connection in the console
+  useEffect(() => {
+    socket.on('connect', () => console.log("Snapit Socket Connected:", socket.id));
+    socket.on('connect_error', (err) => console.log("Socket Syncing..."));
+    
+    return () => {
+      socket.off('connect');
+      socket.off('connect_error');
+    };
   }, []);
 
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
