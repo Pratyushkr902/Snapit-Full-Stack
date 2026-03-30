@@ -46,11 +46,13 @@ const server = http.createServer(app);
 const latestPositions = new Map(); 
 
 // --- PRODUCTION CORS LOGIC ---
-// Fixed 401: Explicitly allowing your frontend URL for cookies/tokens
+// FIXED: Added Capacitor origins for iOS and Android support
 const allowedOrigins = [
-    process.env.FRONTEND_URL, // Your Vercel link
+    process.env.FRONTEND_URL, 
     "https://snapit-full-stack-pwvnb.vercel.app",
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "capacitor://localhost", // REQUIRED for iOS
+    "http://localhost"        // REQUIRED for Android
 ];
 
 // Socket.io initialization
@@ -65,18 +67,22 @@ const io = new Server(server, {
     allowEIO3: true 
 });
 
-// FIXED CORS: Added explicit headers to solve 401 status
+// FIXED CORS: Updated logic to correctly validate mobile origins
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
+            console.log("Blocked by CORS:", origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"]
 }));
 
 app.use((req, res, next) => {
@@ -88,15 +94,17 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
 
+// Updated Helmet to be less restrictive for the mobile WebView
 app.use(helmet({
     crossOriginResourcePolicy: false,
+    crossOriginEmbedderPolicy: false, // Mobile compatibility fix
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
             imgSrc: ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com"],
             frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
-            connectSrc: ["'self'", "https://api.razorpay.com", "https://*.googleapis.com", "ws:", "wss:", "http://*", "https://*", "ws://*", "wss://*"] 
+            connectSrc: ["'self'", "https://api.razorpay.com", "https://*.googleapis.com", "ws:", "wss:", "http://*", "https://*", "ws://*", "wss://*", "capacitor://*"] 
         },
     },
 }));
