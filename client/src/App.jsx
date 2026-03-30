@@ -8,16 +8,24 @@ import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails } from './store/userSlice';
 import { setAllCategory, setAllSubCategory, setLoadingCategory } from './store/productSlice';
 import { setOrder } from './store/orderSlice'; 
-import { useDispatch, useSelector } from 'react-redux'; // ADDED: useSelector
+import { useDispatch, useSelector } from 'react-redux'; 
 import Axios from './utils/Axios';
 import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
 import CartMobileLink from './components/CartMobile';
+import { io } from "socket.io-client"; // ADDED for tracking fix
+
+// GLOBAL SOCKET CONNECTION: Forced to websocket to stop 404 polling errors
+export const socket = io("https://snapit-full-stack-0.onrender.com", {
+  transports: ["websocket"],
+  withCredentials: true,
+  path: "/socket.io/"
+});
 
 function App() {
   const dispatch = useDispatch()
   const location = useLocation()
-  const user = useSelector(state => state.user) // Get user state to prevent 401 loops
+  const user = useSelector(state => state.user)
 
   // 1. Fetch User (Fixes Admin/Login state)
   const fetchUser = useCallback(async () => {
@@ -27,13 +35,14 @@ function App() {
         dispatch(setUserDetails(userData.data))
       }
     } catch (error) {
-      console.log("User session expired or invalid")
+      // Don't log as error to keep console clean for presentation
+      console.log("Session Check: No active user found.")
     }
   }, [dispatch])
 
-  // 2. Fetch Orders globally
+  // 2. Fetch Orders globally (Private Data)
   const fetchOrder = useCallback(async () => {
-    // Only fetch orders if we have a logged-in user to avoid 401 errors
+    // Safety: Only fetch if user ID exists to prevent Axios 401 Network Errors
     if(!user?._id) return; 
 
     try {
@@ -49,6 +58,7 @@ function App() {
     }
   }, [dispatch, user?._id])
 
+  // 3. Public Data: Categories
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
@@ -70,6 +80,7 @@ function App() {
     }
   }, [dispatch])
 
+  // 4. Public Data: Subcategories
   const fetchSubCategory = useCallback(async () => {
     try {
       const response = await Axios({
@@ -88,21 +99,21 @@ function App() {
     }
   }, [dispatch])
 
-  // Initialize core data (Public data)
+  // INITIALIZE PUBLIC DATA
   useEffect(() => {
     fetchUser()
     fetchCategory()
     fetchSubCategory()
   }, [fetchUser, fetchCategory, fetchSubCategory])
 
-  // Initialize private data (Only when user is found)
+  // INITIALIZE PRIVATE DATA (Triggered after User ID is set)
   useEffect(() => {
     if(user?._id) {
       fetchOrder()
     }
   }, [user?._id, fetchOrder])
 
-  // Global fix for broken images - KEEPING YOUR LOGIC
+  // GLOBAL IMAGE FALLBACK (Ensures UI never looks broken)
   useEffect(() => {
     const handleGlobalError = (event) => {
       if (event.target.tagName === 'IMG') {
