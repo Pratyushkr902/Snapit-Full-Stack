@@ -75,7 +75,7 @@ const Register = () => {
             <div className='bg-white my-8 w-full max-w-lg mx-auto rounded-xl shadow-lg p-8 border border-neutral-100'>
                 <div className='text-center mb-6'>
                     <h2 className='text-2xl font-black text-slate-800'>Welcome to Snapit</h2>
-                    <p className='text-slate-500 text-sm'>Fastest delivery for IIT Roorkee students</p>
+                    <p className='text-slate-500 text-sm'>Fastest delivery in your locality</p>
                 </div>
 
                 <form className='grid gap-4' onSubmit={handleSubmit}>

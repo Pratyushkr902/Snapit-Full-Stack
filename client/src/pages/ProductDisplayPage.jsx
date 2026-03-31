@@ -222,7 +222,7 @@ const ProductDisplayPage = () => {
                             </div>
                             <div className='text-sm'>
                                 <div className='font-bold text-slate-800 text-base'>Superfast Delivery</div>
-                                <p className='text-slate-500'>Directly from our local dark stores near IIT Roorkee.</p>
+                                <p className='text-slate-500'>Directly from our local dark stores .</p>
                             </div>
                         </div>
                         <div className='flex items-center gap-5'>
