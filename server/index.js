@@ -40,12 +40,11 @@ import orderRouter from './route/order.route.js';
 import storeRouter from './route/store.route.js'; 
 import walletRouter from './route/wallet.route.js';
 import flashSaleRouter from './route/flashSale.route.js';
-import referralRouter from './route/referral.route.js'; // IMPORTED: Referral System
+import referralRouter from './route/referral.route.js'; 
 
 const app = express();
 const server = http.createServer(app); 
 
-// Memory cache for latest rider positions
 const latestPositions = new Map(); 
 
 // --- PRODUCTION CORS LOGIC ---
@@ -54,11 +53,11 @@ const allowedOrigins = [
     "https://snapit-full-stack-pwvnb.vercel.app",
     "https://snapit-full-stack-0.onrender.com", 
     "http://localhost:5173",
-    "capacitor://localhost", // REQUIRED for iOS
-    "http://localhost"        // REQUIRED for Android
+    "capacitor://localhost", 
+    "http://localhost"        
 ];
 
-// Socket.io initialization
+// --- SOCKET.IO PRODUCTION STABILIZATION ---
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: {
@@ -66,17 +65,16 @@ const io = new Server(server, {
         methods: ["GET", "POST"],
         credentials: true
     },
+    // FIXED: Enforce websocket transport to match frontend fix for Render stability
     transports: ['websocket'], 
     pingTimeout: 60000,        
     pingInterval: 25000,       
     allowEIO3: true 
 });
 
-// FIXED CORS: Added additional headers for admin panel authorization
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
-        
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
@@ -114,7 +112,7 @@ app.use(helmet({
 
 // --- SOCKET.IO TRACKING LOGIC ---
 io.on('connection', (socket) => {
-    console.log(`Tracking: Connected [ID: ${socket.id}]`);
+    console.log(`🚀 Tracking Connected: ${socket.id}`);
 
     socket.on('join_order', (orderId) => {
         if (orderId) {
@@ -142,15 +140,15 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('error', (err) => console.error("Socket.io Error Log:", err));
-    socket.on('disconnect', () => console.log(`Tracking: Client ${socket.id} disconnected`));
+    socket.on('error', (err) => console.error("Socket.io Error:", err));
+    socket.on('disconnect', () => console.log(`📡 Tracking Disconnected: ${socket.id}`));
 });
 
 const PORT = process.env.PORT || 8080;
 
 app.get("/", (request, response) => {
     response.json({
-        message: "Snapit Server is Live on " + PORT,
+        message: "Snapit Server is Live",
         tracking_enabled: true
     });
 });
@@ -167,18 +165,16 @@ app.use('/api/order', orderRouter);
 app.use('/api/store', storeRouter); 
 app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
-app.use('/api/referral', referralRouter); // ADDED: Referral endpoint
+app.use('/api/referral', referralRouter); 
 
-// --- RENDER/VERCEL PERSISTENCE ---
+// --- DATABASE & SERVER START ---
 connectDB().then(() => {
-    console.log("Database Connected Successfully");
-    if (process.env.NODE_ENV !== 'test') {
-        server.listen(PORT, () => { 
-            console.log("Snapit Server running on port " + PORT);
-        });
-    }
+    console.log("✅ Database Connected");
+    server.listen(PORT, () => { 
+        console.log(`🚀 Snapit Server running on port ${PORT}`);
+    });
 }).catch(err => {
-    console.error("Database connection failed", err);
+    console.error("❌ Database connection failed", err);
 });
 
 export default app;
