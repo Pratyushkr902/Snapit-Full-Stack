@@ -1,5 +1,5 @@
 import ProductModel from "../models/product.model.js";
-import mongoose from "mongoose"; // REQUIRED: For ID validation
+import mongoose from "mongoose";
 
 // HELPER: Ensures all image URLs are secure for Android/Mobile compatibility
 const secureImages = (images) => {
@@ -22,7 +22,6 @@ export const createProductController = async(request,response)=>{
             more_details,
         } = request.body 
 
-        // Ensure critical fields are present
         if(!name || !image[0] || !category[0] || !subCategory[0] || !unit || !price || !description ){
             return response.status(400).json({
                 message : "Enter required fields",
@@ -31,10 +30,9 @@ export const createProductController = async(request,response)=>{
             })
         }
 
-        // FIXED: Mapping the 'stock' input to the new Multi-Mart store_inventory structure
         const productData = {
             name ,
-            image : secureImages(image), // Apply HTTPS fix on creation
+            image : secureImages(image), 
             category,
             subCategory,
             unit,
@@ -90,7 +88,6 @@ export const getProductController = async(request,response)=>{
             ProductModel.countDocuments(query)
         ])
 
-        // Apply HTTPS fix to all images in the list
         const securedData = data.map(prod => ({
             ...prod._doc,
             image: secureImages(prod.image)
@@ -241,7 +238,6 @@ export const getProductDetails = async(request,response)=>{
             })
         }
 
-        // Apply HTTPS fix to single product details
         const securedProduct = {
             ...product._doc,
             image: secureImages(product.image)
@@ -255,7 +251,6 @@ export const getProductDetails = async(request,response)=>{
         })
 
     } catch (error) {
-        console.error("GET PRODUCT DETAILS ERROR:", error);
         return response.status(500).json({
             message : error.message || error,
             error : true,
@@ -276,7 +271,6 @@ export const updateProductDetails = async(request,response)=>{
             })
         }
 
-        // If images are updated, ensure they are secured
         if(updateFields.image) {
             updateFields.image = secureImages(updateFields.image);
         }
@@ -376,5 +370,42 @@ export const searchProduct = async(request,response)=>{
             error : true,
             success : false
         })
+    }
+}
+
+// --- RECOMMENDATION ENGINE CONTROLLER ---
+export async function getFrequentlyBought(req, res) {
+    try {
+        const { productId } = req.query
+
+        if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({ success: false, message: 'Valid Product ID required' })
+        }
+
+        const product = await ProductModel.findById(productId)
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' })
+        }
+
+        // Find products in same category excluding the current one
+        const suggestions = await ProductModel
+            .find({
+                category: { $in: product.category },
+                _id: { $ne: productId }
+            })
+            .limit(5)
+
+        // Apply secure images fix to suggestions
+        const securedSuggestions = suggestions.map(prod => ({
+            ...prod._doc,
+            image: secureImages(prod.image)
+        }));
+
+        return res.json({
+            success: true,
+            data: securedSuggestions
+        })
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message })
     }
 }

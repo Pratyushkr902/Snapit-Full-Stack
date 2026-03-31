@@ -153,7 +153,6 @@ const SummaryApi = {
         url : '/api/order/order-list',
         method : 'get'
     },
-    // NEW: Live Tracking and Status Management Endpoints
     getRiderLocation: {
         url: '/api/order/get-rider-location',
         method: 'post'
@@ -166,7 +165,6 @@ const SummaryApi = {
         url: '/api/order/update-seller-status',
         method: 'post'
     },
-    // --- MULTI-MART EXPANSION & SETTLEMENT ---
     getNearestStore: {
         url: '/api/store/nearest',
         method: 'post'
@@ -179,13 +177,21 @@ const SummaryApi = {
         url: '/api/store/add',
         method: 'post'
     },
-    // FIXED: Critical endpoints for Admin Dashboard logic
     settleCash: {
         url: '/api/order/settle-cash',
         method: 'post'
     },
     getDailyReport: {
         url: '/api/order/daily-report',
+        method: 'get'
+    },
+    // --- RECENTLY ADDED ---
+    getLastOrder: {
+        url: '/api/order/last-order',
+        method: 'get'
+    },
+    getFrequentlyBought: {
+        url: '/api/product/frequently-bought',
         method: 'get'
     }
 }

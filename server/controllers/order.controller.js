@@ -2,7 +2,7 @@ import CartProductModel from "../models/cartproduct.model.js";
 import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
 import ProductModel from "../models/product.model.js"; 
-import StoreModel from "../models/store.model.js"; // IMPORTED
+import StoreModel from "../models/store.model.js"; 
 import mongoose from "mongoose";
 import Razorpay from 'razorpay';
 
@@ -301,7 +301,6 @@ export const getDailySalesReport = async (req, res) => {
     }
 };
 
-// --- ADDED THIS TO FIX SERVER CRASH ---
 export const settleRiderCashController = async (req, res) => {
     try {
         const { rider_name } = req.body; 
@@ -328,3 +327,19 @@ export const settleRiderCashController = async (req, res) => {
         });
     }
 };
+
+export async function getLastOrder(req, res) {
+    try {
+        const lastOrder = await OrderModel
+            .findOne({ userId: req.userId })
+            .sort({ createdAt: -1 })
+            .populate('cartItems.productId') // Populating from your payload structure
+
+        return res.json({
+            success: true,
+            data: lastOrder
+        })
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message })
+    }
+}

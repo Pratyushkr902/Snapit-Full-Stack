@@ -8,31 +8,34 @@ import {
     getProductController, 
     getProductDetails, 
     searchProduct, 
-    updateProductDetails 
+    updateProductDetails,
+    getFrequentlyBought // ADDED: Controller for Recommendation Engine
 } from '../controllers/product.controller.js'
 import { admin } from '../middleware/Admin.js'
 
 const productRouter = Router()
 
+// --- CREATE & READ ---
 productRouter.post("/create", auth, admin, createProductController)
 productRouter.post('/get', getProductController)
 productRouter.post("/get-product-by-category", getProductByCategory)
 
-// FIXED: Corrected spelling from 'get-pruduct' to 'get-product'
+// FIXED: Corrected spelling and removed duplicate entry
 productRouter.post('/get-product-by-category-and-subcategory', getProductByCategoryAndSubCategory)
 
 productRouter.post('/get-product-details', getProductDetails)
 
-// update product
+// --- RECOMMENDATION SYSTEM ---
+// This fuels the "People also bought" section on your product pages
+productRouter.get('/frequently-bought', getFrequentlyBought)
+
+// --- UPDATE & DELETE ---
 productRouter.put('/update-product-details', auth, admin, updateProductDetails)
 
-// delete product
 // Note: Ensure your frontend Axios call uses 'DELETE' method to match this
 productRouter.delete('/delete-product', auth, admin, deleteProductDetails)
 
-// search product 
+// --- SEARCH ---
 productRouter.post('/search-product', searchProduct)
 
-// Ensure this matches the SummaryApi URL exactly
-productRouter.post("/get-product-by-category-and-subcategory", getProductByCategoryAndSubCategory);
 export default productRouter

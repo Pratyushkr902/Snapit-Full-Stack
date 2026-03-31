@@ -9,7 +9,8 @@ import {
     getRiderLocationController,    
     updateSellerOrderStatusController,
     getDailySalesReport,      // NEW: For the 7:00 PM Sales Report
-    settleRiderCashController  // NEW: For the "Collect & Settle" button
+    settleRiderCashController,  // NEW: For the "Collect & Settle" button
+    getLastOrder              // ADDED: For the recent activity feed
 } from '../controllers/order.controller.js'
 
 const orderRouter = Router()
@@ -19,6 +20,9 @@ orderRouter.post("/cash-on-delivery", auth, CashOnDeliveryOrderController)
 orderRouter.post('/checkout', auth, paymentController)
 orderRouter.post('/webhook', webhookStripe) 
 orderRouter.get("/order-list", auth, getOrderDetailsController)
+
+// ADDED: Fetch the single most recent order for the Dashboard Summary
+orderRouter.get('/last-order', auth, getLastOrder)
 
 // --- LIVE TRACKING SYSTEM ROUTES ---
 orderRouter.post("/get-rider-location", auth, getRiderLocationController)
