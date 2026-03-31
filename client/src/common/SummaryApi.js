@@ -193,7 +193,6 @@ const SummaryApi = {
         url: '/api/product/frequently-bought',
         method: 'get'
     },
-    // --- WALLET SYSTEM ---
     getWallet: {
         url: '/api/wallet/get',
         method: 'get'
@@ -204,6 +203,15 @@ const SummaryApi = {
     },
     payWithWallet: {
         url: '/api/wallet/pay',
+        method: 'post'
+    },
+    // --- FLASH SALE SYSTEM ---
+    getActiveFlashSales: {
+        url: '/api/flash-sale/active',
+        method: 'get'
+    },
+    startFlashSale: {
+        url: '/api/flash-sale/start',
         method: 'post'
     },
 }

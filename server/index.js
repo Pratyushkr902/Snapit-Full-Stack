@@ -38,7 +38,8 @@ import cartRouter from './route/cart.route.js';
 import addressRouter from './route/address.route.js';
 import orderRouter from './route/order.route.js';
 import storeRouter from './route/store.route.js'; 
-import walletRouter from './route/wallet.route.js'; // IMPORTED: Wallet System
+import walletRouter from './route/wallet.route.js';
+import flashSaleRouter from './route/flashSale.route.js'; // IMPORTED: Flash Sale System
 
 const app = express();
 const server = http.createServer(app); 
@@ -163,7 +164,8 @@ app.use("/api/cart", cartRouter);
 app.use("/api/address", addressRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/store', storeRouter); 
-app.use('/api/wallet', walletRouter); // ADDED: Wallet Route endpoint
+app.use('/api/wallet', walletRouter);
+app.use('/api/flash-sale', flashSaleRouter); // ADDED: Flash Sale endpoint
 
 // --- RENDER/VERCEL PERSISTENCE ---
 connectDB().then(() => {
