@@ -25,9 +25,11 @@ import Success from "../pages/Success";
 import Cancel from "../pages/Cancel";
 import RiderTracking from "../pages/RiderTracking"; 
 import RiderDashboard from "../pages/RiderDashboard"; 
-
-// FIXED: Imported StoreOrders for the Seller Approval flow
 import StoreOrders from "../pages/StoreOrders"; 
+
+// NEW IMPORTS: Added for Wallet and Admin Summary
+import Wallet from '../pages/Wallet'; 
+import AdminSummary from '../components/AdminSummary';
 
 const router = createBrowserRouter([
     {
@@ -67,6 +69,11 @@ const router = createBrowserRouter([
                 element : <UserMenuMobile/>
             },
             {
+                // NEW: Dedicated route for the Wallet system
+                path : "wallet",
+                element : <Wallet />
+            },
+            {
                 path : "rider-panel",
                 element : <RiderDashboard />
             },
@@ -79,6 +86,11 @@ const router = createBrowserRouter([
                         element : <Profile/>
                     },
                     {
+                        // NEW: Midnight Edition Dashboard Summary
+                        path : "admin-summary",
+                        element : <AdminPermision><AdminSummary/></AdminPermision>
+                    },
+                    {
                         path : "myorders",
                         element : <MyOrders/>
                     },
@@ -86,7 +98,6 @@ const router = createBrowserRouter([
                         path : "address",
                         element : <Address/>
                     },
-                    // FIXED: Added Store Orders (Seller Approval View)
                     {
                         path : "store-orders",
                         element : <AdminPermision><StoreOrders/></AdminPermision>

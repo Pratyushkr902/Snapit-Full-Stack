@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema({
     },
     last_login_date : {
         type : Date,
-        default : ""
+        default : null // Fixed empty string default for Date type
     },
     status : {
         type : String,
@@ -63,13 +63,37 @@ const userSchema = new mongoose.Schema({
     },
     forgot_password_expiry : {
         type : Date,
-        default : ""
+        default : null // Fixed empty string default for Date type
     },
     role : {
         type : String,
         enum : ['ADMIN',"USER"],
         default : "USER"
-    }
+    },
+    // --- SNAPIT WALLET SYSTEM ---
+    walletBalance: {
+        type: Number,
+        default: 0
+    },
+    walletTransactions: [
+        {
+            type: {
+                type: String,  // 'credit' or 'debit'
+                required: true
+            },
+            amount: {
+                type: Number,
+                required: true
+            },
+            description: {
+                type: String
+            },
+            date: {
+                type: Date,
+                default: Date.now
+            }
+        }
+    ]
 },{
     timestamps : true
 })

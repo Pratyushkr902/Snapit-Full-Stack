@@ -38,6 +38,7 @@ import cartRouter from './route/cart.route.js';
 import addressRouter from './route/address.route.js';
 import orderRouter from './route/order.route.js';
 import storeRouter from './route/store.route.js'; 
+import walletRouter from './route/wallet.route.js'; // IMPORTED: Wallet System
 
 const app = express();
 const server = http.createServer(app); 
@@ -56,9 +57,8 @@ const allowedOrigins = [
 ];
 
 // Socket.io initialization
-// FIXED: Added path explicitly to ensure Render proxy routes the wss handshake correctly
 const io = new Server(server, {
-    path: '/socket.io/', // CRITICAL: Matches the client-side default
+    path: '/socket.io/', 
     cors: {
         origin: allowedOrigins, 
         methods: ["GET", "POST"],
@@ -153,6 +153,7 @@ app.get("/", (request, response) => {
     });
 });
 
+// --- API ROUTES ---
 app.use('/api/user', userRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/file", uploadRouter);
@@ -162,11 +163,11 @@ app.use("/api/cart", cartRouter);
 app.use("/api/address", addressRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/store', storeRouter); 
+app.use('/api/wallet', walletRouter); // ADDED: Wallet Route endpoint
 
 // --- RENDER/VERCEL PERSISTENCE ---
 connectDB().then(() => {
     console.log("Database Connected Successfully");
-    // Only listen if not in a serverless environment that handles listening for you
     if (process.env.NODE_ENV !== 'test') {
         server.listen(PORT, () => { 
             console.log("Snapit Server running on port " + PORT);

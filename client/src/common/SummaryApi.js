@@ -185,7 +185,6 @@ const SummaryApi = {
         url: '/api/order/daily-report',
         method: 'get'
     },
-    // --- RECENTLY ADDED ---
     getLastOrder: {
         url: '/api/order/last-order',
         method: 'get'
@@ -193,7 +192,20 @@ const SummaryApi = {
     getFrequentlyBought: {
         url: '/api/product/frequently-bought',
         method: 'get'
-    }
+    },
+    // --- WALLET SYSTEM ---
+    getWallet: {
+        url: '/api/wallet/get',
+        method: 'get'
+    },
+    addMoneyToWallet: {
+        url: '/api/wallet/add-money',
+        method: 'post'
+    },
+    payWithWallet: {
+        url: '/api/wallet/pay',
+        method: 'post'
+    },
 }
 
 export default SummaryApi

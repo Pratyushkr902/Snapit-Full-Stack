@@ -51,13 +51,11 @@ const Header = () => {
                                         <img 
                                             src={logo}
                                             alt='logo'
-                                            // Increased size and added drop shadow for "Snapit" presence
                                             className='hidden lg:block w-36 h-auto object-contain drop-shadow-sm hover:scale-105 transition-transform'
                                         />
                                         <img 
                                             src={logo}
                                             alt='logo'
-                                            // Enlarged mobile version as well
                                             className='lg:hidden w-28 h-auto object-contain'
                                         />
                                     </Link>
@@ -69,7 +67,7 @@ const Header = () => {
                                 </div>
 
 
-                                {/**login and my cart */}
+                                {/**login, wallet and my cart */}
                                 <div className='flex-shrink-0'>
                                     {/**user icons display in only mobile version**/}
                                     <button className='text-neutral-600 lg:hidden' onClick={handleMobileUser}>
@@ -78,6 +76,17 @@ const Header = () => {
 
                                       {/**Desktop**/}
                                     <div className='hidden lg:flex items-center gap-8'>
+                                        
+                                        {/** SNAPIT WALLET LINK - Added for demo impact **/}
+                                        {
+                                            user?._id && (
+                                                <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-all group">
+                                                    <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
+                                                    <span className='font-bold text-slate-700 text-sm'>Wallet</span>
+                                                </Link>
+                                            )
+                                        }
+
                                         {
                                             user?._id ? (
                                                 <div className='relative'>
@@ -108,7 +117,7 @@ const Header = () => {
                                             )
                                         }
                                         
-                                        {/** Cart Button - Styled for impact **/}
+                                        {/** Cart Button **/}
                                         <button onClick={()=>setOpenCartSection(true)} className='flex items-center gap-3 bg-green-700 hover:bg-green-800 px-5 py-2.5 rounded-xl text-white shadow-lg shadow-green-100 transition-all active:scale-95'>
                                             <div className='animate-bounce flex items-center justify-center'>
                                                 <BsCart4 size={24}/>
