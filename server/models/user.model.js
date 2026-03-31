@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema({
     },
     last_login_date : {
         type : Date,
-        default : null // Fixed empty string default for Date type
+        default : null 
     },
     status : {
         type : String,
@@ -63,7 +63,7 @@ const userSchema = new mongoose.Schema({
     },
     forgot_password_expiry : {
         type : Date,
-        default : null // Fixed empty string default for Date type
+        default : null 
     },
     role : {
         type : String,
@@ -93,7 +93,26 @@ const userSchema = new mongoose.Schema({
                 default: Date.now
             }
         }
-    ]
+    ],
+    // --- SNAPIT REFERRAL SYSTEM ---
+    referralCode: {
+        type: String,
+        unique: true,
+        sparse: true 
+    },
+    referredBy: {
+        type: String,
+        default: null
+    },
+    referralCount: {
+        type: Number,
+        default: 0
+    },
+    // NEW: Prevents double-claiming of referral rewards
+    firstOrderBonusApplied: {
+        type: Boolean,
+        default: false
+    }
 },{
     timestamps : true
 })

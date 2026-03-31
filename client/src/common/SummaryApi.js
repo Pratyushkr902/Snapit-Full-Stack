@@ -205,13 +205,21 @@ const SummaryApi = {
         url: '/api/wallet/pay',
         method: 'post'
     },
-    // --- FLASH SALE SYSTEM ---
     getActiveFlashSales: {
         url: '/api/flash-sale/active',
         method: 'get'
     },
     startFlashSale: {
         url: '/api/flash-sale/start',
+        method: 'post'
+    },
+    // --- REFERRAL & GROWTH SYSTEM ---
+    getReferralInfo: {
+        url: '/api/referral/info',
+        method: 'get'
+    },
+    applyFirstOrderBonus: {
+        url: '/api/referral/first-order-bonus',
         method: 'post'
     },
 }

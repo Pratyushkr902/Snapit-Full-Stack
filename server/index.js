@@ -39,7 +39,8 @@ import addressRouter from './route/address.route.js';
 import orderRouter from './route/order.route.js';
 import storeRouter from './route/store.route.js'; 
 import walletRouter from './route/wallet.route.js';
-import flashSaleRouter from './route/flashSale.route.js'; // IMPORTED: Flash Sale System
+import flashSaleRouter from './route/flashSale.route.js';
+import referralRouter from './route/referral.route.js'; // IMPORTED: Referral System
 
 const app = express();
 const server = http.createServer(app); 
@@ -165,7 +166,8 @@ app.use("/api/address", addressRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/store', storeRouter); 
 app.use('/api/wallet', walletRouter);
-app.use('/api/flash-sale', flashSaleRouter); // ADDED: Flash Sale endpoint
+app.use('/api/flash-sale', flashSaleRouter);
+app.use('/api/referral', referralRouter); // ADDED: Referral endpoint
 
 // --- RENDER/VERCEL PERSISTENCE ---
 connectDB().then(() => {
