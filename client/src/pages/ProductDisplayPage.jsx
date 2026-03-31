@@ -15,19 +15,20 @@ import SmartSuggestions from '../components/SmartSuggestions'
 
 const ProductDisplayPage = () => {
   const params = useParams()
-  // Extracts the MongoDB ID from the URL slug
   let productId = params?.product?.split("-")?.slice(-1)[0]
   
   const [data,setData] = useState({
     name : "",
     image : [],
-    stock: 0
+    stock: 0,
+    description: "",
+    unit: "",
+    more_details: {}
   })
   const [image,setImage] = useState(0)
   const [loading,setLoading] = useState(false)
   const imageContainer = useRef()
 
-  // --- SHOP STATUS LOGIC (7 AM - 9 PM) ---
   const [isOpen, setIsOpen] = useState(true)
 
   const checkShopStatus = () => {
@@ -76,7 +77,7 @@ const ProductDisplayPage = () => {
   return (
     <section className='container mx-auto p-4'>
         <div className='grid lg:grid-cols-2'>
-            {/* Left Column: Images and Mobile Details */}
+            {/* Left Column: Images and Details */}
             <div className=''>
                 <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded min-h-56 max-h-56 h-full w-full flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm'>
                     {
@@ -88,7 +89,7 @@ const ProductDisplayPage = () => {
                         /> 
                       ) : (
                         <div className='w-full h-full bg-slate-50 animate-pulse flex items-center justify-center'>
-                           <p className='text-slate-400'>Loading Product...</p>
+                           <p className='text-slate-400 font-bold'>Snapit</p>
                         </div>
                       )
                     }
@@ -129,25 +130,29 @@ const ProductDisplayPage = () => {
                     </div>
                 </div>
 
-                <div className='my-8 hidden lg:grid gap-4'>
-                    <h3 className='font-bold text-xl text-slate-800 border-b pb-2'>Product Specifications</h3>
+                {/* FIXED: DESCRIPTION & SPECIFICATIONS BLOCK */}
+                <div className='my-8 grid gap-4'>
+                    <h3 className='font-bold text-xl text-slate-800 border-b pb-2'>Product Details</h3>
                     <div>
-                        <p className='font-semibold text-slate-600'>Description</p>
-                        <p className='text-base text-slate-500 leading-relaxed'>{data.description}</p>
+                        <p className='font-bold text-slate-700'>Description</p>
+                        <p className='text-base text-slate-500 leading-relaxed'>{data.description || "No description available for this product."}</p>
                     </div>
                     <div>
-                        <p className='font-semibold text-slate-600'>Unit</p>
+                        <p className='font-bold text-slate-700'>Unit</p>
                         <p className='text-base text-slate-500'>{data.unit}</p>
                     </div>
                     {
-                      data?.more_details && Object.keys(data?.more_details).map((element,index)=>{
-                        return(
-                          <div key={element+index}>
-                              <p className='font-semibold text-slate-600'>{element}</p>
-                              <p className='text-base text-slate-500'>{data?.more_details[element]}</p>
-                          </div>
-                        )
-                      })
+                      data?.more_details && Object.keys(data?.more_details).length > 0 && (
+                        <div className='grid gap-3'>
+                           <p className='font-bold text-slate-700 border-t pt-2'>Additional Information</p>
+                           {Object.entries(data.more_details).map(([key, value]) => (
+                                <div key={key} className='flex flex-col'>
+                                    <p className='font-semibold text-slate-600 text-sm'>{key}</p>
+                                    <p className='text-base text-slate-500'>{value}</p>
+                                </div>
+                           ))}
+                        </div>
+                      )
                     }
                 </div>
             </div>
@@ -159,8 +164,8 @@ const ProductDisplayPage = () => {
                         ⚡ 10 MINS
                     </span>
                     {data.stock < 5 && data.stock > 0 && (
-                        <span className='bg-orange-100 text-orange-600 text-xs font-bold px-3 py-1 rounded-full'>
-                            ONLY {data.stock} LEFT
+                        <span className='bg-orange-100 text-orange-600 text-xs font-bold px-3 py-1 rounded-full uppercase'>
+                            Only {data.stock} Left
                         </span>
                     )}
                 </div>
@@ -198,12 +203,13 @@ const ProductDisplayPage = () => {
                   !isOpen ? (
                       <div className='bg-slate-50 border-2 border-slate-200 p-6 rounded-3xl my-6 flex flex-col items-center gap-2'>
                           <span className='text-3xl'>🌙</span>
-                          <p className='font-black text-slate-800 text-xl'>Snapit is Resting</p>
-                          <p className='text-slate-500 font-medium'>Ordering resumes at 7:00 AM</p>
+                          <p className='font-black text-slate-800 text-xl text-center'>Snapit is Resting</p>
+                          <p className='text-slate-500 font-medium text-center'>Ordering resumes at 7:00 AM</p>
                       </div>
-                  ) : data.stock === 0 ? (
-                    <div className='bg-rose-50 border-2 border-rose-100 p-4 rounded-2xl text-center my-6'>
+                  ) : data.stock <= 0 ? (
+                    <div className='bg-rose-50 border-2 border-rose-100 p-6 rounded-3xl text-center my-6'>
                         <p className='text-rose-600 font-black text-xl italic'>Currently Out of Stock</p>
+                        <p className='text-rose-400 text-sm mt-1'>Check back later or try similar items below.</p>
                     </div>
                   ) 
                   : (
@@ -222,7 +228,7 @@ const ProductDisplayPage = () => {
                             </div>
                             <div className='text-sm'>
                                 <div className='font-bold text-slate-800 text-base'>Superfast Delivery</div>
-                                <p className='text-slate-500'>Directly from our local dark stores .</p>
+                                <p className='text-slate-500'>Directly from our local dark stores to your doorstep.</p>
                             </div>
                         </div>
                         <div className='flex items-center gap-5'>
@@ -231,7 +237,7 @@ const ProductDisplayPage = () => {
                             </div>
                             <div className='text-sm'>
                                 <div className='font-bold text-slate-800 text-base'>Best Prices & Offers</div>
-                                <p className='text-slate-500'>Unbeatable prices with student-focused discounts.</p>
+                                <p className='text-slate-500'>Unbeatable prices with direct manufacturer deals.</p>
                             </div>
                         </div>
                         <div className='flex items-center gap-5'>
@@ -240,7 +246,7 @@ const ProductDisplayPage = () => {
                             </div>
                             <div className='text-sm'>
                                 <div className='font-bold text-slate-800 text-base'>Wide Assortment</div>
-                                <p className='text-slate-500'>Everything from Maggi to gym supplements available.</p>
+                                <p className='text-slate-500'>Choose from 5000+ essential products.</p>
                             </div>
                         </div>
                     </div>
@@ -248,7 +254,6 @@ const ProductDisplayPage = () => {
             </div>
         </div>
 
-        {/* --- SMART RECOMMENDATIONS --- */}
         <div className='mt-12 border-t pt-10'>
             <SmartSuggestions productId={productId} />
         </div>

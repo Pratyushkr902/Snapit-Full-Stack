@@ -30,6 +30,7 @@ import StoreOrders from "../pages/StoreOrders";
 // NEW IMPORTS: Added for Wallet and Admin Summary
 import Wallet from '../pages/Wallet'; 
 import AdminSummary from '../components/AdminSummary';
+import ReferAndEarn from '../pages/ReferAndEarn'; // Ensuring Refer system is included
 
 const router = createBrowserRouter([
     {
@@ -72,6 +73,11 @@ const router = createBrowserRouter([
                 // NEW: Dedicated route for the Wallet system
                 path : "wallet",
                 element : <Wallet />
+            },
+            {
+                // NEW: Dedicated route for Refer and Earn
+                path : "refer",
+                element : <ReferAndEarn />
             },
             {
                 path : "rider-panel",
