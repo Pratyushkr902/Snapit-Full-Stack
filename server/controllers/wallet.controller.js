@@ -6,12 +6,19 @@ export async function getWallet(req, res) {
         const user = await UserModel.findById(req.userId)
             .select('walletBalance walletTransactions')
 
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            })
+        }
+
         return res.json({
             success: true,
             data: {
-                balance: user.walletBalance,
-                transactions: user.walletTransactions
-                    .sort((a, b) => b.date - a.date)
+                balance: user.walletBalance || 0,
+                transactions: (user.walletTransactions || [])
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .slice(0, 20)  // last 20 transactions
             }
         })
@@ -26,12 +33,13 @@ export async function getWallet(req, res) {
 // Add money to wallet
 export async function addMoneyToWallet(req, res) {
     try {
-        const { amount } = req.body
+        // FIXED: Explicitly cast to Number to handle string inputs from mobile forms
+        const amount = Number(req.body.amount)
 
-        if (!amount || amount <= 0) {
+        if (isNaN(amount) || amount <= 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid amount'
+                message: 'Enter a valid numeric amount'
             })
         }
 
@@ -43,6 +51,13 @@ export async function addMoneyToWallet(req, res) {
         }
 
         const user = await UserModel.findById(req.userId)
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            })
+        }
 
         // Add bonus for adding Rs. 500 or more
         let bonus = 0
@@ -50,13 +65,14 @@ export async function addMoneyToWallet(req, res) {
 
         const totalCredit = amount + bonus
 
-        user.walletBalance += totalCredit
+        user.walletBalance = (user.walletBalance || 0) + totalCredit
         user.walletTransactions.push({
             type: 'credit',
             amount: totalCredit,
             description: bonus > 0
                 ? `Added Rs.${amount} + Rs.${bonus} bonus`
-                : `Added Rs.${amount} to wallet`
+                : `Added Rs.${amount} to wallet`,
+            date: new Date()
         })
 
         await user.save()
@@ -82,18 +98,26 @@ export async function addMoneyToWallet(req, res) {
 // Pay using wallet
 export async function payWithWallet(req, res) {
     try {
-        const { amount, orderId } = req.body
+        const amount = Number(req.body.amount)
+        const { orderId } = req.body
 
-        if (!amount || amount <= 0) {
+        if (isNaN(amount) || amount <= 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid amount'
+                message: 'Invalid payment amount'
             })
         }
 
         const user = await UserModel.findById(req.userId)
 
-        if (user.walletBalance < amount) {
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            })
+        }
+
+        if ((user.walletBalance || 0) < amount) {
             return res.status(400).json({
                 success: false,
                 message: 'Insufficient wallet balance'
@@ -104,7 +128,8 @@ export async function payWithWallet(req, res) {
         user.walletTransactions.push({
             type: 'debit',
             amount: amount,
-            description: `Payment for order #${orderId}`
+            description: `Payment for order #${orderId}`,
+            date: new Date()
         })
 
         await user.save()
