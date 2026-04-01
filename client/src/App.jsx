@@ -15,14 +15,15 @@ import GlobalProvider from './provider/GlobalProvider';
 import CartMobileLink from './components/CartMobile';
 import { io } from "socket.io-client"; 
 
-// GLOBAL SOCKET CONNECTION: Optimized with aggressive reconnection for Render
-export const socket = io("https://snapit-full-stack-0.onrender.com", {
-  transports: ["websocket"],
-  withCredentials: true,
-  path: "/socket.io/",
-  reconnection: true,            // Enable reconnection
-  reconnectionAttempts: Infinity, // Keep trying during the demo
-  reconnectionDelay: 2000,       // Try every 2 seconds if it fails
+// GLOBAL SOCKET CONNECTION: Fixed URL + polling first to avoid WebSocket errors
+export const socket = io("https://snapit-full-stack.onrender.com", {
+  transports:           ["polling", "websocket"], // polling first = no handshake errors
+  withCredentials:      true,
+  path:                 "/socket.io/",
+  reconnection:         true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay:    2000,
+  timeout:              20000,
 });
 
 function App() {
@@ -128,7 +129,7 @@ function App() {
   // SOCKET LOGGING: Verify connection in the console
   useEffect(() => {
     socket.on('connect', () => console.log("Snapit Socket Connected:", socket.id));
-    socket.on('connect_error', (err) => console.log("Socket Syncing..."));
+    socket.on('connect_error', (err) => console.log("Socket Syncing...", err.message));
     
     return () => {
       socket.off('connect');
