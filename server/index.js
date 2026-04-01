@@ -47,7 +47,7 @@ const server = http.createServer(app);
 
 const latestPositions = new Map(); 
 
-// --- CORS: Allow all origins ---
+// --- 1. CORS CONFIGURATION ---
 app.use(cors({
     origin: true,        
     credentials: true,
@@ -55,18 +55,10 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// FIXED: Express 5 requires Regex for wildcards to avoid PathError
+// FIXED: Express 5.x requires Regex for wildcards to prevent PathError
 app.options(/(.*)/, cors());
 
-app.use((req, res, next) => {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    next();
-});
-
-app.use(express.json());
-app.use(cookieParser());
-app.use(morgan('dev'));
-
+// --- 2. SECURITY & UTILITY MIDDLEWARE ---
 app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
@@ -81,7 +73,17 @@ app.use(helmet({
     },
 }));
 
-// --- SOCKET.IO CONFIGURATION ---
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    next();
+});
+
+// CRITICAL: Must be placed BEFORE routes so they can parse incoming data
+app.use(express.json());
+app.use(cookieParser());
+app.use(morgan('dev'));
+
+// --- 3. SOCKET.IO CONFIGURATION ---
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: {
@@ -89,7 +91,7 @@ const io = new Server(server, {
         methods: ["GET", "POST"],
         credentials: true
     },
-    // FIXED: Allow both for better handshake stability on Render
+    // FIXED: Handshake stability for Render
     transports: ['polling', 'websocket'], 
     pingTimeout: 60000,        
     pingInterval: 25000,       
@@ -138,7 +140,7 @@ app.get("/", (request, response) => {
     });
 });
 
-// --- API ROUTES ---
+// --- 4. API ROUTES ---
 app.use('/api/user', userRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/file", uploadRouter);
@@ -152,7 +154,7 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
-// --- START SERVER ---
+// --- 5. START SERVER ---
 connectDB().then(() => {
     console.log("✅ Database Connected Successfully");
     if (process.env.NODE_ENV !== 'test') {

@@ -8,8 +8,10 @@ import {
 
 const walletRouter = Router()
 
-walletRouter.get('/get',          auth, getWallet)
-walletRouter.post('/add-money',   auth, addMoneyToWallet)
-walletRouter.post('/pay',         auth, payWithWallet)
+// --- WALLET ENDPOINTS ---
+// Base Path in index.js: /api/wallet
+walletRouter.get('/get',          auth, getWallet)      // GET /api/wallet/get
+walletRouter.post('/add-money',   auth, addMoneyToWallet) // POST /api/wallet/add-money
+walletRouter.post('/pay',         auth, payWithWallet)   // POST /api/wallet/pay
 
 export default walletRouter

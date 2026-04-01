@@ -1,8 +1,9 @@
 import UserModel from '../models/user.model.js'
 
-// Get wallet balance and transactions
+// --- 1. Get Wallet Balance and Transactions ---
 export async function getWallet(req, res) {
     try {
+        // Ensure req.userId exists (passed from auth middleware)
         const user = await UserModel.findById(req.userId)
             .select('walletBalance walletTransactions')
 
@@ -17,6 +18,7 @@ export async function getWallet(req, res) {
             success: true,
             data: {
                 balance: user.walletBalance || 0,
+                // Sort by newest date and limit to 20 for performance
                 transactions: (user.walletTransactions || [])
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .slice(0, 20)
@@ -30,10 +32,11 @@ export async function getWallet(req, res) {
     }
 }
 
-// Add money to wallet - using $inc to avoid pre-save middleware issues
+// --- 2. Add Money to Wallet (with 5% Bonus over Rs. 500) ---
 export async function addMoneyToWallet(req, res) {
     try {
-        const amount = Number(req.body.amount)
+        // Force conversion and handle potential string/decimal inputs
+        const amount = parseFloat(req.body.amount)
 
         if (isNaN(amount) || amount <= 0) {
             return res.status(400).json({
@@ -42,6 +45,7 @@ export async function addMoneyToWallet(req, res) {
             })
         }
 
+        // Limit to prevent test-account abuse
         if (amount > 10000) {
             return res.status(400).json({
                 success: false,
@@ -49,24 +53,25 @@ export async function addMoneyToWallet(req, res) {
             })
         }
 
-        const bonus        = amount >= 500 ? Math.floor(amount * 0.05) : 0
-        const totalCredit  = amount + bonus
+        // Snapit Loyalty: 5% bonus for deposits >= 500
+        const bonus = amount >= 500 ? Math.floor(amount * 0.05) : 0
+        const totalCredit = amount + bonus
 
-        const transaction  = {
-            type:        'credit',
-            amount:      totalCredit,
+        const transaction = {
+            type: 'credit',
+            amount: totalCredit,
             description: bonus > 0
                 ? `Added Rs.${amount} + Rs.${bonus} bonus`
                 : `Added Rs.${amount} to wallet`,
             date: new Date()
         }
 
-        // Use findByIdAndUpdate with $inc to bypass pre-save middleware
+        // Use findByIdAndUpdate with $inc for atomicity (prevents race conditions)
         const user = await UserModel.findByIdAndUpdate(
             req.userId,
             {
-                $inc:  { walletBalance: totalCredit },
-                $push: { walletTransactions: transaction }
+                $inc: { walletBalance: totalCredit },
+                $push: { walletTransactions: { $each: [transaction], $position: 0 } } // Push to top
             },
             { new: true, select: 'walletBalance' }
         )
@@ -85,7 +90,7 @@ export async function addMoneyToWallet(req, res) {
                 : `Rs.${amount} added to wallet`,
             data: {
                 balance: user.walletBalance,
-                bonus:   bonus
+                bonus: bonus
             }
         })
     } catch (err) {
@@ -96,10 +101,10 @@ export async function addMoneyToWallet(req, res) {
     }
 }
 
-// Pay using wallet
+// --- 3. Pay Using Wallet ---
 export async function payWithWallet(req, res) {
     try {
-        const amount    = Number(req.body.amount)
+        const amount = parseFloat(req.body.amount)
         const { orderId } = req.body
 
         if (isNaN(amount) || amount <= 0) {
@@ -109,8 +114,7 @@ export async function payWithWallet(req, res) {
             })
         }
 
-        const user = await UserModel.findById(req.userId)
-            .select('walletBalance')
+        const user = await UserModel.findById(req.userId).select('walletBalance')
 
         if (!user) {
             return res.status(404).json({
@@ -119,6 +123,7 @@ export async function payWithWallet(req, res) {
             })
         }
 
+        // Balance Check
         if ((user.walletBalance || 0) < amount) {
             return res.status(400).json({
                 success: false,
@@ -127,17 +132,17 @@ export async function payWithWallet(req, res) {
         }
 
         const transaction = {
-            type:        'debit',
-            amount:      amount,
+            type: 'debit',
+            amount: amount,
             description: `Payment for order #${orderId || 'N/A'}`,
-            date:        new Date()
+            date: new Date()
         }
 
         const updated = await UserModel.findByIdAndUpdate(
             req.userId,
             {
-                $inc:  { walletBalance: -amount },
-                $push: { walletTransactions: transaction }
+                $inc: { walletBalance: -amount },
+                $push: { walletTransactions: { $each: [transaction], $position: 0 } } // Push to top
             },
             { new: true, select: 'walletBalance' }
         )
@@ -145,7 +150,7 @@ export async function payWithWallet(req, res) {
         return res.json({
             success: true,
             message: 'Payment successful',
-            data:    { balance: updated.walletBalance }
+            data: { balance: updated.walletBalance }
         })
     } catch (err) {
         return res.status(500).json({
