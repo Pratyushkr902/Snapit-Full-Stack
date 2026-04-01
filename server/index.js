@@ -56,7 +56,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-app.options('*', cors());
+app.options(/(.*)/, cors());
 
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
