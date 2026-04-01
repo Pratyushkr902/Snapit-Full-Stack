@@ -30,7 +30,7 @@ export async function getWallet(req, res) {
     }
 }
 
-// Add money to wallet
+// Add money to wallet - using $inc to avoid pre-save middleware issues
 export async function addMoneyToWallet(req, res) {
     try {
         const amount = Number(req.body.amount)
@@ -49,27 +49,27 @@ export async function addMoneyToWallet(req, res) {
             })
         }
 
-        // Use findByIdAndUpdate to avoid pre-save middleware issues
-        const bonus = amount >= 500 ? Math.floor(amount * 0.05) : 0
-        const totalCredit = amount + bonus
+        const bonus        = amount >= 500 ? Math.floor(amount * 0.05) : 0
+        const totalCredit  = amount + bonus
 
-        const transaction = {
-            type: 'credit',
-            amount: totalCredit,
+        const transaction  = {
+            type:        'credit',
+            amount:      totalCredit,
             description: bonus > 0
                 ? `Added Rs.${amount} + Rs.${bonus} bonus`
                 : `Added Rs.${amount} to wallet`,
             date: new Date()
         }
 
+        // Use findByIdAndUpdate with $inc to bypass pre-save middleware
         const user = await UserModel.findByIdAndUpdate(
             req.userId,
             {
-                $inc: { walletBalance: totalCredit },
+                $inc:  { walletBalance: totalCredit },
                 $push: { walletTransactions: transaction }
             },
-            { new: true }
-        ).select('walletBalance')
+            { new: true, select: 'walletBalance' }
+        )
 
         if (!user) {
             return res.status(404).json({
@@ -81,11 +81,11 @@ export async function addMoneyToWallet(req, res) {
         return res.json({
             success: true,
             message: bonus > 0
-                ? `Rs.${totalCredit} added (includes Rs.${bonus} bonus!)`
+                ? `Rs.${totalCredit} added! (includes Rs.${bonus} bonus)`
                 : `Rs.${amount} added to wallet`,
             data: {
                 balance: user.walletBalance,
-                bonus: bonus
+                bonus:   bonus
             }
         })
     } catch (err) {
@@ -99,7 +99,7 @@ export async function addMoneyToWallet(req, res) {
 // Pay using wallet
 export async function payWithWallet(req, res) {
     try {
-        const amount = Number(req.body.amount)
+        const amount    = Number(req.body.amount)
         const { orderId } = req.body
 
         if (isNaN(amount) || amount <= 0) {
@@ -122,30 +122,30 @@ export async function payWithWallet(req, res) {
         if ((user.walletBalance || 0) < amount) {
             return res.status(400).json({
                 success: false,
-                message: 'Insufficient wallet balance'
+                message: `Insufficient balance. Available: Rs.${user.walletBalance}`
             })
         }
 
         const transaction = {
-            type: 'debit',
-            amount: amount,
-            description: `Payment for order #${orderId}`,
-            date: new Date()
+            type:        'debit',
+            amount:      amount,
+            description: `Payment for order #${orderId || 'N/A'}`,
+            date:        new Date()
         }
 
         const updated = await UserModel.findByIdAndUpdate(
             req.userId,
             {
-                $inc: { walletBalance: -amount },
+                $inc:  { walletBalance: -amount },
                 $push: { walletTransactions: transaction }
             },
-            { new: true }
-        ).select('walletBalance')
+            { new: true, select: 'walletBalance' }
+        )
 
         return res.json({
             success: true,
             message: 'Payment successful',
-            data: { balance: updated.walletBalance }
+            data:    { balance: updated.walletBalance }
         })
     } catch (err) {
         return res.status(500).json({
