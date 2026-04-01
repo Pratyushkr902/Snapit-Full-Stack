@@ -7,6 +7,7 @@ import http from 'http';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// --- FIXED DOTENV PATH ---
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config(); 
 }
@@ -18,7 +19,8 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
 
-// --- PRE-REGISTER MODELS ---
+// --- CRITICAL: PRE-REGISTER MODELS ---
+// This prevents "Mongoose Model Not Found" errors during deep population
 import './models/user.model.js';
 import './models/category.model.js';
 import './models/subCategory.model.js'; 
@@ -28,40 +30,33 @@ import './models/order.model.js';
 
 console.log("RAZORPAY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
-import userRouter     from './route/user.route.js';
+import userRouter from './route/user.route.js';
 import categoryRouter from './route/category.route.js';
-import uploadRouter   from './route/upload.router.js';
+import uploadRouter from './route/upload.router.js';
 import subCategoryRouter from './route/subCategory.route.js';
-import productRouter  from './route/product.route.js';
-import cartRouter     from './route/cart.route.js';
-import addressRouter  from './route/address.route.js';
-import orderRouter    from './route/order.route.js';
-import storeRouter    from './route/store.route.js'; 
-import walletRouter   from './route/wallet.route.js';
+import productRouter from './route/product.route.js';
+import cartRouter from './route/cart.route.js';
+import addressRouter from './route/address.route.js';
+import orderRouter from './route/order.route.js';
+import storeRouter from './route/store.route.js'; 
+import walletRouter from './route/wallet.route.js';
 import flashSaleRouter from './route/flashSale.route.js';
 import referralRouter from './route/referral.route.js';
 
-const app    = express();
+const app = express();
 const server = http.createServer(app); 
 
 const latestPositions = new Map(); 
 
-// --- CORS: Allow all origins (fixes 429 + Vercel URL issues) ---
+// --- CORS: Allow all origins (fixes 429 + Vercel dynamic URL issues) ---
 app.use(cors({
-    origin: true,        // allow ALL origins
+    origin: true,        // allow ALL origins for demo flexibility
     credentials: true,
-    methods:     ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: [
-        "Content-Type",
-        "Authorization",
-        "Cookie",
-        "X-Requested-With",
-        "Accept"
-    ]
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// Handle preflight requests
-app.options('*', cors())
+app.options('*', cors());
 
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -73,15 +68,15 @@ app.use(cookieParser());
 app.use(morgan('dev'));
 
 app.use(helmet({
-    crossOriginResourcePolicy:  false,
-    crossOriginEmbedderPolicy:  false, 
+    crossOriginResourcePolicy: false,
+    crossOriginEmbedderPolicy: false, 
     contentSecurityPolicy: {
         directives: {
-            defaultSrc:  ["'self'"],
-            scriptSrc:   ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
-            imgSrc:      ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com"],
-            frameSrc:    ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
-            connectSrc:  ["'self'", "https://api.razorpay.com", "https://*.googleapis.com", "ws:", "wss:", "http://*", "https://*", "ws://*", "wss://*", "capacitor://*"] 
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
+            imgSrc: ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com"],
+            frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
+            connectSrc: ["'self'", "https://api.razorpay.com", "https://*.googleapis.com", "ws:", "wss:", "http://*", "https://*", "ws://*", "wss://*", "capacitor://*"] 
         },
     },
 }));
@@ -90,18 +85,18 @@ app.use(helmet({
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: {
-        origin:      true,   // allow all origins for socket too
-        methods:     ["GET", "POST"],
+        origin: true,
+        methods: ["GET", "POST"],
         credentials: true
     },
-    transports:   ['polling', 'websocket'],  // polling first = no errors
-    pingTimeout:  60000,        
+    transports: ['polling', 'websocket'], // Polling first handles initial handshake better on Render
+    pingTimeout: 60000,        
     pingInterval: 25000,       
-    allowEIO3:    true 
+    allowEIO3: true 
 });
 
 io.on('connection', (socket) => {
-    console.log(`Tracking: Connected [ID: ${socket.id}]`);
+    console.log(`🚀 Tracking Connected: ${socket.id}`);
 
     socket.on('join_order', (orderId) => {
         if (orderId) {
@@ -129,43 +124,43 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('error',      (err) => console.error("Socket.io Error:", err));
-    socket.on('disconnect', ()    => console.log(`Client ${socket.id} disconnected`));
+    socket.on('error', (err) => console.error("Socket.io Error:", err));
+    socket.on('disconnect', () => console.log(`📡 Client ${socket.id} disconnected`));
 });
 
 const PORT = process.env.PORT || 8080;
 
 app.get("/", (request, response) => {
     response.json({
-        message:          "Snapit Server is Live on " + PORT,
+        message: "Snapit Server is Live",
         tracking_enabled: true
     });
 });
 
 // --- API ROUTES ---
-app.use('/api/user',       userRouter);
-app.use("/api/category",   categoryRouter);
-app.use("/api/file",       uploadRouter);
+app.use('/api/user', userRouter);
+app.use("/api/category", categoryRouter);
+app.use("/api/file", uploadRouter);
 app.use("/api/subcategory", subCategoryRouter);
-app.use("/api/product",    productRouter);
-app.use("/api/cart",       cartRouter);
-app.use("/api/address",    addressRouter);
-app.use('/api/order',      orderRouter);
-app.use('/api/store',      storeRouter); 
-app.use('/api/wallet',     walletRouter);
+app.use("/api/product", productRouter);
+app.use("/api/cart", cartRouter);
+app.use("/api/address", addressRouter);
+app.use('/api/order', orderRouter);
+app.use('/api/store', storeRouter); 
+app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
-app.use('/api/referral',   referralRouter);
+app.use('/api/referral', referralRouter);
 
 // --- START SERVER ---
 connectDB().then(() => {
-    console.log("Database Connected Successfully");
+    console.log("✅ Database Connected Successfully");
     if (process.env.NODE_ENV !== 'test') {
         server.listen(PORT, () => { 
-            console.log("Snapit Server running on port " + PORT);
+            console.log(`🚀 Snapit Server running on port ${PORT}`);
         });
     }
 }).catch(err => {
-    console.error("Database connection failed", err);
+    console.error("❌ Database connection failed", err);
 });
 
 export default app;
