@@ -20,7 +20,6 @@ import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
 
 // --- CRITICAL: PRE-REGISTER MODELS ---
-// This prevents "Mongoose Model Not Found" errors during deep population
 import './models/user.model.js';
 import './models/category.model.js';
 import './models/subCategory.model.js'; 
@@ -48,14 +47,15 @@ const server = http.createServer(app);
 
 const latestPositions = new Map(); 
 
-// --- CORS: Allow all origins (fixes 429 + Vercel dynamic URL issues) ---
+// --- CORS: Allow all origins ---
 app.use(cors({
-    origin: true,        // allow ALL origins for demo flexibility
+    origin: true,        
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
+// FIXED: Express 5 requires Regex for wildcards to avoid PathError
 app.options(/(.*)/, cors());
 
 app.use((req, res, next) => {
@@ -81,7 +81,7 @@ app.use(helmet({
     },
 }));
 
-// --- SOCKET.IO ---
+// --- SOCKET.IO CONFIGURATION ---
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: {
@@ -89,7 +89,8 @@ const io = new Server(server, {
         methods: ["GET", "POST"],
         credentials: true
     },
-    transports: ['polling', 'websocket'], // Polling first handles initial handshake better on Render
+    // FIXED: Allow both for better handshake stability on Render
+    transports: ['polling', 'websocket'], 
     pingTimeout: 60000,        
     pingInterval: 25000,       
     allowEIO3: true 
