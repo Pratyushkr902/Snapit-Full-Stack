@@ -19,7 +19,7 @@ export async function getWallet(req, res) {
                 balance: user.walletBalance || 0,
                 transactions: (user.walletTransactions || [])
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
-                    .slice(0, 20)  // last 20 transactions
+                    .slice(0, 20)
             }
         })
     } catch (err) {
@@ -33,7 +33,6 @@ export async function getWallet(req, res) {
 // Add money to wallet
 export async function addMoneyToWallet(req, res) {
     try {
-        // FIXED: Explicitly cast to Number to handle string inputs from mobile forms
         const amount = Number(req.body.amount)
 
         if (isNaN(amount) || amount <= 0) {
@@ -50,32 +49,34 @@ export async function addMoneyToWallet(req, res) {
             })
         }
 
-        const user = await UserModel.findById(req.userId)
-        
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            })
-        }
-
-        // Add bonus for adding Rs. 500 or more
-        let bonus = 0
-        if (amount >= 500) bonus = Math.floor(amount * 0.05)  // 5% bonus
-
+        // Use findByIdAndUpdate to avoid pre-save middleware issues
+        const bonus = amount >= 500 ? Math.floor(amount * 0.05) : 0
         const totalCredit = amount + bonus
 
-        user.walletBalance = (user.walletBalance || 0) + totalCredit
-        user.walletTransactions.push({
+        const transaction = {
             type: 'credit',
             amount: totalCredit,
             description: bonus > 0
                 ? `Added Rs.${amount} + Rs.${bonus} bonus`
                 : `Added Rs.${amount} to wallet`,
             date: new Date()
-        })
+        }
 
-        await user.save()
+        const user = await UserModel.findByIdAndUpdate(
+            req.userId,
+            {
+                $inc: { walletBalance: totalCredit },
+                $push: { walletTransactions: transaction }
+            },
+            { new: true }
+        ).select('walletBalance')
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            })
+        }
 
         return res.json({
             success: true,
@@ -109,6 +110,7 @@ export async function payWithWallet(req, res) {
         }
 
         const user = await UserModel.findById(req.userId)
+            .select('walletBalance')
 
         if (!user) {
             return res.status(404).json({
@@ -124,22 +126,26 @@ export async function payWithWallet(req, res) {
             })
         }
 
-        user.walletBalance -= amount
-        user.walletTransactions.push({
+        const transaction = {
             type: 'debit',
             amount: amount,
             description: `Payment for order #${orderId}`,
             date: new Date()
-        })
+        }
 
-        await user.save()
+        const updated = await UserModel.findByIdAndUpdate(
+            req.userId,
+            {
+                $inc: { walletBalance: -amount },
+                $push: { walletTransactions: transaction }
+            },
+            { new: true }
+        ).select('walletBalance')
 
         return res.json({
             success: true,
             message: 'Payment successful',
-            data: {
-                balance: user.walletBalance
-            }
+            data: { balance: updated.walletBalance }
         })
     } catch (err) {
         return res.status(500).json({
