@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import HomeBanner from '../components/HomeBanner' 
-import FlashSaleBanner from '../components/FlashSaleBanner' 
+// Removed FlashSaleBanner import
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
@@ -22,8 +22,8 @@ const Home = () => {
     const priorityKeywords = ["atta", "masala", "oil", "dal"];
 
     data.sort((a, b) => {
-      const aName = a.name.toLowerCase();
-      const bName = b.name.toLowerCase();
+      const aName = (a.name || "").toLowerCase();
+      const bName = (b.name || "").toLowerCase();
 
       // Check if A or B is a priority item
       const aIsPriority = priorityKeywords.some(key => aName.includes(key));
@@ -53,41 +53,45 @@ const Home = () => {
           <HomeBanner />
       </div>
 
-      {/* 2. FLASH SALE (Moves products up when hidden) */}
-      <div className='container mx-auto px-4 -mt-2'>
-          <FlashSaleBanner />
-      </div>
+      {/* FLASH SALE REMOVED - Raising content higher */}
       
-      {/* 3. CATEGORY GRID (Reduced margins to raise products) */}
-      <div className='container mx-auto px-4 mt-2 mb-6 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3'>
+      {/* 2. CATEGORY GRID */}
+      <div className='container mx-auto px-4 mt-4 mb-6 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3 lg:gap-5'>
           {
             loadingCategory ? (
               new Array(12).fill(null).map((_, i) => (
-                <div key={i+"load"} className='bg-slate-50 rounded-xl p-4 min-h-32 animate-pulse'></div>
+                <div key={i+"load"} className='bg-slate-50 rounded-xl p-4 min-h-32 animate-pulse border border-slate-50'>
+                   <div className='bg-slate-200 aspect-square rounded-lg mb-2'></div>
+                   <div className='bg-slate-200 h-3 rounded w-3/4 mx-auto'></div>
+                </div>
               ))
             ) : (
               categoryData?.map((cat) => (
                 <div 
-                  key={cat._id} 
+                  key={cat._id + "homeGrid"} 
                   className='group cursor-pointer' 
                   onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
                 >
-                  <div className='bg-blue-50 rounded-2xl p-2.5 group-hover:bg-blue-100 transition-all'>
-                      <img src={cat.image} alt={cat.name} className='w-full aspect-square object-scale-down group-hover:scale-105 transition-transform' />
+                  <div className='bg-blue-50 rounded-2xl p-2.5 group-hover:bg-blue-100 transition-all duration-300'>
+                      <img 
+                        src={cat.image} 
+                        alt={cat.name} 
+                        className='w-full aspect-square object-scale-down group-hover:scale-110 transition-transform duration-300' 
+                      />
                   </div>
-                  <p className='text-center text-[10px] lg:text-xs mt-1.5 font-bold text-slate-700'>{cat.name}</p>
+                  <p className='text-center text-[10px] lg:text-xs mt-1.5 font-bold text-slate-700 line-clamp-1'>{cat.name}</p>
                 </div>
               ))
             )
           }
       </div>
 
-      {/* 4. PRODUCT SECTIONS (Staples at the top) */}
-      <div className='grid gap-4 lg:gap-8 pb-24'>
+      {/* 3. DYNAMIC PRODUCT SECTIONS (Essentials at the top) */}
+      <div className='grid gap-6 lg:gap-10 pb-24'>
         {
           !loadingCategory && prioritizedCategorySections.map((c) => (
             <CategoryWiseProductDisplay 
-              key={c?._id} 
+              key={c?._id + "homeDisplay"} 
               id={c?._id} 
               name={c?.name}
             />

@@ -206,18 +206,7 @@ const SummaryApi = {
         method: 'post'
     },
     // --- FLASH SALE ENDPOINTS ---
-    getActiveFlashSales: {
-        url: '/api/flash-sale/active',
-        method: 'get'
-    },
-    getFlashSales: { // ALIAS FOR FRONTEND CONSISTENCY
-        url: '/api/flash-sale/active',
-        method: 'get'
-    },
-    startFlashSale: {
-        url: '/api/flash-sale/start',
-        method: 'post'
-    },
+    
     // --- REFERRAL & GROWTH SYSTEM ---
     getReferralInfo: {
         url: '/api/referral/info',
