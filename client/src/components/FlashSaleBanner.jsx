@@ -81,7 +81,7 @@ const FlashSaleBanner = () => {
                         <h2 className="font-black text-red-600 text-xl uppercase tracking-tighter">
                             Flash Sales
                         </h2>
-                        <p className='text-[10px] text-red-400 font-bold uppercase'>IIT Roorkee Student Deals</p>
+                        <p className='text-[10px] text-red-400 font-bold uppercase'>snapit Deals</p>
                     </div>
                 </div>
                 <Link to="/all-flash-sales" className='text-xs font-bold text-red-600 hover:underline'>View All</Link>

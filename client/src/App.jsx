@@ -32,7 +32,7 @@ function App() {
   const location = useLocation()
   const user = useSelector(state => state.user)
   
-  // FIXED: State for global cart visibility
+  // State for global cart visibility
   const [showCart, setShowCart] = useState(false)
 
   const fetchUser = useCallback(async () => {
@@ -58,14 +58,17 @@ function App() {
     }
   }, [dispatch, user?._id])
 
-  // FIXED: Removed .sort() to maintain DB order (Atta, Rice & Dal first)
+  // --- FIXED: Alphabetical Sort for Categories ---
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
       const response = await Axios({ ...SummaryApi.getCategory })
       if (response.data.success) {
-        // Keeps the order defined in your Admin Panel/MongoDB
-        dispatch(setAllCategory(response.data.data))
+        // Sorts A-Z (Case Insensitive)
+        const sortedData = [...response.data.data].sort((a, b) => 
+          (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase())
+        )
+        dispatch(setAllCategory(sortedData))
       }
     } catch (error) {
       console.error("Category fetch error", error)
@@ -74,13 +77,16 @@ function App() {
     }
   }, [dispatch])
 
-  // FIXED: Removed .sort() to prevent sub-category shuffling
+  // --- FIXED: Alphabetical Sort for Sub-Categories ---
   const fetchSubCategory = useCallback(async () => {
     try {
       const response = await Axios({ ...SummaryApi.getSubCategory })
       if (response.data.success) {
-        // Keeps the order defined in your Admin Panel/MongoDB
-        dispatch(setAllSubCategory(response.data.data))
+        // Sorts A-Z (Case Insensitive)
+        const sortedData = [...response.data.data].sort((a, b) => 
+          (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase())
+        )
+        dispatch(setAllSubCategory(sortedData))
       }
     } catch (error) {
       console.error("SubCategory fetch error", error)
@@ -107,7 +113,6 @@ function App() {
 
   return (
     <GlobalProvider>
-      {/* FIXED: Passing setter function to Header */}
       <Header openCart={() => setShowCart(true)} />
       
       <main className='min-h-[78vh]'>
@@ -118,7 +123,6 @@ function App() {
       
       <Toaster position="top-center" />
 
-      {/* FIXED: Global Cart Overlay */}
       {showCart && <DisplayCartItem close={() => setShowCart(false)} />}
 
       {
