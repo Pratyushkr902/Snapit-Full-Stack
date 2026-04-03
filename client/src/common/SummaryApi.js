@@ -205,7 +205,12 @@ const SummaryApi = {
         url: '/api/wallet/pay',
         method: 'post'
     },
+    // --- FLASH SALE ENDPOINTS ---
     getActiveFlashSales: {
+        url: '/api/flash-sale/active',
+        method: 'get'
+    },
+    getFlashSales: { // ALIAS FOR FRONTEND CONSISTENCY
         url: '/api/flash-sale/active',
         method: 'get'
     },
@@ -224,4 +229,4 @@ const SummaryApi = {
     },
 }
 
-export default SummaryApi
+export default SummaryApi;
