@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 
 const FlashSaleBanner = () => {
-    const [sales, setSales]     = useState([])
-    const [timers, setTimers]   = useState({})
+    const [sales, setSales] = useState([])
+    const [timers, setTimers] = useState({})
+    const [loading, setLoading] = useState(true)
+    const navigate = useNavigate()
 
     useEffect(() => {
         fetchFlashSales()
@@ -13,29 +16,42 @@ const FlashSaleBanner = () => {
 
     const fetchFlashSales = async () => {
         try {
-            const res = await Axios({ ...SummaryApi.getActiveFlashSales })
+            setLoading(true)
+            const res = await Axios({ ...SummaryApi.getFlashSales }) // Fixed: Ensure this matches your SummaryApi key
             if (res.data.success) {
                 setSales(res.data.data)
             }
         } catch (err) {
-            console.log(err)
+            console.error("Flash Sale Fetch Error:", err)
+        } finally {
+            setLoading(false)
         }
     }
 
-    // Countdown timer
+    // Countdown timer logic
     useEffect(() => {
+        if (sales.length === 0) return;
+
         const interval = setInterval(() => {
             const updated = {}
-            sales.forEach((sale) => {
-                const end       = new Date(sale.flashSale.endTime)
-                const now       = new Date()
-                const diff      = end - now
+            sales.forEach((product) => {
+                // Ensure we are accessing the nested flashSale object correctly
+                const endTime = product.flashSale?.endTime;
+                if (!endTime) return;
+
+                const end = new Date(endTime).getTime()
+                const now = new Date().getTime()
+                const diff = end - now
+
                 if (diff <= 0) {
-                    updated[sale._id] = 'Ended'
+                    updated[product._id] = 'Ended'
                 } else {
-                    const mins = Math.floor(diff / 60000)
-                    const secs = Math.floor((diff % 60000) / 1000)
-                    updated[sale._id] = `${mins}m ${secs}s`
+                    const hours = Math.floor(diff / (1000 * 60 * 60))
+                    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+                    const secs = Math.floor((diff % (1000 * 60)) / 1000)
+                    
+                    // Format: 00h 00m 00s
+                    updated[product._id] = `${hours > 0 ? hours + 'h ' : ''}${mins}m ${secs}s`
                 }
             })
             setTimers(updated)
@@ -44,50 +60,80 @@ const FlashSaleBanner = () => {
         return () => clearInterval(interval)
     }, [sales])
 
-    if (sales.length === 0) return null
+    // Handle Redirect to Product Details
+    const handleProductClick = (product) => {
+        navigate(`/product/${product._id}`)
+    }
+
+    if (!loading && sales.length === 0) return null
 
     return (
-        <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-4 mb-4">
-            <div className="flex items-center gap-2 mb-3">
-                <span className="text-red-500 text-lg">⚡</span>
-                <h2 className="font-bold text-red-600 text-lg">
-                    Flash Sales — Limited Time!
-                </h2>
+        <div className="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-2xl p-5 mb-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <span className="text-2xl animate-bounce">⚡</span>
+                    <div>
+                        <h2 className="font-black text-red-600 text-xl uppercase tracking-tighter">
+                            Flash Sales
+                        </h2>
+                        <p className='text-[10px] text-red-400 font-bold uppercase'>Limited Stock Only</p>
+                    </div>
+                </div>
+                <Link to="/all-flash-sales" className='text-xs font-bold text-red-600 hover:underline'>View All</Link>
             </div>
 
-            <div className="flex gap-3 overflow-x-auto pb-2">
-                {sales.map((product) => (
-                    <div
-                        key={product._id}
-                        className="min-w-[160px] bg-white border border-red-200 rounded-xl p-3 flex-shrink-0"
-                    >
-                        <img
-                            src={product.image?.[0]}
-                            alt={product.name}
-                            className="w-full h-20 object-contain mb-2"
-                        />
-                        <p className="text-sm font-semibold line-clamp-1">
-                            {product.name}
-                        </p>
-
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="text-green-600 font-bold">
-                                ₹{product.price}
-                            </span>
-                            <span className="text-gray-400 line-through text-xs">
-                                ₹{product.flashSale.originalPrice}
-                            </span>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                {loading ? (
+                    // Skeleton Loader for Demo
+                    new Array(4).fill(null).map((_, i) => (
+                        <div key={i} className="min-w-[180px] bg-white rounded-2xl p-4 animate-pulse border border-red-100">
+                            <div className="w-full h-24 bg-slate-100 rounded-xl mb-3"></div>
+                            <div className="h-4 bg-slate-100 rounded w-3/4 mb-2"></div>
+                            <div className="h-3 bg-slate-100 rounded w-1/2"></div>
                         </div>
+                    ))
+                ) : (
+                    sales.map((product) => (
+                        <div
+                            key={product._id}
+                            onClick={() => handleProductClick(product)}
+                            className="min-w-[180px] bg-white border border-red-100 rounded-2xl p-4 flex-shrink-0 cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
+                        >
+                            {/* Discount Tag */}
+                            <div className='absolute top-0 right-0 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl'>
+                                {product.flashSale?.discountPercent}% OFF
+                            </div>
 
-                        <div className="bg-red-500 text-white text-xs text-center rounded-lg py-1 mt-2">
-                            {product.flashSale.discountPercent}% OFF
-                        </div>
+                            <div className='flex justify-center items-center h-28 mb-3 group-hover:scale-105 transition-transform'>
+                                <img
+                                    src={product.image?.[0]}
+                                    alt={product.name}
+                                    className="max-w-full max-h-full object-contain"
+                                />
+                            </div>
 
-                        <div className="text-center text-xs text-red-500 font-medium mt-1">
-                            ⏱ {timers[product._id] || 'Loading...'}
+                            <p className="text-sm font-bold text-slate-800 line-clamp-1 mb-1">
+                                {product.name}
+                            </p>
+
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="text-green-700 font-black text-base">
+                                    {DisplayPriceInRupees(product.price)}
+                                </span>
+                                <span className="text-slate-400 line-through text-[11px] font-medium">
+                                    {DisplayPriceInRupees(product.flashSale?.originalPrice)}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center justify-center gap-1.5 bg-red-50 text-red-600 text-[11px] font-black rounded-lg py-1.5 border border-red-100">
+                                <span>⏱</span>
+                                <span className="tabular-nums">
+                                    {timers[product._id] || 'Loading...'}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
         </div>
     )

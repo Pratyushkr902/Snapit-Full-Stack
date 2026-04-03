@@ -35,6 +35,55 @@ const CheckoutPage = () => {
     });
   };
 
+  // --- NEW: WALLET PAYMENT HANDLER ---
+  const handleWalletPayment = async () => {
+    try {
+      if (!addressList[selectAddress]) {
+        return toast.error("Please select a delivery address")
+      }
+
+      if ((user?.walletBalance || 0) < grandTotal) {
+        return toast.error("Insufficient Wallet Balance. Please top up!")
+      }
+
+      const loadingToast = toast.loading("Processing Wallet Payment...")
+
+      let coords = { lat: 25.2921, lng: 84.8170 };
+      try {
+        coords = await getCoordinates();
+      } catch (e) {
+        console.warn("Location access denied.");
+      }
+
+      const response = await Axios({
+        ...SummaryApi.payWithWallet, // Ensure this endpoint is defined in SummaryApi.js
+        data: {
+          list_items: cartItemsList,
+          addressId: addressList[selectAddress]?._id,
+          subTotalAmt: totalPrice,
+          delivery_fee: deliveryFee,
+          totalAmt: grandTotal,
+          lat: coords.lat,
+          lng: coords.lng,
+          amount: grandTotal, // Amount to debit from wallet
+          orderId: "SNAP-WLT-" + Date.now()
+        }
+      })
+
+      const { data: responseData } = response
+      toast.dismiss(loadingToast);
+
+      if (responseData.success) {
+        toast.success("Paid successfully using Snapit Wallet! 💸")
+        if (fetchCartItem) fetchCartItem()
+        if (fetchOrder) fetchOrder()
+        navigate('/success', { state: { text: "Order" } })
+      }
+    } catch (error) {
+      AxiosToastError(error)
+    }
+  }
+
   const handleCashOnDelivery = async () => {
     try {
       if (!addressList[selectAddress]) {
@@ -58,8 +107,8 @@ const CheckoutPage = () => {
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
           totalAmt: grandTotal,
-          lat: coords.lat, // SENT TO BACKEND FOR NEAREST STORE CALCULATION
-          lng: coords.lng  // SENT TO BACKEND FOR NEAREST STORE CALCULATION
+          lat: coords.lat, 
+          lng: coords.lng  
         }
       })
 
@@ -111,8 +160,8 @@ const CheckoutPage = () => {
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
           totalAmt: grandTotal,
-          lat: coords.lat, // SENT TO BACKEND
-          lng: coords.lng  // SENT TO BACKEND
+          lat: coords.lat, 
+          lng: coords.lng  
         }
       })
 
@@ -201,6 +250,20 @@ const CheckoutPage = () => {
         </div>
 
         <div className='w-full max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
+          {/* WALLET STATUS CARD */}
+          <div className='mx-4 mb-4 bg-green-50 border border-green-100 rounded-2xl p-4'>
+             <div className='flex items-center justify-between'>
+                <div>
+                   <p className='text-[10px] font-black uppercase text-green-600'>Snapit Wallet Balance</p>
+                   <p className='text-xl font-black text-slate-900'>{DisplayPriceInRupees(user?.walletBalance || 0)}</p>
+                </div>
+                <div className='text-2xl'>💰</div>
+             </div>
+             {(user?.walletBalance || 0) < grandTotal && (
+                <p className='text-[10px] text-red-500 font-bold mt-2 uppercase'>Add {DisplayPriceInRupees(grandTotal - (user?.walletBalance || 0))} more to pay via wallet</p>
+             )}
+          </div>
+
           <h3 className='text-lg font-black px-4 uppercase text-slate-800'>Bill Summary</h3>
           <div className='p-4 space-y-3'>
             <div className='flex gap-4 justify-between'>
@@ -237,12 +300,22 @@ const CheckoutPage = () => {
           </div>
 
           <div className='w-full flex flex-col gap-3 p-4'>
+            {/* PAY VIA WALLET BUTTON */}
+            <button 
+                disabled={cartItemsList.length === 0 || (user?.walletBalance || 0) < grandTotal}
+                className={`py-4 px-4 bg-green-700 hover:bg-green-800 rounded-2xl text-white font-black transition-all shadow-xl shadow-green-100 uppercase tracking-widest text-sm flex items-center justify-center gap-2 ${(cartItemsList.length === 0 || (user?.walletBalance || 0) < grandTotal) ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`} 
+                onClick={handleWalletPayment}
+            >
+                <span>Pay via Wallet</span>
+                <span className='text-xs font-normal opacity-80'>({DisplayPriceInRupees(grandTotal)})</span>
+            </button>
+
             <button 
                 disabled={cartItemsList.length === 0}
                 className={`py-4 px-4 bg-slate-900 hover:bg-black rounded-2xl text-white font-black transition-all shadow-xl shadow-slate-200 uppercase tracking-widest text-sm ${cartItemsList.length === 0 ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`} 
                 onClick={handleOnlinePayment}
             >
-                Pay Online Now
+                Online (Card/UPI/NetBanking)
             </button>
 
             <button 

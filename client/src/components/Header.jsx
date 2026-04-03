@@ -23,6 +23,10 @@ const Header = () => {
     const { totalPrice, totalQty } = useGlobalContext()
     const [openCartSection, setOpenCartSection] = useState(false)
 
+    // --- NEW: Pulling address for Zepto-style Header ---
+    const addressList = useSelector(state => state.addresses.addressList)
+    const primaryAddress = addressList?.[0]?.address_line || "Select Address"
+
     const redirectToLoginPage = () => {
         navigate("/login")
     }
@@ -45,8 +49,8 @@ const Header = () => {
                 !(isSearchPage && isMobile) && (
                     <div className='container mx-auto flex items-center px-2 justify-between gap-4'>
                         {/** logo - ENLARGED FOR SNAPIT BRANDING **/}
-                        <div className='h-full flex-shrink-0'>
-                            <Link to={"/"} className='h-full flex justify-center items-center'>
+                        <div className='flex items-center gap-2'>
+                            <Link to={"/"} className='h-full flex justify-center items-center shrink-0'>
                                 <img
                                     src={logo}
                                     alt='logo'
@@ -58,6 +62,20 @@ const Header = () => {
                                     className='lg:hidden w-28 h-auto object-contain'
                                 />
                             </Link>
+
+                            {/** ZEPTO-STYLE DELIVERY BADGE & LOCATION (Desktop Only) **/}
+                            <div className='hidden lg:flex flex-col justify-center ml-2 border-l-2 pl-4 border-slate-100 h-10'>
+                                <div className='flex items-center gap-1.5'>
+                                    <h2 className='font-black text-slate-900 text-[15px] uppercase tracking-tighter'>
+                                        Delivery in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
+                                    </h2>
+                                    <span className='text-lg'>⚡</span>
+                                </div>
+                                <div className='flex items-center gap-0.5 text-xs text-slate-500 font-semibold cursor-pointer hover:text-green-700 transition-colors'>
+                                    <span className='max-w-[150px] truncate'>{primaryAddress}</span>
+                                    <GoTriangleDown size={14} />
+                                </div>
+                            </div>
                         </div>
 
                         {/** Search - Balanced for desktop width **/}
@@ -78,9 +96,12 @@ const Header = () => {
                                 {/** SNAPIT WALLET LINK - Key Demo Feature **/}
                                 {
                                     user?._id && (
-                                        <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-all group">
+                                        <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-all group shadow-sm active:scale-95">
                                             <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
-                                            <span className='font-bold text-slate-700 text-sm'>Wallet</span>
+                                            <div className='flex flex-col'>
+                                                <span className='font-black text-slate-700 text-[10px] uppercase leading-none'>Balance</span>
+                                                <span className='font-bold text-green-700 text-sm'>{DisplayPriceInRupees(user?.walletBalance || 0)}</span>
+                                            </div>
                                         </Link>
                                     )
                                 }
