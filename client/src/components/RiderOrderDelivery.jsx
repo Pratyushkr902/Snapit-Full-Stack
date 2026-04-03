@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 // 1. UPDATED: Connect to your NEW Render Tracking Server
 // We use the Render URL instead of localhost to make it live for users
-const socket = io("https://snapit-full-stack.onrender.com", {
+const socket = io("https://snapit-full-stack-2.onrender.com", {
     transports: ["websocket", "polling"],
     withCredentials: true
 }); 

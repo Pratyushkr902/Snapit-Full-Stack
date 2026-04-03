@@ -16,7 +16,7 @@ import CartMobileLink from './components/CartMobile';
 import { io } from "socket.io-client"; 
 
 // GLOBAL SOCKET CONNECTION: Fixed URL + polling first to avoid WebSocket errors
-export const socket = io("https://snapit-full-stack.onrender.com", {
+export const socket = io("https://snapit-full-stack-2.onrender.com", {
   transports:           ["polling", "websocket"], // polling first = no handshake errors
   withCredentials:      true,
   path:                 "/socket.io/",

@@ -2,7 +2,7 @@ import { io } from "socket.io-client";
 import { useEffect, useState } from "react";
 
 // Connect to your Node.js server
-const socket = io("https://snapit-full-stack.onrender.com"); 
+const socket = io("https://snapit-full-stack-2.onrender.com"); 
 
 const TrackingScreen = ({ orderId }) => {
   const [riderLocation, setRiderLocation] = useState(null);

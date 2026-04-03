@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { FaMapMarkedAlt, FaCheckCircle, FaShoppingBasket, FaPhone, FaMotorcycle, FaHistory, FaStore } from "react-icons/fa";
 import { io } from 'socket.io-client';
 
-const socket = io(import.meta.env.VITE_API_URL || "https://snapit-full-stack.onrender.com");
+const socket = io(import.meta.env.VITE_API_URL || "https://snapit-full-stack-2.onrender.com");
 
 const RiderDashboard = () => {
     const [orders, setOrders] = useState([]);

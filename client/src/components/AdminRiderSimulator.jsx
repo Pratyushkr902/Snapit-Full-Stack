@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import io from 'socket.io-client'
 
 // Connect to your Node.js socket server
-const socket = io.connect("https://snapit-full-stack.onrender.com")
+const socket = io.connect("https://snapit-full-stack-2.onrender.com")
 
 const AdminRiderSimulator = ({ orderId }) => {
     const [isSimulating, setIsSimulating] = useState(false)
