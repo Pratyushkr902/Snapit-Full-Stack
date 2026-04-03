@@ -14,15 +14,16 @@ import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
 import CartMobileLink from './components/CartMobile';
 import { io } from "socket.io-client"; 
+import https from 'https';
 
 // GLOBAL SOCKET CONNECTION: Fixed URL + polling first to avoid WebSocket errors
 export const socket = io("https://snapit-full-stack-2.onrender.com", {
-  transports:           ["polling", "websocket"], // polling first = no handshake errors
+  transports:           ["polling", "websocket"],
   withCredentials:      true,
   path:                 "/socket.io/",
   reconnection:         true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay:    2000,
+  reconnectionAttempts: 3,        // only try 3 times not infinity
+  reconnectionDelay:    10000,    // wait 10 seconds between attempts
   timeout:              20000,
 });
 

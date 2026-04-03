@@ -91,7 +91,6 @@ const io = new Server(server, {
         methods: ["GET", "POST"],
         credentials: true
     },
-    // FIXED: Handshake stability for Render
     transports: ['polling', 'websocket'], 
     pingTimeout: 60000,        
     pingInterval: 25000,       
@@ -99,7 +98,7 @@ const io = new Server(server, {
 });
 
 io.on('connection', (socket) => {
-    console.log(`🚀 Tracking Connected: ${socket.id}`);
+    console.log(`Tracking Connected: ${socket.id}`);
 
     socket.on('join_order', (orderId) => {
         if (orderId) {
@@ -128,7 +127,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('error', (err) => console.error("Socket.io Error:", err));
-    socket.on('disconnect', () => console.log(`📡 Client ${socket.id} disconnected`));
+    socket.on('disconnect', () => console.log(`Client ${socket.id} disconnected`));
 });
 
 const PORT = process.env.PORT || 8080;
@@ -154,16 +153,22 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
-// --- 5. START SERVER ---
+// --- 5. KEEP RENDER AWAKE (ping every 14 minutes) ---
+setInterval(() => {
+    fetch('https://snapit-full-stack-2.onrender.com/')
+        .catch(() => {})
+}, 14 * 60 * 1000)
+
+// --- 6. START SERVER ---
 connectDB().then(() => {
-    console.log("✅ Database Connected Successfully");
+    console.log("Database Connected Successfully");
     if (process.env.NODE_ENV !== 'test') {
         server.listen(PORT, () => { 
-            console.log(`🚀 Snapit Server running on port ${PORT}`);
+            console.log(`Snapit Server running on port ${PORT}`);
         });
     }
 }).catch(err => {
-    console.error("❌ Database connection failed", err);
+    console.error("Database connection failed", err);
 });
 
 export default app;
