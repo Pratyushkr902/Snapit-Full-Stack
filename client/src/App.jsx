@@ -3,7 +3,7 @@ import './App.css'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import { Toaster } from 'react-hot-toast';
-import { useEffect, useCallback, useState } from 'react'; // ADDED: useState
+import { useEffect, useCallback, useState } from 'react'; 
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails } from './store/userSlice';
 import { setAllCategory, setAllSubCategory, setLoadingCategory } from './store/productSlice';
@@ -13,7 +13,7 @@ import Axios from './utils/Axios';
 import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
 import CartMobileLink from './components/CartMobile';
-import DisplayCartItem from './components/DisplayCartItem'; // IMPORTED: Missing component
+import DisplayCartItem from './components/DisplayCartItem'; 
 import { io } from "socket.io-client"; 
 
 // GLOBAL SOCKET CONNECTION
@@ -32,7 +32,7 @@ function App() {
   const location = useLocation()
   const user = useSelector(state => state.user)
   
-  // FIXED: Define the missing state locally in App.js
+  // FIXED: State for global cart visibility
   const [showCart, setShowCart] = useState(false)
 
   const fetchUser = useCallback(async () => {
@@ -58,11 +58,13 @@ function App() {
     }
   }, [dispatch, user?._id])
 
+  // FIXED: Removed .sort() to maintain DB order (Atta, Rice & Dal first)
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
       const response = await Axios({ ...SummaryApi.getCategory })
       if (response.data.success) {
+        // Keeps the order defined in your Admin Panel/MongoDB
         dispatch(setAllCategory(response.data.data))
       }
     } catch (error) {
@@ -72,10 +74,12 @@ function App() {
     }
   }, [dispatch])
 
+  // FIXED: Removed .sort() to prevent sub-category shuffling
   const fetchSubCategory = useCallback(async () => {
     try {
       const response = await Axios({ ...SummaryApi.getSubCategory })
       if (response.data.success) {
+        // Keeps the order defined in your Admin Panel/MongoDB
         dispatch(setAllSubCategory(response.data.data))
       }
     } catch (error) {
@@ -103,7 +107,7 @@ function App() {
 
   return (
     <GlobalProvider>
-      {/* FIXED: Pass the cart setter to the Header */}
+      {/* FIXED: Passing setter function to Header */}
       <Header openCart={() => setShowCart(true)} />
       
       <main className='min-h-[78vh]'>
@@ -114,7 +118,7 @@ function App() {
       
       <Toaster position="top-center" />
 
-      {/* FIXED: Handle global cart visibility */}
+      {/* FIXED: Global Cart Overlay */}
       {showCart && <DisplayCartItem close={() => setShowCart(false)} />}
 
       {
