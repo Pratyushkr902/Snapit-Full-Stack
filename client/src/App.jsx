@@ -16,7 +16,7 @@ import CartMobileLink from './components/CartMobile';
 import DisplayCartItem from './components/DisplayCartItem'; 
 import { io } from "socket.io-client"; 
 
-// GLOBAL SOCKET CONNECTION
+// GLOBAL SOCKET CONNECTION - Pointing to stable -0 instance
 export const socket = io("https://snapit-full-stack-0.onrender.com", {
   transports:           ["polling", "websocket"],
   withCredentials:      true,
@@ -58,13 +58,12 @@ function App() {
     }
   }, [dispatch, user?._id])
 
-  // --- FIXED: Alphabetical Sort for Categories ---
+  // --- ALPHABETICAL SORT: Ensures 'Atta' stays at the top naturally ---
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
       const response = await Axios({ ...SummaryApi.getCategory })
       if (response.data.success) {
-        // Sorts A-Z (Case Insensitive)
         const sortedData = [...response.data.data].sort((a, b) => 
           (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase())
         )
@@ -77,12 +76,10 @@ function App() {
     }
   }, [dispatch])
 
-  // --- FIXED: Alphabetical Sort for Sub-Categories ---
   const fetchSubCategory = useCallback(async () => {
     try {
       const response = await Axios({ ...SummaryApi.getSubCategory })
       if (response.data.success) {
-        // Sorts A-Z (Case Insensitive)
         const sortedData = [...response.data.data].sort((a, b) => 
           (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase())
         )
@@ -113,6 +110,7 @@ function App() {
 
   return (
     <GlobalProvider>
+      {/* Passing setShowCart through the Header prop */}
       <Header openCart={() => setShowCart(true)} />
       
       <main className='min-h-[78vh]'>
@@ -123,6 +121,7 @@ function App() {
       
       <Toaster position="top-center" />
 
+      {/* Global Cart Overlay Component */}
       {showCart && <DisplayCartItem close={() => setShowCart(false)} />}
 
       {
