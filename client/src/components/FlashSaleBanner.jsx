@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react' // Added useCallback
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { Link, useNavigate } from 'react-router-dom'
@@ -10,14 +10,36 @@ const FlashSaleBanner = () => {
     const [loading, setLoading] = useState(true)
     const navigate = useNavigate()
 
-    useEffect(() => {
-        fetchFlashSales()
-    }, [])
+    // --- FIXED: Optimized Timer Calculation ---
+    const calculateTimers = useCallback(() => {
+        const updated = {}
+        sales.forEach((product) => {
+            const endTime = product.flashSale?.endTime;
+            if (!endTime) return;
+
+            const end = new Date(endTime).getTime()
+            const now = new Date().getTime()
+            const diff = end - now
+
+            if (diff <= 0) {
+                updated[product._id] = 'Ended'
+            } else {
+                const hours = Math.floor(diff / (1000 * 60 * 60))
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+                const secs = Math.floor((diff % (1000 * 60)) / 1000)
+                
+                // Professional format: HH:MM:SS
+                updated[product._id] = `${hours > 0 ? hours + 'h ' : ''}${mins}m ${secs}s`
+            }
+        })
+        setTimers(updated)
+    }, [sales])
 
     const fetchFlashSales = async () => {
         try {
             setLoading(true)
-            const res = await Axios({ ...SummaryApi.getFlashSales }) // Fixed: Ensure this matches your SummaryApi key
+            // Use the consistent key we added to SummaryApi
+            const res = await Axios({ ...SummaryApi.getFlashSales }) 
             if (res.data.success) {
                 setSales(res.data.data)
             }
@@ -28,43 +50,26 @@ const FlashSaleBanner = () => {
         }
     }
 
-    // Countdown timer logic
+    useEffect(() => {
+        fetchFlashSales()
+    }, [])
+
+    // --- FIXED: Countdown timer logic ---
     useEffect(() => {
         if (sales.length === 0) return;
 
-        const interval = setInterval(() => {
-            const updated = {}
-            sales.forEach((product) => {
-                // Ensure we are accessing the nested flashSale object correctly
-                const endTime = product.flashSale?.endTime;
-                if (!endTime) return;
+        // Run once immediately to avoid "Loading..." flash
+        calculateTimers()
 
-                const end = new Date(endTime).getTime()
-                const now = new Date().getTime()
-                const diff = end - now
-
-                if (diff <= 0) {
-                    updated[product._id] = 'Ended'
-                } else {
-                    const hours = Math.floor(diff / (1000 * 60 * 60))
-                    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-                    const secs = Math.floor((diff % (1000 * 60)) / 1000)
-                    
-                    // Format: 00h 00m 00s
-                    updated[product._id] = `${hours > 0 ? hours + 'h ' : ''}${mins}m ${secs}s`
-                }
-            })
-            setTimers(updated)
-        }, 1000)
-
+        const interval = setInterval(calculateTimers, 1000)
         return () => clearInterval(interval)
-    }, [sales])
+    }, [sales, calculateTimers])
 
-    // Handle Redirect to Product Details
     const handleProductClick = (product) => {
         navigate(`/product/${product._id}`)
     }
 
+    // Hide entire component if no sales are active
     if (!loading && sales.length === 0) return null
 
     return (
@@ -76,7 +81,7 @@ const FlashSaleBanner = () => {
                         <h2 className="font-black text-red-600 text-xl uppercase tracking-tighter">
                             Flash Sales
                         </h2>
-                        <p className='text-[10px] text-red-400 font-bold uppercase'>Limited Stock Only</p>
+                        <p className='text-[10px] text-red-400 font-bold uppercase'>IIT Roorkee Student Deals</p>
                     </div>
                 </div>
                 <Link to="/all-flash-sales" className='text-xs font-bold text-red-600 hover:underline'>View All</Link>
@@ -84,9 +89,8 @@ const FlashSaleBanner = () => {
 
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
                 {loading ? (
-                    // Skeleton Loader for Demo
                     new Array(4).fill(null).map((_, i) => (
-                        <div key={i} className="min-w-[180px] bg-white rounded-2xl p-4 animate-pulse border border-red-100">
+                        <div key={i + "skeleton"} className="min-w-[180px] bg-white rounded-2xl p-4 animate-pulse border border-red-100">
                             <div className="w-full h-24 bg-slate-100 rounded-xl mb-3"></div>
                             <div className="h-4 bg-slate-100 rounded w-3/4 mb-2"></div>
                             <div className="h-3 bg-slate-100 rounded w-1/2"></div>
@@ -100,7 +104,7 @@ const FlashSaleBanner = () => {
                             className="min-w-[180px] bg-white border border-red-100 rounded-2xl p-4 flex-shrink-0 cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
                         >
                             {/* Discount Tag */}
-                            <div className='absolute top-0 right-0 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl'>
+                            <div className='absolute top-0 right-0 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl z-10'>
                                 {product.flashSale?.discountPercent}% OFF
                             </div>
 
@@ -109,6 +113,7 @@ const FlashSaleBanner = () => {
                                     src={product.image?.[0]}
                                     alt={product.name}
                                     className="max-w-full max-h-full object-contain"
+                                    onError={(e) => { e.target.src = "https://res.cloudinary.com/daso5ntlt/image/upload/v1773599668/Aashirvaad_Superior_MP_Whole_Wheat_Atta_z8tqsf.jpg" }}
                                 />
                             </div>
 
@@ -125,10 +130,11 @@ const FlashSaleBanner = () => {
                                 </span>
                             </div>
 
+                            {/* TIMER UI */}
                             <div className="flex items-center justify-center gap-1.5 bg-red-50 text-red-600 text-[11px] font-black rounded-lg py-1.5 border border-red-100">
                                 <span>⏱</span>
                                 <span className="tabular-nums">
-                                    {timers[product._id] || 'Loading...'}
+                                    {timers[product._id] || 'Syncing...'}
                                 </span>
                             </div>
                         </div>
@@ -139,4 +145,4 @@ const FlashSaleBanner = () => {
     )
 }
 
-export default FlashSaleBanner
+export default FlashSaleBanner;
