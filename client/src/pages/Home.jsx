@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useMemo } from 'react' // ADDED: useMemo for performance
 import HomeBanner from '../components/HomeBanner' 
-import FlashSaleBanner from '../components/FlashSaleBanner' // IMPORTED
+import FlashSaleBanner from '../components/FlashSaleBanner' 
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
@@ -11,6 +11,21 @@ const Home = () => {
   const categoryData = useSelector(state => state.product.allCategory)
   const subCategoryData = useSelector(state => state.product.allSubCategory)
   const navigate = useNavigate()
+
+  // --- FIXED: Prioritization Logic for "Atta, Rice & Dal" ---
+  // This ensures Atta is always the first product section rendered
+  const prioritizedCategorySections = useMemo(() => {
+    if (!categoryData || categoryData.length === 0) return [];
+    
+    const priorityName = "Atta, Rice & Dal";
+    const data = [...categoryData];
+    
+    return data.sort((a, b) => {
+      if (a.name === priorityName) return -1;
+      if (b.name === priorityName) return 1;
+      return 0;
+    });
+  }, [categoryData]);
 
   const handleRedirectProductListpage = (id, cat) => {
     const subcategory = subCategoryData.find(sub => {
@@ -28,23 +43,23 @@ const Home = () => {
   return (
     <section className='bg-white min-h-screen'>
       {/* MAIN PROMOTIONAL SLIDER */}
-      <div className='container mx-auto'>
+      <div className='container mx-auto mb-2 lg:mb-4'>
           <HomeBanner />
       </div>
 
-      {/* FLASH SALE SYSTEM: Urgency Banner for Midnight/Student Deals */}
-      <div className='container mx-auto px-4'>
+      {/* FLASH SALE SYSTEM: Urgency Banner */}
+      <div className='container mx-auto px-4 -mt-2'>
           <FlashSaleBanner />
       </div>
       
-      {/* CATEGORY ICON GRID: Optimized for high-density mobile view */}
-      <div className='container mx-auto px-4 my-6 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-4'>
+      {/* CATEGORY ICON GRID: Raised and Tightened */}
+      <div className='container mx-auto px-4 my-4 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3 lg:gap-5'>
           {
             loadingCategory ? (
               new Array(12).fill(null).map((_, index) => (
-                <div key={index + "loadingcategory"} className='bg-slate-50 rounded-xl p-4 min-h-36 grid gap-2 shadow-sm animate-pulse'>
-                  <div className='bg-slate-200 min-h-24 rounded-lg'></div>
-                  <div className='bg-slate-200 h-6 rounded w-3/4 mx-auto'></div>
+                <div key={index + "loadingcategory"} className='bg-slate-50 rounded-xl p-4 min-h-32 grid gap-2 shadow-sm animate-pulse'>
+                  <div className='bg-slate-200 min-h-20 rounded-lg'></div>
+                  <div className='bg-slate-200 h-4 rounded w-3/4 mx-auto'></div>
                 </div>
               ))
             ) : (
@@ -54,24 +69,24 @@ const Home = () => {
                   className='group w-full h-full cursor-pointer' 
                   onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
                 >
-                  <div className='bg-blue-50 rounded-2xl p-3 group-hover:bg-blue-100 group-hover:shadow-md transition-all duration-300'>
+                  <div className='bg-blue-50 rounded-2xl p-2.5 group-hover:bg-blue-100 group-hover:shadow-md transition-all duration-300'>
                       <img 
                         src={cat.image}
                         alt={cat.name}
-                        className='w-full h-full object-scale-down aspect-square group-hover:scale-110 transition-transform duration-300'
+                        className='w-full h-full object-scale-down aspect-square group-hover:scale-105 transition-transform duration-300'
                       />
                   </div>
-                  <p className='text-center text-[11px] lg:text-xs mt-2 font-bold text-slate-700 line-clamp-1'>{cat.name}</p>
+                  <p className='text-center text-[10px] lg:text-xs mt-1.5 font-bold text-slate-700 line-clamp-1'>{cat.name}</p>
                 </div>
               ))
             )
           }
       </div>
 
-      {/* DYNAMIC PRODUCT SECTIONS: Organized by Category */}
-      <div className='grid gap-8 pb-24'>
+      {/* DYNAMIC PRODUCT SECTIONS: Ordered with "Atta" first */}
+      <div className='grid gap-6 lg:gap-10 pb-24'>
         {
-          categoryData?.map((c) => (
+          prioritizedCategorySections?.map((c) => (
             <CategoryWiseProductDisplay 
               key={c?._id + "CategorywiseProduct"} 
               id={c?._id} 
