@@ -42,9 +42,13 @@ const CheckoutPage = () => {
         return toast.error("Please select a delivery address")
       }
 
-      // Check balance before processing
-      if ((user?.walletBalance || 0) < grandTotal) {
-        return toast.error(`Insufficient Balance! You need ${DisplayPriceInRupees(grandTotal - user.walletBalance)} more.`)
+      // FIXED: Ensure numbers are used for comparison to avoid NaN errors
+      const currentBalance = Number(user?.walletBalance || 0);
+      const totalToPay = Number(grandTotal);
+
+      if (currentBalance < totalToPay) {
+        const missingAmount = totalToPay - currentBalance;
+        return toast.error(`Insufficient Balance! You need ${DisplayPriceInRupees(missingAmount)} more.`)
       }
 
       const loadingToast = toast.loading("Processing Wallet Payment...")
@@ -186,12 +190,12 @@ const CheckoutPage = () => {
             {addressList.length > 0 ? (
                 addressList.map((address, index) => (
                     <label key={address._id || index} className={`${!address.status && "hidden"} cursor-pointer`}>
-                      <div className={`border rounded-xl p-3 flex gap-3 hover:bg-blue-50 transition-all ${Number(selectAddress) === index ? 'border-primary-200 bg-blue-50' : ''}`}>
+                      <div className={`border rounded-xl p-3 flex gap-3 hover:bg-blue-50 transition-all ${Number(selectAddress) === index ? 'border-primary-200 bg-blue-50 shadow-sm' : ''}`}>
                         <input type='radio' value={index} checked={Number(selectAddress) === index} onChange={(e) => setSelectAddress(Number(e.target.value))} name='address' />
                         <div>
                           <p className='font-bold text-slate-800'>{address.address_line}</p>
                           <p className='text-sm text-slate-600'>{address.city}, {address.pincode}</p>
-                          <p className='text-xs font-bold text-primary-200 uppercase'>Contact: {address.mobile}</p>
+                          <p className='text-xs font-bold text-primary-200 uppercase mt-1'>Contact: {address.mobile}</p>
                         </div>
                       </div>
                     </label>
@@ -203,24 +207,27 @@ const CheckoutPage = () => {
         </div>
 
         <div className='w-full max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
-          <div className='mx-4 mb-4 bg-green-50 border border-green-100 rounded-2xl p-4'>
+          {/* WALLET STATUS CARD */}
+          <div className='mx-4 mb-4 bg-green-50 border border-green-100 rounded-2xl p-4 shadow-sm'>
              <div className='flex items-center justify-between'>
                 <div>
-                   <p className='text-[10px] font-black uppercase text-green-600'>Wallet Balance</p>
+                   <p className='text-[10px] font-black uppercase text-green-600 tracking-wider'>Wallet Balance</p>
                    <p className='text-xl font-black text-slate-900'>{DisplayPriceInRupees(user?.walletBalance || 0)}</p>
                 </div>
-                <div className='text-2xl'>💰</div>
+                <div className='text-2xl drop-shadow-sm'>💰</div>
              </div>
              {(user?.walletBalance || 0) < grandTotal && (
-                <p className='text-[10px] text-red-500 font-bold mt-2 uppercase underline'>Insufficient Balance</p>
+                <p className='text-[10px] text-red-500 font-black mt-2 uppercase flex items-center gap-1'>
+                    <span>⚠️</span> Insufficient Balance
+                </p>
              )}
           </div>
 
-          <h3 className='text-lg font-black px-4 uppercase text-slate-800'>Bill Summary</h3>
+          <h3 className='text-lg font-black px-4 uppercase text-slate-800 tracking-tight'>Bill Summary</h3>
           <div className='p-4 space-y-3'>
-            <div className='flex justify-between'><p className='text-slate-500'>Items total</p><p className='font-bold'>{DisplayPriceInRupees(totalPrice)}</p></div>
-            <div className='flex justify-between'><p className='text-slate-500'>Delivery Charge</p><p className={deliveryFee === 0 ? "text-green-600 font-black" : "font-bold"}>{deliveryFee === 0 ? "FREE" : DisplayPriceInRupees(deliveryFee)}</p></div>
-            <div className='font-black flex justify-between border-t border-dashed pt-4 text-xl text-slate-900'><p>Grand total</p><p>{DisplayPriceInRupees(grandTotal)}</p></div>
+            <div className='flex justify-between'><p className='text-slate-500 font-medium'>Items total</p><p className='font-bold text-slate-800'>{DisplayPriceInRupees(totalPrice)}</p></div>
+            <div className='flex justify-between'><p className='text-slate-500 font-medium'>Delivery Charge</p><p className={deliveryFee === 0 ? "text-green-600 font-black" : "font-bold text-slate-800"}>{deliveryFee === 0 ? "FREE" : DisplayPriceInRupees(deliveryFee)}</p></div>
+            <div className='font-black flex justify-between border-t border-dashed pt-4 text-xl text-slate-900 tracking-tighter'><p>Grand total</p><p>{DisplayPriceInRupees(grandTotal)}</p></div>
           </div>
 
           <div className='w-full flex flex-col gap-3 p-4'>
@@ -228,14 +235,15 @@ const CheckoutPage = () => {
             <button 
                 disabled={cartItemsList.length === 0}
                 className={`py-4 px-4 rounded-2xl font-black transition-all shadow-xl uppercase tracking-widest text-sm flex items-center justify-center gap-2 
-                ${(user?.walletBalance || 0) >= grandTotal ? 'bg-green-700 text-white active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`} 
+                ${(user?.walletBalance || 0) >= grandTotal ? 'bg-green-700 text-white active:scale-95 shadow-green-100' : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}`} 
                 onClick={handleWalletPayment}
             >
-                Pay via Wallet { (user?.walletBalance || 0) >= grandTotal ? '💸' : '🔒' }
+                <span>Pay via Wallet</span>
+                <span>{(user?.walletBalance || 0) >= grandTotal ? '💸' : '🔒'}</span>
             </button>
 
-            <button disabled={cartItemsList.length === 0} className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95' onClick={handleOnlinePayment}>Online Payment</button>
-            <button disabled={cartItemsList.length === 0} className='py-4 border-2 border-slate-900 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95' onClick={handleCashOnDelivery}>Cash on Delivery</button>
+            <button disabled={cartItemsList.length === 0} className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 shadow-xl shadow-slate-100' onClick={handleOnlinePayment}>Online Payment</button>
+            <button disabled={cartItemsList.length === 0} className='py-4 border-2 border-slate-900 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 hover:bg-slate-50' onClick={handleCashOnDelivery}>Cash on Delivery</button>
           </div>
         </div>
       </div>

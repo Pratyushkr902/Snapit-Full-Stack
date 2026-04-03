@@ -20,12 +20,21 @@ const Header = () => {
     const user = useSelector((state) => state?.user)
     const [openUserMenu, setOpenUserMenu] = useState(false)
     const cartItem = useSelector(state => state.cartItem.cart)
-    const { totalPrice, totalQty } = useGlobalContext()
-    const [openCartSection, setOpenCartSection] = useState(false)
+    
+    // --- UPDATED: Destructure fetch functions for sync ---
+    const { totalPrice, totalQty, fetchUser, fetchAddress } = useGlobalContext()
 
     // --- NEW: Pulling address for Zepto-style Header ---
     const addressList = useSelector(state => state.addresses.addressList)
     const primaryAddress = addressList?.[0]?.address_line || "Select Address"
+
+    // --- SYNC LOGIC: Refresh data when user ID is found ---
+    useEffect(() => {
+        if (user?._id) {
+            if (fetchUser) fetchUser();
+            if (fetchAddress) fetchAddress();
+        }
+    }, [user?._id])
 
     const redirectToLoginPage = () => {
         navigate("/login")
@@ -109,6 +118,7 @@ const Header = () => {
                                         <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
                                         <div className='flex flex-col'>
                                             <span className='font-black text-slate-700 text-[10px] uppercase leading-none'>Balance</span>
+                                            {/* SYNCED BALANCE */}
                                             <span className='font-bold text-green-700 text-sm'>{DisplayPriceInRupees(user?.walletBalance || 0)}</span>
                                         </div>
                                     </Link>

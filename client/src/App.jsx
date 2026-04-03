@@ -14,16 +14,15 @@ import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
 import CartMobileLink from './components/CartMobile';
 import { io } from "socket.io-client"; 
-import https from 'https';
 
-// GLOBAL SOCKET CONNECTION: Fixed URL + polling first to avoid WebSocket errors
-export const socket = io("https://snapit-full-stack-2.onrender.com", {
+// GLOBAL SOCKET CONNECTION: Updated to match your -0 Render instance
+export const socket = io("https://snapit-full-stack-0.onrender.com", {
   transports:           ["polling", "websocket"],
   withCredentials:      true,
   path:                 "/socket.io/",
   reconnection:         true,
-  reconnectionAttempts: 3,        // only try 3 times not infinity
-  reconnectionDelay:    10000,    // wait 10 seconds between attempts
+  reconnectionAttempts: 5,        
+  reconnectionDelay:    5000,    
   timeout:              20000,
 });
 
@@ -32,7 +31,7 @@ function App() {
   const location = useLocation()
   const user = useSelector(state => state.user)
 
-  // 1. Fetch User (Fixes Admin/Login state)
+  // 1. Fetch User (Syncs Balance & Admin state)
   const fetchUser = useCallback(async () => {
     try {
       const userData = await fetchUserDetails()
@@ -44,10 +43,9 @@ function App() {
     }
   }, [dispatch])
 
-  // 2. Fetch Orders globally (Private Data)
+  // 2. Fetch Orders globally
   const fetchOrder = useCallback(async () => {
     if(!user?._id) return; 
-
     try {
       const response = await Axios({
         ...SummaryApi.getOrderItems 
@@ -65,9 +63,7 @@ function App() {
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
-      const response = await Axios({
-        ...SummaryApi.getCategory
-      })
+      const response = await Axios({ ...SummaryApi.getCategory })
       const { data: responseData } = response
 
       if (responseData.success) {
@@ -86,11 +82,8 @@ function App() {
   // 4. Public Data: Subcategories
   const fetchSubCategory = useCallback(async () => {
     try {
-      const response = await Axios({
-        ...SummaryApi.getSubCategory
-      })
+      const response = await Axios({ ...SummaryApi.getSubCategory })
       const { data: responseData } = response
-
       if (responseData.success) {
         const sortedData = Array.isArray(responseData.data)
           ? [...responseData.data].sort((a, b) => (a.name || "").localeCompare(b.name || ""))
@@ -102,21 +95,21 @@ function App() {
     }
   }, [dispatch])
 
-  // INITIALIZE PUBLIC DATA
+  // INITIALIZE ALL DATA
   useEffect(() => {
     fetchUser()
     fetchCategory()
     fetchSubCategory()
   }, [fetchUser, fetchCategory, fetchSubCategory])
 
-  // INITIALIZE PRIVATE DATA (Triggered after User ID is set)
+  // PRIVATE DATA SYNC (Triggered after User ID is established)
   useEffect(() => {
     if(user?._id) {
       fetchOrder()
     }
   }, [user?._id, fetchOrder])
 
-  // GLOBAL IMAGE FALLBACK (Ensures UI never looks broken)
+  // GLOBAL IMAGE FALLBACK (Ensures Zepto-style visuals never break)
   useEffect(() => {
     const handleGlobalError = (event) => {
       if (event.target.tagName === 'IMG') {
@@ -127,10 +120,10 @@ function App() {
     return () => window.removeEventListener('error', handleGlobalError, true);
   }, []);
 
-  // SOCKET LOGGING: Verify connection in the console
+  // SOCKET LOGGING
   useEffect(() => {
-    socket.on('connect', () => console.log("Snapit Socket Connected:", socket.id));
-    socket.on('connect_error', (err) => console.log("Socket Syncing...", err.message));
+    socket.on('connect', () => console.log("🚀 Snapit Socket Connected:", socket.id));
+    socket.on('connect_error', (err) => console.log("📡 Socket Syncing...", err.message));
     
     return () => {
       socket.off('connect');
@@ -149,7 +142,7 @@ function App() {
       
       {!isDashboard && <Footer />}
       
-      <Toaster />
+      <Toaster position="top-center" reverseOrder={false} />
 
       {
         location.pathname !== '/checkout' && 
