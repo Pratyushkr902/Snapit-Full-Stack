@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react' // ADDED: useMemo for performance
+import React, { useMemo } from 'react'
 import HomeBanner from '../components/HomeBanner' 
 import FlashSaleBanner from '../components/FlashSaleBanner' 
 import { useSelector } from 'react-redux'
@@ -12,19 +12,21 @@ const Home = () => {
   const subCategoryData = useSelector(state => state.product.allSubCategory)
   const navigate = useNavigate()
 
-  // --- FIXED: Prioritization Logic for "Atta, Rice & Dal" ---
-  // This ensures Atta is always the first product section rendered
+  // --- FIXED: Flexible Prioritization Logic ---
+  // This version is "fuzzier" so it won't break if there's a typo in the DB name
   const prioritizedCategorySections = useMemo(() => {
-    if (!categoryData || categoryData.length === 0) return [];
+    if (!categoryData || !Array.isArray(categoryData) || categoryData.length === 0) return [];
     
-    const priorityName = "Atta, Rice & Dal";
     const data = [...categoryData];
+    // Find index of category containing "Atta" (case insensitive)
+    const attaIndex = data.findIndex(c => c?.name?.toLowerCase().includes("atta"));
     
-    return data.sort((a, b) => {
-      if (a.name === priorityName) return -1;
-      if (b.name === priorityName) return 1;
-      return 0;
-    });
+    if (attaIndex > -1) {
+      const [attaItem] = data.splice(attaIndex, 1);
+      data.unshift(attaItem); // Force move to index 0
+    }
+    
+    return data;
   }, [categoryData]);
 
   const handleRedirectProductListpage = (id, cat) => {
@@ -42,28 +44,28 @@ const Home = () => {
 
   return (
     <section className='bg-white min-h-screen'>
-      {/* MAIN PROMOTIONAL SLIDER */}
+      {/* 1. TOP PROMO BANNER */}
       <div className='container mx-auto mb-2 lg:mb-4'>
           <HomeBanner />
       </div>
 
-      {/* FLASH SALE SYSTEM: Urgency Banner */}
+      {/* 2. FLASH SALE BANNER */}
       <div className='container mx-auto px-4 -mt-2'>
           <FlashSaleBanner />
       </div>
       
-      {/* CATEGORY ICON GRID: Raised and Tightened */}
+      {/* 3. CATEGORY GRID (Top Icons) */}
       <div className='container mx-auto px-4 my-4 grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3 lg:gap-5'>
           {
             loadingCategory ? (
               new Array(12).fill(null).map((_, index) => (
-                <div key={index + "loadingcategory"} className='bg-slate-50 rounded-xl p-4 min-h-32 grid gap-2 shadow-sm animate-pulse'>
+                <div key={index + "loadingcategory"} className='bg-slate-50 rounded-xl p-4 min-h-32 grid gap-2 animate-pulse'>
                   <div className='bg-slate-200 min-h-20 rounded-lg'></div>
                   <div className='bg-slate-200 h-4 rounded w-3/4 mx-auto'></div>
                 </div>
               ))
             ) : (
-              categoryData.map((cat) => (
+              categoryData?.map((cat) => (
                 <div 
                   key={cat._id + "displayCategory"} 
                   className='group w-full h-full cursor-pointer' 
@@ -83,16 +85,21 @@ const Home = () => {
           }
       </div>
 
-      {/* DYNAMIC PRODUCT SECTIONS: Ordered with "Atta" first */}
+      {/* 4. DYNAMIC PRODUCT SECTIONS (The actual products) */}
       <div className='grid gap-6 lg:gap-10 pb-24'>
         {
-          prioritizedCategorySections?.map((c) => (
-            <CategoryWiseProductDisplay 
-              key={c?._id + "CategorywiseProduct"} 
-              id={c?._id} 
-              name={c?.name}
-            />
-          ))
+          !loadingCategory && prioritizedCategorySections.length > 0 ? (
+            prioritizedCategorySections.map((c) => (
+              <CategoryWiseProductDisplay 
+                key={c?._id + "CategorywiseProduct"} 
+                id={c?._id} 
+                name={c?.name}
+              />
+            ))
+          ) : (
+             // Show a small loader if categories are still fetching
+             !loadingCategory && <p className="text-center text-slate-400 text-sm">Initializing product aisles...</p>
+          )
         }
       </div>
     </section>
