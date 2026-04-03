@@ -50,7 +50,7 @@ function App() {
     if(!user?._id) return; 
     try {
       const response = await Axios({ ...SummaryApi.getOrderItems })
-      if (response.data.success) {
+      if (response?.data?.success) {
         dispatch(setOrder(response.data.data))
       }
     } catch (error) {
@@ -63,7 +63,7 @@ function App() {
     try {
       dispatch(setLoadingCategory(true))
       const response = await Axios({ ...SummaryApi.getCategory })
-      if (response.data.success) {
+      if (response?.data?.success) {
         const sortedData = [...response.data.data].sort((a, b) => 
           (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase())
         )
@@ -79,7 +79,7 @@ function App() {
   const fetchSubCategory = useCallback(async () => {
     try {
       const response = await Axios({ ...SummaryApi.getSubCategory })
-      if (response.data.success) {
+      if (response?.data?.success) {
         const sortedData = [...response.data.data].sort((a, b) => 
           (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase())
         )
@@ -97,40 +97,49 @@ function App() {
   }, [fetchUser, fetchCategory, fetchSubCategory])
 
   useEffect(() => {
-    if(user?._id) fetchOrder()
+    if(user?._id) {
+      fetchOrder()
+    }
   }, [user?._id, fetchOrder])
 
   // SOCKET LOGGING
   useEffect(() => {
     socket.on('connect', () => console.log("🚀 Snapit Socket Connected:", socket.id));
-    return () => socket.off('connect');
+    socket.on('connect_error', (err) => console.log("📡 Socket connection effort:", err.message));
+    
+    return () => {
+      socket.off('connect');
+      socket.off('connect_error');
+    };
   }, []);
 
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
 
   return (
     <GlobalProvider>
-      {/* Passing setShowCart through the Header prop */}
-      <Header openCart={() => setShowCart(true)} />
-      
-      <main className='min-h-[78vh]'>
-        <Outlet />
-      </main>
-      
-      {!isDashboard && <Footer />}
-      
-      <Toaster position="top-center" />
+      <div className="App">
+        {/* Passing setShowCart through the Header prop */}
+        <Header openCart={() => setShowCart(true)} />
+        
+        <main className='min-h-[78vh]'>
+          <Outlet />
+        </main>
+        
+        {!isDashboard && <Footer />}
+        
+        <Toaster position="top-center" reverseOrder={false} />
 
-      {/* Global Cart Overlay Component */}
-      {showCart && <DisplayCartItem close={() => setShowCart(false)} />}
+        {/* Global Cart Overlay Component */}
+        {showCart && <DisplayCartItem close={() => setShowCart(false)} />}
 
-      {
-        location.pathname !== '/checkout' && 
-        location.pathname !== '/cart' && 
-        !isDashboard && (
-          <CartMobileLink />
-        )
-      }
+        {
+          location.pathname !== '/checkout' && 
+          location.pathname !== '/cart' && 
+          !isDashboard && (
+            <CartMobileLink />
+          )
+        }
+      </div>
     </GlobalProvider>
   )
 }
