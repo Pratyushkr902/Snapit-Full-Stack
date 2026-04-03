@@ -10,9 +10,9 @@ import { GoTriangleDown, GoTriangleUp } from "react-icons/go";
 import UserMenu from './UserMenu';
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees';
 import { useGlobalContext } from '../provider/GlobalProvider';
-import DisplayCartItem from './DisplayCartItem';
 
-const Header = () => {
+// FIXED: Receive openCart as a prop from App.jsx
+const Header = ({ openCart }) => {
     const [isMobile] = useMobile()
     const location = useLocation()
     const isSearchPage = location.pathname === "/search"
@@ -21,14 +21,11 @@ const Header = () => {
     const [openUserMenu, setOpenUserMenu] = useState(false)
     const cartItem = useSelector(state => state.cartItem.cart)
     
-    // --- UPDATED: Destructure fetch functions for sync ---
     const { totalPrice, totalQty, fetchUser, fetchAddress } = useGlobalContext()
 
-    // --- NEW: Pulling address for Zepto-style Header ---
     const addressList = useSelector(state => state.addresses.addressList)
     const primaryAddress = addressList?.[0]?.address_line || "Select Address"
 
-    // --- SYNC LOGIC: Refresh data when user ID is found ---
     useEffect(() => {
         if (user?._id) {
             if (fetchUser) fetchUser();
@@ -58,7 +55,6 @@ const Header = () => {
                 !(isSearchPage && isMobile) && (
                     <div className='container mx-auto flex flex-col lg:flex-row items-center px-3 py-2 lg:justify-between gap-2 lg:gap-4'>
                         
-                        {/* TOP ROW: Logo + Delivery Badge + Mobile Icons */}
                         <div className='flex items-center justify-between w-full lg:w-auto gap-4'>
                             <div className='flex items-center gap-2'>
                                 <Link to={"/"} className='h-full flex justify-center items-center shrink-0'>
@@ -74,7 +70,6 @@ const Header = () => {
                                     />
                                 </Link>
 
-                                {/** ZEPTO-STYLE DELIVERY BADGE - Mobile & Desktop Responsive **/}
                                 <div className='flex flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
                                     <div className='flex items-center gap-1'>
                                         <h2 className='font-black text-slate-900 text-[13px] lg:text-[15px] uppercase tracking-tighter'>
@@ -89,12 +84,12 @@ const Header = () => {
                                 </div>
                             </div>
 
-                            {/* Mobile-only Icons (User/Cart) for Native feel */}
                             <div className='flex items-center gap-5 lg:hidden'>
                                 <button className='text-neutral-600' onClick={handleMobileUser}>
                                     <FaRegCircleUser size={24} />
                                 </button>
-                                <button onClick={() => setOpenCartSection(true)} className='relative text-green-700'>
+                                {/* FIXED: Now using openCart prop from App.jsx */}
+                                <button onClick={openCart} className='relative text-green-700'>
                                     <BsCart4 size={24} />
                                     {totalQty > 0 && (
                                         <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full'>
@@ -105,12 +100,10 @@ const Header = () => {
                             </div>
                         </div>
 
-                        {/** Desktop Search Bar **/}
                         <div className='hidden lg:block w-full max-w-xl'>
                             <Search />
                         </div>
 
-                        {/** Desktop Right Menu */}
                         <div className='hidden lg:flex items-center gap-8 flex-shrink-0'>
                             {
                                 user?._id && (
@@ -118,7 +111,6 @@ const Header = () => {
                                         <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
                                         <div className='flex flex-col'>
                                             <span className='font-black text-slate-700 text-[10px] uppercase leading-none'>Balance</span>
-                                            {/* SYNCED BALANCE */}
                                             <span className='font-bold text-green-700 text-sm'>{DisplayPriceInRupees(user?.walletBalance || 0)}</span>
                                         </div>
                                     </Link>
@@ -145,7 +137,8 @@ const Header = () => {
                                 )
                             }
 
-                            <button onClick={() => setOpenCartSection(true)} className='flex items-center gap-3 bg-green-700 hover:bg-green-800 px-5 py-2.5 rounded-xl text-white shadow-lg active:scale-95 transition-all'>
+                            {/* FIXED: Now using openCart prop from App.jsx */}
+                            <button onClick={openCart} className='flex items-center gap-3 bg-green-700 hover:bg-green-800 px-5 py-2.5 rounded-xl text-white shadow-lg active:scale-95 transition-all'>
                                 <div className='animate-bounce'><BsCart4 size={24} /></div>
                                 <div className='font-bold text-sm text-left leading-tight'>
                                     {cartItem[0] ? (
@@ -161,12 +154,11 @@ const Header = () => {
                 )
             }
 
-            {/** MOBILE SEARCH BAR (Second Tier) **/}
             <div className='container mx-auto px-3 lg:hidden pb-2'>
                 <Search />
             </div>
 
-            {openCartSection && <DisplayCartItem close={() => setOpenCartSection(false)} />}
+            {/* REMOVED: DisplayCartItem condition. It is now handled globally in App.jsx */}
         </header>
     )
 }
