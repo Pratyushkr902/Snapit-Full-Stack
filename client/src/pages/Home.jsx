@@ -44,18 +44,23 @@ const Home = () => {
 
   return (
     <section className='bg-white min-h-screen overflow-x-hidden'>
-      {/* 1. MAIN BANNER - Removed extra mobile padding to prevent gaps */}
+      {/* 1. MAIN BANNER - Edge-to-edge on mobile */}
       <div className='container mx-auto px-0 lg:px-4 mb-2 lg:mb-4'>
           <HomeBanner />
       </div>
 
-      {/* 2. CATEGORY ICON GRID - Optimized for Touch & High Density */}
+      {/* FLASH SALE SECTION PERMANENTLY REMOVED */}
+
+      {/* 2. CATEGORY ICON GRID - Positioned high for better visibility */}
       <div className='container mx-auto px-4 mt-2 mb-6'>
         <div className='grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3 lg:gap-5'>
             {
               loadingCategory ? (
                 new Array(12).fill(null).map((_, i) => (
-                  <div key={i+"load"} className='bg-slate-50 rounded-xl aspect-square animate-pulse'></div>
+                  <div key={i+"load"} className='flex flex-col items-center gap-2'>
+                    <div className='bg-slate-100 w-full aspect-square rounded-2xl animate-pulse'></div>
+                    <div className='bg-slate-100 h-3 w-3/4 rounded animate-pulse'></div>
+                  </div>
                 ))
               ) : (
                 categoryData?.map((cat) => (
@@ -69,6 +74,7 @@ const Home = () => {
                           src={cat.image} 
                           alt={cat.name} 
                           className='w-full h-full object-scale-down group-hover:scale-110 transition-transform duration-300' 
+                          loading="lazy"
                         />
                     </div>
                     <p className='text-center text-[10px] lg:text-xs mt-1.5 font-bold text-slate-700 line-clamp-1'>{cat.name}</p>
@@ -79,7 +85,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 3. DYNAMIC PRODUCT SECTIONS - Removed Android Overflow Gaps */}
+      {/* 3. DYNAMIC PRODUCT SECTIONS - Smooth vertical flow starting with staples */}
       <div className='flex flex-col gap-4 lg:gap-10 pb-24'>
         {
           !loadingCategory && prioritizedCategorySections.map((c) => (
