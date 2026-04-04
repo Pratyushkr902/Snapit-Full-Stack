@@ -54,7 +54,6 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// Robust CORS for Express 5 regex paths
 app.options(/(.*)/, cors());
 
 // --- 2. SECURITY & UTILITY MIDDLEWARE ---
@@ -135,18 +134,27 @@ app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
 // --- 5. STATIC FILE SERVING (FIXES MIME TYPE & 404 ERRORS) ---
-const clientBuildPath = path.resolve(__dirname, '..', 'client', 'dist'); 
+// We use process.cwd() to ensure we are in the root of the project for Render
+const clientBuildPath = path.join(process.cwd(), 'client', 'dist');
+
+// LOG: This will show up in your Render Logs to confirm the path
+console.log("Serving static files from:", clientBuildPath);
+
 app.use(express.static(clientBuildPath));
 
-// NUCLEAR FIX: Using app.use middleware instead of app.get with regex.
-// This bypasses the path-to-regexp library entirely to avoid PathErrors.
+// Fallback for Single Page Application (SPA) routing
 app.use((req, res, next) => {
-    // If the request starts with /api but wasn't handled by the routes above
     if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: "API endpoint not found", success: false });
     }
-    // For all other requests (like /search, /cart, etc.), serve the React index.html
-    res.sendFile(path.join(clientBuildPath, 'index.html'));
+    
+    // Attempt to send index.html; if it fails, the frontend build is missing or path is wrong
+    res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
+        if (err) {
+            console.error("Static File Error:", err.message);
+            res.status(500).send("Frontend build not found. Please ensure 'npm run build' was successful.");
+        }
+    });
 });
 
 // --- 6. KEEP RENDER AWAKE (Updated to -0 server) ---
