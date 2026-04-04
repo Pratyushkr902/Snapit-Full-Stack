@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
+import fs from 'fs'; // Added for path verification
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +55,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// FIXED: Bypassing PathError by using middleware for OPTIONS instead of a regex string
+// FIXED: Bypassing PathError by using middleware for OPTIONS
 app.use((req, res, next) => {
     if (req.method === 'OPTIONS') {
         res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -143,9 +144,16 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
-// --- 5. STATIC FILE SERVING ---
-const clientBuildPath = path.join(process.cwd(), 'client', 'dist');
-console.log("Serving static files from:", clientBuildPath);
+// --- 5. STATIC FILE SERVING (SMART PATHING FIX) ---
+const possiblePaths = [
+    path.join(process.cwd(), 'client', 'dist'),          // Try Root-level
+    path.join(process.cwd(), '..', 'client', 'dist'),     // Try Parent-level
+    path.resolve(__dirname, '..', 'client', 'dist')      // Try Absolute Relative
+];
+
+// Determine actual build path
+const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 
 app.use(express.static(clientBuildPath));
 
@@ -161,7 +169,12 @@ app.use((req, res, next) => {
     
     res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
         if (err) {
-            res.status(500).send("Frontend build not found. Please ensure 'npm run build' was successful.");
+            console.error("❌ SendFile Error:", err.message);
+            res.status(500).json({
+                error: "Frontend build not found.",
+                resolvedPath: clientBuildPath,
+                tip: "Verify build command: cd client && npm run build"
+            });
         }
     });
 });
