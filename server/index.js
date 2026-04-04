@@ -54,8 +54,17 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// Robust CORS handling for Express 5
-app.options('(.*)', cors());
+// FIXED: Bypassing PathError by using middleware for OPTIONS instead of a regex string
+app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With, Accept');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        return res.sendStatus(200);
+    }
+    next();
+});
 
 // --- 2. SECURITY & UTILITY MIDDLEWARE ---
 app.use(helmet({
@@ -134,34 +143,30 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
-// --- 5. STATIC FILE SERVING (FIXES MIME TYPE & 404 ERRORS) ---
+// --- 5. STATIC FILE SERVING ---
 const clientBuildPath = path.join(process.cwd(), 'client', 'dist');
 console.log("Serving static files from:", clientBuildPath);
 
 app.use(express.static(clientBuildPath));
 
-// NUCLEAR FIX: Bypassing path-to-regexp entirely to avoid Express 5 PathErrors
+// NUCLEAR FIX: Bypassing path-to-regexp entirely for all remaining routes
 app.use((req, res, next) => {
-    // Stop the 500 crash on favicon requests
     if (req.url === '/favicon.ico') {
         return res.status(204).end();
     }
 
-    // If it's an API call that wasn't caught above, it's a real 404
     if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: "API endpoint not found", success: false });
     }
     
-    // For SPA routing, send index.html
     res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
         if (err) {
-            console.error("Static File Error:", err.message);
             res.status(500).send("Frontend build not found. Please ensure 'npm run build' was successful.");
         }
     });
 });
 
-// --- 6. KEEP RENDER AWAKE (Updated to -0 server) ---
+// --- 6. KEEP RENDER AWAKE ---
 setInterval(() => {
     fetch('https://snapit-full-stack-0.onrender.com/')
         .catch(() => {})
