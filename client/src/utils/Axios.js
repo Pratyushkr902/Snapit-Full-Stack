@@ -1,8 +1,8 @@
 import axios from "axios";
 import SummaryApi, { baseURL } from "../common/SummaryApi";
 
-// Production URL Fix
-const API_URL = "https://snapit-full-stack-2.onrender.com";
+// PRODUCTION URL FIX: Switching from broken -2 to stable -0
+const API_URL = "https://snapit-full-stack-0.onrender.com";
 
 const Axios = axios.create({
     baseURL : API_URL,
@@ -12,14 +12,14 @@ const Axios = axios.create({
 // Sending access token in the header
 Axios.interceptors.request.use(
     async(config)=>{
-        // Fix: Case-sensitive check for 'accessToken'
-        const accessToken = localStorage.getItem('accesstoken')
+        // FIXED: Check both common cases to prevent "Provide Token" error on Android
+        const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken');
 
         if(accessToken){
-            config.headers.Authorization = `Bearer ${accessToken}`
+            config.headers.Authorization = `Bearer ${accessToken}`;
         }
 
-        return config
+        return config;
     },
     (error)=>{
         return Promise.reject(error)
@@ -68,7 +68,10 @@ const refreshAccessToken = async(refreshToken)=>{
         })
 
         const accessToken = response.data.data.accessToken
-        localStorage.setItem('accesstoken', accessToken)
+        // Standardize storage for both cases
+        localStorage.setItem('accessToken', accessToken)
+        localStorage.setItem('accesstoken', accessToken) 
+        
         return accessToken
     } catch (error) {
         // If refresh fails, clear everything and force logout
@@ -78,4 +81,4 @@ const refreshAccessToken = async(refreshToken)=>{
     }
 }
 
-export default Axios
+export default Axios;

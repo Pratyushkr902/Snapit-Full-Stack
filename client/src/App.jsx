@@ -58,7 +58,7 @@ function App() {
     }
   }, [dispatch, user?._id])
 
-  // --- ALPHABETICAL SORT: Ensures 'Atta' stays at the top naturally ---
+  // --- ALPHABETICAL SORT: Ensures 'Atta' and others stay organized A-Z ---
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
@@ -102,7 +102,7 @@ function App() {
     }
   }, [user?._id, fetchOrder])
 
-  // SOCKET LOGGING
+  // SOCKET LOGGING & CLEANUP
   useEffect(() => {
     socket.on('connect', () => console.log("🚀 Snapit Socket Connected:", socket.id));
     socket.on('connect_error', (err) => console.log("📡 Socket connection effort:", err.message));
