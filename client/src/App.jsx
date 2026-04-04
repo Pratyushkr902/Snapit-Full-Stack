@@ -17,7 +17,7 @@ import DisplayCartItem from './components/DisplayCartItem';
 import { io } from "socket.io-client"; 
 
 // GLOBAL SOCKET CONNECTION - Pointing to stable -0 instance
-export const socket = io("https://snapit-full-stack-0.onrender.com", {
+export const socket = io("https://snapit-full-stack-2.onrender.com", {
   transports:           ["polling", "websocket"],
   withCredentials:      true,
   path:                 "/socket.io/",
