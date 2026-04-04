@@ -26,7 +26,6 @@ import './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
 
-// Pre-deployment log checks
 console.log("RAZORPAY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
 import userRouter from './route/user.route.js';
@@ -139,11 +138,14 @@ app.use('/api/referral', referralRouter);
 const clientBuildPath = path.resolve(__dirname, '..', 'client', 'dist'); 
 app.use(express.static(clientBuildPath));
 
-// FIXED: Named parameter ':path*' ensures Express 5 compatibility
-app.get('/:path*', (req, res) => {
+// NUCLEAR FIX: Using app.use middleware instead of app.get with regex.
+// This bypasses the path-to-regexp library entirely to avoid PathErrors.
+app.use((req, res, next) => {
+    // If the request starts with /api but wasn't handled by the routes above
     if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: "API endpoint not found", success: false });
     }
+    // For all other requests (like /search, /cart, etc.), serve the React index.html
     res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
