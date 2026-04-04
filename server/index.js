@@ -26,6 +26,7 @@ import './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
 
+// Pre-deployment log checks
 console.log("RAZORPAY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
 import userRouter from './route/user.route.js';
@@ -54,6 +55,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
+// Robust CORS for Express 5 regex paths
 app.options(/(.*)/, cors());
 
 // --- 2. SECURITY & UTILITY MIDDLEWARE ---
@@ -137,9 +139,8 @@ app.use('/api/referral', referralRouter);
 const clientBuildPath = path.resolve(__dirname, '..', 'client', 'dist'); 
 app.use(express.static(clientBuildPath));
 
-// FIXED: Express 5.x Wildcard Fix using a named parameter ':path*'
+// FIXED: Named parameter ':path*' ensures Express 5 compatibility
 app.get('/:path*', (req, res) => {
-    // Prevent accidental HTML responses for broken API calls
     if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: "API endpoint not found", success: false });
     }
