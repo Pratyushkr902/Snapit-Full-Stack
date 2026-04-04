@@ -54,7 +54,8 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-app.options(/(.*)/, cors());
+// Robust CORS handling for Express 5
+app.options('(.*)', cors());
 
 // --- 2. SECURITY & UTILITY MIDDLEWARE ---
 app.use(helmet({
@@ -134,21 +135,24 @@ app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
 // --- 5. STATIC FILE SERVING (FIXES MIME TYPE & 404 ERRORS) ---
-// We use process.cwd() to ensure we are in the root of the project for Render
 const clientBuildPath = path.join(process.cwd(), 'client', 'dist');
-
-// LOG: This will show up in your Render Logs to confirm the path
 console.log("Serving static files from:", clientBuildPath);
 
 app.use(express.static(clientBuildPath));
 
-// Fallback for Single Page Application (SPA) routing
+// NUCLEAR FIX: Bypassing path-to-regexp entirely to avoid Express 5 PathErrors
 app.use((req, res, next) => {
+    // Stop the 500 crash on favicon requests
+    if (req.url === '/favicon.ico') {
+        return res.status(204).end();
+    }
+
+    // If it's an API call that wasn't caught above, it's a real 404
     if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: "API endpoint not found", success: false });
     }
     
-    // Attempt to send index.html; if it fails, the frontend build is missing or path is wrong
+    // For SPA routing, send index.html
     res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
         if (err) {
             console.error("Static File Error:", err.message);
