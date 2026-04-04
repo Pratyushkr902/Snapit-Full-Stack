@@ -10,6 +10,7 @@ import { GoTriangleDown, GoTriangleUp } from "react-icons/go";
 import UserMenu from './UserMenu';
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees';
 import { useGlobalContext } from '../provider/GlobalProvider';
+import DeliveryTimer from './DeliveryTimer'
 
 // FIXED: Receive openCart as a prop from App.jsx
 const Header = ({ openCart }) => {
@@ -50,7 +51,11 @@ const Header = ({ openCart }) => {
     }
 
     return (
-        <header className='h-28 lg:h-24 lg:shadow-md sticky top-0 z-40 flex flex-col justify-center gap-1 bg-white shadow-sm'>
+        <header className='lg:h-24 lg:shadow-md sticky top-0 z-40 flex flex-col justify-center gap-1 bg-white shadow-sm'>
+
+            {/* ── Zepto-style delivery timer bar (mobile only) ── */}
+            {isMobile && user?._id && <DeliveryTimer />}
+
             {
                 !(isSearchPage && isMobile) && (
                     <div className='container mx-auto flex flex-col lg:flex-row items-center px-3 py-2 lg:justify-between gap-2 lg:gap-4'>
@@ -70,7 +75,8 @@ const Header = ({ openCart }) => {
                                     />
                                 </Link>
 
-                                <div className='flex flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
+                                {/* Desktop delivery info */}
+                                <div className='hidden lg:flex flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
                                     <div className='flex items-center gap-1'>
                                         <h2 className='font-black text-slate-900 text-[13px] lg:text-[15px] uppercase tracking-tighter'>
                                             Delivery in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
@@ -78,17 +84,32 @@ const Header = ({ openCart }) => {
                                         <span className='text-base lg:text-lg'>⚡</span>
                                     </div>
                                     <div className='flex items-center gap-0.5 text-[10px] lg:text-xs text-slate-500 font-semibold cursor-pointer truncate max-w-[120px] lg:max-w-[150px]'>
-                                        <span className='truncate'>{primaryAddress}</span>
+                                        <span className='truncate'>📍 {primaryAddress}</span>
                                         <GoTriangleDown size={12} />
                                     </div>
                                 </div>
+
+                                {/* Mobile delivery info (shown when not logged in) */}
+                                {!user?._id && (
+                                    <div className='flex lg:hidden flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
+                                        <div className='flex items-center gap-1'>
+                                            <h2 className='font-black text-slate-900 text-[13px] uppercase tracking-tighter'>
+                                                Delivery in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
+                                            </h2>
+                                            <span>⚡</span>
+                                        </div>
+                                        <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold cursor-pointer truncate max-w-[120px]'>
+                                            <span className='truncate'>📍 {primaryAddress}</span>
+                                            <GoTriangleDown size={12} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className='flex items-center gap-5 lg:hidden'>
                                 <button className='text-neutral-600' onClick={handleMobileUser}>
                                     <FaRegCircleUser size={24} />
                                 </button>
-                                {/* FIXED: Now using openCart prop from App.jsx */}
                                 <button onClick={openCart} className='relative text-green-700'>
                                     <BsCart4 size={24} />
                                     {totalQty > 0 && (
@@ -137,7 +158,6 @@ const Header = ({ openCart }) => {
                                 )
                             }
 
-                            {/* FIXED: Now using openCart prop from App.jsx */}
                             <button onClick={openCart} className='flex items-center gap-3 bg-green-700 hover:bg-green-800 px-5 py-2.5 rounded-xl text-white shadow-lg active:scale-95 transition-all'>
                                 <div className='animate-bounce'><BsCart4 size={24} /></div>
                                 <div className='font-bold text-sm text-left leading-tight'>
@@ -158,7 +178,6 @@ const Header = ({ openCart }) => {
                 <Search />
             </div>
 
-            {/* REMOVED: DisplayCartItem condition. It is now handled globally in App.jsx */}
         </header>
     )
 }
