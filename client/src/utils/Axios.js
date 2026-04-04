@@ -2,7 +2,7 @@ import axios from "axios";
 import SummaryApi, { baseURL } from "../common/SummaryApi";
 
 // PRODUCTION URL FIX: Switching from broken -2 to stable -0
-const API_URL = "https://snapit-full-stack-0.onrender.com";
+const API_URL = "https://snapit-full-stack-2.onrender.com";
 
 const Axios = axios.create({
     baseURL : API_URL,
