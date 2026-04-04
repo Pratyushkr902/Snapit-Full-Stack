@@ -10,7 +10,7 @@ import { GoTriangleDown, GoTriangleUp } from "react-icons/go";
 import UserMenu from './UserMenu';
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees';
 import { useGlobalContext } from '../provider/GlobalProvider';
-import DeliveryTimer from './DeliveryTimer'
+
 
 // FIXED: Receive openCart as a prop from App.jsx
 const Header = ({ openCart }) => {
