@@ -11,7 +11,6 @@ import UserMenu from './UserMenu';
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees';
 import { useGlobalContext } from '../provider/GlobalProvider';
 
-// FIXED: Receive openCart as a prop from App.jsx
 const Header = ({ openCart }) => {
     const [isMobile] = useMobile()
     const location = useLocation()
@@ -50,7 +49,7 @@ const Header = ({ openCart }) => {
     }
 
     return (
-        <header className='h-28 lg:h-24 lg:shadow-md sticky top-0 z-40 flex flex-col justify-center gap-1 bg-white shadow-sm'>
+        <header className='h-32 lg:h-24 lg:shadow-md sticky top-0 z-40 flex flex-col justify-center gap-1 bg-white shadow-sm overflow-hidden'>
             {
                 !(isSearchPage && isMobile) && (
                     <div className='container mx-auto flex flex-col lg:flex-row items-center px-3 py-2 lg:justify-between gap-2 lg:gap-4'>
@@ -77,22 +76,28 @@ const Header = ({ openCart }) => {
                                         </h2>
                                         <span className='text-base lg:text-lg'>⚡</span>
                                     </div>
-                                    <div className='flex items-center gap-0.5 text-[10px] lg:text-xs text-slate-500 font-semibold cursor-pointer truncate max-w-[120px] lg:max-w-[150px]'>
+                                    <div className='flex items-center gap-0.5 text-[10px] lg:text-xs text-slate-500 font-semibold cursor-pointer truncate max-w-[100px] lg:max-w-[150px]'>
                                         <span className='truncate'>{primaryAddress}</span>
                                         <GoTriangleDown size={12} />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className='flex items-center gap-5 lg:hidden'>
-                                <button className='text-neutral-600' onClick={handleMobileUser}>
-                                    <FaRegCircleUser size={24} />
+                            {/* MOBILE ACTION ROW: Wallet + User + Cart */}
+                            <div className='flex items-center gap-3 lg:hidden'>
+                                {user?._id && (
+                                    <Link to="/wallet" className='flex items-center bg-green-50 px-2 py-1 rounded-lg border border-green-100 active:scale-90 transition-transform'>
+                                        <span className='text-[10px] font-black text-green-700 mr-1'>₹</span>
+                                        <span className='text-xs font-bold text-green-700'>{user?.walletBalance || 0}</span>
+                                    </Link>
+                                )}
+                                <button className='text-neutral-600 active:scale-90 transition-transform' onClick={handleMobileUser}>
+                                    <FaRegCircleUser size={22} />
                                 </button>
-                                {/* FIXED: Now using openCart prop from App.jsx */}
-                                <button onClick={openCart} className='relative text-green-700'>
-                                    <BsCart4 size={24} />
+                                <button onClick={openCart} className='relative text-green-700 active:scale-90 transition-transform'>
+                                    <BsCart4 size={22} />
                                     {totalQty > 0 && (
-                                        <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full'>
+                                        <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-white'>
                                             {totalQty}
                                         </span>
                                     )}
@@ -100,10 +105,12 @@ const Header = ({ openCart }) => {
                             </div>
                         </div>
 
+                        {/* DESKTOP SEARCH */}
                         <div className='hidden lg:block w-full max-w-xl'>
                             <Search />
                         </div>
 
+                        {/* DESKTOP ACTION ROW */}
                         <div className='hidden lg:flex items-center gap-8 flex-shrink-0'>
                             {
                                 user?._id && (
@@ -137,7 +144,6 @@ const Header = ({ openCart }) => {
                                 )
                             }
 
-                            {/* FIXED: Now using openCart prop from App.jsx */}
                             <button onClick={openCart} className='flex items-center gap-3 bg-green-700 hover:bg-green-800 px-5 py-2.5 rounded-xl text-white shadow-lg active:scale-95 transition-all'>
                                 <div className='animate-bounce'><BsCart4 size={24} /></div>
                                 <div className='font-bold text-sm text-left leading-tight'>
@@ -154,11 +160,10 @@ const Header = ({ openCart }) => {
                 )
             }
 
+            {/* MOBILE SEARCH BAR */}
             <div className='container mx-auto px-3 lg:hidden pb-2'>
                 <Search />
             </div>
-
-            {/* REMOVED: DisplayCartItem condition. It is now handled globally in App.jsx */}
         </header>
     )
 }
