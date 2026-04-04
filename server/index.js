@@ -3,6 +3,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Server } from 'socket.io'; 
 import http from 'http'; 
+import express from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
+import helmet from 'helmet';
+import connectDB from './config/connectDB.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,13 +17,6 @@ const __dirname = path.dirname(__filename);
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config(); 
 }
-
-import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
-import helmet from 'helmet';
-import connectDB from './config/connectDB.js';
 
 // --- CRITICAL: PRE-REGISTER MODELS ---
 import './models/user.model.js';
@@ -55,7 +54,6 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// FIXED: Express 5.x requires Regex for wildcards to prevent PathError
 app.options(/(.*)/, cors());
 
 // --- 2. SECURITY & UTILITY MIDDLEWARE ---
@@ -78,7 +76,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// CRITICAL: Must be placed BEFORE routes so they can parse incoming data
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
@@ -119,24 +116,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('update_location', (data) => {
-        const { orderId, latitude, longitude } = data;
-        if (orderId && latitude && longitude) {
-            io.to(orderId).emit('rider_moved', { latitude, longitude });
-        }
-    });
-
-    socket.on('error', (err) => console.error("Socket.io Error:", err));
     socket.on('disconnect', () => console.log(`Client ${socket.id} disconnected`));
-});
-
-const PORT = process.env.PORT || 8080;
-
-app.get("/", (request, response) => {
-    response.json({
-        message: "Snapit Server is Live",
-        tracking_enabled: true
-    });
 });
 
 // --- 4. API ROUTES ---
@@ -153,20 +133,34 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
-// --- 5. KEEP RENDER AWAKE (ping every 14 minutes) ---
+// --- 5. STATIC FILE SERVING (FIXES MIME TYPE & 404 ERRORS) ---
+// This tells Express where the frontend build files are
+const clientBuildPath = path.join(__dirname, '../client/dist'); 
+app.use(express.static(clientBuildPath));
+
+// Redirect all non-API requests to the React index.html
+app.get('*', (req, res) => {
+    // If it's an API call that wasn't caught, return JSON, otherwise return the frontend
+    if (req.url.startsWith('/api')) {
+        return res.status(404).json({ message: "API endpoint not found" });
+    }
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+});
+
+// --- 6. KEEP RENDER AWAKE (Updated to -0 server) ---
 setInterval(() => {
-    fetch('https://snapit-full-stack-2.onrender.com/')
+    // Ping the correct live server
+    fetch('https://snapit-full-stack-0.onrender.com/')
         .catch(() => {})
 }, 14 * 60 * 1000)
 
-// --- 6. START SERVER ---
+// --- 7. START SERVER ---
+const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
     console.log("Database Connected Successfully");
-    if (process.env.NODE_ENV !== 'test') {
-        server.listen(PORT, () => { 
-            console.log(`Snapit Server running on port ${PORT}`);
-        });
-    }
+    server.listen(PORT, () => { 
+        console.log(`Snapit Server running on port ${PORT}`);
+    });
 }).catch(err => {
     console.error("Database connection failed", err);
 });
