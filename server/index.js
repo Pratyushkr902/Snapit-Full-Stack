@@ -144,14 +144,15 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
-// --- 5. STATIC FILE SERVING (SMART PATHING FIX) ---
+// --- 5. STATIC FILE SERVING (RENDER-SPECIFIC PATH FIX) ---
+// Since Render root directory is 'server', we must look one level up (..) to find 'client'
 const possiblePaths = [
-    path.join(process.cwd(), 'client', 'dist'),          // Try Root-level
-    path.join(process.cwd(), '..', 'client', 'dist'),     // Try Parent-level
-    path.resolve(__dirname, '..', 'client', 'dist')      // Try Absolute Relative
+    path.join(process.cwd(), '..', 'client', 'dist'),     // 1. Level above (Standard for mono-repo on Render)
+    path.join(process.cwd(), 'client', 'dist'),          // 2. Same level
+    path.resolve(__dirname, '..', 'client', 'dist')      // 3. Absolute resolution
 ];
 
-// Determine actual build path
+// Determine actual build path by checking which directory exists
 const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
 console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 
@@ -173,7 +174,8 @@ app.use((req, res, next) => {
             res.status(500).json({
                 error: "Frontend build not found.",
                 resolvedPath: clientBuildPath,
-                tip: "Verify build command: cd client && npm run build"
+                currentWorkingDirectory: process.cwd(),
+                tip: "Verify build command: cd client && npm install && npm run build"
             });
         }
     });
