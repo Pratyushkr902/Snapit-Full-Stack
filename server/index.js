@@ -137,8 +137,8 @@ app.use('/api/referral', referralRouter);
 const clientBuildPath = path.resolve(__dirname, '..', 'client', 'dist'); 
 app.use(express.static(clientBuildPath));
 
-// FIXED: Express 5.x Wildcard Fix. Using (.*) regex instead of '*' string.
-app.get('(.*)', (req, res) => {
+// FIXED: Express 5.x Wildcard Fix using a named parameter ':path*'
+app.get('/:path*', (req, res) => {
     // Prevent accidental HTML responses for broken API calls
     if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: "API endpoint not found", success: false });
