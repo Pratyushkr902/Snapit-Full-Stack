@@ -134,12 +134,11 @@ app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
 // --- 5. STATIC FILE SERVING (FIXES MIME TYPE & 404 ERRORS) ---
-// We use path.resolve to ensure Render finds the dist folder correctly regardless of current directory
 const clientBuildPath = path.resolve(__dirname, '..', 'client', 'dist'); 
 app.use(express.static(clientBuildPath));
 
-// Redirect all non-API requests to the React index.html
-app.get('*', (req, res) => {
+// FIXED: Express 5.x Wildcard Fix. Using (.*) regex instead of '*' string.
+app.get('(.*)', (req, res) => {
     // Prevent accidental HTML responses for broken API calls
     if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: "API endpoint not found", success: false });
