@@ -43,7 +43,7 @@ const Header = ({ openCart }) => {
     }
 
     const handleMobileUser = () => {
-        if (!user._id) {
+        if (!user?._id) {
             navigate("/login")
             return
         }
@@ -53,8 +53,7 @@ const Header = ({ openCart }) => {
     return (
         <header className='lg:h-24 lg:shadow-md sticky top-0 z-40 flex flex-col justify-center gap-1 bg-white shadow-sm'>
 
-            {/* ── Zepto-style delivery timer bar (mobile only) ── */}
-            {isMobile && user?._id && <DeliveryTimer />}
+            {/* FIXED: Removed DeliveryTimer ghost reference to fix white screen */}
 
             {
                 !(isSearchPage && isMobile) && (
@@ -77,7 +76,7 @@ const Header = ({ openCart }) => {
 
                                 {/* Desktop delivery info */}
                                 <div className='hidden lg:flex flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
-                                    <div className='flex items-center gap-1'>
+                                    <div className='flex items-center gap-1 leading-none'>
                                         <h2 className='font-black text-slate-900 text-[13px] lg:text-[15px] uppercase tracking-tighter'>
                                             Delivery in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
                                         </h2>
@@ -89,31 +88,29 @@ const Header = ({ openCart }) => {
                                     </div>
                                 </div>
 
-                                {/* Mobile delivery info (shown when not logged in) */}
-                                {!user?._id && (
-                                    <div className='flex lg:hidden flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
-                                        <div className='flex items-center gap-1'>
-                                            <h2 className='font-black text-slate-900 text-[13px] uppercase tracking-tighter'>
-                                                Delivery in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
-                                            </h2>
-                                            <span>⚡</span>
-                                        </div>
-                                        <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold cursor-pointer truncate max-w-[120px]'>
-                                            <span className='truncate'>📍 {primaryAddress}</span>
-                                            <GoTriangleDown size={12} />
-                                        </div>
+                                {/* Mobile delivery info (shown when not logged in or timer removed) */}
+                                <div className='flex lg:hidden flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
+                                    <div className='flex items-center gap-1 leading-none'>
+                                        <h2 className='font-black text-slate-900 text-[13px] uppercase tracking-tighter'>
+                                            Delivery in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
+                                        </h2>
+                                        <span>⚡</span>
                                     </div>
-                                )}
+                                    <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold cursor-pointer truncate max-w-[120px]'>
+                                        <span className='truncate'>📍 {primaryAddress}</span>
+                                        <GoTriangleDown size={12} />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className='flex items-center gap-5 lg:hidden'>
-                                <button className='text-neutral-600' onClick={handleMobileUser}>
+                                <button className='text-neutral-600 active:scale-90 transition-transform' onClick={handleMobileUser}>
                                     <FaRegCircleUser size={24} />
                                 </button>
-                                <button onClick={openCart} className='relative text-green-700'>
+                                <button onClick={openCart} className='relative text-green-700 active:scale-90 transition-transform'>
                                     <BsCart4 size={24} />
                                     {totalQty > 0 && (
-                                        <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full'>
+                                        <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white'>
                                             {totalQty}
                                         </span>
                                     )}
@@ -146,7 +143,7 @@ const Header = ({ openCart }) => {
                                             {openUserMenu ? <GoTriangleUp size={22} /> : <GoTriangleDown size={22} />}
                                         </div>
                                         {openUserMenu && (
-                                            <div className='absolute right-0 top-12'>
+                                            <div className='absolute right-0 top-12 z-50'>
                                                 <div className='bg-white rounded-xl p-4 min-w-52 shadow-2xl border border-slate-100'>
                                                     <UserMenu close={handleCloseUserMenu} />
                                                 </div>
@@ -154,14 +151,14 @@ const Header = ({ openCart }) => {
                                         )}
                                     </div>
                                 ) : (
-                                    <button onClick={redirectToLoginPage} className='text-lg px-2 font-bold text-slate-700 hover:text-green-700'>Login</button>
+                                    <button onClick={redirectToLoginPage} className='text-lg px-2 font-bold text-slate-700 hover:text-green-700 transition-colors'>Login</button>
                                 )
                             }
 
                             <button onClick={openCart} className='flex items-center gap-3 bg-green-700 hover:bg-green-800 px-5 py-2.5 rounded-xl text-white shadow-lg active:scale-95 transition-all'>
-                                <div className='animate-bounce'><BsCart4 size={24} /></div>
+                                <BsCart4 size={24} className={totalQty > 0 ? 'animate-bounce' : ''} />
                                 <div className='font-bold text-sm text-left leading-tight'>
-                                    {cartItem[0] ? (
+                                    {totalQty > 0 ? (
                                         <div>
                                             <p>{totalQty} Items</p>
                                             <p className='text-[11px] font-medium opacity-90'>{DisplayPriceInRupees(totalPrice)}</p>
