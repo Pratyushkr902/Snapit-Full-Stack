@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom' // Added useParams
 import AxiosToastError from '../utils/AxiosToastError'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
@@ -13,6 +13,11 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(false)
     const containerRef = useRef()
+    const params = useParams() // Get params to detect product changes
+    
+    // Extract current product ID from URL to exclude it from suggestions
+    const currentProductId = params?.product?.split("-")?.slice(-1)[0]
+
     const subCategoryData = useSelector(state => state.product.allSubCategory)
     const loadingCardNumber = new Array(6).fill(null)
 
@@ -29,7 +34,9 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
             const { data: responseData } = response
 
             if (responseData.success) {
-                setData(responseData.data)
+                // OPTIMIZATION: Filter out the current product so it doesn't suggest itself
+                const filteredData = responseData.data.filter(p => p._id !== currentProductId)
+                setData(filteredData)
             }
         } catch (error) {
             AxiosToastError(error)
@@ -38,21 +45,18 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
         }
     }
 
+    // FIX: Added 'id' and 'params' so it re-fetches when navigating between products
     useEffect(() => {
         fetchCategoryWiseProduct()
-    }, [])
+    }, [id, params])
 
     const handleScrollRight = () => {
-        containerRef.current.scrollLeft += 200
+        containerRef.current.scrollLeft += 250 // Increased for better UX
     }
 
     const handleScrollLeft = () => {
-        containerRef.current.scrollLeft -= 200
+        containerRef.current.scrollLeft -= 250
     }
-
-    
-
-  
 
   const handleRedirectProductListpage = ()=>{
       const subcategory = subCategoryData.find(sub =>{
@@ -69,13 +73,13 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
 
   const redirectURL =  handleRedirectProductListpage()
     return (
-        <div>
+        <div className='my-4 lg:my-8'> {/* Added vertical spacing */}
             <div className='container mx-auto p-4 flex items-center justify-between gap-4'>
-                <h3 className='font-semibold text-lg md:text-xl'>{name}</h3>
-                <Link  to={redirectURL} className='text-green-600 hover:text-green-400'>See All</Link>
+                <h3 className='font-bold text-lg md:text-2xl text-slate-800 dark:text-white'>{name}</h3>
+                <Link to={redirectURL} className='text-green-600 font-bold hover:text-green-500 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm transition-all'>See All</Link>
             </div>
-            <div className='relative flex items-center '>
-                <div className=' flex gap-4 md:gap-6 lg:gap-8 container mx-auto px-4 overflow-x-scroll scrollbar-none scroll-smooth' ref={containerRef}>
+            <div className='relative flex items-center group'> {/* added group for hover effects */}
+                <div className='flex gap-4 md:gap-6 lg:gap-8 container mx-auto px-4 overflow-x-scroll scrollbar-none scroll-smooth' ref={containerRef}>
                     {loading &&
                         loadingCardNumber.map((_, index) => {
                             return (
@@ -84,8 +88,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                         })
                     }
 
-
-                    {
+                    {!loading &&
                         data.map((p, index) => {
                             return (
                                 <CardProduct
@@ -97,12 +100,20 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     }
 
                 </div>
-                <div className='w-full left-0 right-0 container mx-auto  px-2  absolute hidden lg:flex justify-between'>
-                    <button onClick={handleScrollLeft} className='z-10 relative bg-white hover:bg-gray-100 shadow-lg text-lg p-2 rounded-full'>
-                        <FaAngleLeft />
+                
+                {/* Optimized Buttons: Slightly larger hit area and hover scales */}
+                <div className='w-full left-0 right-0 container mx-auto px-2 absolute hidden lg:flex justify-between pointer-events-none'>
+                    <button 
+                        onClick={handleScrollLeft} 
+                        className='pointer-events-auto z-10 bg-white dark:bg-zinc-800 hover:scale-110 shadow-xl text-xl p-3 rounded-full transition-transform'
+                    >
+                        <FaAngleLeft className='dark:text-white' />
                     </button>
-                    <button onClick={handleScrollRight} className='z-10 relative  bg-white hover:bg-gray-100 shadow-lg p-2 text-lg rounded-full'>
-                        <FaAngleRight />
+                    <button 
+                        onClick={handleScrollRight} 
+                        className='pointer-events-auto z-10 bg-white dark:bg-zinc-800 hover:scale-110 shadow-xl p-3 text-xl rounded-full transition-transform'
+                    >
+                        <FaAngleRight className='dark:text-white' />
                     </button>
                 </div>
             </div>
