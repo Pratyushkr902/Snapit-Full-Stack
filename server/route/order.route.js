@@ -4,13 +4,14 @@ import {
     CashOnDeliveryOrderController, 
     getOrderDetailsController, 
     paymentController, 
+    verifyPaymentController,  // ADDED: Imported the verification logic
     webhookStripe,
     updateOrderStatusController, 
     getRiderLocationController,    
     updateSellerOrderStatusController,
-    getDailySalesReport,      // NEW: For the 7:00 PM Sales Report
-    settleRiderCashController,  // NEW: For the "Collect & Settle" button
-    getLastOrder              // ADDED: For the recent activity feed
+    getDailySalesReport,      
+    settleRiderCashController,  
+    getLastOrder              
 } from '../controllers/order.controller.js'
 
 const orderRouter = Router()
@@ -18,6 +19,10 @@ const orderRouter = Router()
 // --- BASIC ORDER ROUTES ---
 orderRouter.post("/cash-on-delivery", auth, CashOnDeliveryOrderController)
 orderRouter.post('/checkout', auth, paymentController)
+
+// ADDED: Route to verify Razorpay signature and save the online order to MongoDB
+orderRouter.post('/verify-payment', auth, verifyPaymentController)
+
 orderRouter.post('/webhook', webhookStripe) 
 orderRouter.get("/order-list", auth, getOrderDetailsController)
 

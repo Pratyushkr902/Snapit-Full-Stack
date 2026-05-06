@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import CartProductModel from "../models/cartproduct.model.js";
 import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
@@ -5,6 +6,7 @@ import ProductModel from "../models/product.model.js";
 import StoreModel from "../models/store.model.js"; 
 import mongoose from "mongoose";
 import Razorpay from 'razorpay';
+
 
 export async function CashOnDeliveryOrderController(request, response) {
     try {
@@ -120,7 +122,6 @@ export async function paymentController(request, response) {
         const userId = request.userId 
         const { totalAmt, addressId } = request.body 
 
-        // Fix: Force string and trim to avoid 401 errors from hidden spaces in Render
         const key_id = String(process.env.RAZORPAY_KEY_ID || "").trim();
         const key_secret = String(process.env.RAZORPAY_SECRET_KEY || "").trim();
 
@@ -137,7 +138,6 @@ export async function paymentController(request, response) {
             key_secret: key_secret,
         });
 
-        // Safety check for amount
         const amount = Math.round(Number(totalAmt || 0) * 100);
         if (amount <= 0) {
             return response.status(400).json({
@@ -167,6 +167,100 @@ export async function paymentController(request, response) {
             error: true,
             success: false
         })
+    }
+}
+
+// --- VERIFY PAYMENT & CREATE ORDER (FIXED) ---
+export async function verifyPaymentController(request, response) {
+    try {
+        const userId = request.userId;
+        const { 
+            razorpay_order_id, 
+            razorpay_payment_id, 
+            razorpay_signature,
+            list_items,
+            addressId,
+            subTotalAmt,
+            totalAmt 
+        } = request.body;
+
+        const key_secret = String(process.env.RAZORPAY_SECRET_KEY || "").trim();
+
+        // 1. Verify Signature
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+            .createHmac("sha256", key_secret)
+            .update(body.toString())
+            .digest("hex");
+
+        if (expectedSignature !== razorpay_signature) {
+            return response.status(400).json({
+                message: "Invalid payment signature. Transaction failed.",
+                error: true,
+                success: false
+            });
+        }
+
+        // 2. Assign Store (Main Store Default)
+        let assignedStore = {
+            name: "Snapit Main Store - Paliganj",
+            address: "Main Road, Paliganj",
+            location: { lat: 25.2921, lng: 84.8170 }
+        };
+
+        // 3. Create the Order Payload
+        const payload = {
+            userId: userId,
+            orderId: razorpay_order_id,
+            cartItems: list_items.map(el => ({
+                productId: el.productId._id,
+                name: el.productId.name,
+                image: el.productId.image[0],
+                quantity: el.quantity || 1,
+                price: el.productId.price
+            })),
+            product_details: {
+                name: list_items[0].productId.name + (list_items.length > 1 ? ` (+${list_items.length - 1} more)` : ""),
+                image: list_items[0].productId.image
+            },
+            paymentId: razorpay_payment_id,
+            payment_status: "PAID",
+            delivery_address: addressId,
+            subTotalAmt: subTotalAmt,
+            totalAmt: totalAmt,
+            delivery_status: "Pending",
+            seller_status: "Pending",
+            store_details: assignedStore, 
+            rider_name: "Pratyush Sharma",
+            rider_contact: "9472026580"
+        };
+
+        const newOrder = new OrderModel(payload);
+        await newOrder.save();
+
+        // 4. Update Stock & Clear Cart
+        for (const item of list_items) {
+            await ProductModel.findByIdAndUpdate(item.productId._id, {
+                $inc: { stock: -(item.quantity || 1) }
+            });
+        }
+
+        await CartProductModel.deleteMany({ userId: userId });
+        await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
+
+        return response.json({
+            message: "Payment verified and order placed successfully!",
+            error: false,
+            success: true,
+            data: newOrder
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        });
     }
 }
 

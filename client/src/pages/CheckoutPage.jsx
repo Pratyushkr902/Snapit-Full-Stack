@@ -84,7 +84,6 @@ const CheckoutPage = () => {
         navigate('/success', { state: { text: "Order" } })
       }
     } catch (error) {
-      // FIX: Ensure error message is a string to prevent React Error #31
       const errorMsg = error.response?.data?.message || error.message || "Wallet payment failed";
       toast.error(typeof errorMsg === 'object' ? "Payment failed: Check Server Logs" : errorMsg);
     }
@@ -129,7 +128,6 @@ const CheckoutPage = () => {
         navigate('/success', { state: { text: "Order" } })
       }
     } catch (error) {
-      // FIX: Extract string message
       const errorMsg = error.response?.data?.message || error.message || "COD Order failed";
       toast.error(typeof errorMsg === 'object' ? "Checkout Error" : errorMsg);
     }
@@ -167,10 +165,34 @@ const CheckoutPage = () => {
             name: "Snapit Grocery",
             order_id: responseData.id, 
             handler: async function (response) {
-                toast.success("Payment Successful")
-                if (fetchCartItem) fetchCartItem()
-                if (fetchOrder) fetchOrder()
-                navigate('/success', { state: { text: "Order" } })
+                const verificationToast = toast.loading("Verifying payment with Snapit...")
+                try {
+                  const verifyRes = await Axios({
+                    ...SummaryApi.payment_verification, 
+                    data: {
+                      razorpay_order_id: response.razorpay_order_id,
+                      razorpay_payment_id: response.razorpay_payment_id,
+                      razorpay_signature: response.razorpay_signature,
+                      list_items: cartItemsList,
+                      addressId: addressList[selectAddress]?._id,
+                      subTotalAmt: totalPrice,
+                      delivery_fee: deliveryFee,
+                      totalAmt: grandTotal
+                    }
+                  })
+
+                  toast.dismiss(verificationToast)
+
+                  if (verifyRes.data.success) {
+                    toast.success("Order Placed Successfully! 🛒")
+                    if (fetchCartItem) fetchCartItem()
+                    if (fetchOrder) fetchOrder()
+                    navigate('/success', { state: { text: "Order" } })
+                  }
+                } catch (err) {
+                  toast.dismiss(verificationToast)
+                  AxiosToastError(err)
+                }
             },
             prefill: {
                 name: user?.name || "",
@@ -182,15 +204,15 @@ const CheckoutPage = () => {
         rzp.open();
       }
     } catch (error) {
-      // FIX: Specifically handle the Razorpay 401 error object to prevent crash
       const errorMsg = error.response?.data?.message || "Razorpay initialization failed";
-      toast.error(typeof errorMsg === 'object' ? "Authentication Failed: Check API Keys" : errorMsg);
+      toast.error(typeof errorMsg === 'object' ? "Authentication Failed" : errorMsg);
     }
   }
 
   return (
-    <section className='bg-blue-50'>
+    <section className='bg-blue-50 min-h-screen'>
       <div className='container mx-auto p-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
+        
         {/* LEFT COLUMN: ADDRESS SELECTION */}
         <div className='w-full'>
           <h3 className='text-lg font-semibold uppercase tracking-tight text-slate-700'>Choose your address</h3>
@@ -215,9 +237,8 @@ const CheckoutPage = () => {
         </div>
 
         {/* RIGHT COLUMN: BILL SUMMARY & PAYMENT */}
-        <div className='w-full max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
+        <div className='w-full lg:max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
           
-          {/* WALLET STATUS CARD */}
           <div className='mx-4 mb-4 bg-green-50 border border-green-100 rounded-2xl p-4 shadow-sm'>
              <div className='flex items-center justify-between'>
                 <div>
@@ -241,7 +262,6 @@ const CheckoutPage = () => {
           </div>
 
           <div className='w-full flex flex-col gap-3 p-4'>
-            {/* WALLET BUTTON */}
             <button 
                 disabled={cartItemsList.length === 0}
                 className={`py-4 px-4 rounded-2xl font-black transition-all shadow-xl uppercase tracking-widest text-sm flex items-center justify-center gap-2 
@@ -252,7 +272,6 @@ const CheckoutPage = () => {
                 <span>{(user?.walletBalance || 0) >= grandTotal ? '💸' : '🔒'}</span>
             </button>
 
-            {/* ONLINE PAYMENT BUTTON */}
             <button 
                 disabled={cartItemsList.length === 0} 
                 className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 shadow-xl shadow-slate-100' 
@@ -261,7 +280,6 @@ const CheckoutPage = () => {
                 Online Payment
             </button>
 
-            {/* COD BUTTON */}
             <button 
                 disabled={cartItemsList.length === 0} 
                 className='py-4 border-2 border-slate-900 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 hover:bg-slate-50' 
