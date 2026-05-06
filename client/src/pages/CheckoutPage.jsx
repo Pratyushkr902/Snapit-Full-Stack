@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 
 const CheckoutPage = () => {
-  const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder } = useGlobalContext()
+  const { fetchCartItem, fetchOrder, totalPrice } = useGlobalContext()
   const [openAddress, setOpenAddress] = useState(false)
   const addressList = useSelector(state => state.addresses.addressList)
   const [selectAddress, setSelectAddress] = useState(0)
@@ -21,7 +21,7 @@ const CheckoutPage = () => {
   const deliveryFee = totalPrice >= 399 ? 0 : 12;
   const grandTotal = totalPrice + deliveryFee;
 
-  // NEW: Helper function to get coordinates
+  // Helper function to get coordinates
   const getCoordinates = () => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -42,7 +42,6 @@ const CheckoutPage = () => {
         return toast.error("Please select a delivery address")
       }
 
-      // FIXED: Ensure numbers are used for comparison to avoid NaN errors
       const currentBalance = Number(user?.walletBalance || 0);
       const totalToPay = Number(grandTotal);
 
@@ -89,6 +88,7 @@ const CheckoutPage = () => {
     }
   }
 
+  // --- CASH ON DELIVERY HANDLER ---
   const handleCashOnDelivery = async () => {
     try {
       if (!addressList[selectAddress]) {
@@ -131,6 +131,7 @@ const CheckoutPage = () => {
     }
   }
 
+  // --- ONLINE PAYMENT HANDLER (RAZORPAY) ---
   const handleOnlinePayment = async () => {
     try {
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
@@ -184,6 +185,7 @@ const CheckoutPage = () => {
   return (
     <section className='bg-blue-50'>
       <div className='container mx-auto p-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
+        {/* LEFT COLUMN: ADDRESS SELECTION */}
         <div className='w-full'>
           <h3 className='text-lg font-semibold uppercase tracking-tight text-slate-700'>Choose your address</h3>
           <div className='bg-white p-2 grid gap-4 mt-2 rounded-xl shadow-sm'>
@@ -206,7 +208,9 @@ const CheckoutPage = () => {
           </div>
         </div>
 
+        {/* RIGHT COLUMN: BILL SUMMARY & PAYMENT */}
         <div className='w-full max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
+          
           {/* WALLET STATUS CARD */}
           <div className='mx-4 mb-4 bg-green-50 border border-green-100 rounded-2xl p-4 shadow-sm'>
              <div className='flex items-center justify-between'>
@@ -231,7 +235,7 @@ const CheckoutPage = () => {
           </div>
 
           <div className='w-full flex flex-col gap-3 p-4'>
-            {/* IMPROVED WALLET BUTTON */}
+            {/* WALLET BUTTON */}
             <button 
                 disabled={cartItemsList.length === 0}
                 className={`py-4 px-4 rounded-2xl font-black transition-all shadow-xl uppercase tracking-widest text-sm flex items-center justify-center gap-2 
@@ -242,8 +246,23 @@ const CheckoutPage = () => {
                 <span>{(user?.walletBalance || 0) >= grandTotal ? '💸' : '🔒'}</span>
             </button>
 
-            <button disabled={cartItemsList.length === 0} className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 shadow-xl shadow-slate-100' onClick={handleOnlinePayment}>Online Payment</button>
-            <button disabled={cartItemsList.length === 0} className='py-4 border-2 border-slate-900 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 hover:bg-slate-50' onClick={handleCashOnDelivery}>Cash on Delivery</button>
+            {/* ONLINE PAYMENT BUTTON */}
+            <button 
+                disabled={cartItemsList.length === 0} 
+                className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 shadow-xl shadow-slate-100' 
+                onClick={handleOnlinePayment}
+            >
+                Online Payment
+            </button>
+
+            {/* COD BUTTON */}
+            <button 
+                disabled={cartItemsList.length === 0} 
+                className='py-4 border-2 border-slate-900 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 hover:bg-slate-50' 
+                onClick={handleCashOnDelivery}
+            >
+                Cash on Delivery
+            </button>
           </div>
         </div>
       </div>

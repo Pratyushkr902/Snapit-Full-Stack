@@ -33,7 +33,11 @@ const CardProduct = ({data}) => {
     }
   
   return (
-    <Link to={url} className='border p-2 lg:p-3 flex flex-col gap-2 min-w-[150px] lg:min-w-[220px] max-w-[220px] h-[320px] lg:h-[380px] rounded-2xl cursor-pointer bg-white dark:bg-[#0F0F0F] border-slate-100 dark:border-zinc-800 transition-all hover:shadow-xl dark:hover:shadow-green-900/10 hover:border-green-100 dark:hover:border-green-900/50 group relative overflow-hidden' >
+    <Link 
+        to={url} 
+        onClick={() => window.scrollTo(0, 0)} // FIX: Jump to top when clicking suggestions
+        className='border p-2 lg:p-3 flex flex-col gap-2 min-w-[150px] lg:min-w-[220px] max-w-[220px] h-[320px] lg:h-[380px] rounded-2xl cursor-pointer bg-white dark:bg-[#0F0F0F] border-slate-100 dark:border-zinc-800 transition-all hover:shadow-2xl dark:hover:shadow-green-900/20 hover:border-green-200 dark:hover:border-green-900/50 group relative overflow-hidden' 
+    >
       
       {/* FEATURE: Floating Category Label with Glow */}
       {label && (
@@ -51,10 +55,12 @@ const CardProduct = ({data}) => {
                 className='max-w-full max-h-full object-contain transition-transform duration-500 lg:group-hover:scale-110 drop-shadow-sm dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.05)]'
             />
             
-            {/* FEATURE: Low Stock Urgency Alert */}
+            {/* FEATURE: Low Stock Urgency Alert with Gradient */}
             {data?.stock < 10 && data?.stock > 0 && (
-                <div className='absolute bottom-0 left-0 w-full bg-red-600/10 dark:bg-red-500/5 py-0.5 text-center'>
-                    <p className='text-[8px] font-black text-red-600 dark:text-red-400 animate-pulse uppercase'>Only {data.stock} left</p>
+                <div className='absolute bottom-0 left-0 w-full bg-gradient-to-t from-red-600/20 to-transparent py-1 text-center'>
+                    <p className='text-[8px] font-black text-red-600 dark:text-red-400 animate-pulse uppercase tracking-tighter'>
+                        Only {data.stock} left in stock
+                    </p>
                 </div>
             )}
       </div>
@@ -98,7 +104,7 @@ const CardProduct = ({data}) => {
               )}
             </div>
 
-            <div className='flex-shrink-0'>
+            <div className='flex-shrink-0' onClick={(e) => e.preventDefault()}> {/* Prevent Link click when adding to cart */}
               {
                 data?.stock == 0 ? (
                     <div className='border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-2 py-1 rounded-md'>
