@@ -120,9 +120,9 @@ export async function paymentController(request, response) {
         const userId = request.userId 
         const { totalAmt, addressId } = request.body 
 
-        // Fix: Use .trim() to catch accidental whitespace from Render dashboard
-        const key_id = process.env.RAZORPAY_KEY_ID?.trim();
-        const key_secret = process.env.RAZORPAY_SECRET_KEY?.trim();
+        // Fix: Force string and trim to avoid 401 errors from hidden spaces in Render
+        const key_id = String(process.env.RAZORPAY_KEY_ID || "").trim();
+        const key_secret = String(process.env.RAZORPAY_SECRET_KEY || "").trim();
 
         if (!key_id || !key_secret) {
             return response.status(500).json({
@@ -137,8 +137,18 @@ export async function paymentController(request, response) {
             key_secret: key_secret,
         });
 
+        // Safety check for amount
+        const amount = Math.round(Number(totalAmt || 0) * 100);
+        if (amount <= 0) {
+            return response.status(400).json({
+                message: "Invalid order amount",
+                error: true,
+                success: false
+            });
+        }
+
         const options = {
-            amount: Math.round(totalAmt * 100), 
+            amount: amount, 
             currency: "INR",
             receipt: `rcpt_${new mongoose.Types.ObjectId()}`,
             notes: {
@@ -335,13 +345,13 @@ export async function getLastOrder(req, res) {
         const lastOrder = await OrderModel
             .findOne({ userId: req.userId })
             .sort({ createdAt: -1 })
-            .populate('cartItems.productId') 
+            .populate('cartItems.productId');
 
         return res.json({
             success: true,
             data: lastOrder
-        })
+        });
     } catch (err) {
-        return res.status(500).json({ success: false, message: err.message })
+        return res.status(500).json({ success: false, message: err.message });
     }
 }
