@@ -9,7 +9,8 @@ import {
     getProductDetails, 
     searchProduct, 
     updateProductDetails,
-    getFrequentlyBought // ADDED: Controller for Recommendation Engine
+    getFrequentlyBought,
+    updateProductEmails // ADDED: Controller for Bulk Email Update
 } from '../controllers/product.controller.js'
 import { admin } from '../middleware/Admin.js'
 
@@ -37,5 +38,9 @@ productRouter.delete('/delete-product', auth, admin, deleteProductDetails)
 
 // --- SEARCH ---
 productRouter.post('/search-product', searchProduct)
+
+// --- ADMIN & MAINTENANCE ---
+// Trigger this once to change info@blinkit.com to info@snapit.com across all products
+productRouter.post('/bulk-update-email', auth, admin, updateProductEmails)
 
 export default productRouter

@@ -409,3 +409,37 @@ export async function getFrequentlyBought(req, res) {
         return res.status(500).json({ success: false, message: err.message })
     }
 }
+
+// --- BULK UPDATE CONTROLLER: Update Customer Care Email ---
+export const updateProductEmails = async (req, res) => {
+    try {
+        const result = await ProductModel.updateMany(
+            { description: { $regex: "info@blinkit.com", $options: "i" } }, 
+            [
+                {
+                    $set: {
+                        description: {
+                            $replaceOne: {
+                                input: "$description",
+                                find: "info@blinkit.com",
+                                replacement: "info@snapit.com"
+                            }
+                        }
+                    }
+                }
+            ]
+        );
+
+        return res.json({
+            message: `Successfully updated ${result.modifiedCount} products from Blinkit support to Snapit support.`,
+            success: true,
+            error: false
+        });
+    } catch (error) {
+        return res.status(500).json({ 
+            message: error.message || error,
+            error: true,
+            success: false 
+        });
+    }
+};
