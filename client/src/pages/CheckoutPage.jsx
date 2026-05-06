@@ -84,7 +84,9 @@ const CheckoutPage = () => {
         navigate('/success', { state: { text: "Order" } })
       }
     } catch (error) {
-      AxiosToastError(error)
+      // FIX: Ensure error message is a string to prevent React Error #31
+      const errorMsg = error.response?.data?.message || error.message || "Wallet payment failed";
+      toast.error(typeof errorMsg === 'object' ? "Payment failed: Check Server Logs" : errorMsg);
     }
   }
 
@@ -127,7 +129,9 @@ const CheckoutPage = () => {
         navigate('/success', { state: { text: "Order" } })
       }
     } catch (error) {
-      AxiosToastError(error)
+      // FIX: Extract string message
+      const errorMsg = error.response?.data?.message || error.message || "COD Order failed";
+      toast.error(typeof errorMsg === 'object' ? "Checkout Error" : errorMsg);
     }
   }
 
@@ -178,7 +182,9 @@ const CheckoutPage = () => {
         rzp.open();
       }
     } catch (error) {
-      AxiosToastError(error)
+      // FIX: Specifically handle the Razorpay 401 error object to prevent crash
+      const errorMsg = error.response?.data?.message || "Razorpay initialization failed";
+      toast.error(typeof errorMsg === 'object' ? "Authentication Failed: Check API Keys" : errorMsg);
     }
   }
 
