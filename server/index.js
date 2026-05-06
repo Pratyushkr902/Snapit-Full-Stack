@@ -9,12 +9,13 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
-import fs from 'fs'; // Added for path verification
+import fs from 'fs';
 
+// --- INITIALIZATION ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// --- FIXED DOTENV PATH ---
+// Load environment variables in development
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config(); 
 }
@@ -27,8 +28,10 @@ import './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
 
+// Debug check for Razorpay
 console.log("RAZORPAY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
+// --- ROUTE IMPORTS ---
 import userRouter from './route/user.route.js';
 import categoryRouter from './route/category.route.js';
 import uploadRouter from './route/upload.router.js';
@@ -44,10 +47,9 @@ import referralRouter from './route/referral.route.js';
 
 const app = express();
 const server = http.createServer(app); 
-
 const latestPositions = new Map(); 
 
-// --- 1. CORS CONFIGURATION ---
+// --- 1. MIDDLEWARE & SECURITY ---
 app.use(cors({
     origin: true,        
     credentials: true,
@@ -55,19 +57,6 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// FIXED: Bypassing PathError by using middleware for OPTIONS
-app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') {
-        res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With, Accept');
-        res.header('Access-Control-Allow-Credentials', 'true');
-        return res.sendStatus(200);
-    }
-    next();
-});
-
-// --- 2. SECURITY & UTILITY MIDDLEWARE ---
 app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
@@ -82,16 +71,17 @@ app.use(helmet({
     },
 }));
 
+app.use(express.json());
+app.use(cookieParser());
+app.use(morgan('dev'));
+
+// Custom Headers / Cache Control
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     next();
 });
 
-app.use(express.json());
-app.use(cookieParser());
-app.use(morgan('dev'));
-
-// --- 3. SOCKET.IO CONFIGURATION ---
+// --- 2. SOCKET.IO CONFIGURATION ---
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: {
@@ -107,17 +97,14 @@ const io = new Server(server, {
 
 io.on('connection', (socket) => {
     console.log(`Tracking Connected: ${socket.id}`);
-
     socket.on('join_order', (orderId) => {
         if (orderId) {
             socket.join(orderId);
             if (latestPositions.has(orderId)) {
                 socket.emit('receive_location', latestPositions.get(orderId));
             }
-            console.log(`User joined tracking for: ${orderId}`);
         }
     });
-
     socket.on('send_location', (data) => {
         const { orderId, latitude, longitude } = data;
         if (orderId && latitude && longitude) {
@@ -126,11 +113,10 @@ io.on('connection', (socket) => {
             io.to(orderId).emit('receive_location', movementData);
         }
     });
-
     socket.on('disconnect', () => console.log(`Client ${socket.id} disconnected`));
 });
 
-// --- 4. API ROUTES ---
+// --- 3. API ROUTES ---
 app.use('/api/user', userRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/file", uploadRouter);
@@ -144,50 +130,38 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
-// --- 5. STATIC FILE SERVING (RENDER-SPECIFIC PATH FIX) ---
-// Since Render root directory is 'server', we must look one level up (..) to find 'client'
+// --- 4. STATIC FILE SERVING (RENDER FIX) ---
 const possiblePaths = [
-    path.join(process.cwd(), '..', 'client', 'dist'),     // 1. Level above (Standard for mono-repo on Render)
-    path.join(process.cwd(), 'client', 'dist'),          // 2. Same level
-    path.resolve(__dirname, '..', 'client', 'dist')      // 3. Absolute resolution
+    path.join(process.cwd(), '..', 'client', 'dist'),     // Mono-repo root check
+    path.join(process.cwd(), 'client', 'dist'),          // Standard check
+    path.resolve(__dirname, '..', 'client', 'dist')      // Absolute check
 ];
 
-// Determine actual build path by checking which directory exists
 const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
 console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 
 app.use(express.static(clientBuildPath));
 
-// NUCLEAR FIX: Bypassing path-to-regexp entirely for all remaining routes
+// Final catch-all for SPA (Nuclear Fix)
 app.use((req, res, next) => {
-    if (req.url === '/favicon.ico') {
-        return res.status(204).end();
-    }
-
-    if (req.url.startsWith('/api')) {
-        return res.status(404).json({ message: "API endpoint not found", success: false });
-    }
+    if (req.url === '/favicon.ico') return res.status(204).end();
+    if (req.url.startsWith('/api')) return res.status(404).json({ message: "API endpoint not found", success: false });
     
     res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
         if (err) {
             console.error("❌ SendFile Error:", err.message);
-            res.status(500).json({
-                error: "Frontend build not found.",
-                resolvedPath: clientBuildPath,
-                currentWorkingDirectory: process.cwd(),
-                tip: "Verify build command: cd client && npm install && npm run build"
-            });
+            res.status(500).json({ error: "Frontend build not found." });
         }
     });
 });
 
-// --- 6. KEEP RENDER AWAKE ---
+// --- 5. RENDER SELF-PING ---
 setInterval(() => {
     fetch('https://snapit-full-stack-0.onrender.com/')
         .catch(() => {})
 }, 14 * 60 * 1000)
 
-// --- 7. START SERVER ---
+// --- 6. START SERVER ---
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
     console.log("Database Connected Successfully");
