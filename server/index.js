@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+dotenv.config(); // No if-check — runs always, on Render and locally
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Server } from 'socket.io'; 
@@ -11,16 +13,10 @@ import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
 import fs from 'fs';
 
-// --- INITIALIZATION ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables in development
-if (process.env.NODE_ENV !== 'production') {
-    dotenv.config(); 
-}
-
-// --- CRITICAL: PRE-REGISTER MODELS ---
+// --- PRE-REGISTER MODELS ---
 import './models/user.model.js';
 import './models/category.model.js';
 import './models/subCategory.model.js'; 
@@ -28,7 +24,6 @@ import './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
 
-// Debug check for Razorpay
 console.log("RAZORPAY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
 // --- ROUTE IMPORTS ---
@@ -49,7 +44,7 @@ const app = express();
 const server = http.createServer(app); 
 const latestPositions = new Map(); 
 
-// --- 1. MIDDLEWARE & SECURITY ---
+// --- CORS ---
 app.use(cors({
     origin: true,        
     credentials: true,
@@ -57,6 +52,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
+// --- HELMET ---
 app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
@@ -72,16 +68,16 @@ app.use(helmet({
 }));
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 
-// Custom Headers / Cache Control
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     next();
 });
 
-// --- 2. SOCKET.IO CONFIGURATION ---
+// --- SOCKET.IO ---
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: {
@@ -116,7 +112,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => console.log(`Client ${socket.id} disconnected`));
 });
 
-// --- 3. API ROUTES ---
+// --- API ROUTES ---
 app.use('/api/user', userRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/file", uploadRouter);
@@ -130,11 +126,19 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 
-// --- 4. STATIC FILE SERVING (RENDER FIX) ---
+// --- HEALTH CHECK ---
+app.get("/health", (req, res) => {
+    res.json({ 
+        message: "Snapit Server is Live!",
+        razorpay_status: process.env.RAZORPAY_KEY_ID ? "Configured" : "Missing Keys"
+    });
+});
+
+// --- STATIC FILE SERVING ---
 const possiblePaths = [
-    path.join(process.cwd(), '..', 'client', 'dist'),     // Mono-repo root check
-    path.join(process.cwd(), 'client', 'dist'),          // Standard check
-    path.resolve(__dirname, '..', 'client', 'dist')      // Absolute check
+    path.join(process.cwd(), '..', 'client', 'dist'),
+    path.join(process.cwd(), 'client', 'dist'),
+    path.resolve(__dirname, '..', 'client', 'dist')
 ];
 
 const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
@@ -142,7 +146,6 @@ console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 
 app.use(express.static(clientBuildPath));
 
-// Final catch-all for SPA (Nuclear Fix)
 app.use((req, res, next) => {
     if (req.url === '/favicon.ico') return res.status(204).end();
     if (req.url.startsWith('/api')) return res.status(404).json({ message: "API endpoint not found", success: false });
@@ -155,18 +158,19 @@ app.use((req, res, next) => {
     });
 });
 
-// --- 5. RENDER SELF-PING ---
+// --- RENDER SELF-PING ---
 setInterval(() => {
     fetch('https://snapit-full-stack-0.onrender.com/')
         .catch(() => {})
-}, 14 * 60 * 1000)
+}, 14 * 60 * 1000);
 
-// --- 6. START SERVER ---
+// --- START SERVER ---
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
     console.log("Database Connected Successfully");
     server.listen(PORT, () => { 
-        console.log(`Snapit Server running on port ${PORT}`);
+        console.log(`🚀 Snapit Server running on port ${PORT}`);
+        console.log(`✅ Razorpay Status: ${process.env.RAZORPAY_KEY_ID ? 'LOADED' : 'NOT FOUND — check Render env vars'}`);
     });
 }).catch(err => {
     console.error("Database connection failed", err);
