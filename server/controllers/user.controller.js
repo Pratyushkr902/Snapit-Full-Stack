@@ -34,8 +34,6 @@ export async function registerUserController(request, response) {
         const salt = await bcryptjs.genSalt(10)
         const hashPassword = await bcryptjs.hash(password, salt)
 
-        // --- SNAPIT REFERRAL CODE GENERATION ---
-        // Generates a code like PRAT8429
         const newReferralCode = name.toUpperCase().replace(/\s/g, '').slice(0, 4) + 
                                Math.floor(1000 + Math.random() * 9000);
 
@@ -46,14 +44,12 @@ export async function registerUserController(request, response) {
             referralCode: newReferralCode
         }
 
-        // --- APPLY REFERRAL REWARD LOGIC ---
         if (incomingReferralCode) {
             const referrer = await UserModel.findOne({ 
                 referralCode: incomingReferralCode 
             })
             
             if (referrer) {
-                // Give referrer ₹20 reward instantly
                 referrer.walletBalance += 20
                 referrer.referralCount += 1
                 referrer.walletTransactions.push({
@@ -64,10 +60,7 @@ export async function registerUserController(request, response) {
                 })
                 await referrer.save()
 
-                // Mark the new user as referred
                 payload.referredBy = incomingReferralCode
-                
-                // Optional: Give new user a welcome bonus
                 payload.walletBalance = 10 
                 payload.walletTransactions = [{
                     type: 'credit',
@@ -507,6 +500,25 @@ export async function userDetails(request, response) {
     } catch (error) {
         return response.status(500).json({
             message: "Something is wrong",
+            error: true,
+            success: false
+        })
+    }
+}
+
+// ── NEW: Get all riders (users with role = 'rider') ──────────
+export async function getAllRiders(request, response) {
+    try {
+        const riders = await UserModel.find({ role: 'rider' }).select('name email mobile status')
+        return response.json({
+            message: "Riders fetched",
+            error: false,
+            success: true,
+            data: riders
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
             error: true,
             success: false
         })

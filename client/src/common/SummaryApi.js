@@ -41,6 +41,10 @@ const SummaryApi = {
         url : '/api/user/update-user',
         method : 'put'
     },
+    getRiders : {
+        url : '/api/user/all-riders',
+        method : 'get'
+    },
     addCategory : {
         url : '/api/category/add-category',
         method : 'post'
@@ -205,8 +209,6 @@ const SummaryApi = {
         url: '/api/wallet/pay',
         method: 'post'
     },
-    
-    // --- REFERRAL & GROWTH SYSTEM ---
     getReferralInfo: {
         url: '/api/referral/info',
         method: 'get'
@@ -217,4 +219,4 @@ const SummaryApi = {
     },
 }
 
-export default SummaryApi;
+export default SummaryApi
