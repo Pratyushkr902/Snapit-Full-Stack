@@ -57,8 +57,7 @@ const AdminDashboard = () => {
   const fetchRiders = async () => {
     try {
       const response = await Axios({
-        url: '/api/user/all-riders',
-        method: 'get'
+        ...SummaryApi.getRiders,
       })
       if (response.data.success) {
         const riders = (response.data.data || []).filter(u => u.role === 'rider')
