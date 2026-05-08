@@ -57,7 +57,7 @@ const AdminDashboard = () => {
   const fetchRiders = async () => {
     try {
       const response = await Axios({
-        url: '/api/user/all-users',
+        url: '/api/user/all-riders',
         method: 'get'
       })
       if (response.data.success) {
