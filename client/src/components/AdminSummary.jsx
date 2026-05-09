@@ -34,12 +34,16 @@ const AdminSummary = () => {
       if (response.data.success) {
         const orders = response.data.data || []
         setAllOrders(orders)
+        
+        // FIX: Ensure casing matches your database (Delivered vs delivered)
         const revenue = orders
-          .filter(o => o.delivery_status === 'Delivered')
+          .filter(o => o.delivery_status?.toLowerCase() === 'delivered')
           .reduce((acc, curr) => acc + (curr.totalAmt || curr.totalAmount || 0), 0)
         setTotalRevenue(revenue)
+        
         const pending = orders.filter(
-          o => o.delivery_status !== 'Delivered' && o.delivery_status !== 'Cancelled'
+          o => o.delivery_status?.toLowerCase() !== 'delivered' && 
+               o.delivery_status?.toLowerCase() !== 'cancelled'
         ).length
         setPendingOrders(pending)
       }
@@ -48,10 +52,13 @@ const AdminSummary = () => {
 
   const fetchProductCount = async () => {
     try {
+      // Assuming your product API returns the total count in the response
       const response = await Axios({ ...SummaryApi.getProduct, data: { page: 1, limit: 1 } })
       if (response.data.success) {
-        const total = response.data.totalCount || response.data.total ||
-          (response.data.totalNoPage != null ? response.data.totalNoPage * 12 : 0)
+        // FIX: Prioritize actual total count fields over multiplication logic
+        const total = response.data.totalCount || 
+                      response.data.total || 
+                      response.data.totalNoPage || 0
         setTotalProductCount(total)
       }
     } catch (error) { console.error('Product count error', error) }
@@ -69,8 +76,9 @@ const AdminSummary = () => {
     const currentYear = new Date().getFullYear()
     const map = {}
     months.forEach(m => { map[m] = 0 })
+    
     allOrders
-      .filter(o => o.delivery_status === 'Delivered')
+      .filter(o => o.delivery_status?.toLowerCase() === 'delivered')
       .forEach(o => {
         const date = new Date(o.createdAt)
         if (date.getFullYear() === currentYear) {
@@ -148,7 +156,7 @@ const AdminSummary = () => {
               <p className='text-lg font-black text-green-400'>₹{totalRevenue.toLocaleString('en-IN')}</p>
             </div>
           </div>
-          {allOrders.filter(o => o.delivery_status === 'Delivered').length === 0 ? (
+          {allOrders.filter(o => o.delivery_status?.toLowerCase() === 'delivered').length === 0 ? (
             <div className='h-48 flex items-center justify-center flex-col gap-2'>
               <p className='text-4xl'>📊</p>
               <p className='text-slate-500 text-sm italic text-center'>Revenue chart will populate as orders are delivered.</p>

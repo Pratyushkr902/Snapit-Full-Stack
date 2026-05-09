@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom' // Added useParams
+import { Link, useParams } from 'react-router-dom' 
 import AxiosToastError from '../utils/AxiosToastError'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
@@ -13,9 +13,8 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(false)
     const containerRef = useRef()
-    const params = useParams() // Get params to detect product changes
+    const params = useParams() 
     
-    // Extract current product ID from URL to exclude it from suggestions
     const currentProductId = params?.product?.split("-")?.slice(-1)[0]
 
     const subCategoryData = useSelector(state => state.product.allSubCategory)
@@ -34,7 +33,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
             const { data: responseData } = response
 
             if (responseData.success) {
-                // OPTIMIZATION: Filter out the current product so it doesn't suggest itself
                 const filteredData = responseData.data.filter(p => p._id !== currentProductId)
                 setData(filteredData)
             }
@@ -45,13 +43,12 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
         }
     }
 
-    // FIX: Added 'id' and 'params' so it re-fetches when navigating between products
     useEffect(() => {
         fetchCategoryWiseProduct()
     }, [id, params])
 
     const handleScrollRight = () => {
-        containerRef.current.scrollLeft += 250 // Increased for better UX
+        containerRef.current.scrollLeft += 250 
     }
 
     const handleScrollLeft = () => {
@@ -73,17 +70,21 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
 
   const redirectURL =  handleRedirectProductListpage()
     return (
-        <div className='my-4 lg:my-8'> {/* Added vertical spacing */}
+        <div className='my-4 lg:my-8'> 
             <div className='container mx-auto p-4 flex items-center justify-between gap-4'>
                 <h3 className='font-bold text-lg md:text-2xl text-slate-800 dark:text-white'>{name}</h3>
                 <Link to={redirectURL} className='text-green-600 font-bold hover:text-green-500 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm transition-all'>See All</Link>
             </div>
-            <div className='relative flex items-center group'> {/* added group for hover effects */}
-                <div className='flex gap-4 md:gap-6 lg:gap-8 container mx-auto px-4 overflow-x-scroll scrollbar-none scroll-smooth' ref={containerRef}>
+            <div className='relative flex items-center group'> 
+                {/* FIX: overflow-x-auto and no-scrollbar added for smooth horizontal scrolling */}
+                <div className='flex gap-4 md:gap-6 lg:gap-8 container mx-auto px-4 overflow-x-auto scrollbar-none scroll-smooth' ref={containerRef}>
                     {loading &&
                         loadingCardNumber.map((_, index) => {
                             return (
-                                <CardLoading key={"CategorywiseProductDisplay123" + index} />
+                                // FIX: Added min-width to prevent loading cards from squashing
+                                <div key={"loading-card" + index} className='min-w-[150px] md:min-w-[200px] lg:min-w-[230px]'>
+                                    <CardLoading />
+                                </div>
                             )
                         })
                     }
@@ -91,17 +92,19 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     {!loading &&
                         data.map((p, index) => {
                             return (
-                                <CardProduct
-                                    data={p}
-                                    key={p._id + "CategorywiseProductDisplay" + index}
-                                />
+                                // FIX: Added min-width wrapper to prevent product cards from squashing
+                                <div key={p._id + "wrapper" + index} className='min-w-[150px] md:min-w-[200px] lg:min-w-[230px]'>
+                                    <CardProduct
+                                        data={p}
+                                        key={p._id + "CategorywiseProductDisplay" + index}
+                                    />
+                                </div>
                             )
                         })
                     }
 
                 </div>
                 
-                {/* Optimized Buttons: Slightly larger hit area and hover scales */}
                 <div className='w-full left-0 right-0 container mx-auto px-2 absolute hidden lg:flex justify-between pointer-events-none'>
                     <button 
                         onClick={handleScrollLeft} 
