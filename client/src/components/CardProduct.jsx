@@ -36,12 +36,12 @@ const CardProduct = ({data}) => {
             )}
 
             {/* Image */}
-            <div className='w-full aspect-square rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] p-2 relative'>
+            <div className='w-full aspect-square min-h-[140px] rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] p-2 relative'>
                 <img
                     src={(data?.image && data.image.length > 0) ? data.image[0] : "https://via.placeholder.com/150"}
                     alt={data?.name || "Product"}
                     onError={handleImgError}
-                    className='max-w-full max-h-full object-contain transition-transform duration-500 lg:group-hover:scale-110'
+                    className='w-full h-full object-contain transition-transform duration-500 lg:group-hover:scale-110 p-1'
                 />
                 {data?.stock < 10 && data?.stock > 0 && (
                     <div className='absolute bottom-0 left-0 w-full bg-gradient-to-t from-red-600/20 to-transparent py-1 text-center'>
