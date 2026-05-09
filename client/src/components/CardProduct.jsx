@@ -69,7 +69,11 @@ const CardProduct = ({ data }) => {
                     }
                     alt={data?.name || "Product"}
                     onError={handleImgError}
-                    className='max-w-[78%] max-h-[78%] object-contain transition-transform duration-500 lg:group-hover:scale-105'
+                    className={`transition-transform duration-500 lg:group-hover:scale-105 ${
+                        data?.name?.toLowerCase().includes("chicken curry cut")
+                            ? "w-full h-full object-cover object-center scale-[1.55]"
+                            : "max-w-[78%] max-h-[78%] object-contain"
+                    }`}
                 />
 
                 {/* Soft Overlay */}
