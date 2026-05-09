@@ -59,7 +59,7 @@ const CardProduct = ({ data }) => {
             )}
 
             {/* Product Image */}
-            <div className='w-full aspect-square min-h-[140px] rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] relative'>
+            <div className='w-full aspect-square min-h-[140px] rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] relative p-2'>
 
                 <img
                     src={
@@ -69,7 +69,7 @@ const CardProduct = ({ data }) => {
                     }
                     alt={data?.name || "Product"}
                     onError={handleImgError}
-                    className='w-full h-full object-cover scale-105 transition-transform duration-500 lg:group-hover:scale-110'
+                    className='max-w-[78%] max-h-[78%] object-contain transition-transform duration-500 lg:group-hover:scale-105'
                 />
 
                 {/* Soft Overlay */}
