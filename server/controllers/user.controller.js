@@ -9,6 +9,7 @@ import generatedOtp from '../utils/generatedOtp.js'
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import jwt from 'jsonwebtoken'
 
+
 export async function registerUserController(request, response) {
     try {
         const { name, email, password, referralCode: incomingReferralCode } = request.body
