@@ -14,9 +14,10 @@ import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
 import CartMobileLink from './components/CartMobile';
 import DisplayCartItem from './components/DisplayCartItem'; 
+import WhatsAppButton from './components/WhatsAppButton'
 import { io } from "socket.io-client"; 
 
-// GLOBAL SOCKET CONNECTION - Pointing to stable -0 instance
+// GLOBAL SOCKET CONNECTION
 export const socket = io("https://snapit-full-stack-2.onrender.com", {
   transports:           ["polling", "websocket"],
   withCredentials:      true,
@@ -32,7 +33,6 @@ function App() {
   const location = useLocation()
   const user = useSelector(state => state.user)
   
-  // State for global cart visibility
   const [showCart, setShowCart] = useState(false)
 
   const fetchUser = useCallback(async () => {
@@ -58,7 +58,6 @@ function App() {
     }
   }, [dispatch, user?._id])
 
-  // --- ALPHABETICAL SORT: Ensures 'Atta' and others stay organized A-Z ---
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
@@ -102,11 +101,9 @@ function App() {
     }
   }, [user?._id, fetchOrder])
 
-  // SOCKET LOGGING & CLEANUP
   useEffect(() => {
     socket.on('connect', () => console.log("🚀 Snapit Socket Connected:", socket.id));
     socket.on('connect_error', (err) => console.log("📡 Socket connection effort:", err.message));
-    
     return () => {
       socket.off('connect');
       socket.off('connect_error');
@@ -118,7 +115,6 @@ function App() {
   return (
     <GlobalProvider>
       <div className="App">
-        {/* Passing setShowCart through the Header prop */}
         <Header openCart={() => setShowCart(true)} />
         
         <main className='min-h-[78vh]'>
@@ -129,9 +125,10 @@ function App() {
         
         <Toaster position="top-center" reverseOrder={false} />
 
-        {/* Global Cart Overlay Component */}
+        {/* Global Cart Overlay */}
         {showCart && <DisplayCartItem close={() => setShowCart(false)} />}
 
+        {/* Mobile Cart Link */}
         {
           location.pathname !== '/checkout' && 
           location.pathname !== '/cart' && 
@@ -139,6 +136,9 @@ function App() {
             <CartMobileLink />
           )
         }
+
+        {/* WhatsApp Support Button — hidden on dashboard and rider panel */}
+        {!isDashboard && <WhatsAppButton />}
       </div>
     </GlobalProvider>
   )
