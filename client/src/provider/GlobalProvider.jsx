@@ -28,7 +28,7 @@ const GlobalProvider = ({ children }) => {
                 dispatch(handleAddItemCart(responseData.data))
             }
         } catch (error) {
-            console.log(error)
+            console.log("Cart Fetch Error:", error)
         }
     }
 
@@ -65,6 +65,7 @@ const GlobalProvider = ({ children }) => {
         }
     }
 
+    // Logic to calculate totals whenever cart changes
     useEffect(() => {
         const qty = cartItem.reduce((prev, curr) => prev + curr.quantity, 0)
         setTotalQty(qty)
@@ -81,9 +82,12 @@ const GlobalProvider = ({ children }) => {
         setNotDiscountTotalPrice(notDiscountPrice)
     }, [cartItem])
 
+    // Manual logout function (DO NOT run this in useEffect)
     const handleLogoutOut = () => {
         localStorage.clear()
         dispatch(handleAddItemCart([]))
+        // Optional: redirect to login
+        // window.location.href = "/login"
     }
 
     const fetchAddress = async () => {
@@ -94,7 +98,7 @@ const GlobalProvider = ({ children }) => {
                 dispatch(handleAddAddress(responseData.data))
             }
         } catch (error) {
-            // silent
+            console.log("Address Fetch Error:", error)
         }
     }
 
@@ -106,19 +110,19 @@ const GlobalProvider = ({ children }) => {
                 dispatch(setOrder(responseData.data))
             }
         } catch (error) {
-            console.log(error)
+            console.log("Order Fetch Error:", error)
         }
     }
 
+    // --- CRITICAL FIX ---
     useEffect(() => {
-        // FIXED: Only fetch data when user is logged in
-        // REMOVED handleLogoutOut() — it was wiping tokens on every render
+        // Only run data fetching if the user actually exists (is logged in)
         if (user?._id) {
             fetchCartItem()
             fetchAddress()
             fetchOrder()
         }
-    }, [user?._id]) // Only re-run when user ID changes, not entire user object
+    }, [user?._id]) // dependencies ensure this only runs on login/auth change
 
     return (
         <GlobalContext.Provider value={{
