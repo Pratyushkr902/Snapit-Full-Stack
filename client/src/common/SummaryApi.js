@@ -217,6 +217,32 @@ const SummaryApi = {
         url: '/api/referral/first-order-bonus',
         method: 'post'
     },
+    // ADD THESE ENTRIES TO YOUR EXISTING SummaryApi.js
+// Place them before the closing }  of the SummaryApi object
+
+    // --- REVIEWS ---
+    addReview: {
+        url: '/api/review/add',
+        method: 'post'
+    },
+    getReviews: {
+        url: '/api/review/get',
+        method: 'post'
+    },
+    deleteReview: {
+        url: '/api/review/delete',
+        method: 'delete'
+    },
+
+    // --- WISHLIST ---
+    toggleWishlist: {
+        url: '/api/review/wishlist/toggle',
+        method: 'post'
+    },
+    getWishlist: {
+        url: '/api/review/wishlist/get',
+        method: 'get'
+    },
 }
 
 export default SummaryApi
