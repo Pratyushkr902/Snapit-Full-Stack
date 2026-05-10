@@ -23,14 +23,14 @@ import CartMobile from "../pages/CartMobile";
 import CheckoutPage from "../pages/CheckoutPage";
 import Success from "../pages/Success";
 import Cancel from "../pages/Cancel";
-import RiderTracking from "../pages/RiderTracking"; 
-import RiderDashboard from "../pages/RiderDashboard"; 
-import StoreOrders from "../pages/StoreOrders"; 
-
-// NEW IMPORTS: Added for Wallet and Admin Summary
-import Wallet from '../pages/Wallet'; 
+import RiderTracking from "../pages/RiderTracking";
+import RiderDashboard from "../pages/RiderDashboard";
+import StoreOrders from "../pages/StoreOrders";
+import Wallet from '../pages/Wallet';
 import AdminSummary from '../components/AdminSummary';
-import ReferAndEarn from '../pages/ReferAndEarn'; // Ensuring Refer system is included
+import ReferAndEarn from '../pages/ReferAndEarn';
+import WishlistPage from '../pages/WishlistPage';
+import TrackingPage from '../pages/TrackingPage';
 
 const router = createBrowserRouter([
     {
@@ -70,14 +70,17 @@ const router = createBrowserRouter([
                 element : <UserMenuMobile/>
             },
             {
-                // NEW: Dedicated route for the Wallet system
                 path : "wallet",
                 element : <Wallet />
             },
             {
-                // NEW: Dedicated route for Refer and Earn
                 path : "refer",
                 element : <ReferAndEarn />
+            },
+            {
+                // ❤️ Wishlist page
+                path : "wishlist",
+                element : <WishlistPage />
             },
             {
                 path : "rider-panel",
@@ -92,7 +95,6 @@ const router = createBrowserRouter([
                         element : <Profile/>
                     },
                     {
-                        // NEW: Midnight Edition Dashboard Summary
                         path : "admin-summary",
                         element : <AdminPermision><AdminSummary/></AdminPermision>
                     },
@@ -109,7 +111,8 @@ const router = createBrowserRouter([
                         element : <AdminPermision><StoreOrders/></AdminPermision>
                     },
                     {
-                        path : "order-tracking/:id", 
+                        // Old tracking route kept for backward compat
+                        path : "order-tracking/:id",
                         element : <RiderTracking />
                     },
                     {
@@ -129,6 +132,11 @@ const router = createBrowserRouter([
                         element : <AdminPermision><ProductAdmin/></AdminPermision>
                     }
                 ]
+            },
+            {
+                // 📍 New live tracking page
+                path : "track/:orderId",
+                element : <TrackingPage />
             },
             {
                 path : ":category",
@@ -163,4 +171,4 @@ const router = createBrowserRouter([
     }
 ])
 
-export default router;
+export default router
