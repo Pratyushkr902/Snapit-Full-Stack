@@ -67,7 +67,7 @@ const userSchema = new mongoose.Schema({
     },
     role : {
         type : String,
-        enum : ['ADMIN',"USER"],
+        enum : ['ADMIN',"USER","rider"],
         default : "USER"
     },
     // --- SNAPIT WALLET SYSTEM ---
@@ -78,7 +78,7 @@ const userSchema = new mongoose.Schema({
     walletTransactions: [
         {
             type: {
-                type: String,  // 'credit' or 'debit'
+                type: String,
                 required: true
             },
             amount: {
@@ -108,15 +108,25 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    // NEW: Prevents double-claiming of referral rewards
     firstOrderBonusApplied: {
         type: Boolean,
         default: false
+    },
+    // --- WISHLIST ---
+    wishlist: [
+        {
+            type: mongoose.Schema.ObjectId,
+            ref: 'product'
+        }
+    ],
+    // --- PUSH NOTIFICATIONS ---
+    fcmToken: {
+        type: String,
+        default: null
     }
 },{
     timestamps : true
 })
 
-const UserModel = mongoose.model("User",userSchema)
-
+const UserModel = mongoose.model("User", userSchema)
 export default UserModel

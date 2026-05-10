@@ -12,7 +12,8 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
 import fs from 'fs';
-
+import reviewRouter from './route/review.route.js'
+app.use('/api/review', reviewRouter)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

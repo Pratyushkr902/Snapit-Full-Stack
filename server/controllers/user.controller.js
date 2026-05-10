@@ -9,6 +9,13 @@ import generatedOtp from '../utils/generatedOtp.js'
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import jwt from 'jsonwebtoken'
 
+// Standard cookie options for Safari & Mobile Compatibility
+const cookiesOption = {
+    httpOnly: true,
+    secure: true,   // Must be true for SameSite: None
+    sameSite: "None", // Required for cross-domain cookies on mobile
+    path: "/"
+}
 
 export async function registerUserController(request, response) {
     try {
@@ -179,11 +186,7 @@ export async function loginController(request, response) {
             last_login_date: new Date()
         })
 
-        const cookiesOption = {
-            httpOnly: true,
-            secure: true,
-            sameSite: "None"
-        }
+        // Apply updated cookiesOption for Safari/Mobile
         response.cookie('accessToken', accesstoken, cookiesOption)
         response.cookie('refreshToken', refreshToken, cookiesOption)
 
@@ -209,11 +212,6 @@ export async function loginController(request, response) {
 export async function logoutController(request, response) {
     try {
         const userid = request.userId
-        const cookiesOption = {
-            httpOnly: true,
-            secure: true,
-            sameSite: "None"
-        }
 
         response.clearCookie("accessToken", cookiesOption)
         response.clearCookie("refreshToken", cookiesOption)
@@ -441,6 +439,7 @@ export async function resetpassword(request, response) {
 
 export async function refreshToken(request, response) {
     try {
+        // Fallback to headers for Safari
         const refreshToken = request.cookies.refreshToken || request?.headers?.authorization?.split(" ")[1]
 
         if (!refreshToken) {
@@ -465,11 +464,7 @@ export async function refreshToken(request, response) {
         const userId = verifyToken?._id
         const newAccessToken = await generatedAccessToken(userId)
 
-        const cookiesOption = {
-            httpOnly: true,
-            secure: true,
-            sameSite: "None"
-        }
+        // Ensure token generation uses SameSite: None for mobile
         response.cookie('accessToken', newAccessToken, cookiesOption)
 
         return response.json({
@@ -507,7 +502,6 @@ export async function userDetails(request, response) {
     }
 }
 
-// ── NEW: Get all riders (users with role = 'rider') ──────────
 export async function getAllRiders(request, response) {
     try {
         const riders = await UserModel.find({ role: 'rider' }).select('name email mobile status')
