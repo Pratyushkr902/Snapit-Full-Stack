@@ -7,16 +7,13 @@ import StoreModel from "../models/store.model.js";
 import mongoose from "mongoose";
 import Razorpay from 'razorpay';
 
-
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId; 
         const { list_items, totalAmt, addressId, subTotalAmt, lat, lng } = request.body;
 
-        // Verify stock before placing order
         for (const item of list_items) {
             const product = await ProductModel.findById(item.productId._id);
-            
             if (!product || product.stock < (item.quantity || 1)) {
                 return response.status(400).json({
                     message: `Sorry, ${product?.name || "Product"} is out of stock.`,
@@ -24,12 +21,10 @@ export async function CashOnDeliveryOrderController(request, response) {
                     success: false
                 });
             }
-
             product.stock -= (item.quantity || 1);
             await product.save();
         }
 
-        // --- DYNAMIC NEAREST MART ASSIGNMENT ---
         let assignedStore = {
             name: "Snapit Main Store - Paliganj",
             address: "Main Road, Paliganj",
@@ -85,12 +80,12 @@ export async function CashOnDeliveryOrderController(request, response) {
             seller_status: "Pending",
             store_details: assignedStore, 
             rider_name: "Pratyush Sharma",
-            rider_contact: "9472026580"
+            rider_contact: "9472026580",
+            payment_collected: false 
         };
 
         const generatedOrder = new OrderModel(payload);
         await generatedOrder.save();
-
         await CartProductModel.deleteMany({ userId: userId });
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
 
@@ -100,7 +95,6 @@ export async function CashOnDeliveryOrderController(request, response) {
             success: true,
             data: generatedOrder
         });
-
     } catch (error) {
         return response.status(500).json({
             message: error.message || error,
@@ -116,7 +110,6 @@ export const pricewithDiscount = (price, dis = 1) => {
     return actualPrice
 }
 
-// --- FIXED PAYMENT CONTROLLER ---
 export async function paymentController(request, response) {
     try {
         const userId = request.userId 
@@ -133,12 +126,9 @@ export async function paymentController(request, response) {
             });
         }
 
-        const razorpay = new Razorpay({
-            key_id: key_id,
-            key_secret: key_secret,
-        });
-
+        const razorpay = new Razorpay({ key_id, key_secret });
         const amount = Math.round(Number(totalAmt || 0) * 100);
+        
         if (amount <= 0) {
             return response.status(400).json({
                 message: "Invalid order amount",
@@ -151,26 +141,21 @@ export async function paymentController(request, response) {
             amount: amount, 
             currency: "INR",
             receipt: `rcpt_${new mongoose.Types.ObjectId()}`,
-            notes: {
-                userId: userId,
-                addressId: addressId
-            }
+            notes: { userId, addressId }
         };
 
         const order = await razorpay.orders.create(options);
         return response.status(200).json(order);
-
     } catch (error) {
         console.error("Razorpay Order Error Details:", error);
         return response.status(error.statusCode || 500).json({
-            message: error.description || "Razorpay Authentication failed. Check your Secret Key.",
+            message: error.description || "Razorpay Authentication failed.",
             error: true,
             success: false
         })
     }
 }
 
-// --- VERIFY PAYMENT & CREATE ORDER (FIXED) ---
 export async function verifyPaymentController(request, response) {
     try {
         const userId = request.userId;
@@ -185,32 +170,25 @@ export async function verifyPaymentController(request, response) {
         } = request.body;
 
         const key_secret = String(process.env.RAZORPAY_SECRET_KEY || "").trim();
-
-        // 1. Verify Signature
         const body = razorpay_order_id + "|" + razorpay_payment_id;
-        const expectedSignature = crypto
-            .createHmac("sha256", key_secret)
-            .update(body.toString())
-            .digest("hex");
+        const expectedSignature = crypto.createHmac("sha256", key_secret).update(body.toString()).digest("hex");
 
         if (expectedSignature !== razorpay_signature) {
             return response.status(400).json({
-                message: "Invalid payment signature. Transaction failed.",
+                message: "Invalid signature.",
                 error: true,
                 success: false
             });
         }
 
-        // 2. Assign Store (Main Store Default)
         let assignedStore = {
             name: "Snapit Main Store - Paliganj",
             address: "Main Road, Paliganj",
             location: { lat: 25.2921, lng: 84.8170 }
         };
 
-        // 3. Create the Order Payload
         const payload = {
-            userId: userId,
+            userId,
             orderId: razorpay_order_id,
             cartItems: list_items.map(el => ({
                 productId: el.productId._id,
@@ -226,48 +204,58 @@ export async function verifyPaymentController(request, response) {
             paymentId: razorpay_payment_id,
             payment_status: "PAID",
             delivery_address: addressId,
-            subTotalAmt: subTotalAmt,
-            totalAmt: totalAmt,
+            subTotalAmt,
+            totalAmt,
             delivery_status: "Pending",
             seller_status: "Pending",
             store_details: assignedStore, 
             rider_name: "Pratyush Sharma",
-            rider_contact: "9472026580"
+            rider_contact: "9472026580",
+            payment_collected: true 
         };
 
         const newOrder = new OrderModel(payload);
         await newOrder.save();
 
-        // 4. Update Stock & Clear Cart
         for (const item of list_items) {
-            await ProductModel.findByIdAndUpdate(item.productId._id, {
-                $inc: { stock: -(item.quantity || 1) }
-            });
+            await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } });
         }
 
         await CartProductModel.deleteMany({ userId: userId });
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
 
-        return response.json({
-            message: "Payment verified and order placed successfully!",
-            error: false,
-            success: true,
-            data: newOrder
-        });
-
+        return response.json({ message: "Order placed successfully!", error: false, success: true, data: newOrder });
     } catch (error) {
-        return response.status(500).json({
-            message: error.message || error,
-            error: true,
-            success: false
-        });
+        return response.status(500).json({ message: error.message, error: true, success: false });
     }
 }
+
+// --- UPDATED: BLINKIT STYLE PAYMENT COLLECTION ---
+export const collectPaymentController = async (request, response) => {
+    try {
+        const { orderId, paymentMode, cashReceived, isSettled } = request.body; 
+        
+        const updatedOrder = await OrderModel.findOneAndUpdate(
+            { orderId: orderId },
+            { 
+                payment_collected: true,
+                payment_mode: paymentMode,
+                payment_status: paymentMode === "UPI" ? "PAID" : "CASH ON DELIVERY",
+                cashReceived: cashReceived || 0,
+                isSettled: isSettled || false,
+                settledAt: isSettled ? new Date() : null
+            },
+            { new: true }
+        );
+        return response.json({ message: `Payment collected via ${paymentMode}`, success: true, error: false, data: updatedOrder });
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false });
+    }
+};
 
 export const updateSellerOrderStatusController = async (request, response) => {
     try {
         const { orderId, sellerStatus } = request.body;
-        
         const updatedOrder = await OrderModel.findOneAndUpdate(
             { orderId: orderId },
             { 
@@ -276,19 +264,9 @@ export const updateSellerOrderStatusController = async (request, response) => {
             },
             { new: true }
         );
-
-        return response.json({
-            message: `Store status updated: ${sellerStatus}`,
-            success: true,
-            error: false,
-            data: updatedOrder
-        });
+        return response.json({ message: `Store status updated: ${sellerStatus}`, success: true, error: false, data: updatedOrder });
     } catch (error) {
-        return response.status(500).json({
-            message: error.message || error,
-            error: true,
-            success: false
-        });
+        return response.status(500).json({ message: error.message, error: true, success: false });
     }
 };
 
@@ -300,107 +278,72 @@ export async function getOrderDetailsController(request, response) {
     try {
         const userId = request.userId 
         const user = await UserModel.findById(userId)
-
-        let query = { userId: userId };
-
-        if (user.role === "ADMIN") {
-            query = {}; 
-        }
-
-        const orderlist = await OrderModel.find(query)
-            .sort({ createdAt: -1 })
-            .populate('delivery_address')
-            .populate('userId'); 
-
-        return response.json({
-            message: "order list",
-            data: orderlist,
-            error: false,
-            success: true
-        })
+        let query = user.role === "ADMIN" ? {} : { userId: userId };
+        const orderlist = await OrderModel.find(query).sort({ createdAt: -1 }).populate('delivery_address').populate('userId'); 
+        return response.json({ message: "order list", data: orderlist, error: false, success: true })
     } catch (error) {
-        return response.status(500).json({
-            message: error.message || error,
-            error: true,
-            success: false
-        })
+        return response.status(500).json({ message: error.message, error: true, success: false })
     }
 }
 
+// --- FIXED: SUPPORTS FULL STATUS UPDATE FROM COLLECTPAYMENT.JSX ---
 export const updateOrderStatusController = async (request, response) => {
     try {
-        const { orderId, status } = request.body;
-        
+        const { orderId, status, payment_status, isSettled, cashReceived } = request.body;
+        const order = await OrderModel.findOne({ orderId });
+
+        // Guard: Block delivery completion if no payment recorded
+        if (status === "Delivered" && !order.payment_collected && order.payment_status !== "PAID" && !payment_status) {
+            return response.status(400).json({
+                message: "Collect payment (Cash/UPI) first!",
+                success: false,
+                error: true
+            });
+        }
+
         const updatedOrder = await OrderModel.findOneAndUpdate(
             { orderId: orderId },
-            { delivery_status: status },
+            { 
+                delivery_status: status,
+                // Apply optional payment details if passed from the collection modal
+                ...(payment_status && { payment_status, payment_collected: true }),
+                ...(isSettled !== undefined && { isSettled, settledAt: isSettled ? new Date() : null }),
+                ...(cashReceived !== undefined && { cashReceived }),
+                ...(status === "Delivered" && { deliveredAt: new Date() })
+            },
             { new: true }
         );
-
-        return response.json({
-            message: `Order status updated to ${status}`,
-            success: true,
-            error: false,
-            data: updatedOrder
-        });
+        return response.json({ message: `Order status updated to ${status}`, success: true, error: false, data: updatedOrder });
     } catch (error) {
-        return response.status(500).json({
-            message: error.message || error,
-            error: true,
-            success: false
-        });
+        return response.status(500).json({ message: error.message, error: true, success: false });
     }
 };
 
 export const getRiderLocationController = async (request, response) => {
     try {
         const { orderId } = request.body;
-        return response.json({
-            message: "Rider location fetched",
-            success: true,
-            error: false,
-            data: {
-                latitude: 25.2921, 
-                longitude: 84.8170,
-                orderId
-            }
-        });
+        return response.json({ message: "Rider location fetched", success: true, error: false, data: { latitude: 25.2921, longitude: 84.8170, orderId } });
     } catch (error) {
-        return response.status(500).json({
-            message: error.message || error,
-            error: true,
-            success: false
-        });
+        return response.status(500).json({ message: error.message, error: true, success: false });
     }
 };
 
 export const getDailySalesReport = async (req, res) => {
     try {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-
+        const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
         const report = await OrderModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startOfDay, $lte: endOfDay },
-                    delivery_status: "Delivered" 
-                }
-            },
+            { $match: { createdAt: { $gte: startOfDay, $lte: endOfDay }, delivery_status: "Delivered" } },
             {
                 $group: {
                     _id: "$store_details.name",
                     totalOrders: { $sum: 1 },
                     totalRevenue: { $sum: "$totalAmt" },
-                    codCollected: { 
-                        $sum: { $cond: [{ $eq: ["$payment_status", "CASH ON DELIVERY"] }, "$totalAmt", 0] } 
-                    }
+                    codCollected: { $sum: { $cond: [{ $eq: ["$payment_status", "CASH ON DELIVERY"] }, "$totalAmt", 0] } }
                 }
             },
             { $sort: { totalRevenue: -1 } }
         ]);
-
         res.json({ success: true, data: report });
     } catch (error) {
         res.status(500).json({ message: error.message, success: false });
@@ -411,40 +354,19 @@ export const settleRiderCashController = async (req, res) => {
     try {
         const { rider_name } = req.body; 
         const result = await OrderModel.updateMany(
-            { 
-                rider_name: rider_name, 
-                delivery_status: "Delivered", 
-                payment_status: "CASH ON DELIVERY",
-                isSettled: { $ne: true } 
-            },
+            { rider_name: rider_name, delivery_status: "Delivered", payment_status: "CASH ON DELIVERY", isSettled: { $ne: true } },
             { $set: { isSettled: true, settledAt: new Date() } }
         );
-
-        return res.json({ 
-            success: true, 
-            message: `Settled ${result.modifiedCount} orders for ${rider_name}`,
-            error: false
-        });
+        return res.json({ success: true, message: `Settled ${result.modifiedCount} orders`, error: false });
     } catch (error) {
-        return res.status(500).json({ 
-            message: error.message || error, 
-            success: false,
-            error: true 
-        });
+        return res.status(500).json({ message: error.message, success: false, error: true });
     }
 };
 
 export async function getLastOrder(req, res) {
     try {
-        const lastOrder = await OrderModel
-            .findOne({ userId: req.userId })
-            .sort({ createdAt: -1 })
-            .populate('cartItems.productId');
-
-        return res.json({
-            success: true,
-            data: lastOrder
-        });
+        const lastOrder = await OrderModel.findOne({ userId: req.userId }).sort({ createdAt: -1 }).populate('cartItems.productId');
+        return res.json({ success: true, data: lastOrder });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
