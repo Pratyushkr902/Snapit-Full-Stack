@@ -1,18 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import UserMenu from '../components/UserMenu'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 
 const Dashboard = () => {
   const user = useSelector(state => state.user)
-  const navigate = useNavigate()
   const location = useLocation()
   const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken')
 
-  // No token at all — redirect immediately without waiting
+  // No token — redirect to login
   if (!token) {
-    navigate("/login", { state: { from: location } })
-    return null
+    return <Navigate to="/login" state={{ from: location }} replace />
   }
 
   return (
