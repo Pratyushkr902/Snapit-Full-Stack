@@ -7,43 +7,12 @@ const Dashboard = () => {
   const user = useSelector(state => state.user)
   const navigate = useNavigate()
   const location = useLocation()
-  const [isAuthChecking, setIsAuthChecking] = useState(true)
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken')
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken')
-
-    if (!token) {
-      navigate("/login", { state: { from: location } })
-      return
-    }
-
-    if (user?._id) {
-      setIsAuthChecking(false)
-      return
-    }
-
-    const timeout = setTimeout(() => {
-      setIsAuthChecking(false)
-    }, 3000)
-
-    return () => clearTimeout(timeout)
-  }, [user?._id])
-
-  useEffect(() => {
-    if (user?._id) {
-      setIsAuthChecking(false)
-    }
-  }, [user?._id])
-
-  if (isAuthChecking) {
-    return (
-      <div className='min-h-screen flex items-center justify-center bg-white'>
-        <div className='flex flex-col items-center gap-4'>
-          <div className='w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin'></div>
-          <p className='text-emerald-700 font-bold animate-pulse'>Syncing Snapit Account...</p>
-        </div>
-      </div>
-    )
+  // No token at all — redirect immediately without waiting
+  if (!token) {
+    navigate("/login", { state: { from: location } })
+    return null
   }
 
   return (
