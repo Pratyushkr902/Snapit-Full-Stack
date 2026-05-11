@@ -10,41 +10,38 @@ const Dashboard = () => {
   const [isAuthChecking, setIsAuthChecking] = useState(true)
 
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken')
-      
-      if (!token) {
-        navigate("/login", { state: { from: location } })
-        return
-      }
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken')
 
-      // If token exists, we give the app 5 seconds to load the user profile
-      // If it doesn't load by then, we assume the token is invalid/expired
-      if (user?._id) {
-        setIsAuthChecking(false)
-      }
+    if (!token) {
+      navigate("/login", { state: { from: location } })
+      return
     }
 
-    checkAuth()
+    if (user?._id) {
+      setIsAuthChecking(false)
+      return
+    }
 
     const timeout = setTimeout(() => {
-      if (!user?._id) {
-        const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken')
-        if (!token) navigate("/login")
-        else setIsAuthChecking(false) // Let the page render anyway
-      }
-    }, 5000)
+      setIsAuthChecking(false)
+    }, 3000)
 
     return () => clearTimeout(timeout)
-  }, [user?._id, navigate, location])
+  }, [user?._id])
 
-  if (isAuthChecking && !user?._id) {
+  useEffect(() => {
+    if (user?._id) {
+      setIsAuthChecking(false)
+    }
+  }, [user?._id])
+
+  if (isAuthChecking) {
     return (
       <div className='min-h-screen flex items-center justify-center bg-white'>
-         <div className='flex flex-col items-center gap-4'>
-            <div className='w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin'></div>
-            <p className='text-emerald-700 font-bold animate-pulse'>Syncing Snapit Account...</p>
-         </div>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin'></div>
+          <p className='text-emerald-700 font-bold animate-pulse'>Syncing Snapit Account...</p>
+        </div>
       </div>
     )
   }

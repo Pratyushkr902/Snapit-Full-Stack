@@ -27,8 +27,8 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                 data: {
                     orderId: order.orderId,
                     status: 'Delivered',
-                    delivery_status: 'Delivered',
                     payment_status: method === 'upi' ? 'UPI' : 'CASH ON DELIVERY',
+                    payment_collected: true,
                     isSettled: method === 'upi',
                     cashReceived: method === 'cash' ? Number(cashReceived) : amount,
                 }
