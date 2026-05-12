@@ -4,7 +4,7 @@ import { requestNotificationPermission, onForegroundMessage } from '../utils/fir
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
-
+import useNotifications from './hooks/useNotifications'
 const useNotifications = () => {
     const user = useSelector(state => state.user)
 
