@@ -16,6 +16,7 @@ import CartMobileLink from './components/CartMobile';
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
 import { io } from "socket.io-client"; 
+import useNotifications from './hooks/useNotifications' // Merged Import
 
 // GLOBAL SOCKET CONNECTION
 export const socket = io("https://snapit-full-stack-2.onrender.com", {
@@ -33,6 +34,9 @@ function App() {
   const location = useLocation()
   const user = useSelector(state => state.user)
   
+  // Initialize Notification Hook
+  useNotifications() 
+
   const [showCart, setShowCart] = useState(false)
 
   const fetchUser = useCallback(async () => {

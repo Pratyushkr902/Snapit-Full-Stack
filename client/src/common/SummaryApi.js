@@ -45,6 +45,10 @@ const SummaryApi = {
         url : '/api/user/all-riders',
         method : 'get'
     },
+    saveFcmToken: {
+        url: '/api/user/save-fcm-token',
+        method: 'post'
+    },
     addCategory : {
         url : '/api/category/add-category',
         method : 'post'
@@ -217,9 +221,6 @@ const SummaryApi = {
         url: '/api/referral/first-order-bonus',
         method: 'post'
     },
-    // ADD THESE ENTRIES TO YOUR EXISTING SummaryApi.js
-// Place them before the closing }  of the SummaryApi object
-
     // --- REVIEWS ---
     addReview: {
         url: '/api/review/add',
@@ -233,7 +234,6 @@ const SummaryApi = {
         url: '/api/review/delete',
         method: 'delete'
     },
-
     // --- WISHLIST ---
     toggleWishlist: {
         url: '/api/review/wishlist/toggle',
@@ -245,4 +245,4 @@ const SummaryApi = {
     },
 }
 
-export default SummaryApi
+export default SummaryApi;
