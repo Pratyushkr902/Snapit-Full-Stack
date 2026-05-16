@@ -28,7 +28,6 @@ self.addEventListener('fetch', (event) => {
         fetch(event.request)
             .then((response) => {
                 if (response.status === 200) {
-                    // Only cache same-origin or image assets
                     const url = new URL(event.request.url)
                     const isCacheable = url.origin === self.location.origin
                         || event.request.destination === 'image'
@@ -48,13 +47,17 @@ self.addEventListener('fetch', (event) => {
                     if (event.request.mode === 'navigate') {
                         return caches.match('/index.html')
                     }
+                    // ✅ Fix: always return a valid Response, never undefined
+                    return new Response('', {
+                        status: 408,
+                        statusText: 'Offline'
+                    })
                 })
             })
     )
 })
 
 self.addEventListener('push', (event) => {
-    // Safe JSON parsing — won't crash on plain text payloads
     const data = event.data
         ? (() => { try { return event.data.json() } catch { return { title: event.data.text() } } })()
         : {}
@@ -77,7 +80,6 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close()
 
-    // Fixed: dismiss now actually dismisses without opening anything
     if (event.action === 'dismiss') return
 
     const url = event.action === 'track'
