@@ -11,8 +11,7 @@ import {
     userDetails, 
     verifyEmailController, 
     verifyForgotPasswordOtp,
-    getAllRiders,
-    saveFcmTokenController           // ← Imported to handle Firebase Cloud Messaging tokens
+    getAllRiders           // ← NEW import
 } from '../controllers/user.controller.js'
 import auth from '../middleware/auth.js'
 import upload from '../middleware/multer.js'
@@ -30,7 +29,6 @@ userRouter.put('/verify-forgot-password-otp', verifyForgotPasswordOtp)
 userRouter.put('/reset-password', resetpassword)
 userRouter.post('/refresh-token', refreshToken)
 userRouter.get('/user-details', auth, userDetails)
-userRouter.get('/all-riders', auth, getAllRiders)
-userRouter.post('/save-fcm-token', auth, saveFcmTokenController)  // ← Registered endpoint to resolve 404
+userRouter.get('/all-riders', auth, getAllRiders)  // ← NEW route
 
 export default userRouter

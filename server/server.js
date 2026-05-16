@@ -39,7 +39,6 @@ import storeRouter from './route/store.route.js';
 import walletRouter from './route/wallet.route.js';
 import flashSaleRouter from './route/flashSale.route.js';
 import referralRouter from './route/referral.route.js';
-import reviewRouter from './route/review.route.js'; // Merged review router import
 
 const app = express();
 const server = http.createServer(app); 
@@ -73,7 +72,7 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
-            imgSrc: ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://api.qrserver.com"],
+            imgSrc: ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com"],
             frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
             connectSrc: ["'self'", "https://api.razorpay.com", "https://*.googleapis.com", "ws:", "wss:", "http://*", "https://*", "ws://*", "wss://*", "capacitor://*"] 
         },
@@ -134,7 +133,6 @@ app.use('/api/store', storeRouter);
 app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
-app.use('/api/review', reviewRouter); // Mounted review router path
 
 // --- STATIC FILE SERVING ---
 const possiblePaths = [
@@ -169,9 +167,9 @@ app.use((req, res) => {
     });
 });
 
-// --- FIXED: AUTOMATED SELF-PING UPDATED TO INSTANCE 2 ---
+// --- RENDER SELF-PING ---
 setInterval(() => {
-    fetch('https://snapit-full-stack-2.onrender.com/').catch(() => {});
+    fetch('https://snapit-full-stack-0.onrender.com/').catch(() => {});
 }, 14 * 60 * 1000);
 
 // --- START SERVER ---
