@@ -9,11 +9,10 @@ import generatedOtp from '../utils/generatedOtp.js'
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import jwt from 'jsonwebtoken'
 
-// Standard cookie options for Safari & Mobile Compatibility
 const cookiesOption = {
     httpOnly: true,
-    secure: true,   // Must be true for SameSite: None
-    sameSite: "None", // Required for cross-domain cookies on mobile
+    secure: true,
+    sameSite: "None",
     path: "/"
 }
 
@@ -42,8 +41,8 @@ export async function registerUserController(request, response) {
         const salt = await bcryptjs.genSalt(10)
         const hashPassword = await bcryptjs.hash(password, salt)
 
-        const newReferralCode = name.toUpperCase().replace(/\s/g, '').slice(0, 4) + 
-                               Math.floor(1000 + Math.random() * 9000);
+        const newReferralCode = name.toUpperCase().replace(/\s/g, '').slice(0, 4) +
+            Math.floor(1000 + Math.random() * 9000);
 
         const payload = {
             name,
@@ -53,10 +52,10 @@ export async function registerUserController(request, response) {
         }
 
         if (incomingReferralCode) {
-            const referrer = await UserModel.findOne({ 
-                referralCode: incomingReferralCode 
+            const referrer = await UserModel.findOne({
+                referralCode: incomingReferralCode
             })
-            
+
             if (referrer) {
                 referrer.walletBalance += 20
                 referrer.referralCount += 1
@@ -69,7 +68,7 @@ export async function registerUserController(request, response) {
                 await referrer.save()
 
                 payload.referredBy = incomingReferralCode
-                payload.walletBalance = 10 
+                payload.walletBalance = 10
                 payload.walletTransactions = [{
                     type: 'credit',
                     amount: 10,
@@ -186,7 +185,6 @@ export async function loginController(request, response) {
             last_login_date: new Date()
         })
 
-        // Apply updated cookiesOption for Safari/Mobile
         response.cookie('accessToken', accesstoken, cookiesOption)
         response.cookie('refreshToken', refreshToken, cookiesOption)
 
@@ -439,7 +437,6 @@ export async function resetpassword(request, response) {
 
 export async function refreshToken(request, response) {
     try {
-        // Fallback to headers for Safari
         const refreshToken = request.cookies.refreshToken || request?.headers?.authorization?.split(" ")[1]
 
         if (!refreshToken) {
@@ -464,7 +461,6 @@ export async function refreshToken(request, response) {
         const userId = verifyToken?._id
         const newAccessToken = await generatedAccessToken(userId)
 
-        // Ensure token generation uses SameSite: None for mobile
         response.cookie('accessToken', newAccessToken, cookiesOption)
 
         return response.json({
@@ -510,6 +506,36 @@ export async function getAllRiders(request, response) {
             error: false,
             success: true,
             data: riders
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+// --- FCM TOKEN ---
+export async function saveFcmTokenController(request, response) {
+    try {
+        const userId = request.userId
+        const { fcmToken } = request.body
+
+        if (!fcmToken) {
+            return response.status(400).json({
+                message: "FCM token is required",
+                error: true,
+                success: false
+            })
+        }
+
+        await UserModel.findByIdAndUpdate(userId, { fcmToken })
+
+        return response.json({
+            message: "FCM token saved successfully",
+            error: false,
+            success: true
         })
     } catch (error) {
         return response.status(500).json({
