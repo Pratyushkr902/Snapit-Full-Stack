@@ -48,6 +48,16 @@ const AddAddress = ({ close }) => {
   }
 
   const onSubmit = async (data) => {
+    // Check city text serviceability explicitly from form input data
+    if (data.city) {
+      const serviceableAreas = ['paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos', 'chiksi', 'milki', 'akhtiyarpur', 'balipakar']
+      const cityLower = data.city.toLowerCase()
+      const isServiceable = serviceableAreas.some(area => cityLower.includes(area))
+      if (!isServiceable) {
+        return toast.error("Location not serviceable. Our team is working tirelessly to bring 10-minute deliveries to your location! 🚀")
+      }
+    }
+
     // Check pincode serviceability
     if (data.pincode && !SERVICEABLE_PINCODES.includes(data.pincode)) {
       // Also check if location was detected and out of zone
@@ -128,7 +138,7 @@ const AddAddress = ({ close }) => {
                 </div>
               </div>
               <p className='text-xs text-slate-500 leading-relaxed'>
-                We currently deliver to: <strong>Paliganj, Sarsi, Kurkuri, Acchua, Chandos, Chiksi, Milki</strong> and nearby areas within 3-4km.
+                We currently deliver to: <strong>Paliganj, Sarsi, Kurkuri, Acchua, Chandos, Chiksi, Milki, Akhtiyarpur, Balipakar</strong> and nearby areas within 3-4km.
               </p>
               <p className='text-xs text-green-600 font-bold mt-2'>🚀 Expanding soon to your area!</p>
             </div>
