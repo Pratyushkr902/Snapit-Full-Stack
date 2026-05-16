@@ -12,10 +12,6 @@ const SERVICEABLE_PINCODES = [
   '801110', '801108', '801105', '801113', '801116'
 ]
 
-const SERVICEABLE_AREAS = [
-  'paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos', 'chiksi', 'milki', 'akhtiyarpur', 'balipakar'
-]
-
 const AddAddress = ({ close }) => {
   const { register, handleSubmit, reset, setValue, watch } = useForm()
   const { fetchAddress } = useGlobalContext()
@@ -52,17 +48,8 @@ const AddAddress = ({ close }) => {
   }
 
   const onSubmit = async (data) => {
-    // Check city text serviceability explicitly from form input data
-    if (data.city) {
-      const cityLower = data.city.toLowerCase().trim()
-      const isServiceable = SERVICEABLE_AREAS.some(area => cityLower.includes(area))
-      if (!isServiceable) {
-        return toast.error("Location not serviceable. Our team is working tirelessly to bring 10-minute deliveries to your location! 🚀")
-      }
-    }
-
     // Check pincode serviceability
-    if (data.pincode && !SERVICEABLE_PINCODES.includes(data.pincode.trim())) {
+    if (data.pincode && !SERVICEABLE_PINCODES.includes(data.pincode)) {
       // Also check if location was detected and out of zone
       if (locationStatus === 'out') {
         toast.error('Sorry, we don\'t deliver to this location yet.')
@@ -136,15 +123,14 @@ const AddAddress = ({ close }) => {
               <div className='flex items-center gap-3 mb-2'>
                 <span className='text-2xl'>😔</span>
                 <div>
-                  <p className='font-black text-red-700 text-sm'>Location Not Serviceable</p>
+                  <p className='font-black text-red-700 text-sm'>Not serviceable yet</p>
+                  <p className='text-xs text-red-500'>We're not delivering to your location yet</p>
                 </div>
               </div>
-              <p className='text-sm text-slate-600 leading-relaxed'>
-                Our team is working tirelessly to bring <strong>10-minute deliveries</strong> to your location. 🚀
+              <p className='text-xs text-slate-500 leading-relaxed'>
+                We currently deliver to: <strong>Paliganj, Sarsi, Kurkuri, Acchua, Chandos, Chiksi, Milki</strong> and nearby areas within 3-4km.
               </p>
-              <p className='text-xs text-slate-400 mt-2'>
-                Currently serving: Paliganj, Sarsi, Kurkuri, Acchua, Chandos, Chiksi, Milki, Akhtiyarpur, Balipakar
-              </p>
+              <p className='text-xs text-green-600 font-bold mt-2'>🚀 Expanding soon to your area!</p>
             </div>
           )}
         </div>
