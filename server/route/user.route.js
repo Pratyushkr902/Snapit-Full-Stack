@@ -1,3 +1,4 @@
+cat << 'EOF' > server/route/user.route.js
 import { Router } from 'express'
 import { 
     forgotPasswordController, 
@@ -11,7 +12,8 @@ import {
     userDetails, 
     verifyEmailController, 
     verifyForgotPasswordOtp,
-    getAllRiders           // ← NEW import
+    getAllRiders,
+    saveFcmTokenController
 } from '../controllers/user.controller.js'
 import auth from '../middleware/auth.js'
 import upload from '../middleware/multer.js'
@@ -29,6 +31,8 @@ userRouter.put('/verify-forgot-password-otp', verifyForgotPasswordOtp)
 userRouter.put('/reset-password', resetpassword)
 userRouter.post('/refresh-token', refreshToken)
 userRouter.get('/user-details', auth, userDetails)
-userRouter.get('/all-riders', auth, getAllRiders)  // ← NEW route
+userRouter.get('/all-riders', auth, getAllRiders)
+userRouter.post('/save-fcm-token', auth, saveFcmTokenController)
 
 export default userRouter
+EOF
