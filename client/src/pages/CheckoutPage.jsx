@@ -28,15 +28,22 @@ const CheckoutPage = () => {
 
   // Check if selected address is in serviceable area
   const checkServiceArea = () => {
-   const selectedAddr = addressList[selectAddress]
-if (selectedAddr?.city) {
-  const serviceableAreas = ['paliganj','sarsi','kurkuri','acchua','chandos','chiksi','milki','akhtiyarpur','balipakar']
-  const cityLower = selectedAddr.city.toLowerCase()
-  const isServiceable = serviceableAreas.some(area => cityLower.includes(area))
-  if (!isServiceable) {
-    return toast.error("Location not serviceable. Our team is working tirelessly to bring 10-minute deliveries to your location! 🚀")
+    const selectedAddr = addressList[selectAddress]
+    if (!selectedAddr) return true // let backend handle
+    const cityLower = (selectedAddr.city || '').toLowerCase()
+    const lineLower = (selectedAddr.address_line || '').toLowerCase()
+    const isServiceable = SERVICEABLE_AREAS.some(
+      area => cityLower.includes(area) || lineLower.includes(area)
+    )
+    if (!isServiceable) {
+      toast.error(
+        '😔 Location not serviceable. Our team is working tirelessly to bring 10-minute deliveries to your location! 🚀',
+        { duration: 5000 }
+      )
+      return false
+    }
+    return true
   }
-}
 
   const getCoordinates = () => {
     return new Promise((resolve, reject) => {
