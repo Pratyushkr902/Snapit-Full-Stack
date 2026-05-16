@@ -519,3 +519,33 @@ export async function getAllRiders(request, response) {
         })
     }
 }
+
+// --- ADDED: SAVES THE INBOUND FIREBASE FCM DEVICE REGISTRATION TOKEN ---
+export async function saveFcmTokenController(request, response) {
+    try {
+        const userId = request.userId
+        const { fcmToken } = request.body
+
+        if (!fcmToken) {
+            return response.status(400).json({
+                message: "FCM Token is required",
+                error: true,
+                success: false
+            })
+        }
+
+        await UserModel.findByIdAndUpdate(userId, { fcmToken: fcmToken })
+
+        return response.json({
+            message: "FCM Device notification token registered successfully.",
+            error: false,
+            success: true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}

@@ -7,6 +7,16 @@ import StoreModel from "../models/store.model.js";
 import mongoose from "mongoose";
 import Razorpay from 'razorpay';
 
+// --- HELPER FUNCTIONS ---
+
+export const pricewithDiscount = (price, dis = 1) => {
+    const discountAmout = Math.ceil((Number(price) * Number(dis)) / 100)
+    const actualPrice = Number(price) - Number(discountAmout)
+    return actualPrice
+}
+
+// --- ORDER CONTROLLERS ---
+
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId; 
@@ -104,11 +114,7 @@ export async function CashOnDeliveryOrderController(request, response) {
     }
 }
 
-export const pricewithDiscount = (price, dis = 1) => {
-    const discountAmout = Math.ceil((Number(price) * Number(dis)) / 100)
-    const actualPrice = Number(price) - Number(discountAmout)
-    return actualPrice
-}
+// --- RAZORPAY CONTROLLERS ---
 
 export async function paymentController(request, response) {
     try {
@@ -230,7 +236,8 @@ export async function verifyPaymentController(request, response) {
     }
 }
 
-// --- UPDATED: BLINKIT STYLE PAYMENT COLLECTION ---
+// --- BLINKIT STYLE LOGISTICS & STATUS ---
+
 export const collectPaymentController = async (request, response) => {
     try {
         const { orderId, paymentMode, cashReceived, isSettled } = request.body; 
@@ -270,29 +277,11 @@ export const updateSellerOrderStatusController = async (request, response) => {
     }
 };
 
-export async function webhookStripe(request, response) {
-    response.json({ message: "Stripe disabled. Use Razorpay verification instead." });
-}
-
-export async function getOrderDetailsController(request, response) {
-    try {
-        const userId = request.userId 
-        const user = await UserModel.findById(userId)
-        let query = user.role === "ADMIN" ? {} : { userId: userId };
-        const orderlist = await OrderModel.find(query).sort({ createdAt: -1 }).populate('delivery_address').populate('userId'); 
-        return response.json({ message: "order list", data: orderlist, error: false, success: true })
-    } catch (error) {
-        return response.status(500).json({ message: error.message, error: true, success: false })
-    }
-}
-
-// --- FIXED: SUPPORTS FULL STATUS UPDATE FROM COLLECTPAYMENT.JSX ---
 export const updateOrderStatusController = async (request, response) => {
     try {
         const { orderId, status, payment_status, isSettled, cashReceived } = request.body;
         const order = await OrderModel.findOne({ orderId });
 
-        // Guard: Block delivery completion if no payment recorded
         if (status === "Delivered" && !order.payment_collected && order.payment_status !== "PAID" && !payment_status) {
             return response.status(400).json({
                 message: "Collect payment (Cash/UPI) first!",
@@ -305,7 +294,6 @@ export const updateOrderStatusController = async (request, response) => {
             { orderId: orderId },
             { 
                 delivery_status: status,
-                // Apply optional payment details if passed from the collection modal
                 ...(payment_status && { payment_status, payment_collected: true }),
                 ...(isSettled !== undefined && { isSettled, settledAt: isSettled ? new Date() : null }),
                 ...(cashReceived !== undefined && { cashReceived }),
@@ -318,6 +306,20 @@ export const updateOrderStatusController = async (request, response) => {
         return response.status(500).json({ message: error.message, error: true, success: false });
     }
 };
+
+// --- DATA & REPORTING ---
+
+export async function getOrderDetailsController(request, response) {
+    try {
+        const userId = request.userId 
+        const user = await UserModel.findById(userId)
+        let query = user.role === "ADMIN" ? {} : { userId: userId };
+        const orderlist = await OrderModel.find(query).sort({ createdAt: -1 }).populate('delivery_address').populate('userId'); 
+        return response.json({ message: "order list", data: orderlist, error: false, success: true })
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
 
 export const getRiderLocationController = async (request, response) => {
     try {
@@ -370,4 +372,8 @@ export async function getLastOrder(req, res) {
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
+}
+
+export async function webhookStripe(request, response) {
+    response.json({ message: "Stripe disabled. Use Razorpay verification instead." });
 }
