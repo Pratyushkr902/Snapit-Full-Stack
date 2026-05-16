@@ -28,7 +28,8 @@ self.addEventListener('activate', (event) => {
 
 // Fetch - network first, cache fallback
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET and API requests
+  // FIXED: Simply return early WITHOUT executing event.respondWith().
+  // This safely surrenders control back to the native browser network interface.
   if (event.request.method !== 'GET') return
   if (event.request.url.includes('/api/')) return
 
@@ -59,7 +60,14 @@ self.addEventListener('fetch', (event) => {
 
 // Push notifications
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {}
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch (err) {
+    // Graceful fallback string formatting if payload stream text isn't raw JSON
+    data = { body: event.data ? event.data.text() : null }
+  }
+
   const title = data.title || 'Snapit Update'
   const options = {
     body: data.body || 'Your order has been updated',
