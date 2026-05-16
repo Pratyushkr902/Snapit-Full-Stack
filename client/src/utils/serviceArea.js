@@ -9,6 +9,8 @@ const DELIVERY_ZONES = [
   { name: 'Chandos',   lat: 25.2650, lng: 84.8400, radiusKm: 3 },
   { name: 'Chiksi',    lat: 25.2850, lng: 84.7850, radiusKm: 3 },
   { name: 'Milki',     lat: 25.3200, lng: 84.8100, radiusKm: 3 },
+  { name: 'Akhtiyarpur', lat: 25.2750, lng: 84.8280, radiusKm: 3 },
+{ name: 'Balipakar',   lat: 25.3010, lng: 84.7920, radiusKm: 3 },
 ]
 
 // Haversine formula — distance between 2 coords in km
