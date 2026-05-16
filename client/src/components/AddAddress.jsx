@@ -12,16 +12,29 @@ const SERVICEABLE_PINCODES = [
   '801110', '801108', '801105', '801113', '801116'
 ]
 
+const SERVICEABLE_AREAS = [
+  'paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos', 'chiksi', 'milki', 'akhtiyarpur', 'balipakar'
+]
+
 const AddAddress = ({ close }) => {
-  const { register, handleSubmit, reset, setValue, watch } = useForm()
+  // Added default values for clean state handling
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      addressline: '',
+      city: '',
+      pincode: '',
+      state: 'Bihar',
+      country: 'India',
+      mobile: ''
+    }
+  })
+  
   const { fetchAddress } = useGlobalContext()
   const [locationChecking, setLocationChecking] = useState(false)
   const [locationStatus, setLocationStatus] = useState(null) // 'ok' | 'out'
   const [detectedLocation, setDetectedLocation] = useState(null)
 
-  const pincode = watch('pincode')
-
-  // Auto-detect location and check serviceability
+  // Auto-detect location and check hyper-local serviceability mapping
   const handleDetectLocation = async () => {
     setLocationChecking(true)
     setLocationStatus(null)
@@ -33,7 +46,6 @@ const AddAddress = ({ close }) => {
       if (result.serviceable) {
         setLocationStatus('ok')
         toast.success(`✅ We deliver to ${result.zone}!`)
-        // Auto-fill city
         setValue('city', result.zone)
         setValue('state', 'Bihar')
         setValue('country', 'India')
@@ -48,21 +60,19 @@ const AddAddress = ({ close }) => {
   }
 
   const onSubmit = async (data) => {
-    // Check city text serviceability explicitly from form input data
+    // 1. Explicit Check: Validate city text string against service area boundaries
     if (data.city) {
-      const serviceableAreas = ['paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos', 'chiksi', 'milki', 'akhtiyarpur', 'balipakar']
-      const cityLower = data.city.toLowerCase()
-      const isServiceable = serviceableAreas.some(area => cityLower.includes(area))
+      const cityLower = data.city.trim().toLowerCase()
+      const isServiceable = SERVICEABLE_AREAS.some(area => cityLower.includes(area))
       if (!isServiceable) {
         return toast.error("Location not serviceable. Our team is working tirelessly to bring 10-minute deliveries to your location! 🚀")
       }
     }
 
-    // Check pincode serviceability
-    if (data.pincode && !SERVICEABLE_PINCODES.includes(data.pincode)) {
-      // Also check if location was detected and out of zone
+    // 2. Explicit Check: Pincode lookup checks combined with location status state
+    if (data.pincode && !SERVICEABLE_PINCODES.includes(data.pincode.trim())) {
       if (locationStatus === 'out') {
-        toast.error('Sorry, we don\'t deliver to this location yet.')
+        toast.error("Sorry, we don't deliver to this location yet.")
         return
       }
     }
@@ -72,11 +82,11 @@ const AddAddress = ({ close }) => {
         ...SummaryApi.createAddress,
         data: {
           address_line: data.addressline,
-          city: data.city,
+          city: data.city.trim(),
           state: data.state,
           country: data.country,
-          pincode: data.pincode,
-          mobile: data.mobile
+          pincode: data.pincode.trim(),
+          mobile: data.mobile.trim()
         }
       })
       const { data: responseData } = response
@@ -95,31 +105,31 @@ const AddAddress = ({ close }) => {
 
   return (
     <section className='bg-black fixed inset-0 z-50 bg-opacity-70 overflow-auto flex items-start justify-center p-4'>
-      <div className='bg-white w-full max-w-lg mt-8 rounded-2xl overflow-hidden shadow-2xl'>
+      <div className='bg-white w-full max-w-lg mt-8 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200'>
 
         {/* Header */}
         <div className='flex justify-between items-center p-5 border-b'>
           <h2 className='font-black text-slate-800 text-lg'>Add Delivery Address</h2>
-          <button onClick={close} className='hover:text-red-500 transition-colors'>
+          <button onClick={close} className='hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-slate-50'>
             <IoClose size={24} />
           </button>
         </div>
 
-        {/* Detect Location Button */}
+        {/* Detect Location Action Frame */}
         <div className='p-5 pb-0'>
           <button
             type='button'
             onClick={handleDetectLocation}
             disabled={locationChecking}
-            className='w-full flex items-center justify-center gap-2 bg-green-50 hover:bg-green-100 border-2 border-green-200 text-green-700 font-bold py-3 rounded-xl transition-all active:scale-95 mb-4'
+            className='w-full flex items-center justify-center gap-2 bg-green-50 hover:bg-green-100 border-2 border-green-200 text-green-700 font-bold py-3 rounded-xl transition-all active:scale-95 mb-4 disabled:opacity-60 disabled:pointer-events-none'
           >
-            <IoLocationSharp size={18} />
-            {locationChecking ? 'Detecting...' : 'Use My Current Location'}
+            <IoLocationSharp className={locationChecking ? "animate-bounce" : ""} size={18} />
+            {locationChecking ? 'Detecting coordinates...' : 'Use My Current Location'}
           </button>
 
-          {/* Serviceability status */}
+          {/* Serviceability Status Panels */}
           {locationStatus === 'ok' && detectedLocation && (
-            <div className='bg-green-50 border border-green-200 rounded-xl p-3 mb-4 flex items-center gap-3'>
+            <div className='bg-green-50 border border-green-200 rounded-xl p-3 mb-4 flex items-center gap-3 animate-in slide-in-from-top-2 duration-200'>
               <span className='text-2xl'>✅</span>
               <div>
                 <p className='font-black text-green-700 text-sm'>We deliver here!</p>
@@ -129,30 +139,31 @@ const AddAddress = ({ close }) => {
           )}
 
           {locationStatus === 'out' && (
-            <div className='bg-red-50 border border-red-200 rounded-xl p-4 mb-4'>
+            <div className='bg-red-50 border border-red-200 rounded-xl p-4 mb-4 animate-in slide-in-from-top-2 duration-200'>
               <div className='flex items-center gap-3 mb-2'>
                 <span className='text-2xl'>😔</span>
                 <div>
-                  <p className='font-black text-red-700 text-sm'>Not serviceable yet</p>
-                  <p className='text-xs text-red-500'>We're not delivering to your location yet</p>
+                  <p className='font-black text-red-700 text-sm'>Location Not Serviceable</p>
                 </div>
               </div>
-              <p className='text-xs text-slate-500 leading-relaxed'>
-                We currently deliver to: <strong>Paliganj, Sarsi, Kurkuri, Acchua, Chandos, Chiksi, Milki, Akhtiyarpur, Balipakar</strong> and nearby areas within 3-4km.
+              <p className='text-sm text-slate-600 leading-relaxed'>
+                Our team is working tirelessly to bring <strong>10-minute deliveries</strong> to your location. 🚀
               </p>
-              <p className='text-xs text-green-600 font-bold mt-2'>🚀 Expanding soon to your area!</p>
+              <p className='text-xs text-slate-400 mt-2'>
+                Currently serving: Paliganj, Sarsi, Kurkuri, Acchua, Chandos, Chiksi, Milki, Akhtiyarpur, Balipakar
+              </p>
             </div>
           )}
         </div>
 
-        {/* Form */}
+        {/* Core Form Data Structure */}
         <form className='p-5 grid gap-3' onSubmit={handleSubmit(onSubmit)}>
           <div className='grid gap-1'>
             <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Address Line</label>
             <input
               type='text'
               placeholder='House no, Street, Landmark'
-              className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
+              className={`border p-3 rounded-xl text-sm outline-none transition-all ${errors.addressline ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-slate-50 focus:border-green-400 focus:bg-white'}`}
               {...register("addressline", { required: true })}
             />
           </div>
@@ -171,9 +182,10 @@ const AddAddress = ({ close }) => {
               <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Pincode</label>
               <input
                 type='text'
+                maxLength={6}
                 placeholder='801110'
                 className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
-                {...register("pincode", { required: true })}
+                {...register("pincode", { required: true, pattern: /^\d{6}$/ })}
               />
             </div>
           </div>
@@ -202,16 +214,17 @@ const AddAddress = ({ close }) => {
           <div className='grid gap-1'>
             <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Mobile Number</label>
             <input
-              type='text'
+              type='tel'
+              maxLength={10}
               placeholder='10-digit mobile number'
               className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
-              {...register("mobile", { required: true })}
+              {...register("mobile", { required: true, pattern: /^\d{10}$/ })}
             />
           </div>
 
           <button
             type='submit'
-            className='w-full bg-green-600 hover:bg-green-700 text-white font-black py-3.5 rounded-xl mt-2 transition-all active:scale-95 shadow-lg shadow-green-100'
+            className='w-full bg-green-600 hover:bg-green-700 text-white font-black py-3.5 rounded-xl mt-2 transition-all active:scale-95 shadow-lg shadow-green-100 flex items-center justify-center'
           >
             Save Address
           </button>

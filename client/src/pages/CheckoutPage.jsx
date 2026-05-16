@@ -1,360 +1,367 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useGlobalContext } from '../provider/GlobalProvider'
-import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
-import AddAddress from '../components/AddAddress'
-import { useSelector } from 'react-redux'
-import AxiosToastError from '../utils/AxiosToastError'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
+import AxiosToastError from '../utils/AxiosToastError'
 import { useNavigate } from 'react-router-dom'
+import { IoLocationSharp, IoWalletOutline, IoCardOutline, IoBicycleOutline, IoAddCircleOutline } from 'react-icons/io5'
+import AddAddress from '../components/AddAddress'
 
 const SERVICEABLE_AREAS = [
-  'paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos',
-  'chiksi', 'milki', 'akhtiyarpur', 'balipakar'
+  'paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos', 'chiksi', 'milki', 'akhtiyarpur', 'balipakar'
 ]
 
 const CheckoutPage = () => {
-  const { fetchCartItem, fetchOrder, totalPrice } = useGlobalContext()
-  const [openAddress, setOpenAddress] = useState(false)
-  const addressList = useSelector(state => state.addresses.addressList)
+  const { cartItems, addressList, fetchAddress, walletDetails, fetchWallet } = useGlobalContext()
   const [selectAddress, setSelectAddress] = useState(0)
-  const cartItemsList = useSelector(state => state.cartItem.cart)
-  const user = useSelector(state => state.user)
+  const [openAddressModal, setOpenAddressModal] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState('') // 'COD' | 'RAZORPAY' | 'WALLET'
+
   const navigate = useNavigate()
 
-  const deliveryFee = totalPrice >= 399 ? 0 : 12
-  const grandTotal = totalPrice + deliveryFee
+  // Calculate Order Value Data Matrix
+  const subTotalAmt = cartItems.reduce((acc, curr) => acc + (curr.productId.price * curr.quantity), 0)
+  const deliveryCharge = subTotalAmt > 200 ? 0 : 15
+  const totalAmt = subTotalAmt + deliveryCharge
 
-  // Check if selected address is in serviceable area
-  const checkServiceArea = () => {
-    const selectedAddr = addressList[selectAddress]
-    if (!selectedAddr) return true // let backend handle
-    const cityLower = (selectedAddr.city || '').toLowerCase()
-    const lineLower = (selectedAddr.address_line || '').toLowerCase()
-    const isServiceable = SERVICEABLE_AREAS.some(
-      area => cityLower.includes(area) || lineLower.includes(area)
-    )
-    if (!isServiceable) {
-      toast.error(
-        '😔 Location not serviceable. Our team is working tirelessly to bring 10-minute deliveries to your location! 🚀',
-        { duration: 5000 }
-      )
+  useEffect(() => {
+    fetchAddress()
+    if (fetchWallet) fetchWallet()
+  }, [])
+
+  // --- CORE SYSTEM GUARD: PREVENT UNSERVICEABLE ORDERS GLOBAL CHECK ---
+  const verifyServiceability = () => {
+    if (addressList.length === 0) {
+      toast.error("Please add a delivery address to proceed.")
       return false
+    }
+
+    const selectedAddr = addressList[selectAddress]
+    if (!selectedAddr) {
+      toast.error("Please select a valid delivery address.")
+      return false
+    }
+
+    if (selectedAddr?.city) {
+      const cityLower = selectedAddr.city.toLowerCase().trim()
+      const isServiceable = SERVICEABLE_AREAS.some(area => cityLower.includes(area))
+      
+      if (!isServiceable) {
+        toast.error("Location not serviceable. Our team is working tirelessly to bring 10-minute deliveries to your location! 🚀")
+        return false
+      }
     }
     return true
   }
 
-  const getCoordinates = () => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) return reject(new Error("Geolocation not supported"))
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        err => reject(err),
-        { enableHighAccuracy: true }
-      )
-    })
-  }
-
-  // --- WALLET PAYMENT ---
-  const handleWalletPayment = async () => {
-    try {
-      if (!addressList[selectAddress]) return toast.error("Please select a delivery address")
-      if (!checkServiceArea()) return
-
-      const currentBalance = Number(user?.walletBalance || 0)
-      const totalToPay = Number(grandTotal)
-      if (currentBalance < totalToPay) {
-        const missingAmount = totalToPay - currentBalance
-        return toast.error(`Insufficient Balance! You need ${DisplayPriceInRupees(missingAmount)} more.`)
-      }
-
-      const loadingToast = toast.loading("Processing Wallet Payment...")
-      let coords = { lat: 25.2921, lng: 84.8170 }
-      try { coords = await getCoordinates() } catch (e) {}
-
-      const response = await Axios({
-        ...SummaryApi.payWithWallet,
-        data: {
-          list_items: cartItemsList,
-          addressId: addressList[selectAddress]?._id,
-          subTotalAmt: totalPrice,
-          delivery_fee: deliveryFee,
-          totalAmt: grandTotal,
-          lat: coords.lat,
-          lng: coords.lng,
-          amount: grandTotal,
-          orderId: "SNAP-WLT-" + Date.now()
-        }
-      })
-      const { data: responseData } = response
-      toast.dismiss(loadingToast)
-      if (responseData.success) {
-        toast.success("Paid successfully using Snapit Wallet! 💸")
-        if (fetchCartItem) fetchCartItem()
-        if (fetchOrder) fetchOrder()
-        navigate('/success', { state: { text: "Order" } })
-      }
-    } catch (error) {
-      const errorMsg = error.response?.data?.message || error.message || "Wallet payment failed"
-      toast.error(typeof errorMsg === 'object' ? "Payment failed" : errorMsg)
-    }
-  }
-
-  // --- CASH ON DELIVERY ---
+  // 1. CASH ON DELIVERY SYSTEM
   const handleCashOnDelivery = async () => {
+    if (!verifyServiceability()) return
+    
+    setPaymentLoading(true)
     try {
-      if (!addressList[selectAddress]) return toast.error("Please select an address first")
-      if (!checkServiceArea()) return
-
-      const loadingToast = toast.loading("Locating nearest Mart...")
-      let coords = { lat: 25.2921, lng: 84.8170 }
-      try { coords = await getCoordinates() } catch (e) {}
-
+      const selectedAddr = addressList[selectAddress]
       const response = await Axios({
         ...SummaryApi.CashOnDeliveryOrder,
         data: {
-          list_items: cartItemsList,
-          addressId: addressList[selectAddress]?._id,
-          subTotalAmt: totalPrice,
-          delivery_fee: deliveryFee,
-          totalAmt: grandTotal,
-          lat: coords.lat,
-          lng: coords.lng
+          list_items: cartItems,
+          addressId: selectedAddr._id,
+          subTotalAmt: subTotalAmt,
+          totalAmt: totalAmt,
+          lat: selectedAddr.lat || null,
+          lng: selectedAddr.lng || null
         }
       })
-      const { data: responseData } = response
-      toast.dismiss(loadingToast)
-      if (responseData.success) {
-        toast.success(responseData.message)
-        if (fetchCartItem) fetchCartItem()
-        if (fetchOrder) fetchOrder()
-        navigate('/success', { state: { text: "Order" } })
+
+      if (response.data.success) {
+        toast.success("Order placed successfully via COD! 🎉")
+        navigate('/dashboard/my-orders')
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.message || error.message || "COD Order failed"
-      toast.error(typeof errorMsg === 'object' ? "Checkout Error" : errorMsg)
+      AxiosToastError(error)
+    } finally {
+      setPaymentLoading(false)
     }
   }
 
-  // --- ONLINE PAYMENT (RAZORPAY) ---
-  const handleOnlinePayment = async () => {
-    try {
-      const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
-      if (!RAZORPAY_KEY) return toast.error("Razorpay Key not found.")
-      if (!addressList[selectAddress]) return toast.error("Please select a delivery address")
-      if (!checkServiceArea()) return
+  // 2. WALLET TRANSACTION GATEWAY
+  const handleWalletPayment = async () => {
+    if (!verifyServiceability()) return
 
-      const loadingToast = toast.loading("Preparing payment...")
+    const walletBalance = walletDetails?.balance || 0
+    if (walletBalance < totalAmt) {
+      return toast.error("Insufficient Wallet Balance! Please add money or choose another payment method.")
+    }
+
+    setPaymentLoading(true)
+    try {
+      const selectedAddr = addressList[selectAddress]
       const response = await Axios({
+        ...SummaryApi.payWithWallet,
+        data: {
+          list_items: cartItems,
+          addressId: selectedAddr._id,
+          subTotalAmt: subTotalAmt,
+          totalAmt: totalAmt
+        }
+      })
+
+      if (response.data.success) {
+        toast.success("Payment successful using Snapit Wallet! 💸")
+        navigate('/dashboard/my-orders')
+      }
+    } catch (error) {
+      AxiosToastError(error)
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  // 3. RAZORPAY ONLINE GATEWAY INTEGRATION
+  const handleRazorpayPayment = async () => {
+    if (!verifyServiceability()) return
+
+    setPaymentLoading(true)
+    try {
+      const selectedAddr = addressList[selectAddress]
+      
+      // Step A: Request a transactional order configuration from Razorpay core API
+      const orderResponse = await Axios({
         ...SummaryApi.payment_url,
         data: {
-          list_items: cartItemsList,
-          addressId: addressList[selectAddress]?._id,
-          subTotalAmt: totalPrice,
-          delivery_fee: deliveryFee,
-          totalAmt: grandTotal
+          totalAmt: totalAmt,
+          addressId: selectedAddr._id
         }
       })
-      const { data: responseData } = response
-      toast.dismiss(loadingToast)
 
-      if (responseData && responseData.id) {
-        const options = {
-          key: RAZORPAY_KEY,
-          amount: responseData.amount,
-          currency: "INR",
-          name: "Snapit Grocery",
-          order_id: responseData.id,
-          handler: async function (response) {
-            const verificationToast = toast.loading("Verifying payment...")
-            try {
-              const verifyRes = await Axios({
-                ...SummaryApi.payment_verification,
-                data: {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  list_items: cartItemsList,
-                  addressId: addressList[selectAddress]?._id,
-                  subTotalAmt: totalPrice,
-                  delivery_fee: deliveryFee,
-                  totalAmt: grandTotal
-                }
-              })
-              toast.dismiss(verificationToast)
-              if (verifyRes.data.success) {
-                toast.success("Order Placed Successfully! 🛒")
-                if (fetchCartItem) fetchCartItem()
-                if (fetchOrder) fetchOrder()
-                navigate('/success', { state: { text: "Order" } })
+      const orderData = orderResponse.data
+
+      // Step B: Initialize the browser Client Checkout configurations
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Snapit Delivery",
+        description: "Hyperlocal Checkout Payment Gateway",
+        order_id: orderData.id,
+        handler: async function (authResponse) {
+          try {
+            // Step C: Dispatch secure cryptographic signature evaluation payload
+            const verificationResponse = await Axios({
+              url: '/api/order/verify-payment', // Links to backend verifyPaymentController
+              method: 'post',
+              data: {
+                razorpay_order_id: authResponse.razorpay_order_id,
+                razorpay_payment_id: authResponse.razorpay_payment_id,
+                razorpay_signature: authResponse.razorpay_signature,
+                list_items: cartItems,
+                addressId: selectedAddr._id,
+                subTotalAmt: subTotalAmt,
+                totalAmt: totalAmt
               }
-            } catch (err) {
-              toast.dismiss(verificationToast)
-              AxiosToastError(err)
+            })
+
+            if (verificationResponse.data.success) {
+              toast.success("Online payment verified successfully! 🚀")
+              navigate('/dashboard/my-orders')
             }
-          },
-          prefill: {
-            name: user?.name || "",
-            contact: addressList[selectAddress]?.mobile || ""
-          },
-          theme: { color: "#16a34a" }
+          } catch (verifyErr) {
+            toast.error("Payment verification failed. Please contact support.")
+          }
+        },
+        prefill: {
+          contact: selectedAddr.mobile || "",
+        },
+        theme: {
+          color: "#16a34a"
         }
-        const rzp = new window.Razorpay(options)
-        rzp.open()
       }
+
+      const razorpayWindow = new window.Razorpay(options)
+      razorpayWindow.open()
+
     } catch (error) {
-      const errorMsg = error.response?.data?.message || "Razorpay initialization failed"
-      toast.error(typeof errorMsg === 'object' ? "Authentication Failed" : errorMsg)
+      AxiosToastError(error)
+    } finally {
+      setPaymentLoading(false)
     }
   }
 
-  // Show serviceability warning for selected address
-  const selectedAddr = addressList[selectAddress]
-  const selectedCityLower = (selectedAddr?.city || '').toLowerCase()
-  const isSelectedServiceable = !selectedAddr || SERVICEABLE_AREAS.some(a => selectedCityLower.includes(a))
+  // Routing processing framework orchestration layer
+  const handlePlaceOrder = () => {
+    if (!paymentMethod) {
+      return toast.error("Please select a payment method to complete checkout.")
+    }
+    if (paymentMethod === 'COD') handleCashOnDelivery()
+    if (paymentMethod === 'RAZORPAY') handleRazorpayPayment()
+    if (paymentMethod === 'WALLET') handleWalletPayment()
+  }
 
   return (
-    <section className='bg-blue-50 min-h-screen'>
-      <div className='container mx-auto p-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
-
-        {/* LEFT: ADDRESS */}
-        <div className='w-full'>
-          <h3 className='text-lg font-semibold uppercase tracking-tight text-slate-700 mb-2'>Choose your address</h3>
-          <div className='bg-white p-2 grid gap-3 rounded-xl shadow-sm'>
-            {addressList.length > 0 ? (
-              addressList.map((address, index) => (
-                <label key={address._id || index} className={`${!address.status && "hidden"} cursor-pointer`}>
-                  <div className={`border rounded-xl p-3 flex gap-3 hover:bg-blue-50 transition-all ${Number(selectAddress) === index ? 'border-green-400 bg-green-50 shadow-sm' : ''}`}>
-                    <input
-                      type='radio'
-                      value={index}
-                      checked={Number(selectAddress) === index}
-                      onChange={e => setSelectAddress(Number(e.target.value))}
-                      name='address'
-                    />
-                    <div className='flex-1'>
-                      <p className='font-bold text-slate-800'>{address.address_line}</p>
-                      <p className='text-sm text-slate-600'>{address.city}, {address.pincode}</p>
-                      <p className='text-xs font-bold text-green-600 uppercase mt-1'>📞 {address.mobile}</p>
-                    </div>
-                    {/* Serviceability badge */}
-                    {(() => {
-                      const cityL = (address.city || '').toLowerCase()
-                      const ok = SERVICEABLE_AREAS.some(a => cityL.includes(a))
-                      return ok
-                        ? <span className='text-[10px] bg-green-100 text-green-600 font-black px-2 py-1 rounded-full self-start'>✅ Serviceable</span>
-                        : <span className='text-[10px] bg-red-100 text-red-500 font-black px-2 py-1 rounded-full self-start'>❌ Not served</span>
-                    })()}
-                  </div>
-                </label>
-              ))
-            ) : (
-              <p className='text-neutral-500 p-2 text-sm'>No addresses found. Add one below.</p>
-            )}
-            <div
-              onClick={() => setOpenAddress(true)}
-              className='h-14 bg-blue-50 border-2 border-dashed border-neutral-300 flex justify-center items-center cursor-pointer rounded-xl text-neutral-500 font-bold text-sm hover:bg-blue-100 transition-all'
-            >
-              + Add New Address
+    <section className='bg-slate-50 min-h-screen py-8 px-4 md:px-12 lg:px-24'>
+      <div className='max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8'>
+        
+        {/* LEFT & CENTER PANEL: ADDRESSES & PAYMENT LOGICS */}
+        <div className='lg:col-span-2 space-y-6'>
+          
+          {/* Section 1: Address Frame Panel */}
+          <div className='bg-white p-6 rounded-2xl shadow-sm border border-slate-100'>
+            <div className='flex justify-between items-center mb-4'>
+              <h3 className='font-black text-slate-800 text-lg flex items-center gap-2'>
+                <IoLocationSharp className='text-green-600' />
+                1. Select Delivery Address
+              </h3>
+              <button 
+                onClick={() => setOpenAddressModal(true)}
+                className='text-green-600 font-bold text-sm flex items-center gap-1 hover:text-green-700 transition-colors'
+              >
+                <IoAddCircleOutline size={18} /> Add New
+              </button>
             </div>
+
+            {addressList.length === 0 ? (
+              <div className='text-center py-6 border-2 border-dashed border-slate-200 rounded-xl'>
+                <p className='text-sm text-slate-500'>No addresses saved yet. Add one to unlock delivery options.</p>
+              </div>
+            ) : (
+              <div className='grid gap-3 max-h-64 overflow-y-auto pr-1'>
+                {addressList.map((addr, index) => {
+                  const isCurrentServiceable = SERVICEABLE_AREAS.some(area => addr.city?.toLowerCase().includes(area))
+                  return (
+                    <div 
+                      key={addr._id || index}
+                      onClick={() => setSelectAddress(index)}
+                      className={`p-4 rounded-xl border-2 transition-all cursor-pointer relative ${selectAddress === index ? 'border-green-500 bg-green-50/40' : 'border-slate-100 bg-white hover:border-slate-200'}`}
+                    >
+                      <div className='flex items-start gap-3'>
+                        <input 
+                          type='radio' 
+                          name='checkout_address'
+                          checked={selectAddress === index}
+                          onChange={() => setSelectAddress(index)}
+                          className='mt-1 accent-green-600'
+                        />
+                        <div>
+                          <p className='font-bold text-sm text-slate-800'>{addr.address_line}</p>
+                          <p className='text-xs text-slate-500 mt-0.5'>{addr.city}, {addr.state} - {addr.pincode}</p>
+                          <p className='text-xs text-slate-600 font-medium mt-1'>📞 {addr.mobile}</p>
+                          
+                          {!isCurrentServiceable && (
+                            <span className='inline-block text-[10px] font-extrabold bg-red-100 text-red-700 px-2 py-0.5 rounded mt-2 uppercase tracking-wide'>
+                              ⚠️ Not Serviceable
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Not serviceable warning */}
-          {selectedAddr && !isSelectedServiceable && (
-            <div className='mt-3 bg-red-50 border border-red-200 rounded-2xl p-4'>
-              <p className='font-black text-red-700 text-sm mb-1'>😔 Location Not Serviceable</p>
-              <p className='text-xs text-slate-600 leading-relaxed'>
-                Our team is working tirelessly to bring <strong>10-minute deliveries</strong> to your location. 🚀
-              </p>
-              <p className='text-[11px] text-slate-400 mt-2'>
-                Currently serving: Paliganj, Sarsi, Kurkuri, Acchua, Chandos, Chiksi, Milki, Akhtiyarpur, Balipakar
-              </p>
+          {/* Section 2: Payment Selector Engine Frame */}
+          <div className='bg-white p-6 rounded-2xl shadow-sm border border-slate-100'>
+            <h3 className='font-black text-slate-800 text-lg flex items-center gap-2 mb-4'>
+              <IoCardOutline className='text-green-600' />
+              2. Choose Payment Method
+            </h3>
+
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+              {/* Wallet Selection Module */}
+              <div 
+                onClick={() => setPaymentMethod('WALLET')}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'WALLET' ? 'border-green-500 bg-green-50/40' : 'border-slate-100 hover:border-slate-200 bg-white'}`}
+              >
+                <div className='flex flex-col items-center text-center gap-2'>
+                  <IoWalletOutline size={26} className={paymentMethod === 'WALLET' ? 'text-green-600' : 'text-slate-500'} />
+                  <div>
+                    <p className='font-bold text-sm text-slate-800'>Snapit Wallet</p>
+                    <p className='text-xs text-green-600 font-semibold mt-0.5'>Bal: ₹{walletDetails?.balance || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Razorpay Online Selection Module */}
+              <div 
+                onClick={() => setPaymentMethod('RAZORPAY')}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'RAZORPAY' ? 'border-green-500 bg-green-50/40' : 'border-slate-100 hover:border-slate-200 bg-white'}`}
+              >
+                <div className='flex flex-col items-center text-center gap-2'>
+                  <IoCardOutline size={26} className={paymentMethod === 'RAZORPAY' ? 'text-green-600' : 'text-slate-500'} />
+                  <div>
+                    <p className='font-bold text-sm text-slate-800'>Online Payment</p>
+                    <p className='text-xs text-slate-400 mt-0.5'>UPI, Cards, Netbanking</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cash On Delivery Selection Module */}
+              <div 
+                onClick={() => setPaymentMethod('COD')}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'COD' ? 'border-green-500 bg-green-50/40' : 'border-slate-100 hover:border-slate-200 bg-white'}`}
+              >
+                <div className='flex flex-col items-center text-center gap-2'>
+                  <IoBicycleOutline size={26} className={paymentMethod === 'COD' ? 'text-green-600' : 'text-slate-500'} />
+                  <div>
+                    <p className='font-bold text-sm text-slate-800'>Cash On Delivery</p>
+                    <p className='text-xs text-slate-400 mt-0.5'>Pay rider at your door</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* RIGHT: BILL + PAYMENT */}
-        <div className='w-full lg:max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
-
-          {/* Wallet Balance */}
-          <div className='mx-4 mb-4 bg-green-50 border border-green-100 rounded-2xl p-4 shadow-sm'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-[10px] font-black uppercase text-green-600 tracking-wider'>Wallet Balance</p>
-                <p className='text-xl font-black text-slate-900'>{DisplayPriceInRupees(user?.walletBalance || 0)}</p>
+        {/* RIGHT PANEL: BILLING INVOICE AND EXECUTION TRIGGERS */}
+        <div className='bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit space-y-6'>
+          <h3 className='font-black text-slate-800 text-lg border-b pb-3'>Order Summary</h3>
+          
+          {/* Cart item minimal scroll map list */}
+          <div className='max-h-48 overflow-y-auto space-y-3 pr-1 border-b pb-4'>
+            {cartItems.map((item) => (
+              <div key={item._id} className='flex justify-between items-center text-sm'>
+                <p className='text-slate-600 truncate max-w-[180px]'>
+                  {item.productId.name} <span className='text-slate-400 font-bold'>x{item.quantity}</span>
+                </p>
+                <p className='font-bold text-slate-800'>Template: ₹{item.productId.price * item.quantity}</p>
               </div>
-              <div className='text-2xl'>💰</div>
-            </div>
-            {(user?.walletBalance || 0) < grandTotal && (
-              <p className='text-[10px] text-red-500 font-black mt-2 uppercase flex items-center gap-1'>
-                <span>⚠️</span> Insufficient Balance
-              </p>
-            )}
+            ))}
           </div>
 
-          {/* Bill Summary */}
-          <h3 className='text-lg font-black px-4 uppercase text-slate-800 tracking-tight'>Bill Summary</h3>
-          <div className='p-4 space-y-3'>
-            <div className='flex justify-between'>
-              <p className='text-slate-500 font-medium'>Items total</p>
-              <p className='font-bold text-slate-800'>{DisplayPriceInRupees(totalPrice)}</p>
+          {/* Pricing Ledger calculations frame sheet */}
+          <div className='space-y-2 text-sm border-b pb-4'>
+            <div className='flex justify-between text-slate-500'>
+              <p>Items Subtotal</p>
+              <p>₹{subTotalAmt}</p>
             </div>
-            <div className='flex justify-between'>
-              <p className='text-slate-500 font-medium'>Delivery Charge</p>
-              <p className={deliveryFee === 0 ? "text-green-600 font-black" : "font-bold text-slate-800"}>
-                {deliveryFee === 0 ? "FREE 🎉" : DisplayPriceInRupees(deliveryFee)}
-              </p>
-            </div>
-            {deliveryFee > 0 && (
-              <p className='text-[11px] text-green-600 font-bold'>Add ₹{399 - totalPrice} more for FREE delivery</p>
-            )}
-            <div className='font-black flex justify-between border-t border-dashed pt-4 text-xl text-slate-900 tracking-tighter'>
-              <p>Grand Total</p>
-              <p>{DisplayPriceInRupees(grandTotal)}</p>
+            <div className='flex justify-between text-slate-500'>
+              <p>Delivery Partner Fee</p>
+              <p>{deliveryCharge === 0 ? <span className='text-green-600 font-bold'>FREE</span> : `₹${deliveryCharge}`}</p>
             </div>
           </div>
 
-          {/* Payment Buttons */}
-          <div className='w-full flex flex-col gap-3 p-4'>
-            <button
-              disabled={cartItemsList.length === 0 || !isSelectedServiceable}
-              className={`py-4 px-4 rounded-2xl font-black transition-all shadow-xl uppercase tracking-widest text-sm flex items-center justify-center gap-2
-                ${(user?.walletBalance || 0) >= grandTotal && isSelectedServiceable
-                  ? 'bg-green-700 text-white active:scale-95 shadow-green-100'
-                  : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}`}
-              onClick={handleWalletPayment}
-            >
-              <span>Pay via Wallet</span>
-              <span>{(user?.walletBalance || 0) >= grandTotal ? '💸' : '🔒'}</span>
-            </button>
-
-            <button
-              disabled={cartItemsList.length === 0 || !isSelectedServiceable}
-              className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 shadow-xl shadow-slate-100 disabled:opacity-50 disabled:cursor-not-allowed'
-              onClick={handleOnlinePayment}
-            >
-              Online Payment
-            </button>
-
-            <button
-              disabled={cartItemsList.length === 0 || !isSelectedServiceable}
-              className='py-4 border-2 border-slate-900 text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed'
-              onClick={handleCashOnDelivery}
-            >
-              Cash on Delivery
-            </button>
-
-            {!isSelectedServiceable && (
-              <p className='text-center text-xs text-red-500 font-bold'>
-                Select a serviceable address to continue
-              </p>
-            )}
+          <div className='flex justify-between items-center pb-2'>
+            <p className='font-black text-slate-800 text-base'>Bill Total</p>
+            <p className='font-black text-green-700 text-lg'>₹{totalAmt}</p>
           </div>
+
+          {/* Core Master Trigger Call to Action */}
+          <button
+            type='button'
+            disabled={paymentLoading || cartItems.length === 0}
+            onClick={handlePlaceOrder}
+            className='w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-green-100 tracking-wide text-sm flex items-center justify-center'
+          >
+            {paymentLoading ? 'Processing Secure Transaction...' : `PLACE ORDER — ₹${totalAmt}`}
+          </button>
         </div>
       </div>
 
-      {openAddress && <AddAddress close={() => setOpenAddress(false)} />}
+      {/* Global Add Address Layer Toggle Modal Mount */}
+      {openAddressModal && <AddAddress close={() => setOpenAddressModal(false)} />}
     </section>
   )
 }
