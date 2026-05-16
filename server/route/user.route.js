@@ -1,16 +1,15 @@
-cat << 'EOF' > server/route/user.route.js
 import { Router } from 'express'
-import { 
-    forgotPasswordController, 
-    loginController, 
-    logoutController, 
-    refreshToken, 
-    registerUserController, 
-    resetpassword, 
-    updateUserDetails, 
-    uploadAvatar, 
-    userDetails, 
-    verifyEmailController, 
+import {
+    forgotPasswordController,
+    loginController,
+    logoutController,
+    refreshToken,
+    registerUserController,
+    resetpassword,
+    updateUserDetails,
+    uploadAvatar,
+    userDetails,
+    verifyEmailController,
     verifyForgotPasswordOtp,
     getAllRiders,
     saveFcmTokenController
@@ -35,4 +34,3 @@ userRouter.get('/all-riders', auth, getAllRiders)
 userRouter.post('/save-fcm-token', auth, saveFcmTokenController)
 
 export default userRouter
-EOF
