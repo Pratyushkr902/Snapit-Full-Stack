@@ -8,12 +8,7 @@ import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay
 // ─── CHANGE 1: Delivery ETA badge in header ───────────────────────────────────
 // Moves "10 min" out of every product card and into a single, prominent header badge.
 // This is the #1 Zepto-style signal — it's always visible, never repeated.
-const DeliveryBadge = () => (
-  <div className='flex items-center gap-1.5 bg-green-50 border border-green-100 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full'>
-    <span className='w-2 h-2 bg-green-500 rounded-full animate-pulse' />
-    10 min delivery
-  </div>
-)
+
 
 const Home = () => {
   const loadingCategory = useSelector(state => state.product.loadingCategory)
@@ -54,10 +49,7 @@ const Home = () => {
       {/* ─── CHANGE 3: Sticky delivery badge strip ──────────────────────────────
           A thin strip just below the main nav showing the delivery ETA.
           Replaces the "10 min" text on every single product card.           */}
-      <div className='sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-2 flex items-center justify-between lg:hidden'>
-        <DeliveryBadge />
-        <p className='text-xs text-slate-400 font-medium'>Ghaziabad · Sector 14</p>
-      </div>
+  
 
       {/* 1. BANNER */}
       <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
