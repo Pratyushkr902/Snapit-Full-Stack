@@ -161,6 +161,11 @@ const SummaryApi = {
         url : '/api/order/order-list',
         method : 'get'
     },
+    // FIX: New endpoint — sellers only see their own store's orders
+    getSellerOrders: {
+        url: '/api/order/seller-orders',
+        method: 'get'
+    },
     getRiderLocation: {
         url: '/api/order/get-rider-location',
         method: 'post'
@@ -221,7 +226,6 @@ const SummaryApi = {
         url: '/api/referral/first-order-bonus',
         method: 'post'
     },
-    // --- REVIEWS ---
     addReview: {
         url: '/api/review/add',
         method: 'post'
@@ -234,7 +238,6 @@ const SummaryApi = {
         url: '/api/review/delete',
         method: 'delete'
     },
-    // --- WISHLIST ---
     toggleWishlist: {
         url: '/api/review/wishlist/toggle',
         method: 'post'
