@@ -1,28 +1,39 @@
 import React from 'react'
 import { useSelector } from 'react-redux'
+import { useLocation } from 'react-router-dom'
 import isAdmin from '../utils/isAdmin'
 
-const AdminPermision = ({children}) => {
+const AdminPermision = ({ children }) => {
     const user = useSelector(state => state.user)
+    const location = useLocation()
 
-    // DEBUG: Check what role Redux actually sees
-    // console.log("Current User Role:", user.role)
+    const role = user?.role
 
-  return (
-    <>
-        {
-            isAdmin(user?.role) ? (
-                children 
+    // SELLER gets access to store-orders only
+    const isSellerRoute = location.pathname.includes('/dashboard/store-orders')
+    const isSeller = role === "SELLER"
+
+    // RIDER gets access to rider-panel only
+    const isRiderRoute = location.pathname.includes('/rider-panel')
+    const isRider = role === "RIDER" || role === "rider"
+
+    const hasAccess = isAdmin(role)
+        || (isSeller && isSellerRoute)
+        || (isRider && isRiderRoute)
+
+    return (
+        <>
+            {hasAccess ? (
+                children
             ) : (
                 <div className='flex flex-col items-center justify-center h-full min-h-[200px]'>
-                     <p className='text-red-600 bg-red-100 p-4 rounded border border-red-200'>
-                        ⚠️ Access Denied: You do not have permission to view Admin Tools.
-                     </p>
+                    <p className='text-red-600 bg-red-100 p-4 rounded border border-red-200'>
+                        ⚠️ Access Denied: You do not have permission to view this page.
+                    </p>
                 </div>
-            )
-        }
-    </>
-  )
+            )}
+        </>
+    )
 }
 
 export default AdminPermision
