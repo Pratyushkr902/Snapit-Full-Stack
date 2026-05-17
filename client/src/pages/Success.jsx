@@ -55,7 +55,7 @@ const Success = () => {
           </h1>
           <p className='text-slate-500 mt-1 text-sm'>
             {isOrder
-              ? 'Your groceries are being packed and will arrive in 9 minutes ⚡'
+              ? 'Your groceries are being packed and will arrive in 10 minutes ⚡'
               : 'Your payment was processed successfully'}
           </p>
         </div>

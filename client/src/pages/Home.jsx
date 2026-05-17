@@ -11,7 +11,7 @@ import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay
 const DeliveryBadge = () => (
   <div className='flex items-center gap-1.5 bg-green-50 border border-green-100 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full'>
     <span className='w-2 h-2 bg-green-500 rounded-full animate-pulse' />
-    9 min delivery
+    10 min delivery
   </div>
 )
 
