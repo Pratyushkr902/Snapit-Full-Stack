@@ -1,7 +1,7 @@
 {
   "name": "Snapit - 10 Min Grocery Delivery",
   "short_name": "Snapit",
-  "description": "Order groceries and get delivery in 9 minutes from Snapit",
+  "description": "Order groceries and get delivery in 10 minutes from Snapit",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

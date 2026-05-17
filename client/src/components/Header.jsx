@@ -78,7 +78,7 @@ const Header = ({ openCart }) => {
                                 <div className='hidden lg:flex flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
                                     <div className='flex items-center gap-1 leading-none'>
                                         <h2 className='font-black text-slate-900 text-[13px] lg:text-[15px] uppercase tracking-tighter'>
-                                            Delivery in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
+                                            Delivery in <span className='text-yellow-500 animate-pulse'>10 MINS</span>
                                         </h2>
                                         <span className='text-base lg:text-lg'>⚡</span>
                                     </div>
