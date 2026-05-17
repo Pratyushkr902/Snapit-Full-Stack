@@ -4,28 +4,27 @@ import SummaryApi from "../common/SummaryApi";
 const API_URL = "https://snapit-full-stack-2.onrender.com";
 
 // ─── Storage helpers (single source of truth for key names) ──────────────────
-// Always use lowercase 'accesstoken' and 'refreshtoken' throughout the app.
+// Always use lowercase throughout the app. Helpers also clean up old
+// capitalised variants written by earlier versions of the code.
 const TOKEN_KEY   = 'accesstoken'
 const REFRESH_KEY = 'refreshtoken'
 
 export const getAccessToken  = () => localStorage.getItem(TOKEN_KEY)
 export const getRefreshToken = () => localStorage.getItem(REFRESH_KEY)
 
-export const setAccessToken  = (token) => {
+export const setAccessToken = (token) => {
     localStorage.setItem(TOKEN_KEY, token)
-    // Clean up any stale capital-T variants written by older code
-    localStorage.removeItem('accessToken')
+    localStorage.removeItem('accessToken')   // remove stale capitalised variant
 }
 
 export const setRefreshToken = (token) => {
     localStorage.setItem(REFRESH_KEY, token)
-    localStorage.removeItem('refreshToken') // remove old capitalised variant
+    localStorage.removeItem('refreshToken')  // remove stale capitalised variant
 }
 
 export const clearTokens = () => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(REFRESH_KEY)
-    // Also clear any stale capitalised variants
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
 }
@@ -68,7 +67,7 @@ Axios.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             const refreshToken = getRefreshToken()
 
-            // No refresh token available — bail out immediately
+            // No refresh token — bail out immediately
             if (!refreshToken) {
                 clearTokens()
                 window.location.href = "/login"
@@ -107,7 +106,7 @@ Axios.interceptors.response.use(
     }
 )
 
-// ── Refresh helper (uses plain axios to avoid interceptor loop) ───────────────
+// ── Refresh helper (plain axios to avoid interceptor loop) ────────────────────
 const refreshAccessToken = async (refreshToken) => {
     try {
         const response = await axios({
