@@ -1,65 +1,131 @@
 import axios from "axios";
-import SummaryApi, { baseURL } from "../common/SummaryApi";
+import SummaryApi from "../common/SummaryApi";
 
 const API_URL = "https://snapit-full-stack-2.onrender.com";
 
+// ─── Storage helpers (single source of truth for key names) ──────────────────
+// Always use lowercase 'accesstoken' and 'refreshtoken' throughout the app.
+const TOKEN_KEY   = 'accesstoken'
+const REFRESH_KEY = 'refreshtoken'
+
+export const getAccessToken  = () => localStorage.getItem(TOKEN_KEY)
+export const getRefreshToken = () => localStorage.getItem(REFRESH_KEY)
+
+export const setAccessToken  = (token) => {
+    localStorage.setItem(TOKEN_KEY, token)
+    // Clean up any stale capital-T variants written by older code
+    localStorage.removeItem('accessToken')
+}
+
+export const setRefreshToken = (token) => {
+    localStorage.setItem(REFRESH_KEY, token)
+    localStorage.removeItem('refreshToken') // remove old capitalised variant
+}
+
+export const clearTokens = () => {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_KEY)
+    // Also clear any stale capitalised variants
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const Axios = axios.create({
-    baseURL : API_URL,
-    withCredentials : true
+    baseURL: API_URL,
+    withCredentials: true
 })
 
-// Send access token in header
+// ── Request interceptor: attach access token ──────────────────────────────────
 Axios.interceptors.request.use(
-    async(config) => {
-        // Prefer lowercase accesstoken — avoids stale capital-T token bug
-        const accessToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
+    (config) => {
+        const accessToken = getAccessToken()
         if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`;
+            config.headers.Authorization = `Bearer ${accessToken}`
         }
-        return config;
+        return config
     },
     (error) => Promise.reject(error)
 )
 
-// Auto-refresh on 401
+// ── Response interceptor: auto-refresh on 401 ────────────────────────────────
+let isRefreshing = false
+let failedQueue  = []   // requests that arrived while a refresh was in-flight
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(({ resolve, reject }) => {
+        if (error) reject(error)
+        else       resolve(token)
+    })
+    failedQueue = []
+}
+
 Axios.interceptors.response.use(
     (response) => response,
-    async(error) => {
-        let originRequest = error.config
-        if (error.response && error.response.status === 401 && !originRequest._retry) {
-            originRequest._retry = true
-            const refreshToken = localStorage.getItem("refreshToken")
-            if (refreshToken) {
+    async (error) => {
+        const originalRequest = error.config
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            const refreshToken = getRefreshToken()
+
+            // No refresh token available — bail out immediately
+            if (!refreshToken) {
+                clearTokens()
+                window.location.href = "/login"
+                return Promise.reject(error)
+            }
+
+            if (isRefreshing) {
+                // Queue this request until the ongoing refresh completes
+                return new Promise((resolve, reject) => {
+                    failedQueue.push({ resolve, reject })
+                }).then((token) => {
+                    originalRequest.headers.Authorization = `Bearer ${token}`
+                    return Axios(originalRequest)
+                }).catch((err) => Promise.reject(err))
+            }
+
+            originalRequest._retry = true
+            isRefreshing = true
+
+            try {
                 const newAccessToken = await refreshAccessToken(refreshToken)
-                if (newAccessToken) {
-                    originRequest.headers.Authorization = `Bearer ${newAccessToken}`
-                    return Axios(originRequest)
-                }
+                processQueue(null, newAccessToken)
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+                return Axios(originalRequest)
+            } catch (refreshError) {
+                processQueue(refreshError, null)
+                clearTokens()
+                window.location.href = "/login"
+                return Promise.reject(refreshError)
+            } finally {
+                isRefreshing = false
             }
         }
+
         return Promise.reject(error)
     }
 )
 
-const refreshAccessToken = async(refreshToken) => {
+// ── Refresh helper (uses plain axios to avoid interceptor loop) ───────────────
+const refreshAccessToken = async (refreshToken) => {
     try {
         const response = await axios({
             method: SummaryApi.refreshToken.method,
-            url: `${API_URL}${SummaryApi.refreshToken.url}`,
+            url:    `${API_URL}${SummaryApi.refreshToken.url}`,
             headers: { Authorization: `Bearer ${refreshToken}` },
             withCredentials: true
         })
-        const accessToken = response.data.data.accessToken
-        // FIXED: Only store lowercase — no duplicate stale token
-        localStorage.setItem('accesstoken', accessToken)
-        // Clean up capital-T version if it exists
-        localStorage.removeItem('accessToken')
-        return accessToken
+
+        const newAccessToken = response.data?.data?.accessToken
+        if (!newAccessToken) throw new Error("No access token in refresh response")
+
+        setAccessToken(newAccessToken)
+        return newAccessToken
     } catch (error) {
-        console.log("Refresh Token Expired", error)
-        localStorage.clear()
-        window.location.href = "/login"
+        console.error("Token refresh failed:", error)
+        throw error  // Let the interceptor handle redirect + clearTokens
     }
 }
 
-export default Axios;
+export default Axios
