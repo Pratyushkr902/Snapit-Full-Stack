@@ -6,7 +6,7 @@ import { FaRegCircleUser } from "react-icons/fa6"
 import useMobile from '../hooks/useMobile'
 import { BsCart4 } from "react-icons/bs"
 import { useSelector } from 'react-redux'
-import { GoTriangleUp } from "react-icons/go"
+import { GoTriangleDown, GoTriangleUp } from "react-icons/go"
 import UserMenu from './UserMenu'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { useGlobalContext } from '../provider/GlobalProvider'
