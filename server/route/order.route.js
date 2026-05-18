@@ -2,9 +2,10 @@ import { Router } from 'express'
 import auth from '../middleware/auth.js'
 import { 
     CashOnDeliveryOrderController, 
-    getOrderDetailsController, 
+    getOrderDetailsController,
+    getSellerOrdersController,   // FIX: New seller-specific orders endpoint
     paymentController, 
-    verifyPaymentController,  // ADDED: Imported the verification logic
+    verifyPaymentController,
     webhookStripe,
     updateOrderStatusController, 
     getRiderLocationController,    
@@ -19,29 +20,28 @@ const orderRouter = Router()
 // --- BASIC ORDER ROUTES ---
 orderRouter.post("/cash-on-delivery", auth, CashOnDeliveryOrderController)
 orderRouter.post('/checkout', auth, paymentController)
-
-// ADDED: Route to verify Razorpay signature and save the online order to MongoDB
 orderRouter.post('/verify-payment', auth, verifyPaymentController)
-
 orderRouter.post('/webhook', webhookStripe) 
+
+// Customer order list (their own orders)
 orderRouter.get("/order-list", auth, getOrderDetailsController)
 
-// ADDED: Fetch the single most recent order for the Dashboard Summary
+// FIX: Seller order list — only returns orders containing this seller's products
+// SELLER role → filtered by store_name
+// ADMIN role  → all orders
+orderRouter.get("/seller-orders", auth, getSellerOrdersController)
+
 orderRouter.get('/last-order', auth, getLastOrder)
 
-// --- LIVE TRACKING SYSTEM ROUTES ---
+// --- LIVE TRACKING ROUTES ---
 orderRouter.post("/get-rider-location", auth, getRiderLocationController)
 orderRouter.put("/update-status", auth, updateOrderStatusController)
 
-// --- SELLER APPROVAL SYSTEM ROUTE ---
+// --- SELLER PACKING ROUTE ---
 orderRouter.post("/update-seller-status", auth, updateSellerOrderStatusController)
 
 // --- ADMIN LOGISTICS & SETTLEMENT ROUTES ---
-
-// 1. Get today's total revenue and COD breakdown per Mart
 orderRouter.get("/daily-report", auth, getDailySalesReport)
-
-// 2. Clear a Rider's cash balance when they hand over the money
 orderRouter.post("/settle-cash", auth, settleRiderCashController)
 
 export default orderRouter

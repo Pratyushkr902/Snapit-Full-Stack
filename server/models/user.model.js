@@ -67,8 +67,16 @@ const userSchema = new mongoose.Schema({
     },
     role : {
         type : String,
-        enum : ['ADMIN',"USER","rider"],
+        // FIX: Added SELLER and RIDER to the enum so they are valid roles
+        enum : ['ADMIN', 'USER', 'RIDER', 'rider', 'SELLER'],
         default : "USER"
+    },
+    // FIX: store_name links a SELLER user to their store in product.store_inventory
+    // When a seller registers, save their store name here.
+    // This must exactly match the store_name used in product.store_inventory.
+    store_name : {
+        type : String,
+        default : null
     },
     // --- SNAPIT WALLET SYSTEM ---
     walletBalance: {

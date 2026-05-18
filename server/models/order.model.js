@@ -10,18 +10,21 @@ const orderSchema = new mongoose.Schema({
         required : [true, "Provide orderId"],
         unique : true
     },
-    // Keep this for backward compatibility
+    // Keep for backward compatibility
     productId : {
         type : mongoose.Schema.ObjectId,
         ref : "product"
     },
-    // NEW: The "Shopping List" for the Rider
+    // FIX: Each cart item now knows which store/seller it belongs to
     cartItems: [{
-        productId: { type: mongoose.Schema.ObjectId, ref: "product" },
-        quantity: { type: Number, default: 1 },
-        name: String,
-        image: String,
-        price: Number
+        productId:  { type: mongoose.Schema.ObjectId, ref: "product" },
+        quantity:   { type: Number, default: 1 },
+        name:       String,
+        image:      String,
+        price:      Number,
+        // FIX: store_name of the seller who owns this product
+        // Matched from product.store_inventory at order creation time
+        seller_store_name: { type: String, default: null }
     }],
     product_details : {
         name : String,
@@ -58,15 +61,18 @@ const orderSchema = new mongoose.Schema({
         default: "Pending"
     },
     store_details: {
-        storeId: { type: mongoose.Schema.ObjectId, ref: 'store' }, // LINK TO STORE MODEL
-        name: { type: String, default: "Snapit Main Store - Paliganj" },
-        address: { type: String, default: "Main Road, Paliganj" },
+        storeId:  { type: mongoose.Schema.ObjectId, ref: 'store' },
+        name:     { type: String, default: "Snapit Main Store - Paliganj" },
+        address:  { type: String, default: "Main Road, Paliganj" },
         location: {
             lat: { type: Number, default: 25.2921 },
             lng: { type: Number, default: 84.8170 }
         }
     },
-    // --- NEW FIELDS FOR TRACKING & CONTACT ---
+    // FIX: Array of store names involved in this order.
+    // Used to efficiently query "which orders belong to seller X".
+    involved_stores: [{ type: String }],
+
     delivery_status : {
         type : String,
         enum : ["Pending", "Confirmed", "Out for Delivery", "Delivered", "Cancelled"],
@@ -81,16 +87,31 @@ const orderSchema = new mongoose.Schema({
         default : "9472026580" 
     },
     // --- CASH SETTLEMENT LOGIC ---
+    payment_collected: {
+        type: Boolean,
+        default: false
+    },
+    payment_mode: {
+        type: String,
+        default: null
+    },
+    cashReceived: {
+        type: Number,
+        default: 0
+    },
     isSettled: { 
         type: Boolean, 
         default: false 
     },
     settledAt: { 
         type: Date 
+    },
+    deliveredAt: {
+        type: Date
     }
 },{
     timestamps : true
 })
 
-const OrderModel = mongoose.model('order',orderSchema)
+const OrderModel = mongoose.model('order', orderSchema)
 export default OrderModel
