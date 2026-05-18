@@ -10,7 +10,7 @@ const Footer = () => {
 
             <div className='flex items-center gap-4 justify-center text-2xl'>
                 <a 
-                    href='https://www.facebook.com/profile.php?id=61589250579788' 
+                    href='https://www.facebook.com/share/18RV5RTPMc/?mibextid=wwXIfr' 
                     target='_blank' 
                     rel='noreferrer'
                     className='hover:text-blue-600 transition-colors'
