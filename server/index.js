@@ -53,7 +53,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// --- HELMET ---
+// --- HELMET RULES (MODIFIED FOR HYBRID MOBILE COMPATIBILITY) ---
 app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
@@ -63,7 +63,16 @@ app.use(helmet({
             scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
             imgSrc: ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://api.qrserver.com"],
             frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
-            connectSrc: ["'self'", "https://api.razorpay.com", "https://*.googleapis.com", "ws:", "wss:", "http://*", "https://*", "ws://*", "wss://*", "capacitor://*"] 
+            connectSrc: [
+                "'self'", 
+                "https://api.razorpay.com", 
+                "https://*.razorpay.com", 
+                "https://*.googleapis.com", 
+                "ws:", "wss:", "http://*", "https://*", 
+                "ws://*", "wss://*", 
+                "capacitor://*", 
+                "http://localhost" // White-lists loopback ports for native webviews
+            ] 
         },
     },
 }));
@@ -162,7 +171,7 @@ app.use((req, res, next) => {
 
 // --- RENDER SELF-PING ---
 setInterval(() => {
-    fetch('https://snapit-full-stack-0.onrender.com/')
+    fetch('https://snapit-full-stack-2.onrender.com/health') // Target working secure endpoints cleanly
         .catch(() => {})
 }, 14 * 60 * 1000);
 

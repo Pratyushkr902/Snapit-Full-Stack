@@ -9,9 +9,6 @@ import CofirmBox from '../components/ConfirmBox'
 import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 
-// ─── REMOVED: Dead commented-out Redux selector (useSelector import + allCategory).
-// The direct API approach is cleaner — keep one data-fetching strategy per page.
-
 const CategoryPage = () => {
   const [openUploadCategory, setOpenUploadCategory] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -20,6 +17,9 @@ const CategoryPage = () => {
   const [editData, setEditData] = useState({ name: "", image: "" })
   const [openConfimBoxDelete, setOpenConfirmBoxDelete] = useState(false)
   const [deleteCategory, setDeleteCategory] = useState({ _id: "" })
+
+  // Your backend deployment URL to resolve relative asset paths on mobile
+  const BACKEND_URL = "https://snapit-full-stack-2.onrender.com"
 
   const fetchCategory = async () => {
     try {
@@ -30,7 +30,7 @@ const CategoryPage = () => {
         setCategoryData(responseData.data)
       }
     } catch (error) {
-      AxiosToastError(error)  // ─── FIXED: Was silently swallowing errors
+      AxiosToastError(error)
     } finally {
       setLoading(false)
     }
@@ -58,12 +58,10 @@ const CategoryPage = () => {
   return (
     <section className='min-h-screen bg-slate-50'>
 
-      {/* ─── CHANGE 1: Page header with count badge ───────────────────────────
-          Shows how many categories exist — useful at a glance in admin.      */}
+      {/* Page header with count badge */}
       <div className='bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10'>
         <div className='flex items-center gap-2'>
           <h2 className='font-semibold text-slate-800'>Categories</h2>
-          {/* ─── CHANGE 2: Live count badge ─────────────────────────────────── */}
           {!loading && categoryData.length > 0 && (
             <span className='bg-slate-100 text-slate-500 text-xs font-semibold px-2 py-0.5 rounded-full'>
               {categoryData.length}
@@ -80,9 +78,6 @@ const CategoryPage = () => {
 
       {/* Loading skeletons */}
       {loading && (
-        // ─── CHANGE 3: Skeleton grid matches card shape ──────────────────────
-        // Old: a generic <Loading/> spinner in the middle of nowhere.
-        // New: skeleton cards that match the real card layout — no layout shift.
         <div className='p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3'>
           {new Array(12).fill(null).map((_, i) => (
             <div key={i} className='bg-white rounded-xl shadow-sm overflow-hidden'>
@@ -98,9 +93,7 @@ const CategoryPage = () => {
 
       {!categoryData[0] && !loading && <NoData />}
 
-      {/* ─── CHANGE 4: Card redesign ────────────────────────────────────────────
-          Old: w-32 h-56 fixed — breaks on small screens, image overflow issues.
-          New: fluid grid with aspect-square image + clean action row.          */}
+      {/* Fluid Card Grid Layout */}
       {!loading && (
         <div className='p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3'>
           {categoryData.map((category) => (
@@ -108,13 +101,15 @@ const CategoryPage = () => {
               key={category._id}
               className='bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 hover:shadow-md transition-shadow'
             >
-              {/* ─── CHANGE 5: aspect-square image container ─────────────────
-                  Old: img directly with object-scale-down, no container = height issues.
-                  New: fixed-ratio container, image fills it cleanly.           */}
+              {/* ─── CHANGE 5: Fixed Relative URL Check ─────────────────────── */}
               <div className='w-full aspect-square bg-slate-50 flex items-center justify-center p-3'>
                 <img
                   alt={category.name}
-                  src={category.image}
+                  src={
+                    category.image && category.image.startsWith('http') 
+                      ? category.image 
+                      : `${BACKEND_URL}${category.image}`
+                  }
                   className='w-full h-full object-contain'
                   loading="lazy"
                 />

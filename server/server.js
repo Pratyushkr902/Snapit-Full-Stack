@@ -45,9 +45,11 @@ const app = express();
 const server = http.createServer(app); 
 const latestPositions = new Map(); 
 
-// --- CORS ---
+// --- CORS (FIXED: Added Native Mobile Webview Origins) ---
 const allowedOrigins = [
-    "http://localhost:5173",
+    "http://localhost:5173",                     // Local Vite React web client dev port
+    "http://localhost",                          // ─── CRITICAL: Capacitor Android app origin
+    "capacitor://localhost",                     // ─── CRITICAL: Capacitor iOS app origin
     "https://snapit-full-stack.onrender.com",
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com"
@@ -55,7 +57,7 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
+        // Allow requests with no origin (mobile tools, Postman, etc.) or if explicitly whitelisted
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
@@ -67,7 +69,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// --- HELMET ---
+// --- HELMET (FIXED: Added http://localhost to connectSrc) ---
 app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
@@ -77,7 +79,16 @@ app.use(helmet({
             scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
             imgSrc: ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://api.qrserver.com"],
             frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
-            connectSrc: ["'self'", "https://api.razorpay.com", "https://*.googleapis.com", "ws:", "wss:", "http://*", "https://*", "ws://*", "wss://*", "capacitor://*"] 
+            connectSrc: [
+                "'self'", 
+                "https://api.razorpay.com", 
+                "https://*.razorpay.com", 
+                "https://*.googleapis.com", 
+                "ws:", "wss:", "http://*", "https://*", 
+                "ws://*", "wss://*", 
+                "capacitor://*",
+                "http://localhost" // ─── CRITICAL: Allows Android local bundle engines
+            ] 
         },
     },
 }));
@@ -113,7 +124,6 @@ io.on('connection', (socket) => {
         if (orderId) {
             socket.join(orderId);
             console.log(`Socket ${socket.id} joined order room: ${orderId}`);
-            // Send cached position if exists
             if (latestPositions.has(orderId)) {
                 socket.emit('receive_location', latestPositions.get(orderId));
             }
@@ -135,7 +145,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// --- HEALTH CHECK (before API routes for quick response) ---
+// --- HEALTH CHECK ---
 app.get("/health", (req, res) => {
     res.json({ 
         message: "Snapit Server is Live!",
@@ -144,7 +154,7 @@ app.get("/health", (req, res) => {
     });
 });
 
-// --- API ROUTES (MUST be before static files) ---
+// --- API ROUTES ---
 app.use('/api/user', userRouter);
 app.use('/api/category', categoryRouter);
 app.use('/api/file', uploadRouter);
@@ -159,7 +169,6 @@ app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 app.use('/api/review', reviewRouter);
 
-// Log all registered API routes for debugging
 console.log("✅ Registered API Routes:");
 console.log("   - /api/user");
 console.log("   - /api/category");
@@ -175,7 +184,7 @@ console.log("   - /api/flash-sale");
 console.log("   - /api/referral");
 console.log("   - /api/review");
 
-// --- STATIC FILE SERVING (after API routes) ---
+// --- STATIC FILE SERVING ---
 const possiblePaths = [
     path.join(process.cwd(), '..', 'client', 'dist'),
     path.join(process.cwd(), 'client', 'dist'),
@@ -187,12 +196,8 @@ console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 
 app.use(express.static(clientBuildPath));
 
-// --- SPA CATCH-ALL (MUST BE LAST - handles all non-API, non-file routes) ---
+// --- SPA CATCH-ALL ---
 app.get('*', (req, res) => {
-    // This will only be reached if:
-    // 1. Not an API route (already handled above)
-    // 2. Not a static file (already served above)
-    // So we serve the React app's index.html
     res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
         if (err) {
             console.error("❌ SendFile Error:", err.message);
@@ -204,13 +209,13 @@ app.get('*', (req, res) => {
     });
 });
 
-// --- RENDER SELF-PING (adjust to match YOUR actual domain) ---
+// --- RENDER SELF-PING ---
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-full-stack-2.onrender.com';
 setInterval(() => {
     fetch(`${SELF_URL}/health`)
         .then(() => console.log('✓ Self-ping successful'))
         .catch(() => console.log('✗ Self-ping failed'));
-}, 14 * 60 * 1000); // Every 14 minutes
+}, 14 * 60 * 1000); 
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 8080;
