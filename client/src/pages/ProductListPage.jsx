@@ -7,9 +7,9 @@ import Loading from '../components/Loading'
 import CardProduct from '../components/CardProduct'
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
-// ✅ FIXED: Swapped lucide-react out for your working pre-configured react-icons library
-import { FiSearch } from "react-icons/fi";
-import { FaGridHorizontal, FaList, FaFilter, FaXmark } from "react-icons/fa6";
+// ✅ GUARANTEED MODULE MAPPING: Pulled cleanly from working icon packages
+import { FiSearch, FiGrid, FiList } from "react-icons/fi";
+import { FaFilter, FaXmark } from "react-icons/fa6";
 
 const ProductListPage = () => {
   const [data, setData] = useState([])
@@ -221,13 +221,13 @@ const ProductListPage = () => {
                       onClick={() => setViewMode('grid')}
                       className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-green-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
                     >
-                      <FaGridHorizontal className='w-4 h-4' />
+                      <FiGrid className='w-4 h-4' />
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
                       className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-green-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
                     >
-                      <FaList className='w-4 h-4' />
+                      <FiList className='w-4 h-4' />
                     </button>
                   </div>
                   
@@ -312,7 +312,7 @@ const ProductListPage = () => {
               <div className='flex items-center justify-between text-xs font-semibold text-gray-500 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100'>
                 <span>Found {filteredData.length} items catalogued</span>
                 {searchQuery && (
-                  <span className='text-green-600 font-bold'>Filtering query: \"{searchQuery}\"</span>
+                  <span className='text-green-600 font-bold'>Filtering query: "{searchQuery}"</span>
                 )}
               </div>
             </div>
