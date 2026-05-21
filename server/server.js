@@ -24,7 +24,7 @@ import './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
 
-console.log("RAZORPAY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
+console.log("RAZORPAY INTEGRITY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
 // --- ROUTE IMPORTS ---
 import userRouter from './route/user.route.js';
@@ -45,11 +45,11 @@ const app = express();
 const server = http.createServer(app); 
 const latestPositions = new Map(); 
 
-// --- CORS (FIXED: Added Native Mobile Webview Origins) ---
+// --- CORS RULES (STABILIZED FOR NATIVE CAPACITOR COOKIE EXCHANGE) ---
 const allowedOrigins = [
-    "http://localhost:5173",                     // Local Vite React web client dev port
-    "http://localhost",                          // ─── CRITICAL: Capacitor Android app origin
-    "capacitor://localhost",                     // ─── CRITICAL: Capacitor iOS app origin
+    "http://localhost:5173",                     // Dev web client local server layout
+    "http://localhost",                          // Capacitor Android webview runtime origin
+    "capacitor://localhost",                     // Capacitor iOS container origin
     "https://snapit-full-stack.onrender.com",
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com"
@@ -57,11 +57,10 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile tools, Postman, etc.) or if explicitly whitelisted
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            callback(new Error('Not allowed by CORS'));
+            callback(new Error('Cross-Origin Request rejected by Snapit Engine policies.'));
         }
     },
     credentials: true,
@@ -69,7 +68,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// --- HELMET (FIXED: Added http://localhost to connectSrc) ---
+// --- HELMET CONFIGURATIONS ---
 app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
@@ -87,7 +86,7 @@ app.use(helmet({
                 "ws:", "wss:", "http://*", "https://*", 
                 "ws://*", "wss://*", 
                 "capacitor://*",
-                "http://localhost" // ─── CRITICAL: Allows Android local bundle engines
+                "http://localhost"
             ] 
         },
     },
@@ -103,7 +102,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- SOCKET.IO ---
+// --- SOCKET.IO HANDLING LAYER ---
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: { 
@@ -123,7 +122,6 @@ io.on('connection', (socket) => {
     socket.on('join_order', (orderId) => {
         if (orderId) {
             socket.join(orderId);
-            console.log(`Socket ${socket.id} joined order room: ${orderId}`);
             if (latestPositions.has(orderId)) {
                 socket.emit('receive_location', latestPositions.get(orderId));
             }
@@ -136,7 +134,6 @@ io.on('connection', (socket) => {
             const movementData = { latitude, longitude, timestamp: Date.now() };
             latestPositions.set(orderId, movementData);
             io.to(orderId).emit('receive_location', movementData);
-            console.log(`Location updated for order ${orderId}: ${latitude}, ${longitude}`);
         }
     });
     
@@ -145,16 +142,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// --- HEALTH CHECK ---
-app.get("/health", (req, res) => {
-    res.json({ 
-        message: "Snapit Server is Live!",
-        timestamp: new Date().toISOString(),
-        razorpay_status: process.env.RAZORPAY_KEY_ID ? "Configured" : "Missing Keys"
-    });
-});
-
-// --- API ROUTES ---
+// --- API ROUTES MOUNTING ---
 app.use('/api/user', userRouter);
 app.use('/api/category', categoryRouter);
 app.use('/api/file', uploadRouter);
@@ -169,22 +157,16 @@ app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 app.use('/api/review', reviewRouter);
 
-console.log("✅ Registered API Routes:");
-console.log("   - /api/user");
-console.log("   - /api/category");
-console.log("   - /api/file");
-console.log("   - /api/subcategory");
-console.log("   - /api/product");
-console.log("   - /api/cart");
-console.log("   - /api/address");
-console.log("   - /api/order (includes /seller-orders)");
-console.log("   - /api/store");
-console.log("   - /api/wallet");
-console.log("   - /api/flash-sale");
-console.log("   - /api/referral");
-console.log("   - /api/review");
+// --- HEALTH ROUTE ---
+app.get("/health", (req, res) => {
+    res.json({ 
+        message: "Snapit Server is Live!",
+        timestamp: new Date().toISOString(),
+        razorpay_status: process.env.RAZORPAY_KEY_ID ? "Configured" : "Missing Keys"
+    });
+});
 
-// --- STATIC FILE SERVING ---
+// --- STATIC ASSETS MAPPING ---
 const possiblePaths = [
     path.join(process.cwd(), '..', 'client', 'dist'),
     path.join(process.cwd(), 'client', 'dist'),
@@ -196,36 +178,37 @@ console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 
 app.use(express.static(clientBuildPath));
 
-// --- SPA CATCH-ALL ---
-app.get('*', (req, res) => {
+// --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
+app.get('*', (req, res, next) => {
+    // ✅ FIX: Block the catch-all engine from treating missing .css or .js scripts as valid HTML routes.
+    // This removes the "MIME type ('text/plain') is not supported" runtime compilation browser crashes.
+    if (req.url.startsWith('/api') || req.url.includes('.')) {
+        return res.status(404).json({ message: "Asset file or resource route completely unavailable.", success: false });
+    }
+    
     res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
         if (err) {
             console.error("❌ SendFile Error:", err.message);
             res.status(500).json({ 
-                error: "Frontend build not found.",
+                error: "Frontend distribution layer build files not found.",
                 path: clientBuildPath 
             });
         }
     });
 });
 
-// --- RENDER SELF-PING ---
+// --- KEEP ALIVE ---
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-full-stack-2.onrender.com';
 setInterval(() => {
-    fetch(`${SELF_URL}/health`)
-        .then(() => console.log('✓ Self-ping successful'))
-        .catch(() => console.log('✗ Self-ping failed'));
+    fetch(`${SELF_URL}/health`).catch(() => {});
 }, 14 * 60 * 1000); 
 
-// --- START SERVER ---
+// --- ENGINE BOOT ---
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
-    console.log("✅ Database Connected Successfully");
+    console.log("✅ Database System Connected Successfully");
     server.listen(PORT, '0.0.0.0', () => { 
         console.log(`🚀 Snapit Server running on port ${PORT}`);
-        console.log(`🌍 Server URL: ${SELF_URL}`);
-        console.log(`✅ Razorpay Status: ${process.env.RAZORPAY_KEY_ID ? 'LOADED' : 'NOT FOUND — check Render env vars'}`);
-        console.log(`🔌 Socket.IO enabled on path: /socket.io/`);
     });
 }).catch(err => {
     console.error("❌ Database connection failed", err);
