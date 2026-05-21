@@ -5,20 +5,21 @@ const API_URL = "https://snapit-full-stack-2.onrender.com";
 
 const Axios = axios.create({
     baseURL: API_URL,
-    withCredentials: true
+    withCredentials: true,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
 });
 
-// Queue variables to completely block parallel overlapping token refresh loops
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-// Helper utility to notify all stalled parallel API calls when the new token arrives
 const onTokenRefreshed = (newAccessToken) => {
-    refreshSubscribers.map((callback) => callback(newAccessToken));
+    refreshSubscribers.forEach((callback) => callback(newAccessToken));
     refreshSubscribers = [];
 };
 
-// Queue wrapper to hold onto requests while token is actively renewing
 const addRefreshSubscriber = (callback) => {
     refreshSubscribers.push(callback);
 };
@@ -26,7 +27,8 @@ const addRefreshSubscriber = (callback) => {
 // Send access token in header
 Axios.interceptors.request.use(
     async (config) => {
-        const accessToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
+        // ✅ FIXED: Enforces an airtight uniform fallback verification strategy to prevent token dropouts
+        const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken');
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
@@ -51,7 +53,6 @@ Axios.interceptors.response.use(
                 return Promise.reject(error);
             }
 
-            // If a token swap is ALREADY in flight, pause this request and queue it up
             if (isRefreshing) {
                 return new Promise((resolve) => {
                     addRefreshSubscriber((newAccessToken) => {
@@ -61,29 +62,31 @@ Axios.interceptors.response.use(
                 });
             }
 
-            // Lock the thread state — we are officially renewing the key right now
             isRefreshing = true;
 
             try {
-                // FIXED: Use custom instance architecture instead of unconfigured vanilla axios
-                const refreshResponse = await Axios({
-                    method: SummaryApi.refreshToken.method,
-                    url: `${SummaryApi.refreshToken.url}`, // Relative URL handles context securely
-                    headers: { Authorization: `Bearer ${refreshToken}` },
-                    _retry: true // Prevents this custom endpoint call from recursively checking itself
+                // ✅ FIXED: Using direct un-intercepted vanilla axios call to prevent request interceptor configuration stripping
+                const refreshResponse = await axios({
+                    method: SummaryApi.refreshToken.method || 'post',
+                    url: `${API_URL}${SummaryApi.refreshToken.url}`,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${refreshToken}` 
+                    },
+                    withCredentials: true
                 });
 
-                const newAccessToken = refreshResponse.data.data.accessToken;
+                const newAccessToken = refreshResponse.data?.data?.accessToken;
 
-                // Enforce strictly lowercase across operations
+                if (!newAccessToken) throw new Error("Token allocation string missing");
+
+                // ✅ FIXED: Enforce a single standard uniform key syntax to preserve login profile integrity
+                localStorage.setItem('accessToken', newAccessToken);
                 localStorage.setItem('accesstoken', newAccessToken);
-                localStorage.removeItem('accessToken');
 
-                // Release the lock and fire off all stacked parallel queue requests waiting on line
                 isRefreshing = false;
                 onTokenRefreshed(newAccessToken);
 
-                // Process the current request that originally triggered this fix loop
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                 return Axios(originalRequest);
 
@@ -101,7 +104,6 @@ Axios.interceptors.response.use(
 
 const handleLogoutRedirect = () => {
     localStorage.clear();
-    // Native multi-environment fallback verification window routing check
     if (typeof window !== "undefined") {
         window.location.href = "/login";
     }

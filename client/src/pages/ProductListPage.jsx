@@ -1,184 +1,228 @@
-import React, { useEffect, useState } from 'react'
-import Axios from '../utils/Axios'
+import React, { useEffect, useRef, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import SummaryApi from '../common/SummaryApi'
-import { Link, useParams } from 'react-router-dom'
+import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
-import Loading from '../components/Loading'
-import CardProduct from '../components/CardProduct'
-import { useSelector } from 'react-redux'
-import { valideURLConvert } from '../utils/valideURLConvert'
+import { FaAngleRight, FaAngleLeft, FaChevronLeft, FaShareNodes } from "react-icons/fa6";
+import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
+import Divider from '../components/Divider'
+import image1 from '../assets/minute_delivery.png'
+import image2 from '../assets/Best_Prices_Offers.png'
+import image3 from '../assets/Wide_Assortment.png'
+import { pricewithDiscount } from '../utils/PriceWithDiscount'
+import AddToCartButton from '../components/AddToCartButton'
+import SmartSuggestions from '../components/SmartSuggestions'
+import WishlistButton from '../components/WishlistButton'
+import ProductReviews from '../components/ProductReviews'
+import toast from 'react-hot-toast'
 
-const ProductListPage = () => {
-  const [data, setData] = useState([])
-  const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [totalPage, setTotalPage] = useState(1)
+const ProductDisplayPage = () => {
   const params = useParams()
-  const AllSubCategory = useSelector(state => state.product.allSubCategory)
-  const [DisplaySubCatory, setDisplaySubCategory] = useState([])
-
-  const BACKEND_URL = "https://snapit-full-stack-2.onrender.com"
-
-  const categoryId = params.category ? params.category.split("-").pop() : null
-  const subCategoryParam = params.subCategory ? params.subCategory.split("-").pop() : null
+  const navigate = useNavigate()
   
-  const subCategory = params?.subCategory?.split("-")
-  const subCategoryName = params?.subCategory === "all" ? "All Products" : subCategory?.slice(0, subCategory?.length - 1)?.join(" ")
+  let productId = params?.product?.split("-")?.slice(-1)[0]
 
-  const fetchProductdata = async () => {
-    if (!categoryId || categoryId.length !== 24) return;
+  const [data, setData] = useState({ name: "", image: [], stock: 0 })
+  const [image, setImage] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [imageZoom, setImageZoom] = useState(false)
+  const imageContainer = useRef()
+  const [isOpen, setIsOpen] = useState(true)
 
+  const checkShopStatus = () => {
+    const now = new Date()
+    const hours = now.getHours()
+    setIsOpen(hours >= 7 && hours < 21)
+  }
+
+  const fetchProductDetails = async () => {
     try {
       setLoading(true)
-      
-      const requestPayload = {
-        categoryId: categoryId,
-        page: page,
-        limit: 12,
-      }
-
-      if (subCategoryParam !== "all" && subCategoryParam?.length === 24) {
-        requestPayload.subCategoryId = subCategoryParam
-      }
-
-      console.log("Snapit Request Payload:", requestPayload);
-
       const response = await Axios({
-        ...SummaryApi.getProductByCategoryAndSubCategory,
-        data: requestPayload
+        ...SummaryApi.getProductDetails,
+        data: { productId }
       })
-
       const { data: responseData } = response
-
-      if (responseData.success) {
-        if (responseData.page === 1) {
-          setData(responseData.data)
-        } else {
-          setData([...data, ...responseData.data])
-        }
-        setTotalPage(responseData.totalCount)
-      }
+      if (responseData.success) setData(responseData.data)
     } catch (error) {
-      if(error.code !== "ERR_CANCELED") {
-        AxiosToastError(error)
-      }
+      AxiosToastError(error)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    setData([])
-    setPage(1)
-  }, [params.category, params.subCategory])
+    fetchProductDetails()
+    checkShopStatus()
+    const timer = setInterval(checkShopStatus, 60000)
+    return () => clearInterval(timer)
+  }, [params, productId])
 
-  useEffect(() => {
-    fetchProductdata()
-  }, [params.category, params.subCategory, page])
+  const handleScrollRight = () => { imageContainer.current.scrollLeft += 100 }
+  const handleScrollLeft = () => { imageContainer.current.scrollLeft -= 100 }
 
-
-  useEffect(() => {
-    if(!categoryId) return; 
-
-    const sub = AllSubCategory.filter(s => {
-      const filterData = s.category.some(el => {
-        return el._id === categoryId
-      })
-      return filterData ? filterData : null
-    })
-    setDisplaySubCategory(sub)
-  }, [params, AllSubCategory, categoryId])
+  const handleShareProductSystem = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Buy ${data.name || 'this item'} on Snapit!`,
+          text: `Check out this amazing deal for ${data.name} on Snapit App.`,
+          url: window.location.href,
+        })
+      } else {
+        await navigator.clipboard.writeText(window.location.href)
+        toast.success('Product link copied! 📋')
+      }
+    } catch (err) {
+      console.log("Share cancelled")
+    }
+  }
 
   return (
-    <section className='sticky top-24 lg:top-20'>
-      <div className='container mx-auto grid grid-cols-[90px,1fr] md:grid-cols-[200px,1fr] lg:grid-cols-[280px,1fr]'>
-        
-        {/** sidebar **/}
-        <div className='min-h-[88vh] max-h-[88vh] overflow-y-scroll grid gap-1 shadow-md scrollbarCustom bg-white py-2'>
-          
-          {/* All Products Option */}
-          {
-            DisplaySubCatory.length > 0 && (
-              <Link 
-                to={`/${valideURLConvert(params.category.split("-")[0])}-${categoryId}/all`}
-                className={`w-full p-2 lg:flex items-center lg:w-full lg:h-16 box-border lg:gap-4 border-b 
-                hover:bg-green-100 cursor-pointer transition-all
-                ${subCategoryParam === 'all' ? "bg-green-100 border-r-4 border-green-600 font-bold" : ""}
-              `}
-              >
-                <div className='hidden lg:flex w-fit max-w-28 mx-auto lg:mx-0 bg-white rounded box-border items-center justify-center h-14 w-12 border border-dashed border-neutral-300'>
-                  <p className='text-[10px] font-bold text-neutral-500'>ALL</p>
-                </div>
-                <p className='text-xs text-center lg:text-left lg:text-base'>All Products</p>
-              </Link>
-            )
-          }
+    <section key={productId} className='w-full bg-gradient-to-b from-white to-gray-50 pb-24 lg:pb-10 animate-fadeIn relative'>
+      
+      {/* FIXED PREMIUM MINIMALIST ACTION HEADER */}
+      <div className='sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'>
+        <div className='container mx-auto px-4 py-3.5 flex items-center justify-between w-full'>
+          <button 
+            onClick={() => navigate(-1)} 
+            className='p-2.5 hover:bg-gray-50 active:scale-95 transition-all rounded-full text-gray-800 flex items-center justify-center border border-gray-100 bg-white shadow-sm'
+          >
+            <FaChevronLeft size={16} />
+          </button>
 
-          {
-            DisplaySubCatory.map((s, index) => {
-               const link = `/${valideURLConvert(s?.category[0]?.name)}-${s?.category[0]?._id}/${valideURLConvert(s.name)}-${s._id}`
-              return (
-                <Link 
-                  key={s._id + "sidebar" + index}
-                  to={link} 
-                  className={`w-full p-2 lg:flex items-center lg:w-full lg:h-16 box-border lg:gap-4 border-b 
-                  hover:bg-green-100 cursor-pointer transition-all
-                  ${subCategoryParam === s._id ? "bg-green-100 border-r-4 border-green-600 font-bold" : ""}
-                `}
+          <h4 className='text-xs font-black tracking-wider text-slate-400 uppercase truncate max-w-[50%] select-none'>
+            {data.name || 'Product Details'}
+          </h4>
+
+          <button 
+            onClick={handleShareProductSystem}
+            className='p-2.5 hover:bg-gray-50 active:scale-95 transition-all rounded-full text-gray-800 flex items-center justify-center border border-gray-100 bg-white shadow-sm'
+          >
+            <FaShareNodes size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className='container mx-auto p-4 lg:p-8 grid lg:grid-cols-2 gap-8 mt-2'>
+        {/* Gallery */}
+        <div className='space-y-4'>
+          <div 
+            className='bg-white lg:min-h-[460px] rounded-[2rem] min-h-80 max-h-80 lg:max-h-[460px] flex items-center justify-center overflow-hidden border border-gray-100 shadow-md relative group cursor-zoom-in'
+            onClick={() => setImageZoom(!imageZoom)}
+          >
+            {!loading && data?.image?.length > 0 ? (
+              <img
+                src={data.image[image]?.replace("http://", "https://")}
+                className={`w-full h-full object-contain p-6 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
+                alt={data.name}
+              />
+            ) : (
+              <div className='w-full h-full bg-slate-50 animate-pulse flex items-center justify-center'>
+                <p className='text-gray-400 font-bold text-xs uppercase tracking-widest'>Loading...</p>
+              </div>
+            )}
+          </div>
+
+          <div className='flex items-center justify-center gap-1.5'>
+            {data?.image?.map((img, index) => (
+              <button
+                key={img + index}
+                onClick={() => setImage(index)}
+                className={`h-1.5 rounded-full transition-all ${index === image ? "bg-green-600 w-6" : "bg-gray-200 w-1.5"}`}
+              />
+            ))}
+          </div>
+
+          <div className='relative'>
+            <div ref={imageContainer} className='flex gap-2.5 overflow-x-auto scrollbar-none snap-x scroll-smooth px-1'>
+              {data?.image?.map((img, index) => (
+                <button
+                  key={img + index}
+                  onClick={() => setImage(index)}
+                  className={`min-w-20 w-20 h-20 rounded-2xl border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md scale-105' : 'border-transparent opacity-60 bg-white p-1'}`}
                 >
-                  <div className='w-fit max-w-28 mx-auto lg:mx-0 bg-white rounded box-border' >
-                    <img
-                      src={
-                        s?.image && typeof s.image === 'string' && s.image.startsWith('http') 
-                          ? s.image.replace('http://', 'https://') 
-                          : `${BACKEND_URL}${s?.image || ''}`
-                      }
-                      alt={s.name}
-                      className='w-14 lg:h-14 lg:w-12 h-full object-scale-down'
-                      onError={(e) => {
-                        e.target.src = "https://placehold.co/150?text=Snapit";
-                      }}
-                    />
-                  </div>
-                  <p className='text-xs text-center lg:text-left lg:text-base'>{s.name}</p>
-                </Link>
-              )
-            })
-          }
-        </div>
-
-        {/** Product Grid **/}
-        <div className='min-h-[88vh] bg-white'>
-          <div className='bg-white shadow-sm p-4 sticky top-0 z-10 border-b'>
-            <h3 className='font-semibold text-lg text-neutral-800'>{subCategoryName}</h3>
-          </div>
-          
-          <div className='min-h-[80vh] overflow-y-auto'>
-            {
-                data.length === 0 && !loading ? (
-                    <div className='flex flex-col justify-center items-center h-[60vh] gap-2'>
-                        <p className='text-lg text-neutral-400'>No products found in this category.</p>
-                    </div>
-                ) : (
-                    <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 p-4 gap-4'>
-                        {
-                            data.map((p, index) => (
-                                <CardProduct
-                                    data={p}
-                                    key={p._id + "product-list-" + index}
-                                />
-                            ))
-                        }
-                    </div>
-                )
-            }
-
-            {loading && <Loading />}
+                  <img src={img?.replace("http://", "https://")} alt='thumb' className='w-full h-full object-contain p-1' />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Content Details */}
+        <div className='space-y-5'>
+          <div className='flex items-center gap-2'>
+            <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
+          </div>
+
+          <h1 className='text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data.name}</h1>
+          <p className='text-gray-400 font-bold text-xs mt-0.5'>{data.unit}</p>
+
+          <Divider />
+
+          <div className='bg-slate-950 text-white p-5 rounded-3xl shadow-xl flex items-center justify-between'>
+            <div>
+              <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1'>Price Details</p>
+              <div className='flex items-baseline gap-3'>
+                <span className='text-3xl font-black tracking-tight'>
+                  {DisplayPriceInRupees(pricewithDiscount(Number(data.price || 0), Number(data.discount || 0)))}
+                </span>
+                {data.discount > 0 && (
+                  <span className='line-through text-gray-500 font-bold text-sm'>
+                    {DisplayPriceInRupees(Number(data.price || 0))}
+                  </span>
+                )}
+              </div>
+            </div>
+            {data.discount > 0 && (
+              <span className='bg-green-600 font-black text-xs px-3 py-1.5 rounded-xl text-white shadow-md uppercase tracking-wider'>
+                {data.discount}% OFF
+              </span>
+            )}
+          </div>
+
+          {productId && <WishlistButton productId={productId} />}
+
+          {!isOpen ? (
+            <div className='bg-indigo-50/50 border-2 border-indigo-100 border-dashed p-6 rounded-3xl text-center'>
+              <p className='font-black text-slate-800 text-base'>🌙 Shop is Closed</p>
+              <p className='text-xs text-gray-500 font-semibold mt-0.5'>Ordering opens up at 7:00 AM</p>
+            </div>
+          ) : data.stock === 0 ? (
+            <div className='bg-rose-50 border border-rose-100 p-4 rounded-2xl text-center'>
+              <p className='text-rose-600 font-black text-sm uppercase tracking-widest italic'>Out of stock</p>
+            </div>
+          ) : (
+            <div className='h-14 mt-4 shadow-md shadow-green-100/30 rounded-2xl overflow-hidden'>
+              <AddToCartButton data={data} />
+            </div>
+          )}
+
+          <div className='bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4'>
+            <div className='flex items-center gap-4 group cursor-pointer'>
+              <div className='w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image1} alt='superfast' className='object-contain' /></div>
+              <div><p className='font-extrabold text-slate-800 text-sm'>Superfast Delivery</p><p className='text-xs text-gray-400 font-medium'>Directly from local dark stores in 10 minutes.</p></div>
+            </div>
+            <div className='flex items-center gap-4 group cursor-pointer'>
+              <div className='w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image2} alt='offers' className='object-contain' /></div>
+              <div><p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p><p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p></div>
+            </div>
+            <div className='flex items-center gap-4 group cursor-pointer'>
+              <div className='w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image3} alt='assortment' className='object-contain' /></div>
+              <div><p className='font-extrabold text-slate-800 text-sm'>Wide Assortment</p><p className='text-xs text-gray-400 font-medium'>Everything you need, available instantly.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Embedded Slider Carousel */}
+      <SmartSuggestions productId={productId} />
+
+      <div className='container mx-auto px-4 mt-8'>
+        <ProductReviews productId={productId} />
       </div>
     </section>
   )
 }
 
-export default ProductListPage;
+export default ProductDisplayPage
