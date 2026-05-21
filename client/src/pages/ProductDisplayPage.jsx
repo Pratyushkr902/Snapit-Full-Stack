@@ -227,7 +227,7 @@ const ProductDisplayPage = () => {
           {/* Checkout Triggers Action Buttons */}
           {!isOpen ? (
             <div className='bg-indigo-50/50 border-2 border-indigo-100 border-dashed p-6 rounded-3xl text-center'>
-              <p className='font-black text-slate-800 text-base'>🌙 Shop is Closed</p>
+              <p className='font-black text-slate-800 text-base'>🌙 Snapit is Resting</p>
               <p className='text-xs text-gray-500 font-semibold mt-0.5'>Ordering opens up at 7:00 AM</p>
             </div>
           ) : data.stock === 0 ? (
