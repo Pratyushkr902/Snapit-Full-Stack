@@ -149,7 +149,7 @@ const ProductDisplayPage = () => {
             </div>
           </div>
 
-          {/* ✅ RE-ADDED DESKTOP SPECIFICATIONS */}
+          {/* DESKTOP SPECIFICATIONS (PRESERVED) */}
           <div className='hidden lg:block bg-white rounded-3xl p-6 shadow-sm border border-gray-100'>
             <h3 className='font-black text-xl text-gray-800 mb-4 flex items-center gap-2'>
               <span className='w-1 h-5 bg-green-600 rounded-full'></span>
@@ -189,7 +189,7 @@ const ProductDisplayPage = () => {
 
           <Divider />
 
-          {/* Pricing Box */}
+          {/* Price Component Block */}
           <div className='bg-slate-950 text-white p-5 rounded-3xl shadow-xl flex items-center justify-between'>
             <div>
               <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1'>Price Details</p>
@@ -228,7 +228,6 @@ const ProductDisplayPage = () => {
             </div>
           )}
 
-          {/* Core Feature Badges */}
           <div className='bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-3.5'>
             <div className='flex items-center gap-4 group cursor-pointer'>
               <div className='w-11 h-11 bg-blue-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image1} alt='superfast' className='object-contain' /></div>
@@ -236,11 +235,11 @@ const ProductDisplayPage = () => {
             </div>
             <div className='flex items-center gap-4 group cursor-pointer'>
               <div className='w-11 h-11 bg-emerald-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image2} alt='offers' className='object-contain' /></div>
-              <div><p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p><p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p></div>
+              <div><p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p><p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified coupons.</p></div>
             </div>
           </div>
 
-          {/* ✅ RE-ADDED MOBILE SPECIFICATIONS PANEL */}
+          {/* MOBILE SPECIFICATIONS PANEL (PRESERVED) */}
           <div className='lg:hidden bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4'>
             <h3 className='font-black text-lg text-gray-800 mb-2 flex items-center gap-2'>
               <span className='w-1 h-5 bg-green-600 rounded-full'></span>
@@ -268,7 +267,6 @@ const ProductDisplayPage = () => {
         </div>
       </div>
 
-      {/* Clean Carousel Section */}
       <SmartSuggestions productId={productId} />
 
       <div className='container mx-auto px-4 mt-6'>

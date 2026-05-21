@@ -27,7 +27,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // ✅ BULLETPROOF STATUS CAPTURE: Stops non-200 stream clones from generating TypeExceptions
+                // ✅ FIXED: Safely verify response state exists and status is perfectly 200 before executing clones
                 if (response && response.status === 200) {
                     const url = new URL(event.request.url)
                     const isCacheable = url.origin === self.location.origin
@@ -54,6 +54,29 @@ self.addEventListener('fetch', (event) => {
     )
 })
 
-// Keep your existing push notifications listener hooks intact down here...
-self.addEventListener('push', (event) => { /* ... */ });
-self.addEventListener('notificationclick', (event) => { /* ... */ });
+self.addEventListener('push', (event) => {
+    const data = event.data
+        ? (() => { try { return event.data.json() } catch { return { title: event.data.text() } } })()
+        : {}
+
+    const title = data.title || 'Snapit Update'
+    const options = {
+        body: data.body || 'Your order has been updated',
+        icon: '/snapit-icon-192.png',
+        badge: '/snapit-icon-192.png',
+        vibrate: [200, 100, 200],
+        data: { url: data.url || '/' },
+        actions: [
+            { action: 'track', title: '📍 Track Order' },
+            { action: 'dismiss', title: 'Dismiss' }
+        ]
+    }
+    event.waitUntil(self.registration.showNotification(title, options))
+})
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close()
+    if (event.action === 'dismiss') return
+    const url = event.action === 'track' ? (event.notification.data.url || '/dashboard/myorders') : '/'
+    event.waitUntil(clients.openWindow(url))
+})

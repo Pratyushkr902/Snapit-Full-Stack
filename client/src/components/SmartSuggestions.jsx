@@ -16,7 +16,8 @@ const SmartSuggestions = ({ productId }) => {
       setLoading(true)
       const response = await Axios({
         ...SummaryApi.getFrequentlyBought,
-        data: { 
+        // ✅ FIXED: Using 'params' for GET request query serialization instead of 'data'
+        params: { 
           productId: productId,
           id: productId, 
           limit: 10 
@@ -74,13 +75,12 @@ const SmartSuggestions = ({ productId }) => {
                 />
               </div>
 
-              {/* Title & Price */}
+              {/* Title & Price Display */}
               <div className='flex flex-col flex-1 justify-between gap-1'>
                 <h3 className='text-sm font-bold text-slate-800 line-clamp-2 leading-tight min-h-[2.5rem]'>
                   {product.name}
                 </h3>
                 
-                {/* Clean, Green Price Stamp matching Screenshot */}
                 <div className='mt-1 text-green-600 font-extrabold text-base tracking-tight'>
                   {DisplayPriceInRupees(finalPrice)}
                 </div>
