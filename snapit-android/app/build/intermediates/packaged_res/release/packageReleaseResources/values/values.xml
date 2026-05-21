@@ -5,6 +5,7 @@
     <color name="backgroundColor">#FFFFFF</color>
     <color name="colorPrimary">#16A34A</color>
     <color name="colorPrimaryDark">#000000</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
     <color name="navigationColor">#000000</color>
     <color name="navigationColorDark">#000000</color>
     <color name="navigationDividerColor">#000000</color>
@@ -12,16 +13,8 @@
     <color name="shortcut_background">#F5F5F5</color>
     <integer name="splashScreenFadeOutDuration">300</integer>
     <string name="appName" translatable="false">Snapit</string>
-    <string name="assetStatements">
-    [{
-        \"relation\": [\"delegate_permission/common.handle_all_urls\"],
-        \"target\": {
-            \"namespace\": \"web\",
-            \"site\": \"https://snapit-full-stack-0.onrender.com\"
-        }
-    }]
-    
-  </string>
+    <string name="app_name">Snapit</string>
+    <string name="custom_url_scheme">com.pratyush.snapit</string>
     <string name="fallbackType" translatable="false">customtabs</string>
     <string name="fullScopeUrl" translatable="false">https://snapit-full-stack-0.onrender.com/</string>
     <string name="generatorApp" translatable="false">bubblewrap-cli</string>
@@ -29,6 +22,22 @@
     <string name="launchUrl" translatable="false">https://snapit-full-stack-0.onrender.com/</string>
     <string name="launcherName" translatable="false">Snapit</string>
     <string name="orientation" translatable="false">default</string>
+    <string name="package_name">com.pratyush.snapit</string>
     <string name="providerAuthority" translatable="false">com.snapit.grocery.fileprovider</string>
+    <string name="title_activity_main">Snapit</string>
     <string name="webManifestUrl" translatable="false">https://snapit-full-stack-0.onrender.com/manifest.json</string>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+    </style>
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+    </style>
 </resources>
