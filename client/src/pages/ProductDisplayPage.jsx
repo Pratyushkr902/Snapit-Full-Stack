@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import SummaryApi from '../common/SummaryApi'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
-import { FaAngleRight, FaAngleLeft, FaChevronLeft, FaShareNodes, FaStar } from "react-icons/fa6"; // Cleaned out unused FaHeart
-import { FiSearch } from "react-icons/fi";
+import { FaAngleRight, FaAngleLeft } from "react-icons/fa6";
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import Divider from '../components/Divider'
 import image1 from '../assets/minute_delivery.png'
@@ -15,18 +14,14 @@ import AddToCartButton from '../components/AddToCartButton'
 import SmartSuggestions from '../components/SmartSuggestions'
 import WishlistButton from '../components/WishlistButton'
 import ProductReviews from '../components/ProductReviews'
-import toast from 'react-hot-toast'
 
 const ProductDisplayPage = () => {
   const params = useParams()
-  const navigate = useNavigate()
-  
   let productId = params?.product?.split("-")?.slice(-1)[0]
 
   const [data, setData] = useState({ name: "", image: [], stock: 0 })
   const [image, setImage] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [imageZoom, setImageZoom] = useState(false)
   const imageContainer = useRef()
 
   const [isOpen, setIsOpen] = useState(true)
@@ -58,337 +53,171 @@ const ProductDisplayPage = () => {
     checkShopStatus()
     const timer = setInterval(checkShopStatus, 60000)
     return () => clearInterval(timer)
-  }, [params, productId])
+  }, [params])
 
   const handleScrollRight = () => { imageContainer.current.scrollLeft += 100 }
   const handleScrollLeft = () => { imageContainer.current.scrollLeft -= 100 }
 
-  const handleShareProductSystem = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Buy ${data.name || 'this item'} on Snapit!`,
-          text: `Check out this amazing deal for ${data.name} on Snapit App.`,
-          url: window.location.href,
-        })
-      } else {
-        await navigator.clipboard.writeText(window.location.href)
-        toast.success('Product link copied! 📋', {
-          style: {
-            borderRadius: '12px',
-            background: '#10b981',
-            color: '#fff',
-          },
-        })
-      }
-    } catch (err) {
-      console.log("Share cancelled")
-    }
-  }
-
   return (
-    <section key={productId} className='w-full bg-gradient-to-b from-white to-gray-50 pb-20 lg:pb-10'>
-      
-      {/* ENHANCED STICKY HEADER */}
-      <div className='sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'>
-        <div className='container mx-auto px-4 py-3 flex items-center justify-between gap-3'>
-          <button 
-            onClick={() => navigate(-1)} 
-            className='p-2.5 hover:bg-gray-50 active:scale-95 transition-all rounded-xl text-gray-800 flex items-center justify-center border border-gray-100 hover:border-gray-200'
-          >
-            <FaChevronLeft size={18} />
-          </button>
+    <section className='container mx-auto p-4'>
+      <div className='grid lg:grid-cols-2'>
 
-          {/* ENHANCED SEARCH BAR */}
-          <div 
-            onClick={() => navigate('/')} 
-            className='flex-1 max-w-2xl bg-gray-50 border border-gray-200 px-4 py-3 rounded-full flex items-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group'
-          >
-            <FiSearch size={18} className='text-gray-400 group-hover:text-green-600 transition-colors' />
-            <span className='font-medium text-gray-400 text-sm select-none group-hover:text-gray-600 transition-colors'>
-              Search products...
-            </span>
-          </div>
-
-          <button 
-            onClick={handleShareProductSystem}
-            className='p-2.5 hover:bg-gray-50 active:scale-95 transition-all rounded-xl text-gray-800 flex items-center justify-center border border-gray-100 hover:border-gray-200'
-          >
-            <FaShareNodes size={18} />
-          </button>
-        </div>
-      </div>
-
-      <div className='container mx-auto p-4 lg:p-8 grid lg:grid-cols-2 gap-8 mt-4'>
-        
-        {/* LEFT: ENHANCED IMAGE GALLERY */}
-        <div className='space-y-4'>
-          {/* Main Image */}
-          <div 
-            className='bg-white lg:min-h-[500px] rounded-3xl min-h-80 max-h-80 lg:max-h-[500px] flex items-center justify-center overflow-hidden border border-gray-100 shadow-lg relative group cursor-zoom-in'
-            onClick={() => setImageZoom(!imageZoom)}
-          >
+        {/* Left: Images */}
+        <div>
+          <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded min-h-56 max-h-56 h-full w-full flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm'>
             {!loading && data?.image?.length > 0 ? (
               <img
                 src={data.image[image]?.replace("http://", "https://")}
-                className={`w-full h-full object-contain p-6 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
+                className='w-full h-full object-scale-down p-4'
                 alt={data.name}
               />
             ) : (
-              <div className='w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 animate-pulse flex items-center justify-center'>
-                <p className='text-gray-400 text-sm font-bold uppercase tracking-wider'>Loading...</p>
-              </div>
-            )}
-            
-            {/* Zoom Indicator */}
-            {data?.image?.length > 0 && (
-              <div className='absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1.5 rounded-full text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity'>
-                Click to zoom
+              <div className='w-full h-full bg-slate-50 animate-pulse flex items-center justify-center'>
+                <p className='text-slate-400'>Loading Product...</p>
               </div>
             )}
           </div>
 
-          {/* Image Indicators */}
-          <div className='flex items-center justify-center gap-2'>
-            {data?.image?.map((img, index) => (
-              <button
-                key={img + index}
-                onClick={() => setImage(index)}
-                className={`h-1.5 rounded-full transition-all ${
-                  index === image ? "bg-green-600 w-8" : "bg-gray-200 w-1.5 hover:bg-gray-300"
-                }`}
-              />
+          <div className='flex items-center justify-center gap-3 my-4'>
+            {data.image.map((img, index) => (
+              <div key={img + index + "point"} className={`w-2 h-2 rounded-full transition-all ${index === image ? "bg-green-600 w-4" : "bg-slate-200"}`}></div>
             ))}
           </div>
 
-          {/* Thumbnail Gallery */}
-          <div className='relative'>
-            <div ref={imageContainer} className='flex gap-3 overflow-x-auto scrollbar-none snap-x scroll-smooth'>
-              {data?.image?.map((img, index) => (
-                <button
-                  key={img + index}
-                  onClick={() => setImage(index)}
-                  className={`min-w-20 w-20 h-20 rounded-2xl border-2 transition-all overflow-hidden ${
-                    index === image 
-                      ? 'border-green-500 shadow-lg scale-105' 
-                      : 'border-gray-200 opacity-60 hover:opacity-100 hover:border-gray-300'
-                  }`}
-                >
-                  <img 
-                    src={img?.replace("http://", "https://")} 
-                    alt={`thumbnail ${index + 1}`}
-                    className='w-full h-full object-contain bg-white p-2'
-                  />
-                </button>
-              ))}
-            </div>
-            
-            {/* Navigation Arrows */}
-            {data?.image?.length > 4 && (
-              <div className='hidden lg:flex justify-between absolute inset-0 items-center pointer-events-none px-2'>
-                <button 
-                  onClick={handleScrollLeft}
-                  className='pointer-events-auto bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-lg border border-gray-100 hover:bg-white transition-all'
-                >
-                  <FaAngleLeft className='text-gray-700' />
-                </button>
-                <button 
-                  onClick={handleScrollRight}
-                  className='pointer-events-auto bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-lg border border-gray-100 hover:bg-white transition-all'
-                >
-                  <FaAngleRight className='text-gray-700' />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* DESKTOP SPECIFICATIONS */}
-          <div className='hidden lg:block bg-white rounded-3xl p-6 shadow-sm border border-gray-100'>
-            <h3 className='font-black text-xl text-gray-800 mb-6 flex items-center gap-2'>
-              <span className='w-1 h-6 bg-green-600 rounded-full'></span>
-              Product Details
-            </h3>
-            <div className='space-y-5'>
-              <div>
-                <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-2'>Description</p>
-                <p className='text-sm text-gray-600 leading-relaxed'>{data.description}</p>
-              </div>
-              <Divider />
-              <div>
-                <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-2'>Unit</p>
-                <p className='text-sm text-gray-600'>{data.unit}</p>
-              </div>
-              {data?.more_details && Object.keys(data?.more_details).map((element, index) => (
-                <div key={element + index} className='space-y-5'>
-                  <Divider />
-                  <div>
-                    <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-2'>{element}</p>
-                    <p className='text-sm text-gray-600'>{data?.more_details[element]}</p>
-                  </div>
+          <div className='grid relative'>
+            <div ref={imageContainer} className='flex gap-4 z-10 relative w-full overflow-x-auto scrollbar-none snap-x px-2'>
+              {data.image.map((img, index) => (
+                <div className={`w-20 h-20 min-w-20 rounded-lg border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md' : 'border-transparent opacity-70'}`} key={img + index}>
+                  <img src={img?.replace("http://", "https://")} alt='thumbnail' onClick={() => setImage(index)} className='w-full h-full object-scale-down bg-white' />
                 </div>
               ))}
             </div>
+            <div className='w-full -ml-3 h-full hidden lg:flex justify-between absolute items-center pointer-events-none'>
+              <button onClick={handleScrollLeft} className='pointer-events-auto z-10 bg-white p-2 rounded-full shadow-lg border border-slate-100 hover:bg-slate-50'><FaAngleLeft /></button>
+              <button onClick={handleScrollRight} className='pointer-events-auto z-10 bg-white p-2 rounded-full shadow-lg border border-slate-100 hover:bg-slate-50'><FaAngleRight /></button>
+            </div>
+          </div>
+
+          <div className='my-8 hidden lg:grid gap-4'>
+            <h3 className='font-bold text-xl text-slate-800 border-b pb-2'>Product Specifications</h3>
+            <div>
+              <p className='font-semibold text-slate-600'>Description</p>
+              <p className='text-base text-slate-500 leading-relaxed'>{data.description}</p>
+            </div>
+            <div>
+              <p className='font-semibold text-slate-600'>Unit</p>
+              <p className='text-base text-slate-500'>{data.unit}</p>
+            </div>
+            {data?.more_details && Object.keys(data?.more_details).map((element, index) => (
+              <div key={element + index}>
+                <p className='font-semibold text-slate-600'>{element}</p>
+                <p className='text-base text-slate-500'>{data?.more_details[element]}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* RIGHT: ENHANCED PRODUCT DETAILS */}
-        <div className='space-y-6'>
-          {/* Status Badges */}
-          <div className='flex items-center gap-2 flex-wrap'>
-            <span className='bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-black px-4 py-2 rounded-full flex items-center gap-2 shadow-lg shadow-green-500/30'>
-              <span className='text-base'>⚡</span>
-              10 MIN DELIVERY
+        {/* Right: Details */}
+        <div className='p-4 lg:pl-10 text-base lg:text-lg'>
+          <div className='flex items-center gap-2 mb-2'>
+            <span className='bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1'>
+              ⚡ 10 MINS
             </span>
             {data.stock < 5 && data.stock > 0 && (
-              <span className='bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wide animate-pulse shadow-lg shadow-orange-500/30'>
-                Only {data.stock} Left
-              </span>
-            )}
-            {data.discount > 0 && (
-              <span className='bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-black px-4 py-2 rounded-full shadow-lg shadow-purple-500/30'>
-                {data.discount}% OFF
+              <span className='bg-orange-100 text-orange-600 text-xs font-bold px-3 py-1 rounded-full'>
+                ONLY {data.stock} LEFT
               </span>
             )}
           </div>
 
-          {/* Product Title */}
-          <div>
-            <h1 className='text-3xl lg:text-4xl font-black text-gray-900 leading-tight mb-2'>
-              {data.name}
-            </h1>
-            <p className='text-gray-500 font-semibold text-sm'>{data.unit}</p>
-          </div>
+          <h2 className='text-2xl font-black lg:text-4xl text-slate-900 mb-1'>{data.name}</h2>
+          <p className='text-slate-400 font-medium mb-4'>{data.unit}</p>
 
-          {/* Price Section */}
-          <div className='bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-6 shadow-xl'>
-            <p className='text-gray-400 text-xs font-bold uppercase tracking-wider mb-3'>Price</p>
-            <div className='flex items-end gap-4'>
-              <div>
-                <p className='font-black text-4xl lg:text-5xl text-white tracking-tight'>
+          <Divider />
+
+          <div className='my-6'>
+            <p className='text-slate-500 text-sm font-bold uppercase tracking-wider mb-2'>Price Details</p>
+            <div className='flex items-center gap-4'>
+              <div className='bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl shadow-slate-200'>
+                <p className='font-black text-2xl lg:text-3xl'>
                   {DisplayPriceInRupees(pricewithDiscount(Number(data.price || 0), Number(data.discount || 0)))}
                 </p>
               </div>
               {data.discount > 0 && (
-                <div className='flex flex-col mb-1'>
-                  <p className='line-through text-gray-500 font-bold text-lg'>
-                    {DisplayPriceInRupees(Number(data.price || 0))}
-                  </p>
-                  <p className="font-black text-green-400 text-sm">Save {data.discount}%</p>
+                <div className='flex flex-col'>
+                  <p className='line-through text-slate-400 font-bold'>{DisplayPriceInRupees(Number(data.price || 0))}</p>
+                  <p className="font-black text-green-600 text-lg">{data.discount}% OFF</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Wishlist & Rating */}
-          <div className='flex items-center gap-3'>
-            {productId && (
-              <div className='flex-1'>
-                <WishlistButton productId={productId} />
-              </div>
-            )}
-            <button className='flex items-center gap-2 bg-white border border-gray-200 px-5 py-3 rounded-2xl hover:border-yellow-400 transition-all group'>
-              <FaStar className='text-yellow-400 group-hover:scale-110 transition-transform' />
-              <span className='font-bold text-gray-700'>4.5</span>
-              <span className='text-gray-400 text-sm'>(120)</span>
-            </button>
-          </div>
+          {/* Wishlist Button */}
+          {productId && (
+            <div className='mb-4'>
+              <WishlistButton productId={productId} />
+            </div>
+          )}
 
           {/* Add to Cart / Status */}
           {!isOpen ? (
-            <div className='bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-100 border-dashed p-8 rounded-3xl flex flex-col items-center gap-2 shadow-inner'>
-              <span className='text-4xl mb-2'>🌙</span>
-              <p className='font-black text-gray-800 text-xl tracking-tight'>Shop Closed</p>
-              <p className='text-gray-600 font-semibold text-sm'>Opens at 7:00 AM</p>
+            <div className='bg-slate-50 border-2 border-slate-200 p-6 rounded-3xl my-6 flex flex-col items-center gap-2'>
+              <span className='text-3xl'>🌙</span>
+              <p className='font-black text-slate-800 text-xl'>Snapit is Resting</p>
+              <p className='text-slate-500 font-medium'>Ordering resumes at 7:00 AM</p>
             </div>
           ) : data.stock === 0 ? (
-            <div className='bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-100 p-6 rounded-3xl text-center shadow-inner'>
-              <p className='text-red-600 font-black text-lg uppercase tracking-wider'>Out of Stock</p>
-              <p className='text-red-500 text-sm mt-1'>We'll restock soon!</p>
+            <div className='bg-rose-50 border-2 border-rose-100 p-4 rounded-2xl text-center my-6'>
+              <p className='text-rose-600 font-black text-xl italic'>Currently Out of Stock</p>
             </div>
           ) : (
-            <div className='h-16'>
+            <div className='my-8 h-14'>
               <AddToCartButton data={data} />
             </div>
           )}
 
-          {/* Features Section */}
-          <div className='bg-white rounded-3xl p-6 shadow-sm border border-gray-100'>
-            <h3 className='font-black text-gray-800 text-lg mb-5 flex items-center gap-2'>
-              <span className='w-1 h-5 bg-green-600 rounded-full'></span>
-              Why Choose Snapit?
-            </h3>
-            <div className='space-y-4'>
-              <div className='flex items-start gap-4 group hover:bg-gray-50 p-3 rounded-2xl transition-all cursor-pointer'>
-                <div className='w-12 h-12 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm'>
-                  <img src={image1} alt='delivery' className='w-7 h-7 object-contain' />
+          <div className='mt-10'>
+            <h2 className='font-black text-slate-800 text-lg uppercase tracking-tighter mb-4'>Why shop from Snapit?</h2>
+            <div className='space-y-6'>
+              <div className='flex items-center gap-5'>
+                <div className='w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center p-3'>
+                  <img src={image1} alt='superfast' className='object-contain' />
                 </div>
-                <div>
-                  <p className='font-black text-gray-800 text-base mb-1'>Superfast Delivery</p>
-                  <p className='text-gray-600 text-sm leading-relaxed'>10-minute delivery from local stores</p>
+                <div className='text-sm'>
+                  <div className='font-bold text-slate-800 text-base'>Superfast Delivery</div>
+                  <p className='text-slate-500'>Directly from our local dark stores.</p>
                 </div>
               </div>
-              
-              <div className='flex items-start gap-4 group hover:bg-gray-50 p-3 rounded-2xl transition-all cursor-pointer'>
-                <div className='w-12 h-12 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm'>
-                  <img src={image2} alt='prices' className='w-7 h-7 object-contain' />
+              <div className='flex items-center gap-5'>
+                <div className='w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center p-3'>
+                  <img src={image2} alt='best prices' className='object-contain' />
                 </div>
-                <div>
-                  <p className='font-black text-gray-800 text-base mb-1'>Best Prices</p>
-                  <p className='text-gray-600 text-sm leading-relaxed'>Unbeatable deals & discounts</p>
-                </div>
-              </div>
-              
-              <div className='flex items-start gap-4 group hover:bg-gray-50 p-3 rounded-2xl transition-all cursor-pointer'>
-                <div className='w-12 h-12 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm'>
-                  <img src={image3} alt='assortment' className='w-7 h-7 object-contain' />
-                </div>
-                <div>
-                  <p className='font-black text-gray-800 text-base mb-1'>Wide Selection</p>
-                  <p className='text-gray-600 text-sm leading-relaxed'>Everything you need in one place</p>
+                <div className='text-sm'>
+                  <div className='font-bold text-slate-800 text-base'>Best Prices & Offers</div>
+                  <p className='text-slate-500'>Unbeatable prices with student-focused discounts.</p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Mobile Specifications */}
-          <div className='lg:hidden bg-white rounded-3xl p-6 shadow-sm border border-gray-100'>
-            <h3 className='font-black text-xl text-gray-800 mb-5 flex items-center gap-2'>
-              <span className='w-1 h-6 bg-green-600 rounded-full'></span>
-              Product Details
-            </h3>
-            <div className='space-y-4'>
-              <div>
-                <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-2'>Description</p>
-                <p className='text-sm text-gray-600 leading-relaxed'>{data.description}</p>
-              </div>
-              <Divider />
-              <div>
-                <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-2'>Unit</p>
-                <p className='text-sm text-gray-600'>{data.unit}</p>
-              </div>
-              {data?.more_details && Object.keys(data?.more_details).map((element, index) => (
-                <div key={element + index} className='space-y-4'>
-                  <Divider />
-                  <div>
-                    <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-2'>{element}</p>
-                    <p className='text-sm text-gray-600'>{data?.more_details[element]}</p>
-                  </div>
+              <div className='flex items-center gap-5'>
+                <div className='w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center p-3'>
+                  <img src={image3} alt='assortment' className='object-contain' />
                 </div>
-              ))}
+                <div className='text-sm'>
+                  <div className='font-bold text-slate-800 text-base'>Wide Assortment</div>
+                  <p className='text-slate-500'>Everything from Maggi to gym supplements available.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* REVIEWS SECTION */}
-      <div className='container mx-auto px-4 mt-12'>
-        <div className='bg-white rounded-3xl p-6 lg:p-8 shadow-sm border border-gray-100'>
-          <ProductReviews productId={productId} />
-        </div>
+      {/* Reviews */}
+      <div className='mt-10 border-t pt-8'>
+        <ProductReviews productId={productId} />
       </div>
 
-      {/* ENHANCED SMART SUGGESTIONS */}
-      <div className='container mx-auto px-4 mt-12'>
+      {/* Smart Suggestions */}
+      <div className='mt-12 border-t pt-10'>
         <SmartSuggestions productId={productId} />
       </div>
     </section>
