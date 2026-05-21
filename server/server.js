@@ -13,6 +13,9 @@ import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
 import fs from 'fs';
 
+// --- DATABASE MODEL MAP REFERENCE EXPLICIT ACCESS ---
+import mongoose from 'mongoose';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -47,9 +50,9 @@ const latestPositions = new Map();
 
 // --- CORS (FIXED: Added Native Mobile Webview Origins) ---
 const allowedOrigins = [
-    "http://localhost:5173",                     // Local Vite React web client dev port
-    "http://localhost",                          // ─── CRITICAL: Capacitor Android app origin
-    "capacitor://localhost",                     // ─── CRITICAL: Capacitor iOS app origin
+    "http://localhost:5173",                     
+    "http://localhost",                          
+    "capacitor://localhost",                     
     "https://snapit-full-stack.onrender.com",
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com"
@@ -57,7 +60,6 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile tools, Postman, etc.) or if explicitly whitelisted
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
@@ -87,7 +89,7 @@ app.use(helmet({
                 "ws:", "wss:", "http://*", "https://*", 
                 "ws://*", "wss://*", 
                 "capacitor://*",
-                "http://localhost" // ─── CRITICAL: Allows Android local bundle engines
+                "http://localhost" 
             ] 
         },
     },
@@ -154,7 +156,53 @@ app.get("/health", (req, res) => {
     });
 });
 
-// --- API ROUTES ---
+// --- FIRST-TIME USER 15% COUPON VERIFICATION API ---
+app.post('/api/coupon/apply', async (req, res) => {
+    try {
+        const { couponCode, subtotal, userId } = req.body;
+
+        if (!couponCode || !subtotal || !userId) {
+            return res.status(400).json({ success: false, message: "Missing required compilation arguments." });
+        }
+
+        if (couponCode.toUpperCase() !== 'FIRST15') {
+            return res.status(400).json({ success: false, message: "Invalid or expired coupon configuration code." });
+        }
+
+        // Fetch dynamic reference pointing to your pre-registered order schema collection
+        const OrderModel = mongoose.model('order');
+
+        // Query structural records to evaluate order histories matching this user
+        const completedOrdersCount = await OrderModel.countDocuments({
+            userId: userId,
+            status: { $ne: 'Cancelled' }
+        });
+
+        if (completedOrdersCount > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "This introductory 15% discount is only applicable on your first purchase profile!" 
+            });
+        }
+
+        // Apply mathematical matrix discount deduction (15%)
+        const discountAmount = Math.round(Number(subtotal) * 0.15);
+        const finalTotal = Number(subtotal) - discountAmount;
+
+        return res.status(200).json({
+            success: true,
+            message: "Success! Flat 15% First Purchase coupon applied safely.",
+            discountAmount,
+            finalTotal
+        });
+
+    } catch (error) {
+        console.error("❌ Coupon Engine Error:", error.message);
+        return res.status(500).json({ success: false, message: "Internal server validation failure processing assets." });
+    }
+});
+
+// --- API ROUTES MAP ATTACHMENT ---
 app.use('/api/user', userRouter);
 app.use('/api/category', categoryRouter);
 app.use('/api/file', uploadRouter);
@@ -169,20 +217,7 @@ app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 app.use('/api/review', reviewRouter);
 
-console.log("✅ Registered API Routes:");
-console.log("   - /api/user");
-console.log("   - /api/category");
-console.log("   - /api/file");
-console.log("   - /api/subcategory");
-console.log("   - /api/product");
-console.log("   - /api/cart");
-console.log("   - /api/address");
-console.log("   - /api/order (includes /seller-orders)");
-console.log("   - /api/store");
-console.log("   - /api/wallet");
-console.log("   - /api/flash-sale");
-console.log("   - /api/referral");
-console.log("   - /api/review");
+console.log("✅ Registered API Routes (Including Dynamic First15 Coupon Validator)");
 
 // --- STATIC FILE SERVING ---
 const possiblePaths = [
