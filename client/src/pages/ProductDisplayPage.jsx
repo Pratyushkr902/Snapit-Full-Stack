@@ -4,7 +4,7 @@ import SummaryApi from '../common/SummaryApi'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { FaAngleRight, FaAngleLeft, FaChevronLeft, FaShareNodes } from "react-icons/fa6";
-import { FiSearch } from "react-fi";
+import { FiSearch } from "react-icons/fi"; // ✅ FIXED: Swapped to real react-icons dependency
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import Divider from '../components/Divider'
 import image1 from '../assets/minute_delivery.png'
@@ -214,7 +214,7 @@ const ProductDisplayPage = () => {
           {!isOpen ? (
             <div className='bg-slate-50 border-2 border-slate-200 border-dashed p-6 rounded-3xl my-6 flex flex-col items-center gap-1.5'>
               <span className='text-3xl'>🌙</span>
-              <p className='font-black text-slate-800 text-lg tracking-tight shadow-sm shadow-white'>Snapit is Resting</p>
+              <p className='font-black text-slate-880 text-lg tracking-tight shadow-sm shadow-white'>Snapit is Resting</p>
               <p className='text-slate-500 font-bold text-xs uppercase tracking-wide'>Ordering resumes at 7:00 AM</p>
             </div>
           ) : data.stock === 0 ? (
