@@ -8,6 +8,7 @@ import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import Divider from '../components/Divider'
 import image1 from '../assets/minute_delivery.png'
 import image2 from '../assets/Best_Prices_Offers.png'
+import image3 from '../assets/Wide_Assortment.png'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import AddToCartButton from '../components/AddToCartButton'
 import SmartSuggestions from '../components/SmartSuggestions'
@@ -28,7 +29,6 @@ const ProductDisplayPage = () => {
   const imageContainer = useRef()
   const [isOpen, setIsOpen] = useState(true)
 
-  // ✅ FIXED: Updated shop opening check rules to resume ordering precisely at 8 AM
   const checkShopStatus = () => {
     const now = new Date()
     const hours = now.getHours()
@@ -186,7 +186,6 @@ const ProductDisplayPage = () => {
           {productId && <WishlistButton productId={productId} />}
 
           {!isOpen ? (
-            // ✅ FIXED: Added dynamic resting message string block
             <div className='bg-indigo-50/60 border-2 border-indigo-100 border-dashed p-6 rounded-3xl text-center animate-pulse'>
               <p className='font-black text-slate-800 text-base'>🌙 Snapit is resting</p>
               <p className='text-xs text-indigo-600 font-bold mt-1 uppercase tracking-wider'>Ordering resumes at 8:00 AM</p>
@@ -201,7 +200,7 @@ const ProductDisplayPage = () => {
             </div>
           )}
 
-          {/* ✅ FIXED: Renamed heading to "Why shop from Snapit?" and removed wide assortment badge entirely */}
+          {/* Why Shop from Snapit */}
           <div className='bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-4'>
             <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider px-1'>
               Why shop from Snapit?
@@ -226,16 +225,25 @@ const ProductDisplayPage = () => {
                 <p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p>
               </div>
             </div>
+
+            <div className='flex items-center gap-4 group cursor-pointer'>
+              <div className='w-11 h-11 bg-purple-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'>
+                <img src={image3} alt='assortment' className='object-contain' />
+              </div>
+              <div>
+                <p className='font-extrabold text-slate-800 text-sm'>Wide Assortment</p>
+                <p className='text-xs text-gray-400 font-medium'>Everything from Maggi to gym supplements available.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Ratings and Reviews section positioned immediately under content info */}
+      {/* Ratings and Reviews */}
       <div className='container mx-auto px-4 mt-4 border-t border-gray-100/70 pt-4'>
         <ProductReviews productId={productId} />
       </div>
 
-      {/* Suggestions carousel section locked to the absolute bottom layout layer */}
       <SmartSuggestions productId={productId} />
 
     </section>

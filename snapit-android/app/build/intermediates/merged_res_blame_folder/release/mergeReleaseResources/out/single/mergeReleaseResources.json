@@ -52,6 +52,10 @@
         "source": "com.snapit.grocery.app-main-28:/drawable-port-night-mdpi/splash.png"
     },
     {
+        "merged": "com.snapit.grocery.app-release-27:/drawable_ic_notification_icon.xml.flat",
+        "source": "com.snapit.grocery.app-main-28:/drawable/ic_notification_icon.xml"
+    },
+    {
         "merged": "com.snapit.grocery.app-release-27:/mipmap-xhdpi_ic_launcher_round.png.flat",
         "source": "com.snapit.grocery.app-main-28:/mipmap-xhdpi/ic_launcher_round.png"
     },
@@ -106,10 +110,6 @@
     {
         "merged": "com.snapit.grocery.app-release-27:/mipmap-mdpi_ic_launcher_round.png.flat",
         "source": "com.snapit.grocery.app-main-28:/mipmap-mdpi/ic_launcher_round.png"
-    },
-    {
-        "merged": "com.snapit.grocery.app-release-27:/drawable-anydpi_shortcut_legacy_background.xml.flat",
-        "source": "com.snapit.grocery.app-main-28:/drawable-anydpi/shortcut_legacy_background.xml"
     },
     {
         "merged": "com.snapit.grocery.app-release-27:/drawable-port-xxhdpi_splash.png.flat",

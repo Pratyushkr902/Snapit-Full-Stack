@@ -37,6 +37,7 @@
     <color name="button_material_light">#ffd6d7d7</color>
     <color name="call_notification_answer_color">#1d873b</color>
     <color name="call_notification_decline_color">#d93025</color>
+    <color name="colorAccent">#4CAF50</color>
     <color name="colorPrimary">#16A34A</color>
     <color name="colorPrimaryDark">#000000</color>
     <color name="common_google_signin_btn_text_dark_default">@android:color/white</color>
@@ -90,7 +91,6 @@
     <color name="secondary_text_default_material_light">#8a000000</color>
     <color name="secondary_text_disabled_material_dark">#36ffffff</color>
     <color name="secondary_text_disabled_material_light">#24000000</color>
-    <color name="shortcut_background">#F5F5F5</color>
     <color name="switch_thumb_disabled_material_dark">#ff616161</color>
     <color name="switch_thumb_disabled_material_light">#ffbdbdbd</color>
     <color name="switch_thumb_normal_material_dark">#ffbdbdbd</color>
@@ -326,6 +326,7 @@
     <string name="androidx_startup" translatable="false">androidx.startup</string>
     <string name="appName" translatable="false">Snapit</string>
     <string name="app_name">Snapit</string>
+    <string name="assetStatements">[]</string>
     <string name="call_notification_answer_action">Answer</string>
     <string name="call_notification_answer_video_action">Video</string>
     <string name="call_notification_decline_action">Decline</string>
@@ -352,7 +353,6 @@
     <string name="common_signin_button_text">Sign in</string>
     <string name="common_signin_button_text_long">Sign in with Google</string>
     <string name="copy_toast_msg">Link copied to clipboard</string>
-    <string name="custom_url_scheme">com.pratyush.snapit</string>
     <string name="fallbackType" translatable="false">customtabs</string>
     <string name="fallback_menu_item_copy_link">Copy link</string>
     <string name="fallback_menu_item_open_in_browser">Open in browser</string>
@@ -366,11 +366,9 @@
     <string name="manage_space_not_supported_toast">This app\'s data is stored in %1$s.</string>
     <string name="no_provider_toast">Please install Chrome Stable 72 or later.</string>
     <string name="orientation" translatable="false">default</string>
-    <string name="package_name">com.pratyush.snapit</string>
     <string name="providerAuthority" translatable="false">com.snapit.grocery.fileprovider</string>
     <string name="search_menu_title">Search</string>
     <string name="status_bar_notification_info_overflow">999+</string>
-    <string name="title_activity_main">Snapit</string>
     <string name="update_chrome_toast">Please update to Chrome Stable 72 or later.</string>
     <string name="webManifestUrl" translatable="false">https://snapit-full-stack-0.onrender.com/manifest.json</string>
     <style name="AlertDialog.AppCompat" parent="Base.AlertDialog.AppCompat"/>
@@ -378,19 +376,10 @@
     <style name="Animation.AppCompat.Dialog" parent="Base.Animation.AppCompat.Dialog"/>
     <style name="Animation.AppCompat.DropDownUp" parent="Base.Animation.AppCompat.DropDownUp"/>
     <style name="Animation.AppCompat.Tooltip" parent="Base.Animation.AppCompat.Tooltip"/>
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
-    </style>
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
-    </style>
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
     </style>
     <style name="Base.AlertDialog.AppCompat" parent="android:Widget">
         <item name="android:layout">@layout/abc_alert_dialog_material</item>
@@ -1792,6 +1781,10 @@
     <style name="Theme.AppCompat.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+    </style>
+    <style name="Theme.SplashScreen" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:windowFullscreen">true</item>
     </style>
     <style name="ThemeOverlay.AppCompat" parent="Base.ThemeOverlay.AppCompat"/>
     <style name="ThemeOverlay.AppCompat.ActionBar" parent="Base.ThemeOverlay.AppCompat.ActionBar"/>

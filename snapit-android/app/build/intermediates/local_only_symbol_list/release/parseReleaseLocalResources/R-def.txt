@@ -3,6 +3,7 @@ local
 bool enableNotification
 bool enableSiteSettingsShortcut
 color backgroundColor
+color colorAccent
 color colorPrimary
 color colorPrimaryDark
 color ic_launcher_background
@@ -10,10 +11,9 @@ color navigationColor
 color navigationColorDark
 color navigationDividerColor
 color navigationDividerColorDark
-color shortcut_background
 drawable ic_launcher_background
 drawable ic_launcher_foreground
-drawable shortcut_legacy_background
+drawable ic_notification_icon
 drawable splash
 integer splashScreenFadeOutDuration
 layout activity_main
@@ -23,7 +23,7 @@ mipmap ic_launcher_foreground
 mipmap ic_launcher_round
 string appName
 string app_name
-string custom_url_scheme
+string assetStatements
 string fallbackType
 string fullScopeUrl
 string generatorApp
@@ -31,13 +31,10 @@ string hostName
 string launchUrl
 string launcherName
 string orientation
-string package_name
 string providerAuthority
-string title_activity_main
 string webManifestUrl
 style AppTheme
-style AppTheme.NoActionBar
-style AppTheme.NoActionBarLaunch
+style Theme.SplashScreen
 xml config
 xml file_paths
 xml filepaths

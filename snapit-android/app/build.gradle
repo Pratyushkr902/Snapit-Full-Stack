@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -53,6 +53,7 @@ def twaManifest = [
 android {
     compileSdkVersion 36
     namespace "com.snapit.grocery"
+    
     defaultConfig {
         applicationId "com.snapit.grocery"
         minSdkVersion 21
@@ -70,66 +71,32 @@ android {
         def launchUrl = "https://" + twaManifest.hostName + twaManifest.launchUrl
         resValue "string", "launchUrl", launchUrl
 
-        
+        // The URL the Web Manifest for the Progressive Web App that the TWA points to.
+        resValue "string", "webManifestUrl", 'https://snapit-full-stack-0.onrender.com/manifest.json'
 
-        
-            // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
-            // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
-            // the TWA, as it will probably give a better user experience for non-mobile devices.
-            resValue "string", "webManifestUrl", 'https://snapit-full-stack-0.onrender.com/manifest.json'
-        
+        // This is used by Meta Quest.
+        resValue "string", "fullScopeUrl", 'https://snapit-full-stack-0.onrender.com/'
 
-        
-            // This is used by Meta Quest.
-            resValue "string", "fullScopeUrl", 'https://snapit-full-stack-0.onrender.com/'
-        
-
-        
-
-        // The hostname is used when building the intent-filter, so the TWA is able to
-        // handle Intents to open host url of the application.
+        // The hostname is used when building the intent-filter
         resValue "string", "hostName", twaManifest.hostName
 
-        // This attribute sets the status bar color for the TWA. It can be either set here or in
-        // `res/values/colors.xml`. Setting in both places is an error and the app will not
-        // compile. If not set, the status bar color defaults to #FFFFFF - white.
+        // Status bar configuration setups
         resValue "color", "colorPrimary", twaManifest.themeColor
-
-        // This attribute sets the dark status bar color for the TWA. It can be either set here or in
-        // `res/values/colors.xml`. Setting in both places is an error and the app will not
-        // compile. If not set, the status bar color defaults to #000000 - white.
         resValue "color", "colorPrimaryDark", twaManifest.themeColorDark
 
-        // This attribute sets the navigation bar color for the TWA. It can be either set here or
-        // in `res/values/colors.xml`. Setting in both places is an error and the app will not
-        // compile. If not set, the navigation bar color defaults to #FFFFFF - white.
+        // Navigation bar property maps
         resValue "color", "navigationColor", twaManifest.navigationColor
-
-        // This attribute sets the dark navigation bar color for the TWA. It can be either set here
-        // or in `res/values/colors.xml`. Setting in both places is an error and the app will not
-        // compile. If not set, the navigation bar color defaults to #000000 - black.
         resValue "color", "navigationColorDark", twaManifest.navigationColorDark
-
-        // This attribute sets the navbar divider color for the TWA. It can be either 
-        // set here or in `res/values/colors.xml`. Setting in both places is an error and the app 
-        // will not compile. If not set, the divider color defaults to #00000000 - transparent.
         resValue "color", "navigationDividerColor", twaManifest.navigationDividerColor
-
-        // This attribute sets the dark navbar divider color for the TWA. It can be either 
-        // set here or in `res/values/colors.xml`. Setting in both places is an error and the 
-        //app will not compile. If not set, the divider color defaults to #000000 - black.
         resValue "color", "navigationDividerColorDark", twaManifest.navigationDividerColorDark
 
-        // Sets the color for the background used for the splash screen when launching the
-        // Trusted Web Activity.
+        // Sets the color for the background used for the splash screen
         resValue "color", "backgroundColor", twaManifest.backgroundColor
 
         // Defines a provider authority for the Splash Screen
         resValue "string", "providerAuthority", twaManifest.applicationId + '.fileprovider'
 
-        // The enableNotification resource is used to enable or disable the
-        // TrustedWebActivityService, by changing the android:enabled and android:exported
-        // attributes
+        // Notification routing flags
         resValue "bool", "enableNotification", twaManifest.enableNotifications.toString()
 
         twaManifest.shortcuts.eachWithIndex { shortcut, index ->
@@ -137,28 +104,40 @@ android {
             resValue "string", "shortcut_short_name_$index", "$shortcut.short_name"
         }
 
-        // The splashScreenFadeOutDuration resource is used to set the duration of fade out animation in milliseconds
-        // to be played when removing splash screen. The default is 0 (no animation).
+        // The duration of fade out animation in milliseconds
         resValue "integer", "splashScreenFadeOutDuration", twaManifest.splashScreenFadeOutDuration.toString()
 
         resValue "string", "generatorApp", twaManifest.generatorApp
-
         resValue "string", "fallbackType", twaManifest.fallbackType
-
         resValue "bool", "enableSiteSettingsShortcut", twaManifest.enableSiteSettingsShortcut
         resValue "string", "orientation", twaManifest.orientation
-
-        
     }
+
+    //  KEYSTORE SIGNING MATRIX RULES MOUNTING
+    signingConfigs {
+        release {
+            storeFile file('/Users/pratyushkumar/Documents/snapit/snapit.keystore')
+            storePassword 'Pratyush@123' // 👈 Swap with your keystore password
+            keyAlias 'snapit'
+            keyPassword 'Pratyush@123'  // 👈 Swap with your keystore password
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            //  LINK SIGNING SCHEMES
+            signingConfig signingConfigs.release
         }
     }
+
+    //  OPTIMIZED COMPILER LANGUAGE STRATEGIES
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
+    
     lintOptions {
         checkReleaseBuilds false
     }
@@ -202,14 +181,13 @@ task generateShorcutsFile {
 preBuild.dependsOn(generateShorcutsFile)
 
 repositories {
-    
+    google()
+    mavenCentral()
 }
 
 dependencies {
+    implementation "androidx.appcompat:appcompat:1.6.1"
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    
-        implementation 'com.google.androidbrowserhelper:locationdelegation:1.1.2'
-    
-        implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
-    
+    implementation 'com.google.androidbrowserhelper:locationdelegation:1.1.2'
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
 }
