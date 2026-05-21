@@ -27,7 +27,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                if (response.status === 200) {
+                // ✅ FIX: Only attempt to clone and cache authentic successful responses.
+                // This prevents 400, 404, or 500 server errors from breaking the cache stream reader.
+                if (response && response.status === 200) {
                     const url = new URL(event.request.url)
                     const isCacheable = url.origin === self.location.origin
                         || event.request.destination === 'image'
@@ -47,7 +49,7 @@ self.addEventListener('fetch', (event) => {
                     if (event.request.mode === 'navigate') {
                         return caches.match('/index.html')
                     }
-                    // ✅ Fix: always return a valid Response, never undefined
+                    // ✅ Always return a valid response layout fallback when offline
                     return new Response('', {
                         status: 408,
                         statusText: 'Offline'

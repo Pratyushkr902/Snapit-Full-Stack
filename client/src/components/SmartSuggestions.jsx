@@ -1,3 +1,4 @@
+// SmartSuggestions.jsx - Enhanced Version
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
@@ -17,7 +18,12 @@ const SmartSuggestions = ({ productId }) => {
       setLoading(true)
       const response = await Axios({
         ...SummaryApi.getFrequentlyBought,
-        data: { productId, limit: 10 }
+        // ✅ FIXED: Sending both possible object key names to satisfy your backend route requirements
+        data: { 
+          productId: productId,
+          id: productId, 
+          limit: 10 
+        }
       })
       if (response.data.success) {
         setSuggestions(response.data.data)
@@ -34,7 +40,7 @@ const SmartSuggestions = ({ productId }) => {
   }, [productId])
 
   const handleProductClick = (product) => {
-    const productUrl = `/product/${valideURLConvert(product.name)}-${product._id}`
+    const productUrl = `/product/${valideURLConvert(product.name || "")}-${product._id}`
     navigate(productUrl)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -62,11 +68,14 @@ const SmartSuggestions = ({ productId }) => {
               className='min-w-[150px] w-[150px] bg-white rounded-2xl flex flex-col snap-start cursor-pointer relative'
             >
               {/* Product Image Frame */}
-              <div className='bg-gray-50 rounded-2xl aspect-square w-full flex items-center justify-center relative overflow-hidden p-3 border border-gray-100/60 shadow-sm'>
+              <div className='w-full aspect-square bg-gray-50 rounded-2xl flex items-center justify-center relative overflow-hidden p-3 border border-gray-100/60 shadow-sm'>
                 <img
                   src={product.image?.[0]?.replace('http://', 'https://')}
                   alt={product.name}
                   className='w-full h-full object-contain'
+                  onError={(e) => {
+                    e.target.src = 'https://placehold.co/150?text=Product'
+                  }}
                 />
                 
                 {/* Floating Heart Favourite Icon */}
@@ -92,11 +101,11 @@ const SmartSuggestions = ({ productId }) => {
               {/* Pricing Blocks Row */}
               <div className='mt-2.5 px-1 flex items-center gap-1.5'>
                 <span className='bg-green-700 text-white font-black text-[10px] px-1.5 py-0.5 rounded'>
-                  ₹{finalPrice}
+                  {DisplayPriceInRupees(finalPrice)}
                 </span>
                 {product.discount > 0 && (
                   <span className='text-gray-400 line-through text-[10px] font-bold'>
-                    ₹{product.price}
+                    {DisplayPriceInRupees(product.price)}
                   </span>
                 )}
               </div>
@@ -104,7 +113,7 @@ const SmartSuggestions = ({ productId }) => {
               {/* Dynamic Saving Tag Accent */}
               {product.discount > 0 && (
                 <p className='text-green-600 font-extrabold text-[10px] px-1 uppercase tracking-wide mt-0.5'>
-                  ₹{product.price - finalPrice} OFF
+                  {DisplayPriceInRupees(product.price - finalPrice)} OFF
                 </p>
               )}
 

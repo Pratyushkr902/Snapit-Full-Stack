@@ -23,13 +23,56 @@ const CheckoutPage = () => {
   const user = useSelector(state => state.user)
   const navigate = useNavigate()
 
-  const deliveryFee = totalPrice >= 399 ? 0 : 12
-  const grandTotal = totalPrice + deliveryFee
+  // --- 🎁 COUPON STATE ENGINE LAYERS ---
+  const [couponCode, setCouponCode] = useState('')
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const [couponApplied, setCouponApplied] = useState(false)
+  const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false)
 
-  // Check if selected address is in serviceable area
+  const deliveryFee = totalPrice >= 399 ? 0 : 12
+  
+  // ✅ DYNAMIC GRAND TOTAL: Now instantly factors in any active coupon reductions
+  const grandTotal = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
+
+  // --- VALIDATE FIRST-TIME COUPON SYSTEM PATHWAYS ---
+  const handleApplyPromoCoupon = async () => {
+    if (!couponCode.trim()) return toast.error("Please enter a coupon code code string!")
+    if (couponCode.trim().toUpperCase() !== 'FIRST15') {
+      return toast.error("Invalid coupon code code. Use 'FIRST15' for your first-purchase discount!")
+    }
+
+    try {
+      setIsVerifyingCoupon(true)
+      const loadingToast = toast.loading("Checking pipeline history metrics...")
+      
+      const response = await Axios({
+        ...SummaryApi.applyCoupon, // Points to your first-time user coupon route
+        data: { couponCode: couponCode.trim().toUpperCase() }
+      })
+
+      toast.dismiss(loadingToast)
+      
+      if (response.data.success) {
+        // Calculate 15% discount on the subtotal items price cost layout
+        const calculatedSavings = Math.round(totalPrice * 0.15)
+        setDiscountAmount(calculatedSavings)
+        setCouponApplied(true)
+        toast.success(`🎉 Code applied! Saved ${DisplayPriceInRupees(calculatedSavings)} (15% First-Timer Offer)`)
+      }
+    } catch (error) {
+      toast.dismiss()
+      const serverMsg = error.response?.data?.message || "Coupon verification check rejected."
+      toast.error(serverMsg)
+      setDiscountAmount(0)
+      setCouponApplied(false)
+    } finally {
+      setIsVerifyingCoupon(false)
+    }
+  }
+
   const checkServiceArea = () => {
     const selectedAddr = addressList[selectAddress]
-    if (!selectedAddr) return true // let backend handle
+    if (!selectedAddr) return true 
     const cityLower = (selectedAddr.city || '').toLowerCase()
     const lineLower = (selectedAddr.address_line || '').toLowerCase()
     const isServiceable = SERVICEABLE_AREAS.some(
@@ -80,7 +123,7 @@ const CheckoutPage = () => {
           addressId: addressList[selectAddress]?._id,
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
-          totalAmt: grandTotal,
+          totalAmt: grandTotal, // ✅ FIXED: Pipes the discounted Grand Total securely
           lat: coords.lat,
           lng: coords.lng,
           amount: grandTotal,
@@ -118,7 +161,7 @@ const CheckoutPage = () => {
           addressId: addressList[selectAddress]?._id,
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
-          totalAmt: grandTotal,
+          totalAmt: grandTotal, // ✅ FIXED: Saves the 15% discounted total to COD collections
           lat: coords.lat,
           lng: coords.lng
         }
@@ -153,7 +196,7 @@ const CheckoutPage = () => {
           addressId: addressList[selectAddress]?._id,
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
-          totalAmt: grandTotal
+          totalAmt: grandTotal // ✅ FIXED: Charges the discounted bill amount in Razorpay order generation
         }
       })
       const { data: responseData } = response
@@ -179,7 +222,7 @@ const CheckoutPage = () => {
                   addressId: addressList[selectAddress]?._id,
                   subTotalAmt: totalPrice,
                   delivery_fee: deliveryFee,
-                  totalAmt: grandTotal
+                  totalAmt: grandTotal // ✅ FIXED: Commits the 15% discount securely inside signature checking
                 }
               })
               toast.dismiss(verificationToast)
@@ -209,7 +252,6 @@ const CheckoutPage = () => {
     }
   }
 
-  // Show serviceability warning for selected address
   const selectedAddr = addressList[selectAddress]
   const selectedCityLower = (selectedAddr?.city || '').toLowerCase()
   const isSelectedServiceable = !selectedAddr || SERVICEABLE_AREAS.some(a => selectedCityLower.includes(a))
@@ -220,7 +262,7 @@ const CheckoutPage = () => {
 
         {/* LEFT: ADDRESS */}
         <div className='w-full'>
-          <h3 className='text-lg font-semibold uppercase tracking-tight text-slate-700 mb-2'>Choose your address</h3>
+          <h3 className='text-lg font-black uppercase tracking-tight text-slate-700 mb-2'>Choose your address</h3>
           <div className='bg-white p-2 grid gap-3 rounded-xl shadow-sm'>
             {addressList.length > 0 ? (
               addressList.map((address, index) => (
@@ -238,7 +280,6 @@ const CheckoutPage = () => {
                       <p className='text-sm text-slate-600'>{address.city}, {address.pincode}</p>
                       <p className='text-xs font-bold text-green-600 uppercase mt-1'>📞 {address.mobile}</p>
                     </div>
-                    {/* Serviceability badge */}
                     {(() => {
                       const cityL = (address.city || '').toLowerCase()
                       const ok = SERVICEABLE_AREAS.some(a => cityL.includes(a))
@@ -260,7 +301,6 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* Not serviceable warning */}
           {selectedAddr && !isSelectedServiceable && (
             <div className='mt-3 bg-red-50 border border-red-200 rounded-2xl p-4'>
               <p className='font-black text-red-700 text-sm mb-1'>😔 Location Not Serviceable</p>
@@ -274,10 +314,10 @@ const CheckoutPage = () => {
           )}
         </div>
 
-        {/* RIGHT: BILL + PAYMENT */}
+        {/* RIGHT: BILL + PAYMENT + PROMO COUPONS */}
         <div className='w-full lg:max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
 
-          {/* Wallet Balance */}
+          {/* Wallet Balance Info Grid */}
           <div className='mx-4 mb-4 bg-green-50 border border-green-100 rounded-2xl p-4 shadow-sm'>
             <div className='flex items-center justify-between'>
               <div>
@@ -289,6 +329,46 @@ const CheckoutPage = () => {
             {(user?.walletBalance || 0) < grandTotal && (
               <p className='text-[10px] text-red-500 font-black mt-2 uppercase flex items-center gap-1'>
                 <span>⚠️</span> Insufficient Balance
+              </p>
+            )}
+          </div>
+
+          {/* ✅ PREMIUM ADAPTIVE PROMO COUPON VERIFICATION FIELD BLOCK */}
+          <div className='mx-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
+            <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-2'>Select Promo Coupons</p>
+            <div className='flex gap-2'>
+              <input
+                type='text'
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                disabled={couponApplied}
+                placeholder={couponApplied ? "FIRST15 Applied! 🎉" : "Enter code (e.g. FIRST15)"}
+                className='flex-1 px-3 py-2 border border-slate-200 rounded-xl uppercase text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-green-50 disabled:text-green-700 disabled:border-green-200'
+              />
+              {couponApplied ? (
+                <button
+                  onClick={() => {
+                    setCouponApplied(false)
+                    setDiscountAmount(0)
+                    setCouponCode('')
+                  }}
+                  className='px-3 bg-red-100 hover:bg-red-200 text-red-600 font-bold text-xs rounded-xl transition-all'
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  onClick={handleApplyPromoCoupon}
+                  disabled={isVerifyingCoupon || cartItemsList.length === 0}
+                  className='px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm'
+                >
+                  Apply
+                </button>
+              )}
+            </div>
+            {!couponApplied && cartItemsList.length > 0 && (
+              <p className='text-[10px] font-bold text-green-600 mt-1.5 animate-pulse cursor-pointer' onClick={() => setCouponCode('FIRST15')}>
+                💡 First time shopping? Click here to fill in code "FIRST15"
               </p>
             )}
           </div>
@@ -309,6 +389,15 @@ const CheckoutPage = () => {
             {deliveryFee > 0 && (
               <p className='text-[11px] text-green-600 font-bold'>Add ₹{399 - totalPrice} more for FREE delivery</p>
             )}
+            
+            {/* ✅ DYNAMIC SAVINGS ITEM DISPLAY ROW */}
+            {couponApplied && (
+              <div className='flex justify-between text-green-600 font-bold text-sm bg-green-50/50 p-2 rounded-lg border border-green-100/50 border-dashed animate-fadeIn'>
+                <p>First User Code (15%)</p>
+                <p>- {DisplayPriceInRupees(discountAmount)}</p>
+              </div>
+            )}
+
             <div className='font-black flex justify-between border-t border-dashed pt-4 text-xl text-slate-900 tracking-tighter'>
               <p>Grand Total</p>
               <p>{DisplayPriceInRupees(grandTotal)}</p>

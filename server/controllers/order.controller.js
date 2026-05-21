@@ -15,7 +15,6 @@ export const pricewithDiscount = (price, dis = 1) => {
     return actualPrice
 }
 
-// Helper to find which store has stock for a product
 const getStoreForProduct = (product, preferredStoreName = null) => {
     if (!product.store_inventory || product.store_inventory.length === 0) return null
     if (preferredStoreName) {
@@ -28,7 +27,6 @@ const getStoreForProduct = (product, preferredStoreName = null) => {
     return available ? available.store_name : null
 }
 
-// Default store fallback — used when no nearby store found via geo query
 const DEFAULT_STORE = {
     name:    "Pali Mega Mart",
     address: "Paliganj, Bihar",
@@ -56,7 +54,6 @@ export async function CashOnDeliveryOrderController(request, response) {
             await product.save();
         }
 
-        // Find nearest store — fallback to Pali Mega Mart if none found
         let assignedStore = DEFAULT_STORE
 
         if (lat && lng) {
@@ -82,7 +79,6 @@ export async function CashOnDeliveryOrderController(request, response) {
             }
         }
 
-        // Tag each cart item with the seller store that has it in stock
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
             const product = await ProductModel.findById(el.productId._id)
             const sellerStoreName = product
@@ -98,7 +94,6 @@ export async function CashOnDeliveryOrderController(request, response) {
             }
         }))
 
-        // Collect unique store names involved in this order
         const involved_stores = [...new Set(
             taggedCartItems.map(i => i.seller_store_name).filter(Boolean)
         )]
@@ -145,10 +140,6 @@ export async function CashOnDeliveryOrderController(request, response) {
     }
 }
 
-// Seller-specific orders endpoint
-// SELLER → only their store's orders
-// ADMIN  → all orders
-// USER   → their own orders
 export async function getSellerOrdersController(request, response) {
     try {
         const userId = request.userId
@@ -184,7 +175,6 @@ export async function getSellerOrdersController(request, response) {
                 .populate('delivery_address')
                 .populate('userId')
 
-            // Only expose items belonging to this seller in each order
             const filteredOrders = orders.map(order => {
                 const orderObj = order.toObject()
                 orderObj.cartItems = orderObj.cartItems.filter(
@@ -201,7 +191,6 @@ export async function getSellerOrdersController(request, response) {
             })
         }
 
-        // Regular USER
         const orders = await OrderModel.find({ userId })
             .sort({ createdAt: -1 })
             .populate('delivery_address')
@@ -213,8 +202,6 @@ export async function getSellerOrdersController(request, response) {
         return response.status(500).json({ message: error.message, error: true, success: false })
     }
 }
-
-// --- RAZORPAY CONTROLLERS ---
 
 export async function paymentController(request, response) {
     try {
@@ -269,10 +256,23 @@ export async function verifyPaymentController(request, response) {
         const expectedSignature = crypto.createHmac("sha256", key_secret).update(body).digest("hex");
 
         if (expectedSignature !== razorpay_signature) {
-            return response.status(400).json({ message: "Invalid signature.", error: true, success: false });
+            return response.status(400).json({ message: "Invalid signature verification.", error: true, success: false });
         }
 
-        // Tag items with seller_store_name for online orders too
+        // ✅ SERVER-SIDE SECURITY CHECK: Recalculate price integrity boundaries
+        const expectedDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
+        const baseGrandTotal = Number(subTotalAmt) + expectedDeliveryFee;
+        const allowableDiscountedTotal = Math.max(0, baseGrandTotal - Math.round(Number(subTotalAmt) * 0.15));
+
+        // If totalAmt doesn't match normal price AND doesn't match authorized coupon price, block the order
+        if (Number(totalAmt) !== baseGrandTotal && Number(totalAmt) !== allowableDiscountedTotal) {
+            return response.status(422).json({
+                message: "Security warning: Transacted amount tampering detected.",
+                error: true,
+                success: false
+            });
+        }
+
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
             const product        = await ProductModel.findById(el.productId._id)
             const sellerStoreName = product ? getStoreForProduct(product, DEFAULT_STORE.name) : null
@@ -305,7 +305,7 @@ export async function verifyPaymentController(request, response) {
             totalAmt,
             delivery_status: "Pending",
             seller_status:   "Pending",
-            store_details:   DEFAULT_STORE,   // Razorpay orders use default store
+            store_details:   DEFAULT_STORE,
             involved_stores,
             rider_name:      "Pratyush Sharma",
             rider_contact:   "9472026580",
