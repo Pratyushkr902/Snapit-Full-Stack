@@ -18,7 +18,6 @@ const CategoryPage = () => {
   const [openConfimBoxDelete, setOpenConfirmBoxDelete] = useState(false)
   const [deleteCategory, setDeleteCategory] = useState({ _id: "" })
 
-  // Your backend deployment URL to resolve relative asset paths on mobile
   const BACKEND_URL = "https://snapit-full-stack-2.onrender.com"
 
   const fetchCategory = async () => {
@@ -57,8 +56,6 @@ const CategoryPage = () => {
 
   return (
     <section className='min-h-screen bg-slate-50'>
-
-      {/* Page header with count badge */}
       <div className='bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10'>
         <div className='flex items-center gap-2'>
           <h2 className='font-semibold text-slate-800'>Categories</h2>
@@ -76,7 +73,6 @@ const CategoryPage = () => {
         </button>
       </div>
 
-      {/* Loading skeletons */}
       {loading && (
         <div className='p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3'>
           {new Array(12).fill(null).map((_, i) => (
@@ -93,7 +89,6 @@ const CategoryPage = () => {
 
       {!categoryData[0] && !loading && <NoData />}
 
-      {/* Fluid Card Grid Layout */}
       {!loading && (
         <div className='p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3'>
           {categoryData.map((category) => (
@@ -101,17 +96,19 @@ const CategoryPage = () => {
               key={category._id}
               className='bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 hover:shadow-md transition-shadow'
             >
-              {/* ─── CHANGE 5: Fixed Relative URL Check ─────────────────────── */}
               <div className='w-full aspect-square bg-slate-50 flex items-center justify-center p-3'>
                 <img
                   alt={category.name}
                   src={
-                    category.image && category.image.startsWith('http') 
-                      ? category.image 
-                      : `${BACKEND_URL}${category.image}`
+                    category?.image && typeof category.image === 'string' && category.image.startsWith('http') 
+                      ? category.image.replace('http://', 'https://') 
+                      : `${BACKEND_URL}${category?.image || ''}`
                   }
                   className='w-full h-full object-contain'
                   loading="lazy"
+                  onError={(e) => {
+                    e.target.src = "https://placehold.co/150?text=Snapit";
+                  }}
                 />
               </div>
               <div className='px-2 py-1.5'>
@@ -153,4 +150,4 @@ const CategoryPage = () => {
   )
 }
 
-export default CategoryPage
+export default CategoryPage;

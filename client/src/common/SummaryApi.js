@@ -161,7 +161,6 @@ const SummaryApi = {
         url : '/api/order/order-list',
         method : 'get'
     },
-    // FIX: New endpoint — sellers only see their own store's orders
     getSellerOrders: {
         url: '/api/order/seller-orders',
         method: 'get'
@@ -246,6 +245,11 @@ const SummaryApi = {
         url: '/api/review/wishlist/get',
         method: 'get'
     },
+    // CORRECTION ADDITION: Safe endpoint structural layout injection
+    applyFirstTimeCoupon: {
+        url: '/api/coupon/apply',
+        method: 'post'
+    }
 }
 
 export default SummaryApi;

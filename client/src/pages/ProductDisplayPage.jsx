@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import SummaryApi from '../common/SummaryApi'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
-import { FaAngleRight, FaAngleLeft } from "react-icons/fa6";
+import { FaAngleRight, FaAngleLeft, FaChevronLeft, FaShareNodes } from "react-icons/fa6";
+import { FiSearch } from "react-fi";
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import Divider from '../components/Divider'
 import image1 from '../assets/minute_delivery.png'
@@ -14,9 +15,13 @@ import AddToCartButton from '../components/AddToCartButton'
 import SmartSuggestions from '../components/SmartSuggestions'
 import WishlistButton from '../components/WishlistButton'
 import ProductReviews from '../components/ProductReviews'
+import toast from 'react-hot-toast'
 
 const ProductDisplayPage = () => {
   const params = useParams()
+  const navigate = useNavigate()
+  
+  // Dynamic regex parse to grab the true MongoDB 24-char Hex Object ID string safely
   let productId = params?.product?.split("-")?.slice(-1)[0]
 
   const [data, setData] = useState({ name: "", image: [], stock: 0 })
@@ -53,18 +58,64 @@ const ProductDisplayPage = () => {
     checkShopStatus()
     const timer = setInterval(checkShopStatus, 60000)
     return () => clearInterval(timer)
-  }, [params])
+  }, [params, productId]) // Added exact productId watch dependencies
 
   const handleScrollRight = () => { imageContainer.current.scrollLeft += 100 }
   const handleScrollLeft = () => { imageContainer.current.scrollLeft -= 100 }
 
-  return (
-    <section className='container mx-auto p-4'>
-      <div className='grid lg:grid-cols-2'>
+  // --- NATIVE SYSTEM SHARE SHEET DETECTOR FUNCTION ---
+  const handleShareProductSystem = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Buy ${data.name || 'this item'} on Snapit!`,
+          text: `Check out this amazing deal for ${data.name} on Snapit App.`,
+          url: window.location.href,
+        })
+      } else {
+        // Safe clipboard copy fallback bridge for web layouts context matching
+        await navigator.clipboard.writeText(window.location.href)
+        toast.success('Product link copied to clipboard! 📋')
+      }
+    } catch (err) {
+      console.log("System native share sheet cancelled or blocked.");
+    }
+  }
 
+  return (
+    // Added explicit unique key attribute mapping to force component re-renders when swapping recommendation items!
+    <section key={productId} className='w-full bg-white pb-20 lg:pb-10 animate-fadeIn'>
+      
+      {/* PREMIUM STICKY APPBAR ACTION NAVIGATION HEADER STRIP BAR */}
+      <div className='sticky top-0 z-40 w-full bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between gap-3 shadow-sm shadow-slate-100/30'>
+        <button 
+          onClick={() => navigate(-1)} 
+          className='p-2.5 hover:bg-slate-50 active:scale-95 transition-all rounded-xl text-slate-800 flex items-center justify-center border border-slate-100'
+        >
+          <FaChevronLeft size={18} strokeWidth={2} />
+        </button>
+
+        {/* INLINE CORE SEARCH BRIDGE ROUTING CLICKS TO MAIN SEARCH SECTOR */}
+        <div 
+          onClick={() => navigate('/')} 
+          className='flex-1 max-w-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 rounded-xl flex items-center gap-2.5 cursor-pointer text-slate-400 text-xs transition-all active:bg-slate-100/50'
+        >
+          <FiSearch size={16} className='text-slate-500' />
+          <span className='font-medium text-slate-400 select-none'>Search "chocolate", "milk", "bread"...</span>
+        </div>
+
+        <button 
+          onClick={handleShareProductSystem}
+          className='p-2.5 hover:bg-slate-50 active:scale-95 transition-all rounded-xl text-slate-800 flex items-center justify-center border border-slate-100'
+        >
+          <FaShareNodes size={18} />
+        </button>
+      </div>
+
+      <div className='container mx-auto p-4 grid lg:grid-cols-2 mt-2'>
         {/* Left: Images */}
         <div>
-          <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded min-h-56 max-h-56 h-full w-full flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm'>
+          <div className='bg-white lg:min-h-[65vh] lg:max-h-[65vh] rounded-[1.5rem] min-h-56 max-h-56 h-full w-full flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm'>
             {!loading && data?.image?.length > 0 ? (
               <img
                 src={data.image[image]?.replace("http://", "https://")}
@@ -73,21 +124,21 @@ const ProductDisplayPage = () => {
               />
             ) : (
               <div className='w-full h-full bg-slate-50 animate-pulse flex items-center justify-center'>
-                <p className='text-slate-400'>Loading Product...</p>
+                <p className='text-slate-400 text-xs font-bold uppercase tracking-wider animate-bounce'>Loading Product...</p>
               </div>
             )}
           </div>
 
           <div className='flex items-center justify-center gap-3 my-4'>
-            {data.image.map((img, index) => (
+            {data?.image?.map((img, index) => (
               <div key={img + index + "point"} className={`w-2 h-2 rounded-full transition-all ${index === image ? "bg-green-600 w-4" : "bg-slate-200"}`}></div>
             ))}
           </div>
 
           <div className='grid relative'>
             <div ref={imageContainer} className='flex gap-4 z-10 relative w-full overflow-x-auto scrollbar-none snap-x px-2'>
-              {data.image.map((img, index) => (
-                <div className={`w-20 h-20 min-w-20 rounded-lg border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md' : 'border-transparent opacity-70'}`} key={img + index}>
+              {data?.image?.map((img, index) => (
+                <div className={`w-20 h-20 min-w-20 rounded-xl border-2 transition-all overflow-hidden cursor-pointer ${index === image ? 'border-green-500 shadow-md' : 'border-transparent opacity-70'}`} key={img + index}>
                   <img src={img?.replace("http://", "https://")} alt='thumbnail' onClick={() => setImage(index)} className='w-full h-full object-scale-down bg-white' />
                 </div>
               ))}
@@ -99,19 +150,19 @@ const ProductDisplayPage = () => {
           </div>
 
           <div className='my-8 hidden lg:grid gap-4'>
-            <h3 className='font-bold text-xl text-slate-800 border-b pb-2'>Product Specifications</h3>
+            <h3 className='font-black text-xl text-slate-800 border-b pb-2 tracking-tight'>Product Specifications</h3>
             <div>
-              <p className='font-semibold text-slate-600'>Description</p>
-              <p className='text-base text-slate-500 leading-relaxed'>{data.description}</p>
+              <p className='font-bold text-slate-700 text-sm uppercase tracking-wide'>Description</p>
+              <p className='text-base text-slate-500 leading-relaxed mt-1'>{data.description}</p>
             </div>
             <div>
-              <p className='font-semibold text-slate-600'>Unit</p>
-              <p className='text-base text-slate-500'>{data.unit}</p>
+              <p className='font-bold text-slate-700 text-sm uppercase tracking-wide'>Unit</p>
+              <p className='text-base text-slate-500 mt-1'>{data.unit}</p>
             </div>
             {data?.more_details && Object.keys(data?.more_details).map((element, index) => (
               <div key={element + index}>
-                <p className='font-semibold text-slate-600'>{element}</p>
-                <p className='text-base text-slate-500'>{data?.more_details[element]}</p>
+                <p className='font-bold text-slate-700 text-sm uppercase tracking-wide'>{element}</p>
+                <p className='text-base text-slate-500 mt-1'>{data?.more_details[element]}</p>
               </div>
             ))}
           </div>
@@ -120,33 +171,33 @@ const ProductDisplayPage = () => {
         {/* Right: Details */}
         <div className='p-4 lg:pl-10 text-base lg:text-lg'>
           <div className='flex items-center gap-2 mb-2'>
-            <span className='bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1'>
+            <span className='bg-green-100 text-green-700 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1 uppercase tracking-wide'>
               ⚡ 10 MINS
             </span>
             {data.stock < 5 && data.stock > 0 && (
-              <span className='bg-orange-100 text-orange-600 text-xs font-bold px-3 py-1 rounded-full'>
+              <span className='bg-orange-100 text-orange-600 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wide animate-pulse'>
                 ONLY {data.stock} LEFT
               </span>
             )}
           </div>
 
-          <h2 className='text-2xl font-black lg:text-4xl text-slate-900 mb-1'>{data.name}</h2>
-          <p className='text-slate-400 font-medium mb-4'>{data.unit}</p>
+          <h2 className='text-2xl font-black lg:text-4xl text-slate-900 mb-1 tracking-tight leading-tight'>{data.name}</h2>
+          <p className='text-slate-400 font-bold text-sm mb-4'>{data.unit}</p>
 
           <Divider />
 
           <div className='my-6'>
-            <p className='text-slate-500 text-sm font-bold uppercase tracking-wider mb-2'>Price Details</p>
+            <p className='text-slate-400 text-xs font-black uppercase tracking-wider mb-2'>Price Details</p>
             <div className='flex items-center gap-4'>
-              <div className='bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl shadow-slate-200'>
-                <p className='font-black text-2xl lg:text-3xl'>
+              <div className='bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl shadow-slate-900/10'>
+                <p className='font-black text-2xl lg:text-3xl tracking-tight'>
                   {DisplayPriceInRupees(pricewithDiscount(Number(data.price || 0), Number(data.discount || 0)))}
                 </p>
               </div>
               {data.discount > 0 && (
                 <div className='flex flex-col'>
-                  <p className='line-through text-slate-400 font-bold'>{DisplayPriceInRupees(Number(data.price || 0))}</p>
-                  <p className="font-black text-green-600 text-lg">{data.discount}% OFF</p>
+                  <p className='line-through text-slate-400 font-bold text-sm'>{DisplayPriceInRupees(Number(data.price || 0))}</p>
+                  <p className="font-black text-green-600 text-lg tracking-tight">{data.discount}% OFF</p>
                 </div>
               )}
             </div>
@@ -161,14 +212,14 @@ const ProductDisplayPage = () => {
 
           {/* Add to Cart / Status */}
           {!isOpen ? (
-            <div className='bg-slate-50 border-2 border-slate-200 p-6 rounded-3xl my-6 flex flex-col items-center gap-2'>
+            <div className='bg-slate-50 border-2 border-slate-200 border-dashed p-6 rounded-3xl my-6 flex flex-col items-center gap-1.5'>
               <span className='text-3xl'>🌙</span>
-              <p className='font-black text-slate-800 text-xl'>Snapit is Resting</p>
-              <p className='text-slate-500 font-medium'>Ordering resumes at 7:00 AM</p>
+              <p className='font-black text-slate-800 text-lg tracking-tight shadow-sm shadow-white'>Snapit is Resting</p>
+              <p className='text-slate-500 font-bold text-xs uppercase tracking-wide'>Ordering resumes at 7:00 AM</p>
             </div>
           ) : data.stock === 0 ? (
-            <div className='bg-rose-50 border-2 border-rose-100 p-4 rounded-2xl text-center my-6'>
-              <p className='text-rose-600 font-black text-xl italic'>Currently Out of Stock</p>
+            <div className='bg-rose-50 border border-rose-100 p-4 rounded-2xl text-center my-6 shadow-sm shadow-rose-100/50'>
+              <p className='text-rose-600 font-black text-lg uppercase tracking-wider italic'>Currently Out of Stock</p>
             </div>
           ) : (
             <div className='my-8 h-14'>
@@ -177,33 +228,33 @@ const ProductDisplayPage = () => {
           )}
 
           <div className='mt-10'>
-            <h2 className='font-black text-slate-800 text-lg uppercase tracking-tighter mb-4'>Why shop from Snapit?</h2>
+            <h2 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-4'>Why shop from Snapit?</h2>
             <div className='space-y-6'>
               <div className='flex items-center gap-5'>
-                <div className='w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center p-3'>
+                <div className='w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center p-3 shadow-inner'>
                   <img src={image1} alt='superfast' className='object-contain' />
                 </div>
                 <div className='text-sm'>
-                  <div className='font-bold text-slate-800 text-base'>Superfast Delivery</div>
-                  <p className='text-slate-500'>Directly from our local dark stores.</p>
+                  <div className='font-black text-slate-800 text-base tracking-tight'>Superfast Delivery</div>
+                  <p className='text-slate-500 font-medium'>Directly from our local dark stores in 10 minutes.</p>
                 </div>
               </div>
               <div className='flex items-center gap-5'>
-                <div className='w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center p-3'>
+                <div className='w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center p-3 shadow-inner'>
                   <img src={image2} alt='best prices' className='object-contain' />
                 </div>
                 <div className='text-sm'>
-                  <div className='font-bold text-slate-800 text-base'>Best Prices & Offers</div>
-                  <p className='text-slate-500'>Unbeatable prices with student-focused discounts.</p>
+                  <div className='font-black text-slate-800 text-base tracking-tight'>Best Prices & Offers</div>
+                  <p className='text-slate-500 font-medium'>Unbeatable local prices with verified coupon discounts.</p>
                 </div>
               </div>
               <div className='flex items-center gap-5'>
-                <div className='w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center p-3'>
+                <div className='w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center p-3 shadow-inner'>
                   <img src={image3} alt='assortment' className='object-contain' />
                 </div>
                 <div className='text-sm'>
-                  <div className='font-bold text-slate-800 text-base'>Wide Assortment</div>
-                  <p className='text-slate-500'>Everything from Maggi to gym supplements available.</p>
+                  <div className='font-black text-slate-800 text-base tracking-tight'>Wide Assortment</div>
+                  <p className='text-slate-500 font-medium'>Everything from fresh groceries to dark snacks available instantly.</p>
                 </div>
               </div>
             </div>
@@ -211,13 +262,13 @@ const ProductDisplayPage = () => {
         </div>
       </div>
 
-      {/* Reviews */}
-      <div className='mt-10 border-t pt-8'>
+      {/* Reviews Section */}
+      <div className='mt-10 border-t border-slate-100 pt-8'>
         <ProductReviews productId={productId} />
       </div>
 
-      {/* Smart Suggestions */}
-      <div className='mt-12 border-t pt-10'>
+      {/* Smart Suggestions (You Might Also Like Section) */}
+      <div className='mt-12 border-t border-slate-100 pt-10'>
         <SmartSuggestions productId={productId} />
       </div>
     </section>

@@ -12,7 +12,7 @@ import { valideURLConvert } from '../utils/valideURLConvert'
 const CategoryWiseProductDisplay = ({ id, name }) => {
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(false)
-    const [visible, setVisible] = useState(false) // lazy load trigger
+    const [visible, setVisible] = useState(false) 
     const containerRef = useRef()
     const sectionRef = useRef()
     const params = useParams()
@@ -21,7 +21,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     const subCategoryData = useSelector(state => state.product.allSubCategory)
     const loadingCardNumber = new Array(6).fill(null)
 
-    // Intersection Observer — only fetch when section is visible
     useEffect(() => {
         const observer = new IntersectionObserver(
             ([entry]) => {
@@ -30,7 +29,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     observer.disconnect()
                 }
             },
-            { rootMargin: '200px' } // Start loading 200px before visible
+            { rootMargin: '200px' }
         )
         if (sectionRef.current) observer.observe(sectionRef.current)
         return () => observer.disconnect()
@@ -46,7 +45,20 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
             const { data: responseData } = response
             if (responseData.success) {
                 const filteredData = responseData.data.filter(p => p._id !== currentProductId)
-                setData(filteredData)
+                
+                // Bulletproof loop parsing mapping layer
+                const sanitizedProducts = filteredData.map(product => {
+                    let updatedProduct = { ...product };
+                    if (updatedProduct.image && typeof updatedProduct.image === 'string' && updatedProduct.image.startsWith('http://')) {
+                        updatedProduct.image = updatedProduct.image.replace('http://', 'https://');
+                    }
+                    if (updatedProduct.imageUrl && typeof updatedProduct.imageUrl === 'string' && updatedProduct.imageUrl.startsWith('http://')) {
+                        updatedProduct.imageUrl = updatedProduct.imageUrl.replace('http://', 'https://');
+                    }
+                    return updatedProduct;
+                });
+
+                setData(sanitizedProducts)
             }
         } catch (error) {
             AxiosToastError(error)
@@ -55,7 +67,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
         }
     }
 
-    // Only fetch when section becomes visible
     useEffect(() => {
         if (visible) fetchCategoryWiseProduct()
     }, [visible, id])
@@ -90,20 +101,17 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     ref={containerRef}
                     style={{ scrollSnapType: 'x mandatory' }}
                 >
-                    {/* Loading skeletons */}
                     {loading && loadingCardNumber.map((_, index) => (
                         <div key={"ld" + index} className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]' style={{ scrollSnapAlign: 'start' }}>
                             <CardLoading />
                         </div>
                     ))}
 
-                    {/* Not yet visible — show placeholder skeletons */}
                     {!visible && !loading && loadingCardNumber.map((_, index) => (
                         <div key={"ph" + index} className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px] h-64 bg-slate-100 rounded-2xl animate-pulse' style={{ scrollSnapAlign: 'start' }}>
                         </div>
                     ))}
 
-                    {/* Products */}
                     {!loading && data.map((p, index) => (
                         <div
                             key={p._id + "cat" + index}
@@ -115,18 +123,11 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     ))}
                 </div>
 
-                {/* Scroll buttons — desktop only */}
                 <div className='w-full left-0 right-0 container mx-auto px-2 absolute hidden lg:flex justify-between pointer-events-none'>
-                    <button
-                        onClick={handleScrollLeft}
-                        className='pointer-events-auto z-10 bg-white hover:bg-slate-50 shadow-xl border border-slate-100 text-slate-700 p-3 rounded-full transition-all hover:scale-110 active:scale-95'
-                    >
+                    <button onClick={handleScrollLeft} className='pointer-events-auto z-10 bg-white shadow-xl text-slate-700 p-3 rounded-full'>
                         <FaAngleLeft size={16} />
                     </button>
-                    <button
-                        onClick={handleScrollRight}
-                        className='pointer-events-auto z-10 bg-white hover:bg-slate-50 shadow-xl border border-slate-100 text-slate-700 p-3 rounded-full transition-all hover:scale-110 active:scale-95'
-                    >
+                    <button onClick={handleScrollRight} className='pointer-events-auto z-10 bg-white shadow-xl text-slate-700 p-3 rounded-full'>
                         <FaAngleRight size={16} />
                     </button>
                 </div>
@@ -135,4 +136,4 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     )
 }
 
-export default CategoryWiseProductDisplay
+export default CategoryWiseProductDisplay;

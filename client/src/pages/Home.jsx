@@ -5,16 +5,13 @@ import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
 import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay'
 
-// ─── CHANGE 1: Delivery ETA badge in header ───────────────────────────────────
-// Moves "10 min" out of every product card and into a single, prominent header badge.
-// This is the #1 Zepto-style signal — it's always visible, never repeated.
-
-
 const Home = () => {
   const loadingCategory = useSelector(state => state.product.loadingCategory)
   const categoryData = useSelector(state => state.product.allCategory)
   const subCategoryData = useSelector(state => state.product.allSubCategory)
   const navigate = useNavigate()
+
+  const BACKEND_URL = "https://snapit-full-stack-2.onrender.com"
 
   const prioritizedCategorySections = useMemo(() => {
     if (!categoryData || !Array.isArray(categoryData) || categoryData.length === 0) return []
@@ -42,25 +39,13 @@ const Home = () => {
   }
 
   return (
-    // ─── CHANGE 2: bg-white instead of bg-blue-50 ─────────────────────────────
-    // Zepto/minimal aesthetic = pure white canvas. Blue tint everywhere reads as dated.
     <section className='bg-white min-h-screen overflow-x-hidden'>
-
-      {/* ─── CHANGE 3: Sticky delivery badge strip ──────────────────────────────
-          A thin strip just below the main nav showing the delivery ETA.
-          Replaces the "10 min" text on every single product card.           */}
-  
-
       {/* 1. BANNER */}
       <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
         <HomeBanner />
       </div>
 
-      {/* 2. CATEGORY GRID
-          ─── CHANGE 4: White tiles with slate border (Zepto style) ─────────────
-          Was: bg-blue-50 rounded-2xl
-          Now: bg-white border border-slate-100 — feels cleaner, more premium.
-          Hover state uses a very subtle green tint to hint the brand color.    */}
+      {/* 2. CATEGORY GRID */}
       <div className='container mx-auto px-4 mt-1 mb-6'>
         <div className='grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-2 lg:gap-4'>
           {loadingCategory
@@ -76,18 +61,21 @@ const Home = () => {
                   className='group cursor-pointer flex flex-col items-center gap-1.5'
                   onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
                 >
-                  {/* ─── CHANGE 4 (continued) ──────────────────────────────── */}
                   <div className='bg-white border border-slate-100 rounded-xl p-2 w-full aspect-square flex items-center justify-center transition-all duration-200 active:scale-90 group-hover:border-green-200 group-hover:bg-green-50'>
                     <img
-                      src={cat.image}
+                      src={
+                        cat?.image && typeof cat.image === 'string' && cat.image.startsWith('http') 
+                          ? cat.image.replace('http://', 'https://') 
+                          : `${BACKEND_URL}${cat?.image || ''}`
+                      }
                       alt={cat.name}
                       className='w-full h-full object-scale-down group-hover:scale-105 transition-transform duration-200'
                       loading="lazy"
+                      onError={(e) => {
+                        e.target.src = "https://placehold.co/150?text=Snapit";
+                      }}
                     />
                   </div>
-                  {/* ─── CHANGE 5: Lighter category label ─────────────────────
-                      Was: font-bold text-slate-700
-                      Now: font-medium text-slate-600 — less heavy, more refined  */}
                   <p className='text-center text-[10px] lg:text-xs font-medium text-slate-600 line-clamp-1 w-full'>{cat.name}</p>
                 </div>
               ))
@@ -95,10 +83,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 3. PRODUCT SECTIONS
-          ─── CHANGE 6: Tighter gap on mobile ──────────────────────────────────
-          gap-4 on mobile was creating too much dead space between sections.
-          gap-1 on mobile, gap-8 on desktop gives a cleaner vertical rhythm.   */}
+      {/* 3. PRODUCT SECTIONS */}
       <div className='flex flex-col gap-1 lg:gap-8 pb-24'>
         {!loadingCategory &&
           prioritizedCategorySections.map((c) => (
@@ -112,4 +97,4 @@ const Home = () => {
   )
 }
 
-export default Home
+export default Home;

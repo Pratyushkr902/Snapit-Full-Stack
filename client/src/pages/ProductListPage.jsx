@@ -17,7 +17,8 @@ const ProductListPage = () => {
   const AllSubCategory = useSelector(state => state.product.allSubCategory)
   const [DisplaySubCatory, setDisplaySubCategory] = useState([])
 
-  // FIXED: Improved extraction to ensure we only send valid IDs to the backend
+  const BACKEND_URL = "https://snapit-full-stack-2.onrender.com"
+
   const categoryId = params.category ? params.category.split("-").pop() : null
   const subCategoryParam = params.subCategory ? params.subCategory.split("-").pop() : null
   
@@ -25,14 +26,11 @@ const ProductListPage = () => {
   const subCategoryName = params?.subCategory === "all" ? "All Products" : subCategory?.slice(0, subCategory?.length - 1)?.join(" ")
 
   const fetchProductdata = async () => {
-    // GUARD: Absolute check for 24-character hex string to avoid 400 errors
     if (!categoryId || categoryId.length !== 24) return;
 
     try {
       setLoading(true)
       
-      // FIXED: Build the payload dynamically. 
-      // If subCategory is "all", we DO NOT send subCategoryId at all.
       const requestPayload = {
         categoryId: categoryId,
         page: page,
@@ -42,8 +40,6 @@ const ProductListPage = () => {
       if (subCategoryParam !== "all" && subCategoryParam?.length === 24) {
         requestPayload.subCategoryId = subCategoryParam
       }
-
-      console.log("Snapit Request Payload:", requestPayload);
 
       const response = await Axios({
         ...SummaryApi.getProductByCategoryAndSubCategory,
@@ -69,7 +65,6 @@ const ProductListPage = () => {
     }
   }
 
-  // Reset page and data when switching categories/subcategories to avoid mixed lists
   useEffect(() => {
     setData([])
     setPage(1)
@@ -131,9 +126,16 @@ const ProductListPage = () => {
                 >
                   <div className='w-fit max-w-28 mx-auto lg:mx-0 bg-white rounded box-border' >
                     <img
-                      src={s.image}
+                      src={
+                        s?.image && typeof s.image === 'string' && s.image.startsWith('http') 
+                          ? s.image.replace('http://', 'https://') 
+                          : `${BACKEND_URL}${s?.image || ''}`
+                      }
                       alt={s.name}
                       className='w-14 lg:h-14 lg:w-12 h-full object-scale-down'
+                      onError={(e) => {
+                        e.target.src = "https://placehold.co/150?text=Snapit";
+                      }}
                     />
                   </div>
                   <p className='text-xs text-center lg:text-left lg:text-base'>{s.name}</p>
@@ -142,7 +144,6 @@ const ProductListPage = () => {
             })
           }
         </div>
-
 
         {/** Product Grid **/}
         <div className='min-h-[88vh] bg-white'>
@@ -178,4 +179,4 @@ const ProductListPage = () => {
   )
 }
 
-export default ProductListPage
+export default ProductListPage;

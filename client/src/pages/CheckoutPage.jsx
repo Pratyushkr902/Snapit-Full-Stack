@@ -23,8 +23,48 @@ const CheckoutPage = () => {
   const user = useSelector(state => state.user)
   const navigate = useNavigate()
 
+  // --- COUPON STATE HOOKS ---
+  const [couponApplied, setCouponApplied] = useState(false)
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const [couponError, setCouponError] = useState('')
+  const [loadingCoupon, setLoadingCoupon] = useState(false)
+
+  // Recalculate dynamic billing parameters metrics
   const deliveryFee = totalPrice >= 399 ? 0 : 12
-  const grandTotal = totalPrice + deliveryFee
+  const baseGrandTotal = totalPrice + deliveryFee
+  const grandTotal = baseGrandTotal - discountAmount
+
+  // --- COUPON BACKEND APPLIER HANDLER ---
+  const handleApplyFirstTimeCoupon = async () => {
+    try {
+      if (!user?._id) return toast.error("Please log in to apply coupons.")
+      setCouponError('')
+      setLoadingCoupon(true)
+
+      // Fixed structural implementation matching interceptor layout expectations
+      const response = await Axios({
+        ...SummaryApi.applyFirstTimeCoupon, 
+        data: {
+          couponCode: 'FIRST15',
+          subtotal: totalPrice,
+          userId: user._id
+        }
+      })
+
+      if (response?.data?.success) {
+        setDiscountAmount(response.data.discountAmount)
+        setCouponApplied(true)
+        toast.success("Flat 15% First Order Discount Applied! 🎉")
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || "Failed to process coupon validation."
+      setCouponError(msg)
+      setCouponApplied(false)
+      setDiscountAmount(0)
+    } finally {
+      setLoadingCoupon(false)
+    }
+  }
 
   // Check if selected address is in serviceable area
   const checkServiceArea = () => {
@@ -80,7 +120,7 @@ const CheckoutPage = () => {
           addressId: addressList[selectAddress]?._id,
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
-          totalAmt: grandTotal,
+          totalAmt: grandTotal, 
           lat: coords.lat,
           lng: coords.lng,
           amount: grandTotal,
@@ -118,9 +158,7 @@ const CheckoutPage = () => {
           addressId: addressList[selectAddress]?._id,
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
-          totalAmt: grandTotal,
-          lat: coords.lat,
-          lng: coords.lng
+          totalAmt: grandTotal 
         }
       })
       const { data: responseData } = response
@@ -153,7 +191,7 @@ const CheckoutPage = () => {
           addressId: addressList[selectAddress]?._id,
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
-          totalAmt: grandTotal
+          totalAmt: grandTotal 
         }
       })
       const { data: responseData } = response
@@ -179,7 +217,7 @@ const CheckoutPage = () => {
                   addressId: addressList[selectAddress]?._id,
                   subTotalAmt: totalPrice,
                   delivery_fee: deliveryFee,
-                  totalAmt: grandTotal
+                  totalAmt: grandTotal 
                 }
               })
               toast.dismiss(verificationToast)
@@ -293,6 +331,40 @@ const CheckoutPage = () => {
             )}
           </div>
 
+          {/* PREMIUM INTERACTIVE FIRST PURCHASE COUPON COMPONENT CARD */}
+          <div className='mx-4 mb-4 p-4 border border-dashed border-green-500 rounded-2xl bg-green-50/40 transition-all'>
+            <div className='flex items-center justify-between gap-2'>
+              <div>
+                <span className='bg-green-600 text-white text-[10px] font-black tracking-wider px-2 py-0.5 rounded-md uppercase shadow-sm shadow-green-100'>
+                  FIRST15
+                </span>
+                <h4 className='text-xs font-black text-slate-800 mt-1.5'>
+                  Flat 15% OFF on your first order
+                </h4>
+                <p className='text-[10px] text-slate-500 font-medium'>Valid for your debut checkout session</p>
+              </div>
+              
+              <button
+                onClick={handleApplyFirstTimeCoupon}
+                disabled={couponApplied || loadingCoupon || cartItemsList.length === 0}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black tracking-wide uppercase transition-all shadow-md ${
+                  couponApplied 
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none cursor-not-allowed' 
+                    : 'bg-green-600 text-white hover:bg-green-700 shadow-green-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
+                }`}
+              >
+                {loadingCoupon ? '...' : couponApplied ? 'Applied ✓' : 'Apply'}
+              </button>
+            </div>
+
+            {/* Render validation backend errors dynamically */}
+            {couponError && (
+              <p className='text-[10px] text-red-500 font-black mt-2 bg-red-50/80 px-2 py-1 rounded-lg border border-red-100'>
+                ⚠️ {couponError}
+              </p>
+            )}
+          </div>
+
           {/* Bill Summary */}
           <h3 className='text-lg font-black px-4 uppercase text-slate-800 tracking-tight'>Bill Summary</h3>
           <div className='p-4 space-y-3'>
@@ -300,6 +372,15 @@ const CheckoutPage = () => {
               <p className='text-slate-500 font-medium'>Items total</p>
               <p className='font-bold text-slate-800'>{DisplayPriceInRupees(totalPrice)}</p>
             </div>
+            
+            {/* Dynamic Coupon discount line entry layout */}
+            {couponApplied && (
+              <div className='flex justify-between text-green-600 font-black bg-green-50/60 p-2 rounded-xl border border-green-100/50 text-xs'>
+                <p>15% First Order Savings</p>
+                <p>- {DisplayPriceInRupees(discountAmount)}</p>
+              </div>
+            )}
+
             <div className='flex justify-between'>
               <p className='text-slate-500 font-medium'>Delivery Charge</p>
               <p className={deliveryFee === 0 ? "text-green-600 font-black" : "font-bold text-slate-800"}>
