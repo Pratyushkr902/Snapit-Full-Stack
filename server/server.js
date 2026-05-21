@@ -179,8 +179,9 @@ console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 app.use(express.static(clientBuildPath));
 
 // --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
-app.get('*', (req, res, next) => {
-    // ✅ FIX: Block the catch-all engine from treating missing .css or .js scripts as valid HTML routes.
+// ✅ FIX: Swapped out legacy raw wildcard '*' for the strict, named parameter matching regex pattern syntax required by modern Express/path-to-regexp dependencies.
+app.get('/(.*)', (req, res, next) => {
+    // Block the catch-all engine from treating missing .css or .js scripts as valid HTML routes.
     // This removes the "MIME type ('text/plain') is not supported" runtime compilation browser crashes.
     if (req.url.startsWith('/api') || req.url.includes('.')) {
         return res.status(404).json({ message: "Asset file or resource route completely unavailable.", success: false });
