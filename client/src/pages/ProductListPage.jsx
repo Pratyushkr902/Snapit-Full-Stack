@@ -7,7 +7,9 @@ import Loading from '../components/Loading'
 import CardProduct from '../components/CardProduct'
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
-import { Search, Grid, List, Filter, X } from 'lucide-react' // Cleaned unused ChevronDown icon link
+// ✅ FIXED: Swapped lucide-react out for your working pre-configured react-icons library
+import { FiSearch } from "react-icons/fi";
+import { FaGridHorizontal, FaList, FaFilter, FaXmark } from "react-icons/fa6";
 
 const ProductListPage = () => {
   const [data, setData] = useState([])
@@ -219,13 +221,13 @@ const ProductListPage = () => {
                       onClick={() => setViewMode('grid')}
                       className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-green-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
                     >
-                      <Grid className='w-4 h-4' />
+                      <FaGridHorizontal className='w-4 h-4' />
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
                       className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-green-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
                     >
-                      <List className='w-4 h-4' />
+                      <FaList className='w-4 h-4' />
                     </button>
                   </div>
                   
@@ -234,7 +236,7 @@ const ProductListPage = () => {
                     onClick={() => setShowFilters(!showFilters)}
                     className={`flex items-center gap-2 px-4 py-2 border rounded-xl transition-all font-semibold text-sm ${showFilters ? 'bg-green-50 border-green-200 text-green-700 shadow-sm' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                   >
-                    <Filter className='w-4 h-4' />
+                    <FaFilter className='w-4 h-4' />
                     <span>Filters</span>
                   </button>
                 </div>
@@ -242,7 +244,7 @@ const ProductListPage = () => {
 
               {/* Enhanced Interactive Search Bar Overlay Component Layout */}
               <div className='relative mb-3'>
-                <Search className='absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
+                <FiSearch className='absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
                 <input
                   type='text'
                   value={searchQuery}
@@ -255,7 +257,7 @@ const ProductListPage = () => {
                     onClick={() => setSearchQuery('')}
                     className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
                   >
-                    <X className='w-4 h-4' />
+                    <FaXmark className='w-4 h-4' />
                   </button>
                 )}
               </div>

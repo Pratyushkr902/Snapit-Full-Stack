@@ -5,7 +5,8 @@ import { valideURLConvert } from '../utils/valideURLConvert'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import AddToCartButton from './AddToCartButton'
 
-const CardProduct = ({ data }) => {
+// ✅ Destructured viewMode to handle fluid grid/list state layout variations
+const CardProduct = ({ data, viewMode = 'grid' }) => {
 
     const url = `/product/${valideURLConvert(data?.name || "")}-${data?._id}`
 
@@ -46,7 +47,12 @@ const CardProduct = ({ data }) => {
         <Link
             to={url}
             onClick={() => window.scrollTo(0, 0)}
-            className='border flex flex-col rounded-xl cursor-pointer bg-white dark:bg-[#0F0F0F] border-slate-100 dark:border-zinc-800 transition-all hover:shadow-lg hover:border-green-200 group relative overflow-hidden p-1.5 lg:p-3'
+            // ✅ Applied dynamic structural orientation styles based on active viewMode parameter mapping
+            className={`border rounded-xl cursor-pointer bg-white dark:bg-[#0F0F0F] border-slate-100 dark:border-zinc-800 transition-all hover:shadow-lg hover:border-green-200 group relative overflow-hidden p-1.5 lg:p-3 ${
+                viewMode === 'list' 
+                    ? 'flex flex-row items-center gap-3 lg:gap-6 w-full' 
+                    : 'flex flex-col'
+            }`}
         >
 
             {/* Product Label */}
@@ -58,8 +64,13 @@ const CardProduct = ({ data }) => {
                 </div>
             )}
 
-            {/* Product Image */}
-            <div className='w-full aspect-square min-h-[140px] rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] relative p-2'>
+            {/* Product Image Wrapper */}
+            {/* ✅ Keeps static dimensions for horizontal listing to avoid portrait blowing boundaries */}
+            <div className={`rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] relative p-2 ${
+                viewMode === 'list'
+                    ? 'w-24 h-24 min-w-[6rem] lg:w-36 lg:h-36 lg:min-w-[9rem]'
+                    : 'w-full aspect-square min-h-[140px]'
+            }`}>
 
                 <img
                     src={
@@ -77,7 +88,7 @@ const CardProduct = ({ data }) => {
                 />
 
                 {/* Soft Overlay */}
-                <div className='absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent pointer-events-none'></div>
+                <div className='absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent pointer-transparent points-events-none'></div>
 
                 {/* Low Stock Warning */}
                 {data?.stock < 10 && data?.stock > 0 && (
@@ -89,12 +100,12 @@ const CardProduct = ({ data }) => {
                 )}
             </div>
 
-            {/* Product Content */}
-            <div className='flex flex-col mt-1.5 gap-0.5'>
+            {/* Product Content Container */}
+            {/* ✅ Adjusts spacing dynamically and spans full available row bounds when wide formatting triggers */}
+            <div className={`flex flex-col flex-1 ${viewMode === 'list' ? 'mt-0 gap-1' : 'mt-1.5 gap-0.5'}`}>
 
                 {/* Delivery + Discount Tags */}
                 <div className='flex items-center gap-1'>
-
                     <div className='rounded text-[7px] lg:text-[9px] px-1 py-0.5 text-green-700 bg-green-50 border border-green-100 font-bold uppercase'>
                         10 min
                     </div>
@@ -116,12 +127,12 @@ const CardProduct = ({ data }) => {
                     {data?.unit}
                 </div>
 
-                {/* Price + Cart */}
-                <div className='flex items-center justify-between gap-1 mt-1'>
+                {/* Price + Cart Wrapper Controls Row */}
+                {/* ✅ Drives flex spacing alignment based on structural matrix needs */}
+                <div className={`flex items-center justify-between gap-1 w-full ${viewMode === 'list' ? 'mt-3' : 'mt-1'}`}>
 
                     {/* Price */}
                     <div className='flex flex-col'>
-
                         <div className='font-black text-slate-900 dark:text-white text-[11px] lg:text-base leading-tight'>
                             {
                                 DisplayPriceInRupees(
@@ -140,12 +151,11 @@ const CardProduct = ({ data }) => {
                         )}
                     </div>
 
-                    {/* Add To Cart */}
+                    {/* Add To Cart Container */}
                     <div
                         className='flex-shrink-0 w-[60px] lg:w-[90px]'
                         onClick={(e) => e.preventDefault()}
                     >
-
                         {data?.stock == 0 ? (
                             <div className='border border-red-100 bg-red-50 px-1 py-1 rounded text-center'>
                                 <p className='text-red-500 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
@@ -157,7 +167,6 @@ const CardProduct = ({ data }) => {
                         ) : (
                             <AddToCartButton data={data} />
                         )}
-
                     </div>
 
                 </div>
