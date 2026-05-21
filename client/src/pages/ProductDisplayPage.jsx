@@ -22,7 +22,7 @@ const ProductDisplayPage = () => {
   
   let productId = params?.product?.split("-")?.slice(-1)[0]
 
-  const [data, setData] = useState({ name: "", image: [], stock: 0, description: "", unit: "", more_details: {} })
+  const [data, setData] = useState({ name: "", image: [], stock: 0, unit: "" })
   const [image, setImage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [imageZoom, setImageZoom] = useState(false)
@@ -106,7 +106,7 @@ const ProductDisplayPage = () => {
 
       <div className='container mx-auto p-4 lg:p-8 grid lg:grid-cols-2 gap-8 mt-2'>
         
-        {/* Left: Gallery & Desktop Specs */}
+        {/* Left: Gallery Column */}
         <div className='space-y-4'>
           <div 
             className='bg-white lg:min-h-[420px] rounded-[2rem] min-h-80 max-h-80 lg:max-h-[420px] flex items-center justify-center overflow-hidden border border-gray-100 shadow-md relative group cursor-zoom-in'
@@ -148,48 +148,21 @@ const ProductDisplayPage = () => {
               ))}
             </div>
           </div>
-
-          {/* DESKTOP SPECIFICATIONS (PRESERVED) */}
-          <div className='hidden lg:block bg-white rounded-3xl p-6 shadow-sm border border-gray-100'>
-            <h3 className='font-black text-xl text-gray-800 mb-4 flex items-center gap-2'>
-              <span className='w-1 h-5 bg-green-600 rounded-full'></span>
-              Product Specifications
-            </h3>
-            <div className='space-y-4'>
-              <div>
-                <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>Description</p>
-                <p className='text-sm text-gray-600 leading-relaxed'>{data.description}</p>
-              </div>
-              <Divider />
-              <div>
-                <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>Unit</p>
-                <p className='text-sm text-gray-600'>{data.unit}</p>
-              </div>
-              {data?.more_details && Object.keys(data?.more_details).map((element, index) => (
-                <div key={element + index} className='space-y-4'>
-                  <Divider />
-                  <div>
-                    <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>{element}</p>
-                    <p className='text-sm text-gray-600'>{data?.more_details[element]}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Right: Info Column */}
-        <div className='space-y-5'>
+        {/* Right: Info Interaction Column */}
+        <div className='space-y-5 flex flex-col justify-center'>
           <div className='flex items-center gap-2'>
             <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
           </div>
 
+          {/* ✅ RE-REMOVED SPECIFICATIONS AND DESCRIPTIONS PANEL COMPLETELY TO OPTIMIZE HEIGHT AREA */}
           <h1 className='text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data.name}</h1>
           <p className='text-gray-400 font-bold text-xs mt-0.5'>{data.unit}</p>
 
           <Divider />
 
-          {/* Price Component Block */}
+          {/* Pricing Box Block */}
           <div className='bg-slate-950 text-white p-5 rounded-3xl shadow-xl flex items-center justify-between'>
             <div>
               <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1'>Price Details</p>
@@ -228,6 +201,7 @@ const ProductDisplayPage = () => {
             </div>
           )}
 
+          {/* Core App Feature Badges */}
           <div className='bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-3.5'>
             <div className='flex items-center gap-4 group cursor-pointer'>
               <div className='w-11 h-11 bg-blue-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image1} alt='superfast' className='object-contain' /></div>
@@ -235,43 +209,20 @@ const ProductDisplayPage = () => {
             </div>
             <div className='flex items-center gap-4 group cursor-pointer'>
               <div className='w-11 h-11 bg-emerald-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image2} alt='offers' className='object-contain' /></div>
-              <div><p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p><p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified coupons.</p></div>
+              <div><p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p><p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p></div>
             </div>
-          </div>
-
-          {/* MOBILE SPECIFICATIONS PANEL (PRESERVED) */}
-          <div className='lg:hidden bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4'>
-            <h3 className='font-black text-lg text-gray-800 mb-2 flex items-center gap-2'>
-              <span className='w-1 h-5 bg-green-600 rounded-full'></span>
-              Product Details
-            </h3>
-            <div>
-              <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>Description</p>
-              <p className='text-sm text-gray-600 leading-relaxed'>{data.description}</p>
-            </div>
-            <Divider />
-            <div>
-              <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>Unit</p>
-              <p className='text-sm text-gray-600'>{data.unit}</p>
-            </div>
-            {data?.more_details && Object.keys(data?.more_details).map((element, index) => (
-              <div key={element + index} className='space-y-4'>
-                <Divider />
-                <div>
-                  <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>{element}</p>
-                  <p className='text-sm text-gray-600'>{data?.more_details[element]}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
-      <SmartSuggestions productId={productId} />
-
-      <div className='container mx-auto px-4 mt-6'>
+      {/* ✅ STEP 1: RATINGS AND REVIEWS RENDERED IMMEDIATELY UNDER THE PRODUCT INFO */}
+      <div className='container mx-auto px-4 mt-4 border-t border-gray-100/70 pt-4'>
         <ProductReviews productId={productId} />
       </div>
+
+      {/* ✅ STEP 2: "YOU MIGHT ALSO LIKE" CAROUSEL PLACED DIRECTLY AT THE VERY BOTTOM */}
+      <SmartSuggestions productId={productId} />
+
     </section>
   )
 }

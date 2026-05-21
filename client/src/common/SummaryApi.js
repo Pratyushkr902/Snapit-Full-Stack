@@ -245,9 +245,9 @@ const SummaryApi = {
         url: '/api/review/wishlist/get',
         method: 'get'
     },
-    // CORRECTION ADDITION: Safe endpoint structural layout injection
+    // ✅ FIXED: Corrected route tracking prefix mapping to stop 404 network dropouts
     applyFirstTimeCoupon: {
-        url: '/api/coupon/apply',
+        url: '/api/order/coupon/apply',
         method: 'post'
     }
 }
