@@ -179,8 +179,8 @@ console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 app.use(express.static(clientBuildPath));
 
 // --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
-// ✅ FIX: Swapped out legacy raw wildcard '*' for the strict, named parameter matching regex pattern syntax required by modern Express/path-to-regexp dependencies.
-app.get('/(.*)', (req, res, next) => {
+// ✅ FIXED: Express 5 and path-to-regexp v8 compatible wildcard route parsing structure syntax
+app.get('/{*splat}', (req, res, next) => {
     // Block the catch-all engine from treating missing .css or .js scripts as valid HTML routes.
     // This removes the "MIME type ('text/plain') is not supported" runtime compilation browser crashes.
     if (req.url.startsWith('/api') || req.url.includes('.')) {

@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "com.snapit.grocery.app-release-27:/xml_filepaths.xml.flat",
+        "source": "com.snapit.grocery.app-main-28:/xml/filepaths.xml"
+    },
+    {
+        "merged": "com.snapit.grocery.app-release-27:/drawable-anydpi_shortcut_legacy_background.xml.flat",
+        "source": "com.snapit.grocery.app-main-28:/drawable-anydpi/shortcut_legacy_background.xml"
+    },
+    {
+        "merged": "com.snapit.grocery.app-release-27:/xml_shortcuts.xml.flat",
+        "source": "com.snapit.grocery.app-main-28:/xml/shortcuts.xml"
+    }
+]
