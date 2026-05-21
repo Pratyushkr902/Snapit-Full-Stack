@@ -22,12 +22,11 @@ const ProductDisplayPage = () => {
   
   let productId = params?.product?.split("-")?.slice(-1)[0]
 
-  const [data, setData] = useState({ name: "", image: [], stock: 0 })
+  const [data, setData] = useState({ name: "", image: [], stock: 0, description: "", unit: "", more_details: {} })
   const [image, setImage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [imageZoom, setImageZoom] = useState(false)
   const imageContainer = useRef()
-
   const [isOpen, setIsOpen] = useState(true)
 
   const checkShopStatus = () => {
@@ -80,10 +79,9 @@ const ProductDisplayPage = () => {
   }
 
   return (
-    // ✅ key={productId} forces deep rendering when clicking items inside SmartSuggestions
     <section key={productId} className='w-full bg-gradient-to-b from-white to-gray-50 pb-24 lg:pb-10 animate-fadeIn relative'>
       
-      {/* ✅ PREMIUM STICKY ACTION HEADER (ONLY BACK AND SHARE AS REQUESTED) */}
+      {/* ACTION STICKY HEADER */}
       <div className='sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'>
         <div className='container mx-auto px-4 py-3.5 flex items-center justify-between w-full'>
           <button 
@@ -108,10 +106,10 @@ const ProductDisplayPage = () => {
 
       <div className='container mx-auto p-4 lg:p-8 grid lg:grid-cols-2 gap-8 mt-2'>
         
-        {/* Left: Enhanced Image Gallery */}
+        {/* Left: Gallery & Desktop Specs */}
         <div className='space-y-4'>
           <div 
-            className='bg-white lg:min-h-[460px] rounded-[2rem] min-h-80 max-h-80 lg:max-h-[460px] flex items-center justify-center overflow-hidden border border-gray-100 shadow-md relative group cursor-zoom-in'
+            className='bg-white lg:min-h-[420px] rounded-[2rem] min-h-80 max-h-80 lg:max-h-[420px] flex items-center justify-center overflow-hidden border border-gray-100 shadow-md relative group cursor-zoom-in'
             onClick={() => setImageZoom(!imageZoom)}
           >
             {!loading && data?.image?.length > 0 ? (
@@ -149,15 +147,9 @@ const ProductDisplayPage = () => {
                 </button>
               ))}
             </div>
-            {data?.image?.length > 4 && (
-              <div className='hidden lg:flex justify-between absolute inset-0 items-center pointer-events-none px-2'>
-                <button onClick={handleScrollLeft} className='pointer-events-auto bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md border border-gray-100 hover:bg-white transition-all'><FaAngleLeft /></button>
-                <button onClick={handleScrollRight} className='pointer-events-auto bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md border border-gray-100 hover:bg-white transition-all'><FaAngleRight /></button>
-              </div>
-            )}
           </div>
 
-          {/* Desktop Specifications Panel */}
+          {/* ✅ RE-ADDED DESKTOP SPECIFICATIONS */}
           <div className='hidden lg:block bg-white rounded-3xl p-6 shadow-sm border border-gray-100'>
             <h3 className='font-black text-xl text-gray-800 mb-4 flex items-center gap-2'>
               <span className='w-1 h-5 bg-green-600 rounded-full'></span>
@@ -186,13 +178,10 @@ const ProductDisplayPage = () => {
           </div>
         </div>
 
-        {/* Right: Info Details Column */}
+        {/* Right: Info Column */}
         <div className='space-y-5'>
           <div className='flex items-center gap-2'>
             <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
-            {data.stock < 5 && data.stock > 0 && (
-              <span className='bg-orange-100 text-orange-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider animate-pulse'>ONLY {data.stock} LEFT</span>
-            )}
           </div>
 
           <h1 className='text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data.name}</h1>
@@ -200,7 +189,7 @@ const ProductDisplayPage = () => {
 
           <Divider />
 
-          {/* Premium Refactored Price Section */}
+          {/* Pricing Box */}
           <div className='bg-slate-950 text-white p-5 rounded-3xl shadow-xl flex items-center justify-between'>
             <div>
               <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1'>Price Details</p>
@@ -216,7 +205,7 @@ const ProductDisplayPage = () => {
               </div>
             </div>
             {data.discount > 0 && (
-              <span className='bg-green-600 font-black text-xs px-3 py-1.5 rounded-xl text-white shadow-md uppercase tracking-wider animate-bounce'>
+              <span className='bg-green-600 font-black text-xs px-3 py-1.5 rounded-xl text-white shadow-md uppercase tracking-wider'>
                 {data.discount}% OFF
               </span>
             )}
@@ -224,58 +213,65 @@ const ProductDisplayPage = () => {
 
           {productId && <WishlistButton productId={productId} />}
 
-          {/* Checkout Triggers Action Buttons */}
           {!isOpen ? (
             <div className='bg-indigo-50/50 border-2 border-indigo-100 border-dashed p-6 rounded-3xl text-center'>
               <p className='font-black text-slate-800 text-base'>🌙 Snapit is Resting</p>
-              <p className='text-xs text-gray-500 font-semibold mt-0.5'>Ordering opens up at 7:00 AM</p>
+              <p className='text-xs text-gray-500 font-semibold mt-0.5'>Ordering opens up at 8:00 AM</p>
             </div>
           ) : data.stock === 0 ? (
             <div className='bg-rose-50 border border-rose-100 p-4 rounded-2xl text-center'>
               <p className='text-rose-600 font-black text-sm uppercase tracking-widest italic'>Out of stock</p>
             </div>
           ) : (
-            <div className='h-14 mt-4 shadow-md shadow-green-100/30 rounded-2xl overflow-hidden'>
+            <div className='h-14 mt-2 shadow-md shadow-green-100/30 rounded-2xl overflow-hidden'>
               <AddToCartButton data={data} />
             </div>
           )}
 
-          {/* Core Features Overview */}
-          <div className='bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4'>
+          {/* Core Feature Badges */}
+          <div className='bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-3.5'>
             <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0 group-hover:scale-105 transition-transform'><img src={image1} alt='superfast' className='object-contain' /></div>
+              <div className='w-11 h-11 bg-blue-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image1} alt='superfast' className='object-contain' /></div>
               <div><p className='font-extrabold text-slate-800 text-sm'>Superfast Delivery</p><p className='text-xs text-gray-400 font-medium'>Directly from local dark stores in 10 minutes.</p></div>
             </div>
             <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0 group-hover:scale-105 transition-transform'><img src={image2} alt='offers' className='object-contain' /></div>
-              <div><p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p><p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order discount coupons.</p></div>
-            </div>
-            <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0 group-hover:scale-105 transition-transform'><img src={image3} alt='assortment' className='object-contain' /></div>
-              <div><p className='font-extrabold text-slate-800 text-sm'>Wide Assortment</p><p className='text-xs text-gray-400 font-medium'>Everything from fresh items to active gym stacks instantly.</p></div>
+              <div className='w-11 h-11 bg-emerald-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image2} alt='offers' className='object-contain' /></div>
+              <div><p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p><p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p></div>
             </div>
           </div>
 
-          {/* Mobile Specifications Panel Fallback */}
+          {/* ✅ RE-ADDED MOBILE SPECIFICATIONS PANEL */}
           <div className='lg:hidden bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4'>
             <h3 className='font-black text-lg text-gray-800 mb-2 flex items-center gap-2'>
               <span className='w-1 h-5 bg-green-600 rounded-full'></span>
               Product Details
             </h3>
-            <div><p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>Description</p><p className='text-sm text-gray-600 leading-relaxed'>{data.description}</p></div>
+            <div>
+              <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>Description</p>
+              <p className='text-sm text-gray-600 leading-relaxed'>{data.description}</p>
+            </div>
             <Divider />
-            <div><p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>Unit</p><p className='text-sm text-gray-600'>{data.unit}</p></div>
+            <div>
+              <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>Unit</p>
+              <p className='text-sm text-gray-600'>{data.unit}</p>
+            </div>
             {data?.more_details && Object.keys(data?.more_details).map((element, index) => (
-              <div key={element + index} className='space-y-4'><Divider /><div><p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>{element}</p><p className='text-sm text-gray-600'>{data?.more_details[element]}</p></div></div>
+              <div key={element + index} className='space-y-4'>
+                <Divider />
+                <div>
+                  <p className='font-bold text-gray-700 text-xs uppercase tracking-wider mb-1'>{element}</p>
+                  <p className='text-sm text-gray-600'>{data?.more_details[element]}</p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ✅ INSTANT HORIZONTAL CAROUSEL CARDS SECTOR ATTACHED AT THE BOTTOM */}
+      {/* Clean Carousel Section */}
       <SmartSuggestions productId={productId} />
 
-      <div className='container mx-auto px-4 mt-8'>
+      <div className='container mx-auto px-4 mt-6'>
         <ProductReviews productId={productId} />
       </div>
     </section>
