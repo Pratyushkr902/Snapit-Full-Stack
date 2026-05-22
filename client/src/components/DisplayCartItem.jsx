@@ -22,14 +22,23 @@ const DisplayCartItem = ({close}) => {
     const deliveryFee = totalPrice >= 399 ? 0 : 12;
     const grandTotal = totalPrice + deliveryFee;
 
-    const redirectToCheckoutPage = () => {
-        const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
-        if(token){
-            if(close) close()
-            window.location.hash = '#/checkout'
-            return
+    const redirectToCheckoutPage = (e) => {
+        if (e) {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof e.stopPropagation === 'function') e.stopPropagation();
         }
-        toast.error('Please Login to proceed')
+
+        const token = localStorage.getItem('accesstoken') || 
+                      localStorage.getItem('accessToken') || 
+                      localStorage.getItem('token');
+                      
+        if (token) {
+            if (typeof close === 'function') close();
+            window.location.hash = '#/checkout';
+            return;
+        }
+        
+        toast.error('Please login to proceed to checkout');
     }
 
     return (
@@ -45,7 +54,7 @@ const DisplayCartItem = ({close}) => {
 
                 <div className='flex-1 bg-blue-50 p-2 flex flex-col gap-4 overflow-y-auto'>
                     {
-                        cartItem[0] ? (
+                        cartItem && cartItem[0] ? (
                             <>
                                 <div className='flex items-center justify-between px-4 py-2 bg-blue-100 text-blue-500 rounded-full text-sm font-bold'>
                                     <p>Your total savings</p>
@@ -56,12 +65,12 @@ const DisplayCartItem = ({close}) => {
                                     {
                                         cartItem.map((item, index) => {
                                             return (
-                                                <div key={item?._id+'cartItemDisplay'} className='flex w-full gap-4 items-center'>
+                                                <div key={item?._id || index + 'cartItemDisplay'} className='flex w-full gap-4 items-center'>
                                                     <div className='w-14 h-14 min-h-14 min-w-14 bg-white border rounded-lg p-1'>
                                                         <img
-                                                            src={item?.productId?.image[0]}
+                                                            src={item?.productId?.image?.[0]}
                                                             className='object-scale-down w-full h-full'
-                                                            alt={item?.productId?.name}
+                                                            alt={item?.productId?.name || 'product'}
                                                         />
                                                     </div>
                                                     <div className='flex-1 text-xs'>
@@ -134,10 +143,10 @@ const DisplayCartItem = ({close}) => {
                 </div>
 
                 {
-                    cartItem[0] && (
+                    cartItem && cartItem[0] && (
                         <div className='p-4 bg-white border-t'>
                             <button
-                                onClick={redirectToCheckoutPage}
+                                onClick={(e) => redirectToCheckoutPage(e)}
                                 className='w-full bg-green-700 hover:bg-green-800 text-white px-4 font-black text-base py-4 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-all'
                             >
                                 <div className='flex flex-col items-start leading-none'>
