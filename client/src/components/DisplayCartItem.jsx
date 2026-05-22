@@ -25,15 +25,27 @@ const DisplayCartItem = ({close}) => {
     const deliveryFee = totalPrice >= 399 ? 0 : 12;
     const grandTotal = totalPrice + deliveryFee;
 
-    const redirectToCheckoutPage = () => {
-    const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
-    if(token){
-        if(close) close()
-        navigate("/checkout")
-        return
+    const redirectToCheckoutPage = (e) => {
+        // Prevent any underlying elements or forms from triggering a reset/re-render
+        if (e && e.preventDefault) e.preventDefault();
+        
+        const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
+        
+        if(token){
+            // 1. First trigger the route navigation
+            navigate("/checkout")
+            
+            // 2. Wrap the close logic in a brief timeout to let React Router claim the route 
+            // before the modal unmounts and updates parent state
+            if(close) {
+                setTimeout(() => {
+                    close()
+                }, 50);
+            }
+            return
+        }
+        toast.error("Please Login to proceed")
     }
-    toast.error("Please Login to proceed")
-}
   return (
     <section className='bg-neutral-900 fixed top-0 bottom-0 right-0 left-0 bg-opacity-70 z-50 flex justify-end'>
         <div className='bg-white w-full max-w-sm min-h-screen max-h-screen ml-auto flex flex-col'>
@@ -153,7 +165,7 @@ const DisplayCartItem = ({close}) => {
                 cartItem[0] && (
                     <div className='p-4 bg-white border-t'>
                         <button 
-                            onClick={redirectToCheckoutPage} 
+                            onClick={(e) => redirectToCheckoutPage(e)} 
                             className='w-full bg-green-700 hover:bg-green-800 text-white px-4 font-black text-base py-4 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-all'
                         >
                             <div className='flex flex-col items-start leading-none'>
@@ -173,4 +185,4 @@ const DisplayCartItem = ({close}) => {
   )
 }
 
-export default DisplayCartItem
+export default DisplayCartItem;
