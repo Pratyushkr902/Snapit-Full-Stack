@@ -47,6 +47,7 @@ const latestPositions = new Map();
 
 // --- CORS RULES (STABILIZED FOR NATIVE CAPACITOR COOKIE EXCHANGE) ---
 const allowedOrigins = [
+    "http://localhost:5173",
     "https://localhost:5173",                     // Dev web client local server layout
     "https://localhost",                          // Capacitor Android webview runtime origin
     "capacitor://localhost",                     // Capacitor iOS container origin
