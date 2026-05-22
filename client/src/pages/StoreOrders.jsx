@@ -12,12 +12,17 @@ const StoreOrders = () => {
         try {
             if (orders.length === 0) setLoading(true);
 
-            // FIX: Use the new seller-specific endpoint instead of getOrderItems.
-            // The backend now filters orders to only show this seller's products.
             const response = await Axios({ ...SummaryApi.getSellerOrders });
 
             if (response.data.success) {
-                setOrders(response.data.data);
+                // Only show orders that need packing — hide Ready for Pickup and beyond
+                const filtered = response.data.data.filter(o =>
+                    o.seller_status !== 'Ready for Pickup' &&
+                    o.delivery_status !== 'Out for Delivery' &&
+                    o.delivery_status !== 'Delivered' &&
+                    o.delivery_status !== 'Cancelled'
+                )
+                setOrders(filtered);
             }
         } catch (error) {
             console.error("Fetch error", error);
@@ -48,7 +53,6 @@ const StoreOrders = () => {
 
     useEffect(() => {
         fetchOrdersToPack();
-        // Auto-refresh every 30 seconds to catch new orders
         const interval = setInterval(fetchOrdersToPack, 30000);
         return () => clearInterval(interval);
     }, []);
@@ -102,7 +106,7 @@ const StoreOrders = () => {
 
                             <div className='space-y-3 mb-6'>
                                 <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                                    Your Items to Pack:
+                                    Items to Pack:
                                 </p>
                                 {order.cartItems?.map((item, i) => (
                                     <div key={i} className='flex justify-between items-center bg-slate-50 p-3 rounded-2xl'>
