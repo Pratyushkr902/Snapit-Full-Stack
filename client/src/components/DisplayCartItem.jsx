@@ -26,20 +26,21 @@ const DisplayCartItem = ({close}) => {
     const grandTotal = totalPrice + deliveryFee;
 
     const redirectToCheckoutPage = (e) => {
-        // Prevent all native browser form submissions or parent element event bubbles
+        // Prevent all native browser actions and event bubbling instantly
         if (e) {
-            e.preventDefault();
-            e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopPropagation) e.stopPropagation();
         }
         
         const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
         
         if(token){
-            // 1. Close the drawer modal first to cleanly unmount layout states
+            // 1. Unmount the cart overlay drawer cleanly first
             if(close) close();
             
-            // 2. Navigate immediately after to let the new screen mount on a clean slate
-            navigate("/checkout");
+            // 2. Explicitly set the window hash path to target checkout. 
+            // This forces the Android Webview to render the exact component without refreshing to Home.
+            window.location.hash = "/checkout";
             return;
         }
         toast.error("Please Login to proceed")
