@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createHashRouter } from "react-router-dom"; // Switched from createBrowserRouter to createHashRouter
 import App from "../App";
 import Home from "../pages/Home";
 import SearchPage from "../pages/Searchpage";
@@ -32,7 +32,8 @@ import ReferAndEarn from '../pages/ReferAndEarn';
 import WishlistPage from '../pages/WishlistPage';
 import TrackingPage from '../pages/TrackingPage';
 
-const router = createBrowserRouter([
+// Using Hash Router guarantees Capacitor Android packages resolve subpaths internally without reloads
+const router = createHashRouter([
     {
         path : "/",
         element : <App/>,
@@ -78,7 +79,6 @@ const router = createBrowserRouter([
                 element : <ReferAndEarn />
             },
             {
-                // ❤️ Wishlist page
                 path : "wishlist",
                 element : <WishlistPage />
             },
@@ -111,7 +111,6 @@ const router = createBrowserRouter([
                         element : <AdminPermision><StoreOrders/></AdminPermision>
                     },
                     {
-                        // Old tracking route kept for backward compat
                         path : "order-tracking/:id",
                         element : <RiderTracking />
                     },
@@ -134,7 +133,6 @@ const router = createBrowserRouter([
                 ]
             },
             {
-                // 📍 New live tracking page
                 path : "track/:orderId",
                 element : <TrackingPage />
             },
@@ -171,4 +169,4 @@ const router = createBrowserRouter([
     }
 ])
 
-export default router
+export default router;
