@@ -24,32 +24,20 @@ const DisplayCartItem = ({close}) => {
 
     const redirectToCheckoutPage = (e) => {
         if (e) {
-            if (e.preventDefault) e.preventDefault();
-            if (e.stopPropagation) e.stopPropagation();
+            e.preventDefault();
+            e.stopPropagation();
         }
 
-        console.log('Proceed button clicked! Checking token...');
         const token = localStorage.getItem('accesstoken') || 
                       localStorage.getItem('accessToken') || 
                       localStorage.getItem('token');
                       
         if (token) {
             if (close) close();
-            
-            // Overkill strategy: try React Router navigation first, fallback to structural location changes
-            setTimeout(() => {
-                try {
-                    console.log('Attempting React Router navigation...');
-                    navigate('/checkout');
-                } catch (err) {
-                    console.log('React Router failed, falling back to window location hash adjustment...', err);
-                    window.location.hash = '#/checkout';
-                }
-            }, 0);
+            window.location.hash = '#/checkout';
             return;
         }
         
-        console.log('No token found in localStorage!');
         toast.error('Please login to proceed to checkout');
     }
 
@@ -77,7 +65,7 @@ const DisplayCartItem = ({close}) => {
                                     {
                                         cartItem.map((item, index) => {
                                             return (
-                                                <div key={item?._id || index + 'cartItemDisplay'} className='flex w-full gap-4 items-center'>
+                                                <div key={item?._id || index} className='flex w-full gap-4 items-center'>
                                                     <div className='w-14 h-14 min-h-14 min-w-14 bg-white border rounded-lg p-1'>
                                                         <img
                                                             src={item?.productId?.image?.[0]}
@@ -159,7 +147,7 @@ const DisplayCartItem = ({close}) => {
                         <div className='p-4 bg-white border-t'>
                             <button
                                 type='button'
-                                onClick={(e) => redirectToCheckoutPage(e)}
+                                onClick={redirectToCheckoutPage}
                                 className='w-full bg-green-700 hover:bg-green-800 text-white px-4 font-black text-base py-4 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-all cursor-pointer'
                             >
                                 <div className='flex flex-col items-start leading-none'>
