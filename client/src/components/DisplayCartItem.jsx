@@ -26,23 +26,21 @@ const DisplayCartItem = ({close}) => {
     const grandTotal = totalPrice + deliveryFee;
 
     const redirectToCheckoutPage = (e) => {
-        // Prevent any underlying elements or forms from triggering a reset/re-render
-        if (e && e.preventDefault) e.preventDefault();
+        // Prevent all native browser form submissions or parent element event bubbles
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         
         const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
         
         if(token){
-            // 1. First trigger the route navigation
-            navigate("/checkout")
+            // 1. Close the drawer modal first to cleanly unmount layout states
+            if(close) close();
             
-            // 2. Wrap the close logic in a brief timeout to let React Router claim the route 
-            // before the modal unmounts and updates parent state
-            if(close) {
-                setTimeout(() => {
-                    close()
-                }, 50);
-            }
-            return
+            // 2. Navigate immediately after to let the new screen mount on a clean slate
+            navigate("/checkout");
+            return;
         }
         toast.error("Please Login to proceed")
     }
