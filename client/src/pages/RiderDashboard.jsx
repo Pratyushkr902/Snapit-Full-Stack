@@ -14,7 +14,7 @@ const RiderDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('Confirmed');
     const [isTracking, setIsTracking] = useState(false);
-    const [paymentOrder, setPaymentOrder] = useState(null); // order for payment modal
+    const [paymentOrder, setPaymentOrder] = useState(null);
 
     const fetchRiderOrders = async () => {
         try {
@@ -30,7 +30,6 @@ const RiderDashboard = () => {
         }
     };
 
-    // Live GPS tracking
     useEffect(() => {
         let watchId;
         if (isTracking) {
@@ -49,15 +48,11 @@ const RiderDashboard = () => {
         return () => navigator.geolocation.clearWatch(watchId);
     }, [isTracking, orders]);
 
-    // Pickup from store (Confirmed → Out for Delivery)
     const handlePickup = async (order) => {
         try {
             const response = await Axios({
                 ...SummaryApi.updateOrderStatus,
-                data: {
-                    orderId: order.orderId,
-                    status: 'Out for Delivery',
-                }
+                data: { orderId: order.orderId, status: 'Out for Delivery' }
             });
             if (response.data.success) {
                 toast.success('Order picked up — now Out for Delivery!')
@@ -96,13 +91,11 @@ const RiderDashboard = () => {
     return (
         <div className='container mx-auto p-4 min-h-screen bg-slate-50'>
 
-            {/* Header */}
             <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4'>
                 <div>
                     <h1 className='text-3xl font-black text-slate-900'>RIDER COMMAND</h1>
                     <p className='text-slate-500 font-bold text-xs uppercase tracking-widest'>Snapit Logistics - Bihar</p>
                 </div>
-
                 <div className='flex gap-3'>
                     <div className='bg-white p-3 rounded-2xl shadow-sm border border-slate-200 text-center min-w-[100px]'>
                         <p className='text-[10px] font-bold text-slate-400 uppercase'>Cash in Hand</p>
@@ -117,7 +110,6 @@ const RiderDashboard = () => {
                 </div>
             </div>
 
-            {/* Filter Tabs */}
             <div className='flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide'>
                 {['All', 'Confirmed', 'Out for Delivery', 'Delivered'].map(t => (
                     <button
@@ -130,7 +122,6 @@ const RiderDashboard = () => {
                 ))}
             </div>
 
-            {/* Order Cards */}
             <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
                 {filteredOrders.length === 0 ? (
                     <div className='col-span-full py-20 text-center bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200'>
@@ -141,7 +132,6 @@ const RiderDashboard = () => {
                     filteredOrders.map((order) => (
                         <div key={order._id} className='bg-white shadow-sm rounded-[2.5rem] p-6 border border-slate-100 flex flex-col hover:shadow-md transition-shadow'>
 
-                            {/* Order ID + Contact Buttons */}
                             <div className='flex justify-between items-start mb-4'>
                                 <div className='flex-1'>
                                     <span className='text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase'>
@@ -171,7 +161,6 @@ const RiderDashboard = () => {
                                 </div>
                             </div>
 
-                            {/* Store Pickup Info */}
                             <div className='bg-orange-50 rounded-2xl p-3 mb-3 border border-orange-100'>
                                 <p className='text-[10px] font-black text-orange-600 uppercase flex items-center gap-1 mb-1'>
                                     <FaStore /> Pickup Point
@@ -181,7 +170,6 @@ const RiderDashboard = () => {
                                 </p>
                             </div>
 
-                            {/* Cart Items */}
                             <div className='bg-slate-50 rounded-2xl p-3 mb-4'>
                                 <p className='text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2'>
                                     <FaShoppingBasket /> Items
@@ -194,7 +182,6 @@ const RiderDashboard = () => {
                                 ))}
                             </div>
 
-                            {/* Amount + Status */}
                             <div className='flex justify-between items-end mb-4 mt-auto'>
                                 <div>
                                     <p className='text-[10px] font-black text-slate-400 uppercase'>Collect</p>
@@ -212,7 +199,6 @@ const RiderDashboard = () => {
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
                             {order.delivery_status === 'Confirmed' && (
                                 <button
                                     onClick={() => handlePickup(order)}
@@ -241,10 +227,11 @@ const RiderDashboard = () => {
                 )}
             </div>
 
-            {/* CollectPayment Modal */}
+            {/* CollectPayment Modal — onClose added */}
             {paymentOrder && (
                 <CollectPayment
                     order={paymentOrder}
+                    onClose={() => setPaymentOrder(null)}
                     onSuccess={() => {
                         setPaymentOrder(null)
                         setIsTracking(false)
