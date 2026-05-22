@@ -24,11 +24,9 @@ const addRefreshSubscriber = (callback) => {
     refreshSubscribers.push(callback);
 };
 
-// Send access token in header
 Axios.interceptors.request.use(
     async (config) => {
-        // ✅ FIXED: Enforces an airtight uniform fallback verification strategy to prevent token dropouts
-        const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken');
+        const accessToken = localStorage.getItem('accesstoken');
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
@@ -37,7 +35,6 @@ Axios.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Auto-refresh on 401 with overlapping queue control mechanics
 Axios.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -65,23 +62,20 @@ Axios.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // ✅ FIXED: Using direct un-intercepted vanilla axios call to prevent request interceptor configuration stripping
                 const refreshResponse = await axios({
-                    method: SummaryApi.refreshToken.method || 'post',
+                    method: 'post',
                     url: `${API_URL}${SummaryApi.refreshToken.url}`,
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${refreshToken}` 
+                        'Authorization': `Bearer ${refreshToken}`
                     },
                     withCredentials: true
                 });
 
-                const newAccessToken = refreshResponse.data?.data?.accessToken;
+                const newAccessToken = refreshResponse.data?.data?.accesstoken;
 
-                if (!newAccessToken) throw new Error("Token allocation string missing");
+                if (!newAccessToken) throw new Error("No access token in refresh response");
 
-                // ✅ FIXED: Enforce a single standard uniform key syntax to preserve login profile integrity
-                localStorage.setItem('accessToken', newAccessToken);
                 localStorage.setItem('accesstoken', newAccessToken);
 
                 isRefreshing = false;
@@ -93,7 +87,6 @@ Axios.interceptors.response.use(
             } catch (refreshError) {
                 isRefreshing = false;
                 refreshSubscribers = [];
-                console.error("Refresh Token Expired or Invalidated", refreshError);
                 handleLogoutRedirect();
                 return Promise.reject(refreshError);
             }
