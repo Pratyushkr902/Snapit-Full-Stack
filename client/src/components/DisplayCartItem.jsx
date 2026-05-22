@@ -25,16 +25,17 @@ const DisplayCartItem = ({close}) => {
     const deliveryFee = totalPrice >= 399 ? 0 : 12;
     const grandTotal = totalPrice + deliveryFee;
 
-    const redirectToCheckoutPage = ()=>{
-        if(user?._id){
-            navigate("/checkout")
-            if(close){
-                close()
-            }
-            return
+    const redirectToCheckoutPage = () => {
+    const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
+    if(token){
+        navigate("/checkout")
+        if(close){
+            close()
         }
-        toast.error("Please Login to proceed")
+        return
     }
+    toast.error("Please Login to proceed")
+}
     
   return (
     <section className='bg-neutral-900 fixed top-0 bottom-0 right-0 left-0 bg-opacity-70 z-50 flex justify-end'>
