@@ -28,15 +28,14 @@ const DisplayCartItem = ({close}) => {
     const redirectToCheckoutPage = () => {
     const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
     if(token){
-        if(close){
-            close()
-        }
         navigate("/checkout")
+        setTimeout(() => {
+            if(close) close()
+        }, 100)
         return
     }
     toast.error("Please Login to proceed")
 }
-    
   return (
     <section className='bg-neutral-900 fixed top-0 bottom-0 right-0 left-0 bg-opacity-70 z-50 flex justify-end'>
         <div className='bg-white w-full max-w-sm min-h-screen max-h-screen ml-auto flex flex-col'>
