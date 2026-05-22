@@ -39,6 +39,7 @@ function App() {
 
   const [showCart, setShowCart] = useState(false)
 
+  // Force-close the cart modal overlay instantly when path flips to checkout
   useEffect(() => {
     if (location.pathname === '/checkout') {
       setShowCart(false)
@@ -135,8 +136,10 @@ function App() {
         
         <Toaster position="top-center" reverseOrder={false} />
 
-        {/* Global Cart Overlay */}
-        {showCart && location.pathname !== '/checkout' && <DisplayCartItem close={() => setShowCart(false)} />}
+        {/* Global Cart Overlay — Explicit block to guarantee no flash or overlay loops on /checkout path */}
+        {showCart && location.pathname !== '/checkout' && (
+          <DisplayCartItem close={() => setShowCart(false)} />
+        )}
 
         {/* Mobile Cart Link */}
         {
@@ -154,4 +157,4 @@ function App() {
   )
 }
 
-export default App
+export default App;
