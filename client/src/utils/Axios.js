@@ -1,7 +1,7 @@
 import axios from "axios";
 import SummaryApi from "../common/SummaryApi";
 
-const API_URL = "https://snapit-full-stack-2.onrender.com";
+const API_URL = "https://snapit-full-stack-0.onrender.com";
 
 const Axios = axios.create({
     baseURL: API_URL,
