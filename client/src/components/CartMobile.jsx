@@ -5,7 +5,7 @@ import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { FaCaretRight } from 'react-icons/fa'
 import { useSelector } from 'react-redux'
 
-const CartMobile = () => {
+const CartMobileComponent = () => {
     const { totalPrice, totalQty } = useGlobalContext()
     const cartItem = useSelector(state => state.cartItem.cart)
 
@@ -45,4 +45,4 @@ const CartMobile = () => {
     )
 }
 
-export default CartMobile;
+export default CartMobileComponent;
