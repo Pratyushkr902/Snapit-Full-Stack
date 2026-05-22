@@ -39,6 +39,12 @@ function App() {
 
   const [showCart, setShowCart] = useState(false)
 
+  useEffect(() => {
+    if (location.pathname === '/checkout') {
+      setShowCart(false)
+    }
+  }, [location.pathname])
+
   const fetchUser = useCallback(async () => {
     try {
       const userData = await fetchUserDetails()
