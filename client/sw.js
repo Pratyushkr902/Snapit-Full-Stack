@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snapit-v1'
+const CACHE_NAME = 'snapit-v2'
 const STATIC_ASSETS = ['/', '/index.html']
 
 self.addEventListener('install', (event) => {
@@ -23,22 +23,22 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return
     if (event.request.url.includes('/api/')) return
+    if (event.request.url.includes('firestore') || event.request.url.includes('firebase')) return
+    if (!event.request.url.startsWith('http')) return
 
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // ✅ FIXED: Safely verify response state exists and status is perfectly 200 before executing clones
-                if (response && response.status === 200) {
-                    const url = new URL(event.request.url)
-                    const isCacheable = url.origin === self.location.origin
-                        || event.request.destination === 'image'
-
-                    if (isCacheable) {
-                        const clone = response.clone()
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, clone)
-                        })
-                    }
+                // Only cache same-origin basic responses — never opaque cross-origin
+                if (
+                    response &&
+                    response.status === 200 &&
+                    response.type === 'basic'
+                ) {
+                    const clone = response.clone()
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, clone)
+                    })
                 }
                 return response
             })
@@ -77,6 +77,8 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close()
     if (event.action === 'dismiss') return
-    const url = event.action === 'track' ? (event.notification.data.url || '/dashboard/myorders') : '/'
+    const url = event.action === 'track'
+        ? (event.notification.data.url || '/dashboard/myorders')
+        : '/'
     event.waitUntil(clients.openWindow(url))
 })
