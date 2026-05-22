@@ -5,7 +5,7 @@ import { Server } from 'socket.io';
 const io = new Server(server, {
     cors: {
         // Allows both your local testing and your new Vercel frontend
-        origin: ["http://localhost:5173", "https://snapit-frontend.vercel.app"], 
+        origin: ["https://localhost:5173", "https://snapit-frontend.vercel.app"], 
         methods: ["GET", "POST"],
         credentials: true
     },

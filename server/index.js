@@ -47,8 +47,8 @@ const latestPositions = new Map();
 
 // --- CORS RULES (STABILIZED FOR NATIVE CAPACITOR COOKIE EXCHANGE) ---
 const allowedOrigins = [
-    "http://localhost:5173",                     // Dev web client local server layout
-    "http://localhost",                          // Capacitor Android webview runtime origin
+    "https://localhost:5173",                     // Dev web client local server layout
+    "https://localhost",                          // Capacitor Android webview runtime origin
     "capacitor://localhost",                     // Capacitor iOS container origin
     "https://snapit-full-stack.onrender.com",
     "https://snapit-full-stack-2.onrender.com",
@@ -83,10 +83,10 @@ app.use(helmet({
                 "https://api.razorpay.com", 
                 "https://*.razorpay.com", 
                 "https://*.googleapis.com", 
-                "ws:", "wss:", "http://*", "https://*", 
+                "ws:", "wss:", "https://*", "https://*", 
                 "ws://*", "wss://*", 
                 "capacitor://*",
-                "http://localhost"
+                "https://localhost"
             ] 
         },
     },

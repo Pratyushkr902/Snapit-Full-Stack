@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 // HELPER: Ensures all image URLs are secure for Android/Mobile compatibility
 const secureImages = (images) => {
     if (!Array.isArray(images)) return images;
-    return images.map(img => typeof img === 'string' ? img.replace("http://", "https://") : img);
+    return images.map(img => typeof img === 'string' ? img.replace("https://", "https://") : img);
 };
 
 export const createProductController = async(request,response)=>{

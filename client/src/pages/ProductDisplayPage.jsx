@@ -114,7 +114,7 @@ const ProductDisplayPage = () => {
           >
             {!loading && data?.image?.length > 0 ? (
               <img
-                src={data.image[image]?.replace("http://", "https://")}
+                src={data.image[image]?.replace("https://", "https://")}
                 className={`w-full h-full object-contain p-6 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
                 alt={data.name}
               />
@@ -143,7 +143,7 @@ const ProductDisplayPage = () => {
                   onClick={() => setImage(index)}
                   className={`min-w-20 w-20 h-20 rounded-2xl border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md scale-105' : 'border-transparent opacity-60 bg-white p-1'}`}
                 >
-                  <img src={img?.replace("http://", "https://")} alt='thumb' className='w-full h-full object-contain p-1' />
+                  <img src={img?.replace("https://", "https://")} alt='thumb' className='w-full h-full object-contain p-1' />
                 </button>
               ))}
             </div>

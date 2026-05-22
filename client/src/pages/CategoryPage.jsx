@@ -101,7 +101,7 @@ const CategoryPage = () => {
                   alt={category.name}
                   src={
                     category?.image && typeof category.image === 'string' && category.image.startsWith('http') 
-                      ? category.image.replace('http://', 'https://') 
+                      ? category.image.replace('https://', 'https://') 
                       : `${BACKEND_URL}${category?.image || ''}`
                   }
                   className='w-full h-full object-contain'

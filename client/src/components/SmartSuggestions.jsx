@@ -68,7 +68,7 @@ const SmartSuggestions = ({ productId }) => {
               {/* Product Image */}
               <div className='w-full aspect-square bg-white flex items-center justify-center overflow-hidden p-2 relative mb-2'>
                 <img
-                  src={product.image?.[0]?.replace('http://', 'https://')}
+                  src={product.image?.[0]?.replace('https://', 'https://')}
                   alt={product.name}
                   className='w-full h-full object-contain'
                   onError={(e) => { e.target.src = 'https://placehold.co/150?text=Product' }}

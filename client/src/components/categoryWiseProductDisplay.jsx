@@ -49,11 +49,11 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                 // Bulletproof loop parsing mapping layer
                 const sanitizedProducts = filteredData.map(product => {
                     let updatedProduct = { ...product };
-                    if (updatedProduct.image && typeof updatedProduct.image === 'string' && updatedProduct.image.startsWith('http://')) {
-                        updatedProduct.image = updatedProduct.image.replace('http://', 'https://');
+                    if (updatedProduct.image && typeof updatedProduct.image === 'string' && updatedProduct.image.startsWith('https://')) {
+                        updatedProduct.image = updatedProduct.image.replace('https://', 'https://');
                     }
-                    if (updatedProduct.imageUrl && typeof updatedProduct.imageUrl === 'string' && updatedProduct.imageUrl.startsWith('http://')) {
-                        updatedProduct.imageUrl = updatedProduct.imageUrl.replace('http://', 'https://');
+                    if (updatedProduct.imageUrl && typeof updatedProduct.imageUrl === 'string' && updatedProduct.imageUrl.startsWith('https://')) {
+                        updatedProduct.imageUrl = updatedProduct.imageUrl.replace('https://', 'https://');
                     }
                     return updatedProduct;
                 });

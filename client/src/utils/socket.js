@@ -3,7 +3,7 @@ import { io } from "socket.io-client"
 // --- DYNAMIC URL CONFIGURATION ---
 const URL = process.env.NODE_ENV === 'production'
     ? "https://snapit-full-stack-2.onrender.com"  // UPDATED: Matches your Render service ID
-    : "http://localhost:8080"
+    : "https://localhost:8080"
 
 export const socket = io(URL, {
     // FIXED: Handshake starts with polling to bypass Render's proxy restrictions

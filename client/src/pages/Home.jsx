@@ -65,7 +65,7 @@ const Home = () => {
                     <img
                       src={
                         cat?.image && typeof cat.image === 'string' && cat.image.startsWith('http') 
-                          ? cat.image.replace('http://', 'https://') 
+                          ? cat.image.replace('https://', 'https://') 
                           : `${BACKEND_URL}${cat?.image || ''}`
                       }
                       alt={cat.name}
