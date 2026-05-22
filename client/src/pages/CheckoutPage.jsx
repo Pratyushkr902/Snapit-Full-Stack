@@ -33,7 +33,7 @@ const CheckoutPage = () => {
 
   const handleApplyPromoCoupon = async () => {
     if (!couponCode.trim()) return toast.error("Please enter a coupon code!")
-    if (couponCode.trim().toUpperCase() !== 'FIRST15') {
+    if (couponCode.trim().toUpperCase() !== 'FIRST15' && couponCode.trim().toUpperCase() !== 'SNAPIT15' && couponCode.trim().toUpperCase() !== 'FIRSTORDER') {
       return toast.error("Invalid code. Use 'FIRST15' for your first-purchase offer!")
     }
 
@@ -43,7 +43,7 @@ const CheckoutPage = () => {
       
       const response = await Axios({
         ...SummaryApi.applyFirstTimeCoupon,
-        data: { couponCode: couponCode.trim().toUpperCase() }
+        data: { couponCode: couponCode.trim().toUpperCase(), totalAmt: grandTotal }
       })
 
       toast.dismiss(loadingToast)

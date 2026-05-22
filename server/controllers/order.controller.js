@@ -388,7 +388,7 @@ export const applyCouponController = async (request, response) => {
             return response.status(404).json({ message: "User not found", error: true, success: false })
         }
 
-        if (couponCode === "FIRSTORDER" || couponCode === "SNAPIT15") {
+        if (couponCode === "FIRSTORDER" || couponCode === "SNAPIT15" || couponCode === "FIRST15") {
             const orderCount = await OrderModel.countDocuments({ userId })
             if (orderCount > 0) {
                 return response.status(400).json({ message: "Coupon only valid on first order", error: true, success: false })
