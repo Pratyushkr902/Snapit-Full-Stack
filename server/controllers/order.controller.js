@@ -204,3 +204,39 @@ export const settleRiderCashController = async (req, res) => { /* ... */ };
 export async function getLastOrder(req, res) { /* ... */ };
 export async function getSellerOrdersController(request, response) { /* ... */ };
 export async function webhookStripe(request, response) { /* ... */ };
+export const applyCouponController = async (request, response) => {
+    try {
+        const { couponCode, totalAmt } = request.body
+        const userId = request.userId
+
+        if (!couponCode || !totalAmt) {
+            return response.status(400).json({ message: "Coupon code and amount required", error: true, success: false })
+        }
+
+        const user = await UserModel.findById(userId)
+        if (!user) {
+            return response.status(404).json({ message: "User not found", error: true, success: false })
+        }
+
+        // First order coupon - 15% discount
+        if (couponCode === "FIRSTORDER" || couponCode === "SNAPIT15") {
+            const orderCount = await OrderModel.countDocuments({ userId })
+            if (orderCount > 0) {
+                return response.status(400).json({ message: "Coupon only valid on first order", error: true, success: false })
+            }
+            const discount = Math.round(Number(totalAmt) * 0.15)
+            const newTotal = Number(totalAmt) - discount
+            return response.json({ 
+                message: "Coupon applied successfully!", 
+                error: false, 
+                success: true, 
+                data: { discount, newTotal, couponCode } 
+            })
+        }
+
+        return response.status(400).json({ message: "Invalid coupon code", error: true, success: false })
+
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
