@@ -14,7 +14,8 @@ import {
     settleRiderCashController,  
     getLastOrder,
     collectPaymentController,
-    applyCouponController
+    applyCouponController,
+    getOrderItems
 } from '../controllers/order.controller.js'
 
 const orderRouter = Router()
@@ -25,6 +26,7 @@ orderRouter.post('/verify-payment', auth, verifyPaymentController)
 orderRouter.post('/webhook', webhookStripe) 
 
 orderRouter.get("/order-list", auth, getOrderDetailsController)
+orderRouter.get("/order-items", auth, getOrderItems)
 orderRouter.get("/seller-orders", auth, getSellerOrdersController)
 orderRouter.get('/last-order', auth, getLastOrder)
 

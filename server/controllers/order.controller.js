@@ -86,7 +86,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             store_details: assignedStore,
             involved_stores: [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
             rider_name: "Pratyush Sharma",
-            rider_contact: "9472026580"
+            rider_contact: "9472026580",
+            payment_collected: false
         };
 
         const generatedOrder = new OrderModel(payload);
@@ -134,7 +135,6 @@ export async function verifyPaymentController(request, response) {
             return response.status(400).json({ message: "Signature verification failed.", error: true, success: false });
         }
 
-        // ✅ INJECTED SERVER-SIDE DISCOUNTERS INTEGRITY BOUNDS SECURITY CHECK
         const expectedDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
         const normalBaseTotal = Number(subTotalAmt) + expectedDeliveryFee;
         const verifiedCouponTotal = normalBaseTotal - Math.round(Number(subTotalAmt) * 0.15);
@@ -193,17 +193,187 @@ export async function verifyPaymentController(request, response) {
     }
 }
 
-// Keep all your remaining Blinkit-style status controllers intact from here down...
-export const collectPaymentController = async (request, response) => { /* ... */ };
-export const updateSellerOrderStatusController = async (request, response) => { /* ... */ };
-export const updateOrderStatusController = async (request, response) => { /* ... */ };
-export async function getOrderDetailsController(request, response) { /* ... */ };
-export const getRiderLocationController = async (request, response) => { /* ... */ };
-export const getDailySalesReport = async (req, res) => { /* ... */ };
-export const settleRiderCashController = async (req, res) => { /* ... */ };
-export async function getLastOrder(req, res) { /* ... */ };
-export async function getSellerOrdersController(request, response) { /* ... */ };
-export async function webhookStripe(request, response) { /* ... */ };
+export const collectPaymentController = async (request, response) => {
+    try {
+        const { orderId, payment_status, payment_collected, isSettled, cashReceived } = request.body
+        const order = await OrderModel.findOneAndUpdate(
+            { orderId },
+            {
+                ...(payment_status && { payment_status }),
+                payment_collected: true,
+                ...(isSettled !== undefined && { isSettled }),
+                ...(cashReceived && { cashReceived })
+            },
+            { new: true }
+        )
+        if (!order) return response.status(404).json({ message: "Order not found", error: true, success: false })
+        return response.json({ message: "Payment recorded", error: false, success: true, data: order })
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export const updateSellerOrderStatusController = async (request, response) => {
+    try {
+        const { orderId, sellerStatus } = request.body
+        const delivery_status = sellerStatus === "Ready for Pickup" ? "Confirmed" : "Pending"
+        const order = await OrderModel.findOneAndUpdate(
+            { orderId },
+            { seller_status: sellerStatus, delivery_status },
+            { new: true }
+        )
+        if (!order) return response.status(404).json({ message: "Order not found", error: true, success: false })
+        return response.json({ message: `Store status updated: ${sellerStatus}`, success: true, error: false, data: order })
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export const updateOrderStatusController = async (request, response) => {
+    try {
+        const { orderId, status, payment_status, payment_collected, isSettled, cashReceived } = request.body
+
+        const order = await OrderModel.findOne({ orderId })
+        if (!order) return response.status(404).json({ message: "Order not found", error: true, success: false })
+
+        if (status === "Delivered" && !order.payment_collected && order.payment_status !== "PAID" && !payment_status) {
+            return response.status(400).json({ message: "Collect payment (Cash/UPI) first!", success: false, error: true })
+        }
+
+        const updatedOrder = await OrderModel.findOneAndUpdate(
+            { orderId },
+            {
+                delivery_status: status,
+                ...(payment_status && { payment_status, payment_collected: true }),
+                ...(isSettled !== undefined && { isSettled, settledAt: isSettled ? new Date() : null }),
+                ...(cashReceived && { cashReceived }),
+                ...(status === "Delivered" && { deliveredAt: new Date() })
+            },
+            { new: true }
+        )
+
+        return response.json({ message: `Order status updated to ${status}`, success: true, error: false, data: updatedOrder })
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export async function getOrderDetailsController(request, response) {
+    try {
+        const userId = request.userId
+        const orders = await OrderModel.find({ userId })
+            .populate('delivery_address')
+            .sort({ createdAt: -1 })
+        return response.json({ message: "Orders fetched", error: false, success: true, data: orders })
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export async function getOrderItems(request, response) {
+    try {
+        const orders = await OrderModel.find({
+            delivery_status: { $nin: ['Cancelled'] }
+        })
+            .populate('userId', 'name email mobile')
+            .populate('delivery_address')
+            .populate('cartItems.productId', 'name image price')
+            .sort({ createdAt: -1 })
+        return response.json({ message: "Orders fetched", error: false, success: true, data: orders })
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export const getRiderLocationController = async (request, response) => {
+    try {
+        const { orderId } = request.body
+        const order = await OrderModel.findOne({ orderId }).select('riderLocation delivery_status')
+        if (!order) return response.status(404).json({ message: "Order not found", error: true, success: false })
+        return response.json({ message: "Location fetched", error: false, success: true, data: order.riderLocation })
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export const getDailySalesReport = async (req, res) => {
+    try {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const orders = await OrderModel.find({
+            createdAt: { $gte: today, $lt: tomorrow },
+            delivery_status: { $ne: 'Cancelled' }
+        })
+
+        const totalRevenue = orders.reduce((acc, o) => acc + (Number(o.totalAmt) || 0), 0)
+        const deliveredOrders = orders.filter(o => o.delivery_status === 'Delivered')
+        const pendingOrders = orders.filter(o => o.delivery_status !== 'Delivered')
+
+        return res.json({
+            message: "Daily report",
+            error: false,
+            success: true,
+            data: {
+                totalOrders: orders.length,
+                totalRevenue,
+                deliveredOrders: deliveredOrders.length,
+                pendingOrders: pendingOrders.length,
+                orders
+            }
+        })
+    } catch (error) {
+        return res.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export const settleRiderCashController = async (req, res) => {
+    try {
+        const { ordersSettled } = req.body
+        await OrderModel.updateMany(
+            { _id: { $in: ordersSettled } },
+            { isSettled: true, settledAt: new Date() }
+        )
+        return res.json({ message: "Cash settled successfully", error: false, success: true })
+    } catch (error) {
+        return res.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export async function getLastOrder(req, res) {
+    try {
+        const userId = req.userId
+        const order = await OrderModel.findOne({ userId })
+            .sort({ createdAt: -1 })
+            .populate('delivery_address')
+        if (!order) return res.status(404).json({ message: "No orders found", error: true, success: false })
+        return res.json({ message: "Last order fetched", error: false, success: true, data: order })
+    } catch (error) {
+        return res.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export async function getSellerOrdersController(request, response) {
+    try {
+        const orders = await OrderModel.find({
+            delivery_status: { $nin: ['Cancelled'] }
+        })
+            .populate('userId', 'name email mobile')
+            .populate('delivery_address')
+            .populate('cartItems.productId', 'name image price')
+            .sort({ createdAt: -1 })
+        return response.json({ message: "Seller orders fetched", error: false, success: true, data: orders })
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+export async function webhookStripe(request, response) {
+    return response.json({ message: "Webhook received", success: true })
+}
+
 export const applyCouponController = async (request, response) => {
     try {
         const { couponCode, totalAmt } = request.body
@@ -218,7 +388,6 @@ export const applyCouponController = async (request, response) => {
             return response.status(404).json({ message: "User not found", error: true, success: false })
         }
 
-        // First order coupon - 15% discount
         if (couponCode === "FIRSTORDER" || couponCode === "SNAPIT15") {
             const orderCount = await OrderModel.countDocuments({ userId })
             if (orderCount > 0) {
@@ -226,16 +395,15 @@ export const applyCouponController = async (request, response) => {
             }
             const discount = Math.round(Number(totalAmt) * 0.15)
             const newTotal = Number(totalAmt) - discount
-            return response.json({ 
-                message: "Coupon applied successfully!", 
-                error: false, 
-                success: true, 
-                data: { discount, newTotal, couponCode } 
+            return response.json({
+                message: "Coupon applied successfully!",
+                error: false,
+                success: true,
+                data: { discount, newTotal, couponCode }
             })
         }
 
         return response.status(400).json({ message: "Invalid coupon code", error: true, success: false })
-
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false })
     }
