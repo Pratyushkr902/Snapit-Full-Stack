@@ -45,11 +45,14 @@ const app = express();
 const server = http.createServer(app); 
 const latestPositions = new Map(); 
 
-// --- CORS RULES (STABILIZED FOR NATIVE CAPACITOR COOKIE EXCHANGE) ---
+// --- CORS RULES (STABILIZED FOR NATIVE CAPACITOR & WEBVIEW COOKIE EXCHANGE) ---
 const allowedOrigins = [
+    "http://localhost:5173",
     "https://localhost:5173",                     // Dev web client local server layout
     "https://localhost",                          // Capacitor Android webview runtime origin
-    "capacitor://localhost",                     // Capacitor iOS container origin
+    "http://localhost",                           // Native Android WebView standard fallback loopback
+    "capacitor://localhost",                      // Capacitor iOS container origin
+    "null",                                       // String literal parsed from strict WebView sandboxes
     "https://snapit-full-stack.onrender.com",
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com"
@@ -57,9 +60,16 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Safe check for machine scripts or local server tasks
+        if (!origin) {
+            return callback(null, true);
+        }
+        
+        // Dynamic lookup inside lowercased whitelisted origin strings
+        if (allowedOrigins.includes(origin.toLowerCase())) {
             callback(null, true);
         } else {
+            console.warn(`[CORS Blocked] Unauthorized request attempt from: ${origin}`);
             callback(new Error('Cross-Origin Request rejected by Snapit Engine policies.'));
         }
     },
@@ -86,7 +96,8 @@ app.use(helmet({
                 "ws:", "wss:", "https://*", "https://*", 
                 "ws://*", "wss://*", 
                 "capacitor://*",
-                "https://localhost"
+                "https://localhost",
+                "http://localhost"
             ] 
         },
     },
@@ -179,10 +190,7 @@ console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
 app.use(express.static(clientBuildPath));
 
 // --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
-// ✅ FIXED: Express 5 and path-to-regexp v8 compatible wildcard route parsing structure syntax
 app.get('/{*splat}', (req, res, next) => {
-    // Block the catch-all engine from treating missing .css or .js scripts as valid HTML routes.
-    // This removes the "MIME type ('text/plain') is not supported" runtime compilation browser crashes.
     if (req.url.startsWith('/api') || req.url.includes('.')) {
         return res.status(404).json({ message: "Asset file or resource route completely unavailable.", success: false });
     }
