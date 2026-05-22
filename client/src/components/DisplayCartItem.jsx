@@ -24,20 +24,32 @@ const DisplayCartItem = ({close}) => {
 
     const redirectToCheckoutPage = (e) => {
         if (e) {
-            if (typeof e.preventDefault === 'function') e.preventDefault();
-            if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopPropagation) e.stopPropagation();
         }
 
+        console.log('Proceed button clicked! Checking token...');
         const token = localStorage.getItem('accesstoken') || 
                       localStorage.getItem('accessToken') || 
                       localStorage.getItem('token');
                       
         if (token) {
-            if (typeof close === 'function') close();
-            window.location.hash = '#/checkout';
+            if (close) close();
+            
+            // Overkill strategy: try React Router navigation first, fallback to structural location changes
+            setTimeout(() => {
+                try {
+                    console.log('Attempting React Router navigation...');
+                    navigate('/checkout');
+                } catch (err) {
+                    console.log('React Router failed, falling back to window location hash adjustment...', err);
+                    window.location.hash = '#/checkout';
+                }
+            }, 0);
             return;
         }
         
+        console.log('No token found in localStorage!');
         toast.error('Please login to proceed to checkout');
     }
 
@@ -146,8 +158,9 @@ const DisplayCartItem = ({close}) => {
                     cartItem && cartItem[0] && (
                         <div className='p-4 bg-white border-t'>
                             <button
+                                type='button'
                                 onClick={(e) => redirectToCheckoutPage(e)}
-                                className='w-full bg-green-700 hover:bg-green-800 text-white px-4 font-black text-base py-4 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-all'
+                                className='w-full bg-green-700 hover:bg-green-800 text-white px-4 font-black text-base py-4 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-all cursor-pointer'
                             >
                                 <div className='flex flex-col items-start leading-none'>
                                     <span className='text-[10px] uppercase opacity-80'>Grand Total</span>
