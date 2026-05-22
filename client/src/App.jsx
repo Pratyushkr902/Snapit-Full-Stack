@@ -130,7 +130,7 @@ function App() {
         <Toaster position="top-center" reverseOrder={false} />
 
         {/* Global Cart Overlay */}
-        {showCart && <DisplayCartItem close={() => setShowCart(false)} />}
+        {showCart && location.pathname !== '/checkout' && <DisplayCartItem close={() => setShowCart(false)} />}
 
         {/* Mobile Cart Link */}
         {

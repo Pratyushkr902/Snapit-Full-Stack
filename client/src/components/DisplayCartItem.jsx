@@ -28,10 +28,8 @@ const DisplayCartItem = ({close}) => {
     const redirectToCheckoutPage = () => {
     const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
     if(token){
+        if(close) close()
         navigate("/checkout")
-        setTimeout(() => {
-            if(close) close()
-        }, 100)
         return
     }
     toast.error("Please Login to proceed")
