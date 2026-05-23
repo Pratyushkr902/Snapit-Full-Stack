@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "nodemon server/index.js"
+    "dev": "nodemon server/index.js",
+    "build": "cd ../client && npm install && npm run build"
   },
   "author": "Pratyush Kumar",
   "license": "ISC",

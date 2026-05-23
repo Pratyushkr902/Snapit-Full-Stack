@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: snapit-backend
+    env: node
+    rootDir: server
+    buildCommand: npm install && cd ../client && npm install && npm run build
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
