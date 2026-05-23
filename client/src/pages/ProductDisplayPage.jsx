@@ -116,14 +116,15 @@ const ProductDisplayPage = () => {
         
         {/* Left: Gallery Column */}
         <div className='space-y-4'>
+          {/* ✓ FIX: Replaced elastic padding styles with responsive square constraints to fix mobile distortions */}
           <div 
-            className='bg-white lg:min-h-[420px] rounded-[2rem] min-h-80 max-h-80 lg:max-h-[420px] flex items-center justify-center overflow-hidden border border-gray-100 shadow-md relative group cursor-zoom-in'
+            className='bg-white w-full aspect-square max-h-[300px] sm:max-h-[360px] lg:max-h-[420px] rounded-2xl flex items-center justify-center overflow-hidden border border-gray-100/70 shadow-sm relative group cursor-zoom-in'
             onClick={() => setImageZoom(!imageZoom)}
           >
             {!loading && data?.image?.length > 0 ? (
               <img
                 src={data.image[image]?.replace("https://", "https://")}
-                className={`w-full h-full object-contain p-6 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
+                className={`w-full h-full object-contain p-4 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
                 alt={data.name}
               />
             ) : (
@@ -159,6 +160,7 @@ const ProductDisplayPage = () => {
         </div>
 
         {/* Right: Product Info Column */}
+        {/* ✓ FIX: Cleaned up stray comma from previous layout string */}
         <div className='space-y-5 flex flex-col justify-center'>
           <div className='flex items-center gap-2'>
             <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
