@@ -45,8 +45,9 @@ const ProductDisplayPage = () => {
     try {
       setLoading(true)
       const response = await Axios({
-        ...SummaryApi.getProductDetails,
-        data: { productId }
+        url: '/api/product/get-product-details',
+        method: 'post',
+        data: { productId: productId }
       })
       const { data: responseData } = response
       if (responseData.success) setData(responseData.data)
