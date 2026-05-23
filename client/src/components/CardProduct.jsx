@@ -46,9 +46,8 @@ const CardProduct = ({ data }) => {
         <Link
             to={url}
             onClick={() => window.scrollTo(0, 0)}
-            className='border flex flex-col rounded-xl cursor-pointer bg-white dark:bg-[#0F0F0F] border-slate-100 dark:border-zinc-800 transition-all hover:shadow-lg hover:border-green-200 group relative overflow-hidden p-1.5 lg:p-3'
+            className='border flex flex-col rounded-xl cursor-pointer bg-white dark:bg-[#0F0F0F] border-slate-100 dark:border-zinc-800 transition-all hover:shadow-lg hover:border-green-200 group relative overflow-hidden p-1.5 lg:p-2'
         >
-
             {/* Product Label */}
             {label && (
                 <div
@@ -58,9 +57,10 @@ const CardProduct = ({ data }) => {
                 </div>
             )}
 
-            {/* Product Image */}
-            <div className='w-full aspect-square min-h-[140px] rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] relative p-2'>
+            {/* FIX 1: Maximized image container — full width square, no internal padding */}
+            <div className='w-full aspect-square rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] relative'>
 
+                {/* FIX 2: object-contain filling full container area */}
                 <img
                     src={
                         (data?.image && data.image.length > 0)
@@ -69,11 +69,7 @@ const CardProduct = ({ data }) => {
                     }
                     alt={data?.name || "Product"}
                     onError={handleImgError}
-                    className={`transition-transform duration-500 lg:group-hover:scale-105 ${
-                        data?.name?.toLowerCase().includes("chicken curry cut")
-                            ? "w-full h-full object-cover object-center scale-[1.55]"
-                            : "max-w-[78%] max-h-[78%] object-contain"
-                    }`}
+                    className='w-full h-full object-contain transition-transform duration-500 lg:group-hover:scale-105'
                 />
 
                 {/* Soft Overlay */}
@@ -89,16 +85,14 @@ const CardProduct = ({ data }) => {
                 )}
             </div>
 
-            {/* Product Content */}
-            <div className='flex flex-col mt-1.5 gap-0.5'>
+            {/* FIX 3: Structured compact typography anchored at bottom */}
+            <div className='flex flex-col mt-1.5 gap-0.5 flex-1'>
 
                 {/* Delivery + Discount Tags */}
                 <div className='flex items-center gap-1'>
-
                     <div className='rounded text-[7px] lg:text-[9px] px-1 py-0.5 text-green-700 bg-green-50 border border-green-100 font-bold uppercase'>
                         10 min
                     </div>
-
                     {Boolean(data?.discount) && (
                         <p className='text-white bg-green-600 px-1 py-0.5 text-[7px] lg:text-[9px] rounded font-bold'>
                             {data.discount}% OFF
@@ -106,33 +100,29 @@ const CardProduct = ({ data }) => {
                     )}
                 </div>
 
-                {/* Product Name */}
-                <div className='font-bold text-slate-800 dark:text-zinc-100 text-[10px] lg:text-sm line-clamp-2 min-h-[32px] leading-tight group-hover:text-green-700 transition-colors'>
+                {/* Product Name — fixed 2-line clamp so all cards same height */}
+                <div className='font-bold text-slate-800 dark:text-zinc-100 text-[10px] lg:text-sm line-clamp-2 h-[28px] lg:h-[40px] leading-tight group-hover:text-green-700 transition-colors'>
                     {data?.name}
                 </div>
 
                 {/* Product Unit */}
-                <div className='text-[9px] lg:text-xs text-neutral-400 italic'>
+                <div className='text-[9px] lg:text-xs text-neutral-400 italic leading-tight'>
                     {data?.unit}
                 </div>
 
-                {/* Price + Cart */}
-                <div className='flex items-center justify-between gap-1 mt-1'>
+                {/* Price + Cart — pinned to bottom */}
+                <div className='flex items-center justify-between gap-1 mt-auto pt-1'>
 
                     {/* Price */}
                     <div className='flex flex-col'>
-
                         <div className='font-black text-slate-900 dark:text-white text-[11px] lg:text-base leading-tight'>
-                            {
-                                DisplayPriceInRupees(
-                                    pricewithDiscount(
-                                        data?.price || 0,
-                                        data?.discount || 0
-                                    )
+                            {DisplayPriceInRupees(
+                                pricewithDiscount(
+                                    data?.price || 0,
+                                    data?.discount || 0
                                 )
-                            }
+                            )}
                         </div>
-
                         {Boolean(data?.discount) && (
                             <span className='text-[8px] lg:text-[10px] line-through text-neutral-400'>
                                 {DisplayPriceInRupees(data.price)}
@@ -145,7 +135,6 @@ const CardProduct = ({ data }) => {
                         className='flex-shrink-0 w-[60px] lg:w-[90px]'
                         onClick={(e) => e.preventDefault()}
                     >
-
                         {data?.stock == 0 ? (
                             <div className='border border-red-100 bg-red-50 px-1 py-1 rounded text-center'>
                                 <p className='text-red-500 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
@@ -157,7 +146,6 @@ const CardProduct = ({ data }) => {
                         ) : (
                             <AddToCartButton data={data} />
                         )}
-
                     </div>
 
                 </div>
