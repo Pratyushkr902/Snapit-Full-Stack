@@ -116,7 +116,7 @@ const ProductDisplayPage = () => {
         
         {/* Left: Gallery Column */}
         <div className='space-y-4'>
-          {/* ✓ FIX: Replaced elastic padding styles with responsive square constraints to fix mobile distortions */}
+          {/* Main Image View Box */}
           <div 
             className='bg-white w-full aspect-square max-h-[300px] sm:max-h-[360px] lg:max-h-[420px] rounded-2xl flex items-center justify-center overflow-hidden border border-gray-100/70 shadow-sm relative group cursor-zoom-in'
             onClick={() => setImageZoom(!imageZoom)}
@@ -124,7 +124,8 @@ const ProductDisplayPage = () => {
             {!loading && data?.image?.length > 0 ? (
               <img
                 src={data.image[image]?.replace("https://", "https://")}
-                className={`w-full h-full object-contain p-4 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
+                // ✓ FIX: Applied absolute constraints to keep product image safely proportional and completely eliminate horizontal stretching
+                className={`absolute max-w-[85%] max-h-[85%] object-contain transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
                 alt={data.name}
               />
             ) : (
@@ -134,6 +135,7 @@ const ProductDisplayPage = () => {
             )}
           </div>
 
+          {/* Dots Indicator */}
           <div className='flex items-center justify-center gap-1.5'>
             {data?.image?.map((img, index) => (
               <button
@@ -144,6 +146,7 @@ const ProductDisplayPage = () => {
             ))}
           </div>
 
+          {/* Thumbnails list */}
           <div className='relative'>
             <div ref={imageContainer} className='flex gap-2.5 overflow-x-auto scrollbar-none snap-x scroll-smooth px-1'>
               {data?.image?.map((img, index) => (
@@ -160,7 +163,6 @@ const ProductDisplayPage = () => {
         </div>
 
         {/* Right: Product Info Column */}
-        {/* ✓ FIX: Cleaned up stray comma from previous layout string */}
         <div className='space-y-5 flex flex-col justify-center'>
           <div className='flex items-center gap-2'>
             <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
