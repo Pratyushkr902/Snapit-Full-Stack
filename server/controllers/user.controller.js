@@ -93,10 +93,15 @@ export async function registerUserController(request, response) {
         })
 
         return response.json({
-            message: "User register successfully",
+            message: "User register successfully. Please verify your email.",
             error: false,
             success: true,
-            data: save
+            data: {
+                _id: save._id,
+                name: save.name,
+                email: save.email,
+                verify_email: save.verify_email
+            }
         })
 
     } catch (error) {

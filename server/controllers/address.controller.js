@@ -90,6 +90,7 @@ export const updateAddressController = async(request,response)=>{
 }
 
 export const deleteAddresscontroller = async(request,response)=>{
+    // IDOR protection - verify ownership before delete
     try {
         const userId = request.userId // auth middleware    
         const { _id } = request.body 
