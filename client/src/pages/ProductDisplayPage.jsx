@@ -20,7 +20,10 @@ const ProductDisplayPage = () => {
   const params = useParams()
   const navigate = useNavigate()
   
-  let productId = params?.product?.split("-")?.slice(-1)[0]
+  const rawProduct = params?.product || ''
+  // Extract MongoDB ObjectId (24 hex chars) from the slug
+  const objectIdMatch = rawProduct.match(/[a-fA-F0-9]{24}/)
+  let productId = objectIdMatch ? objectIdMatch[0] : rawProduct.split('-').slice(-1)[0]
 
   const [data, setData] = useState({ name: "", image: [], stock: 0, unit: "" })
   const [image, setImage] = useState(0)
