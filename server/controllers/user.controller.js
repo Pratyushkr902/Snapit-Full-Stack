@@ -198,7 +198,7 @@ export async function loginController(request, response) {
             error: false,
             success: true,
             data: {
-                accesstoken,
+                accesstoken,   // lowercase t — matches localStorage.setItem('accesstoken', ...)
                 refreshToken
             }
         })
@@ -472,7 +472,9 @@ export async function refreshToken(request, response) {
             message: "New Access token generated",
             error: false,
             success: true,
-            data: { accessToken: newAccessToken }
+            data: {
+                accesstoken: newAccessToken  // FIX: lowercase t — consistent with login response
+            }
         })
     } catch (error) {
         return response.status(500).json({
@@ -521,7 +523,6 @@ export async function getAllRiders(request, response) {
     }
 }
 
-// --- FCM TOKEN ---
 export async function saveFcmTokenController(request, response) {
     try {
         const userId = request.userId

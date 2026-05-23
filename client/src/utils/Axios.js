@@ -72,7 +72,9 @@ Axios.interceptors.response.use(
                     withCredentials: true
                 });
 
-                const newAccessToken = refreshResponse.data?.data?.accesstoken;
+                // FIX: handle both accesstoken (login) and accessToken (refresh) key names
+                const newAccessToken = refreshResponse.data?.data?.accesstoken 
+                    || refreshResponse.data?.data?.accessToken;
 
                 if (!newAccessToken) throw new Error("No access token in refresh response");
 
