@@ -98,7 +98,7 @@ Axios.interceptors.response.use(
 const handleLogoutRedirect = () => {
     localStorage.clear();
     if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        window.location.hash = "#/login";
     }
 };
 

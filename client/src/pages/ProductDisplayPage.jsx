@@ -21,11 +21,7 @@ const ProductDisplayPage = () => {
   const navigate = useNavigate()
   
   const rawProduct = params?.product || ''
-  console.log('DEBUG params:', params)
-  console.log('DEBUG rawProduct:', rawProduct)
-  console.log('DEBUG hash:', window.location.hash)
   let productId = rawProduct.split('-').pop()
-  console.log('DEBUG productId:', productId)
 
   const [data, setData] = useState({ name: "", image: [], stock: 0, unit: "" })
   const [image, setImage] = useState(0)
