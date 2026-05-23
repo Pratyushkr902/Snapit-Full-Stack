@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit'
-import mongoSanitize from 'express-mongo-sanitize' // ✓ Fixed package and variable name to match line 65
+import mongoSanitize from 'mongo-sanitize' // ✓ Using mongo-sanitize (Express 5 compatible)
 
 // --- RATE LIMITERS ---
 
@@ -62,12 +62,13 @@ export const paymentLimiter = rateLimit({
 })
 
 // --- INPUT SANITIZER ---
-export const sanitizeInput = mongoSanitize({
-    replaceWith: '_',
-    onSanitize: ({ req, key }) => {
-        console.warn(`⚠️ Sanitized malicious input from ${req.ip} at key: ${key}`)
-    }
-})
+// Manual middleware — express-mongo-sanitize is incompatible with Express 5
+// (req.query is read-only in Express 5, causing a TypeError on every request)
+export const sanitizeInput = (req, res, next) => {
+    if (req.body) req.body = mongoSanitize(req.body)
+    if (req.params) req.params = mongoSanitize(req.params)
+    next()
+}
 
 // --- OWNERSHIP CHECKER ---
 // Usage: checkOwnership(Model, 'paramField', 'userField')
