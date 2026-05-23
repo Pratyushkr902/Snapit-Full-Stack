@@ -97,7 +97,10 @@ app.use(helmet({
                 "ws://*", "wss://*", 
                 "capacitor://*",
                 "https://localhost",
-                "http://localhost"
+                "http://localhost",
+                "https://snapit-full-stack-2.onrender.com",
+                "https://snapit-full-stack.onrender.com",
+                "https://snapit-full-stack-0.onrender.com"
             ] 
         },
     },

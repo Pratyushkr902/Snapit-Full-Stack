@@ -218,6 +218,7 @@ export const getProductByCategoryAndSubCategory  = async(request,response)=>{
 
 export const getProductDetails = async(request,response)=>{
     try {
+        console.log('getProductDetails body:', request.body)
         const { productId } = request.body 
 
         if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
