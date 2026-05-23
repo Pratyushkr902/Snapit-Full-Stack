@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit'
-import mongoSanitize from 'express-mongo-sanitize'
+import sanitize from 'mongo-sanitize'; // ✓ Matches your package.json
 
 // --- RATE LIMITERS ---
 
