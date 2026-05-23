@@ -12,7 +12,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import Axios from './utils/Axios';
 import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
-import CartMobileLink from './components/CartMobile';
+import CartMobileLink from './components/CartMobile'
+import RemoteConfigProvider from './provider/RemoteConfigProvider'
+import OfferStrip from './components/OfferStrip';
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
 import { io } from "socket.io-client"; 
@@ -124,9 +126,9 @@ function App() {
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
 
   return (
-    <GlobalProvider>
+    <RemoteConfigProvider><GlobalProvider>
       <div className="App">
-        <Header openCart={() => setShowCart(true)} />
+        <OfferStrip /><Header openCart={() => setShowCart(true)} />
         
         <main className='min-h-[78vh]'>
           <Outlet />
@@ -153,7 +155,7 @@ function App() {
         {/* WhatsApp Support Button — hidden on dashboard and rider panel */}
         {!isDashboard && <WhatsAppButton />}
       </div>
-    </GlobalProvider>
+    </GlobalProvider></RemoteConfigProvider>
   )
 }
 
