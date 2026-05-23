@@ -41,6 +41,7 @@ const ProductDisplayPage = () => {
   }
 
   const fetchProductDetails = async () => {
+    if (!productId || productId.length !== 24) return
     try {
       setLoading(true)
       const response = await Axios({
@@ -61,7 +62,7 @@ const ProductDisplayPage = () => {
     checkShopStatus()
     const timer = setInterval(checkShopStatus, 60000)
     return () => clearInterval(timer)
-  }, [params, productId])
+  }, [productId])
 
   const handleScrollRight = () => { imageContainer.current.scrollLeft += 100 }
   const handleScrollLeft = () => { imageContainer.current.scrollLeft -= 100 }
