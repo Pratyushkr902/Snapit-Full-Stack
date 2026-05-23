@@ -1,10 +1,10 @@
 import ProductModel from "../models/product.model.js";
 import mongoose from "mongoose";
 
-// HELPER: Ensures all image URLs are secure for Android/Mobile compatibility
+// HELPER: Ensures all image URLs are secure (http → https) for Android/Mobile compatibility
 const secureImages = (images) => {
     if (!Array.isArray(images)) return images;
-    return images.map(img => typeof img === 'string' ? img.replace("https://", "https://") : img);
+    return images.map(img => typeof img === 'string' ? img.replace("http://", "https://") : img);
 };
 
 export const createProductController = async(request,response)=>{
@@ -88,8 +88,9 @@ export const getProductController = async(request,response)=>{
             ProductModel.countDocuments(query)
         ])
 
+        // FIX: Use toObject() instead of _doc for reliable populated field access
         const securedData = data.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -134,8 +135,9 @@ export const getProductByCategory = async(request,response)=>{
             category : { $in : id }
         }).limit(15)
 
+        // FIX: Use toObject() instead of _doc
         const securedData = product.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -192,8 +194,9 @@ export const getProductByCategoryAndSubCategory  = async(request,response)=>{
             ProductModel.countDocuments(query)
         ])
 
+        // FIX: Use toObject() instead of _doc
         const securedData = data.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -239,8 +242,9 @@ export const getProductDetails = async(request,response)=>{
             })
         }
 
+        // FIX: Use toObject() instead of _doc
         const securedProduct = {
-            ...product._doc,
+            ...product.toObject(),
             image: secureImages(product.image)
         };
 
@@ -348,8 +352,9 @@ export const searchProduct = async(request,response)=>{
             ProductModel.countDocuments(query)
         ])
 
+        // FIX: Use toObject() instead of _doc
         const securedData = data.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -363,7 +368,6 @@ export const searchProduct = async(request,response)=>{
             page : page,
             limit : limit 
         })
-
 
     } catch (error) {
         return response.status(500).json({
@@ -388,7 +392,6 @@ export async function getFrequentlyBought(req, res) {
             return res.status(404).json({ success: false, message: 'Product not found' })
         }
 
-        // Find products in same category excluding the current one
         const suggestions = await ProductModel
             .find({
                 category: { $in: product.category },
@@ -396,9 +399,9 @@ export async function getFrequentlyBought(req, res) {
             })
             .limit(5)
 
-        // Apply secure images fix to suggestions
+        // FIX: Use toObject() instead of _doc
         const securedSuggestions = suggestions.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
