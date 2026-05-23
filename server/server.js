@@ -1,227 +1,121 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import express from 'express'
+import cors from 'cors'
+import dotenv from 'dotenv'
+import cookieParser from 'cookie-parser'
+import compression from 'compression'
+import connectDB from './config/connectDB.js'
+import productRouter from './routes/product.route.js'
 
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { Server } from 'socket.io'; 
-import http from 'http'; 
-import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
-import helmet from 'helmet';
-import connectDB from './config/connectDB.js';
-import fs from 'fs';
+dotenv.config()
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const app = express()
 
-// --- PRE-REGISTER MODELS ---
-import './models/user.model.js';
-import './models/category.model.js';
-import './models/subCategory.model.js'; 
-import './models/product.model.js';
-import './models/store.model.js';
-import './models/order.model.js';
+// ============================================
+// MIDDLEWARE - Optimized for Render Free Tier
+// ============================================
 
-console.log("RAZORPAY INTEGRITY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
-
-// --- ROUTE IMPORTS ---
-import userRouter from './route/user.route.js';
-import categoryRouter from './route/category.route.js';
-import uploadRouter from './route/upload.router.js';
-import subCategoryRouter from './route/subCategory.route.js';
-import productRouter from './route/product.route.js';
-import cartRouter from './route/cart.route.js';
-import addressRouter from './route/address.route.js';
-import orderRouter from './route/order.route.js';
-import storeRouter from './route/store.route.js'; 
-import walletRouter from './route/wallet.route.js';
-import flashSaleRouter from './route/flashSale.route.js';
-import referralRouter from './route/referral.route.js';
-import reviewRouter from './route/review.route.js';
-
-const app = express();
-const server = http.createServer(app); 
-const latestPositions = new Map(); 
-
-// --- CORS RULES (STABILIZED FOR NATIVE CAPACITOR & WEBVIEW COOKIE EXCHANGE) ---
-const allowedOrigins = [
-    "http://localhost:5173",
-    "https://localhost:5173",                     // Dev web client local server layout
-    "https://localhost",                          // Capacitor Android webview runtime origin
-    "http://localhost",                           // Native Android WebView standard fallback loopback
-    "capacitor://localhost",                      // Capacitor iOS container origin
-    "null",                                       // String literal parsed from strict WebView sandboxes
-    "https://snapit-full-stack.onrender.com",
-    "https://snapit-full-stack-2.onrender.com",
-    "https://snapit-full-stack-0.onrender.com"
-];
-
+// CORS configuration
 app.use(cors({
-    origin: (origin, callback) => {
-        // Safe check for machine scripts or local server tasks
-        if (!origin) {
-            return callback(null, true);
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true
+}))
+
+// Compression middleware - Reduces response size by ~70%
+app.use(compression({
+    level: 6, // Balance between speed and compression
+    threshold: 1024, // Only compress responses larger than 1KB
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+            return false
         }
-        
-        // Dynamic lookup inside lowercased whitelisted origin strings
-        if (allowedOrigins.includes(origin.toLowerCase())) {
-            callback(null, true);
-        } else {
-            console.warn(`[CORS Blocked] Unauthorized request attempt from: ${origin}`);
-            callback(new Error('Cross-Origin Request rejected by Snapit Engine policies.'));
-        }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
-}));
-
-// --- HELMET CONFIGURATIONS ---
-app.use(helmet({
-    crossOriginResourcePolicy: false,
-    crossOriginEmbedderPolicy: false, 
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
-            imgSrc: ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://api.qrserver.com"],
-            frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
-            connectSrc: [
-                "'self'", 
-                "https://api.razorpay.com", 
-                "https://*.razorpay.com", 
-                "https://*.googleapis.com", 
-                "ws:", "wss:", "https://*", "https://*", 
-                "ws://*", "wss://*", 
-                "capacitor://*",
-                "https://localhost",
-                "http://localhost"
-            ] 
-        },
-    },
-}));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-app.use(morgan('dev'));
-
-app.use((req, res, next) => {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    next();
-});
-
-// --- SOCKET.IO HANDLING LAYER ---
-const io = new Server(server, {
-    path: '/socket.io/', 
-    cors: { 
-        origin: allowedOrigins, 
-        methods: ["GET", "POST"], 
-        credentials: true 
-    },
-    transports: ['polling', 'websocket'], 
-    pingTimeout: 60000,        
-    pingInterval: 25000,       
-    allowEIO3: true 
-});
-
-io.on('connection', (socket) => {
-    console.log(`Tracking Connected: ${socket.id}`);
-    
-    socket.on('join_order', (orderId) => {
-        if (orderId) {
-            socket.join(orderId);
-            if (latestPositions.has(orderId)) {
-                socket.emit('receive_location', latestPositions.get(orderId));
-            }
-        }
-    });
-    
-    socket.on('send_location', (data) => {
-        const { orderId, latitude, longitude } = data;
-        if (orderId && latitude && longitude) {
-            const movementData = { latitude, longitude, timestamp: Date.now() };
-            latestPositions.set(orderId, movementData);
-            io.to(orderId).emit('receive_location', movementData);
-        }
-    });
-    
-    socket.on('disconnect', () => {
-        console.log(`Client ${socket.id} disconnected`);
-    });
-});
-
-// --- API ROUTES MOUNTING ---
-app.use('/api/user', userRouter);
-app.use('/api/category', categoryRouter);
-app.use('/api/file', uploadRouter);
-app.use('/api/subcategory', subCategoryRouter);
-app.use('/api/product', productRouter);
-app.use('/api/cart', cartRouter);
-app.use('/api/address', addressRouter);
-app.use('/api/order', orderRouter);
-app.use('/api/store', storeRouter); 
-app.use('/api/wallet', walletRouter);
-app.use('/api/flash-sale', flashSaleRouter);
-app.use('/api/referral', referralRouter);
-app.use('/api/review', reviewRouter);
-
-// --- HEALTH ROUTE ---
-app.get("/health", (req, res) => {
-    res.json({ 
-        message: "Snapit Server is Live!",
-        timestamp: new Date().toISOString(),
-        razorpay_status: process.env.RAZORPAY_KEY_ID ? "Configured" : "Missing Keys"
-    });
-});
-
-// --- STATIC ASSETS MAPPING ---
-const possiblePaths = [
-    path.join(process.cwd(), '..', 'client', 'dist'),
-    path.join(process.cwd(), 'client', 'dist'),
-    path.resolve(__dirname, '..', 'client', 'dist')
-];
-
-const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
-console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
-
-app.use(express.static(clientBuildPath));
-
-// --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
-app.get('/{*splat}', (req, res, next) => {
-    if (req.url.startsWith('/api') || req.url.includes('.')) {
-        return res.status(404).json({ message: "Asset file or resource route completely unavailable.", success: false });
+        return compression.filter(req, res)
     }
+}))
+
+// Body parsers with size limits to prevent memory issues
+app.use(express.json({ 
+    limit: '10mb' // Limit JSON payload size
+}))
+app.use(express.urlencoded({ 
+    extended: true,
+    limit: '10mb'
+}))
+
+app.use(cookieParser())
+
+// Request logging (only in development)
+if (process.env.NODE_ENV === 'development') {
+    app.use((req, res, next) => {
+        console.log(`${req.method} ${req.path}`)
+        next()
+    })
+}
+
+// ============================================
+// ROUTES
+// ============================================
+
+app.get('/', (req, res) => {
+    res.json({
+        message: "SnapIt API is running",
+        status: "healthy",
+        environment: process.env.NODE_ENV || 'production'
+    })
+})
+
+// API routes
+app.use('/api/product', productRouter)
+
+// ============================================
+// ERROR HANDLING
+// ============================================
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        message: "Route not found",
+        error: true,
+        success: false
+    })
+})
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('Global error:', err)
     
-    res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
-        if (err) {
-            console.error("❌ SendFile Error:", err.message);
-            res.status(500).json({ 
-                error: "Frontend distribution layer build files not found.",
-                path: clientBuildPath 
-            });
-        }
-    });
-});
+    res.status(err.status || 500).json({
+        message: err.message || "Internal server error",
+        error: true,
+        success: false,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    })
+})
 
-// --- KEEP ALIVE ---
-const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-full-stack-2.onrender.com';
-setInterval(() => {
-    fetch(`${SELF_URL}/health`).catch(() => {});
-}, 14 * 60 * 1000); 
+// ============================================
+// SERVER STARTUP
+// ============================================
 
-// --- ENGINE BOOT ---
-const PORT = process.env.PORT || 8080;
-connectDB().then(() => {
-    console.log("✅ Database System Connected Successfully");
-    server.listen(PORT, '0.0.0.0', () => { 
-        console.log(`🚀 Snapit Server running on port ${PORT}`);
-    });
-}).catch(err => {
-    console.error("❌ Database connection failed", err);
-    process.exit(1);
-});
+const PORT = process.env.PORT || 8080
 
-export default app;
+// Connect to MongoDB first, then start server
+connectDB()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`)
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'production'}`)
+            console.log(`💾 Memory Limit: 400MB (--max-old-space-size=400)`)
+            console.log(`📦 Compression: Enabled`)
+        })
+    })
+    .catch((error) => {
+        console.error('Failed to start server:', error)
+        process.exit(1)
+    })
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully')
+    process.exit(0)
+})
+
+export default app

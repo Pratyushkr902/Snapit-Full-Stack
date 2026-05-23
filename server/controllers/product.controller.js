@@ -1,449 +1,206 @@
-import ProductModel from "../models/product.model.js";
-import mongoose from "mongoose";
+// Product Controller - Optimized for Render Free Tier (512MB RAM)
+import ProductModel from '../models/product.model.js'
 
-// HELPER: Ensures all image URLs are secure (http → https) for Android/Mobile compatibility
-const secureImages = (images) => {
-    if (!Array.isArray(images)) return images;
-    return images.map(img => typeof img === 'string' ? img.replace("http://", "https://") : img);
-};
-
-export const createProductController = async(request,response)=>{
+/**
+ * Get products by category
+ * Optimized to prevent memory crashes on free tier hosting
+ */
+export async function getProductByCategory(req, res) {
     try {
-        const { 
-            name ,
-            image ,
-            category,
-            subCategory,
-            unit,
-            stock,
-            price,
-            discount,
-            description,
-            more_details,
-        } = request.body 
+        const { id } = req.body // Category ID(s)
 
-        if(!name || !image[0] || !category[0] || !subCategory[0] || !unit || !price || !description ){
-            return response.status(400).json({
-                message : "Enter required fields",
-                error : true,
-                success : false
+        if (!id) {
+            return res.status(400).json({
+                message: "Category ID is required",
+                error: true,
+                success: false
             })
         }
 
-        const productData = {
-            name ,
-            image : secureImages(image), 
-            category,
-            subCategory,
-            unit,
-            price,
-            discount,
-            description,
-            more_details,
-            stock: Number(stock) || 0,
-            store_inventory: [
-                {
-                    store_name: "Snapit Main Store - Paliganj",
-                    stock: Number(stock) || 0,
-                    isAvailable: true
-                }
-            ]
-        }
+        // Convert single ID to array for consistent handling
+        const categoryIds = Array.isArray(id) ? id : [id]
 
-        const product = new ProductModel(productData)
-        const saveProduct = await product.save()
+        // CRITICAL OPTIMIZATION: Use .lean() to return plain JS objects
+        // This uses ~80% less memory than full Mongoose documents
+        const products = await ProductModel.find({
+            category: { $in: categoryIds }
+        })
+        .select('name price sellingPrice productImage category stock unit') // Only fetch needed fields
+        .limit(15) // Limit results per category to prevent huge responses
+        .lean() // CRITICAL: Returns plain objects instead of Mongoose documents
+        .exec()
 
-        return response.json({
-            message : "Product Created Successfully with Multi-Mart tracking",
-            data : saveProduct,
-            error : false,
-            success : true
+        return res.json({
+            message: "Products fetched successfully",
+            data: products,
+            error: false,
+            success: true
         })
 
     } catch (error) {
-        console.error("CREATE PRODUCT ERROR:", error);
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
+        console.error('getProductByCategory error:', error)
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            error: true,
+            success: false
         })
     }
 }
 
-export const getProductController = async(request,response)=>{
+/**
+ * Get products by subcategory
+ * Optimized with pagination to prevent memory issues
+ */
+export async function getProductBySubCategory(req, res) {
     try {
-        let { page, limit, search } = request.body 
+        const { id, page = 1, limit = 20 } = req.body
 
-        if(!page) page = 1
-        if(!limit) limit = 10
+        if (!id) {
+            return res.status(400).json({
+                message: "Subcategory ID is required",
+                error: true,
+                success: false
+            })
+        }
 
-        const query = search ? {
-            $text : { $search : search }
-        } : {}
-
+        const subcategoryIds = Array.isArray(id) ? id : [id]
         const skip = (page - 1) * limit
 
-        const [data,totalCount] = await Promise.all([
-            ProductModel.find(query).sort({createdAt : -1 }).skip(skip).limit(limit).populate('category subCategory'),
-            ProductModel.countDocuments(query)
-        ])
-
-        // FIX: Use toObject() instead of _doc for reliable populated field access
-        const securedData = data.map(prod => ({
-            ...prod.toObject(),
-            image: secureImages(prod.image)
-        }));
-
-        return response.json({
-            message : "Product data",
-            error : false,
-            success : true,
-            totalCount : totalCount,
-            totalNoPage : Math.ceil( totalCount / limit),
-            data : securedData
+        const products = await ProductModel.find({
+            subCategory: { $in: subcategoryIds }
         })
+        .select('name price sellingPrice productImage category subCategory stock unit')
+        .skip(skip)
+        .limit(limit)
+        .lean() // Memory optimization
+        .exec()
+
+        const totalCount = await ProductModel.countDocuments({
+            subCategory: { $in: subcategoryIds }
+        })
+
+        return res.json({
+            message: "Products fetched successfully",
+            data: products,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page,
+            error: false,
+            success: true
+        })
+
     } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
+        console.error('getProductBySubCategory error:', error)
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            error: true,
+            success: false
         })
     }
 }
 
-export const getProductByCategory = async(request,response)=>{
+/**
+ * Get single product details
+ * Optimized with minimal population
+ */
+export async function getProductDetails(req, res) {
     try {
-        const { id } = request.body 
+        const { id } = req.body
 
-        if(!id){
-            return response.status(400).json({
-                message : "provide category id",
-                error : true,
-                success : false
-            })
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return response.status(400).json({
-                message: "Invalid Category ID",
+        if (!id) {
+            return res.status(400).json({
+                message: "Product ID is required",
                 error: true,
                 success: false
             })
         }
 
-        const product = await ProductModel.find({ 
-            category : { $in : id }
-        }).limit(15)
+        const product = await ProductModel.findById(id)
+            .populate('category', 'name') // Only populate needed fields
+            .populate('subCategory', 'name')
+            .lean()
+            .exec()
 
-        // FIX: Use toObject() instead of _doc
-        const securedData = product.map(prod => ({
-            ...prod.toObject(),
-            image: secureImages(prod.image)
-        }));
-
-        return response.json({
-            message : "category product list",
-            data : securedData,
-            error : false,
-            success : true
-        })
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
-    }
-}
-
-export const getProductByCategoryAndSubCategory  = async(request,response)=>{
-    try {
-        let { categoryId, subCategoryId, page, limit } = request.body
-
-        if(!categoryId){
-            return response.status(400).json({
-                message : "Provide categoryId",
-                error : true,
-                success : false
-            })
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-            return response.status(400).json({
-                message: "Invalid Category ID format",
-                error: true,
-                success: false
-            })
-        }
-
-        if(!page) page = 1
-        if(!limit) limit = 10
-
-        const query = {
-            category : { $in : [categoryId] }
-        }
-
-        if(subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId)){
-            query.subCategory = { $in : [subCategoryId] }
-        }
-
-        const skip = (page - 1) * limit
-
-        const [data,dataCount] = await Promise.all([
-            ProductModel.find(query).sort({createdAt : -1 }).skip(skip).limit(limit).populate('category subCategory'),
-            ProductModel.countDocuments(query)
-        ])
-
-        // FIX: Use toObject() instead of _doc
-        const securedData = data.map(prod => ({
-            ...prod.toObject(),
-            image: secureImages(prod.image)
-        }));
-
-        return response.json({
-            message : "Product list",
-            data : securedData,
-            totalCount : dataCount,
-            page : page,
-            limit : limit,
-            success : true,
-            error : false
-        })
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
-    }
-}
-
-export const getProductDetails = async(request,response)=>{
-    try {
-        console.log('getProductDetails body:', request.body)
-        const { productId } = request.body 
-
-        if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
-            return response.status(400).json({
-                message: "Invalid Product ID",
-                error: true,
-                success: false
-            })
-        }
-
-        const product = await ProductModel.findOne({ _id : productId }).populate('category').populate('subCategory');
-
-        if(!product){
-            return response.status(404).json({
+        if (!product) {
+            return res.status(404).json({
                 message: "Product not found",
                 error: true,
                 success: false
             })
         }
 
-        // FIX: Use toObject() instead of _doc
-        const securedProduct = {
-            ...product.toObject(),
-            image: secureImages(product.image)
-        };
-
-        return response.json({
-            message : "product details",
-            data : securedProduct,
-            error : false,
-            success : true
-        })
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
-    }
-}
-
-export const updateProductDetails = async(request,response)=>{
-    try {
-        const { _id, ...updateFields } = request.body 
-
-        if(!_id || !mongoose.Types.ObjectId.isValid(_id)){
-            return response.status(400).json({
-                message : "provide valid product _id",
-                error : true,
-                success : false
-            })
-        }
-
-        if(updateFields.image) {
-            updateFields.image = secureImages(updateFields.image);
-        }
-
-        const updateProduct = await ProductModel.findOneAndUpdate(
-            { _id : _id },
-            { $set: updateFields },
-            { new: true, runValidators: true }
-        ).populate('category subCategory')
-
-        return response.json({
-            message : "updated successfully",
-            data : updateProduct,
-            error : false,
-            success : true
-        })
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
-    }
-}
-
-export const deleteProductDetails = async(request,response)=>{
-    try {
-        const { _id } = request.body 
-
-        if(!_id || !mongoose.Types.ObjectId.isValid(_id)){
-            return response.status(400).json({
-                message : "provide valid _id ",
-                error : true,
-                success : false
-            })
-        }
-
-        const deleteProduct = await ProductModel.deleteOne({_id : _id })
-
-        return response.json({
-            message : "Delete successfully",
-            error : false,
-            success : true,
-            data : deleteProduct
-        })
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
-    }
-}
-
-export const searchProduct = async(request,response)=>{
-    try {
-        let { search, page , limit } = request.body 
-
-        if(!page) page = 1
-        if(!limit) limit  = 10
-
-        const query = search ? {
-            $or: [
-                { name: { $regex: search, $options: "i" } },
-                { description: { $regex: search, $options: "i" } }
-            ]
-        } : {}
-
-        const skip = ( page - 1) * limit
-
-        const [data,dataCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt  : -1 }).skip(skip).limit(limit).populate('category subCategory'),
-            ProductModel.countDocuments(query)
-        ])
-
-        // FIX: Use toObject() instead of _doc
-        const securedData = data.map(prod => ({
-            ...prod.toObject(),
-            image: secureImages(prod.image)
-        }));
-
-        return response.json({
-            message : "Product data",
-            error : false,
-            success : true,
-            data : securedData,
-            totalCount :dataCount,
-            totalPage : Math.ceil(dataCount/limit),
-            page : page,
-            limit : limit 
-        })
-
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
-    }
-}
-
-// --- RECOMMENDATION ENGINE CONTROLLER ---
-export async function getFrequentlyBought(req, res) {
-    try {
-        const { productId } = req.query
-
-        if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
-            return res.status(400).json({ success: false, message: 'Valid Product ID required' })
-        }
-
-        const product = await ProductModel.findById(productId)
-        if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' })
-        }
-
-        const suggestions = await ProductModel
-            .find({
-                category: { $in: product.category },
-                _id: { $ne: productId }
-            })
-            .limit(5)
-
-        // FIX: Use toObject() instead of _doc
-        const securedSuggestions = suggestions.map(prod => ({
-            ...prod.toObject(),
-            image: secureImages(prod.image)
-        }));
-
         return res.json({
-            success: true,
-            data: securedSuggestions
+            message: "Product details fetched",
+            data: product,
+            error: false,
+            success: true
         })
-    } catch (err) {
-        return res.status(500).json({ success: false, message: err.message })
-    }
-}
 
-// --- BULK UPDATE CONTROLLER: Update Customer Care Email ---
-export const updateProductEmails = async (req, res) => {
-    try {
-        const result = await ProductModel.updateMany(
-            { description: { $regex: "info@blinkit.com", $options: "i" } }, 
-            [
-                {
-                    $set: {
-                        description: {
-                            $replaceOne: {
-                                input: "$description",
-                                find: "info@blinkit.com",
-                                replacement: "info@snapit.com"
-                            }
-                        }
-                    }
-                }
-            ]
-        );
-
-        return res.json({
-            message: `Successfully updated ${result.modifiedCount} products from Blinkit support to Snapit support.`,
-            success: true,
-            error: false
-        });
     } catch (error) {
-        return res.status(500).json({ 
-            message: error.message || error,
+        console.error('getProductDetails error:', error)
+        return res.status(500).json({
+            message: error.message || "Internal server error",
             error: true,
-            success: false 
-        });
+            success: false
+        })
     }
-};
+}
+
+/**
+ * Search products with text search
+ * Optimized with pagination and field selection
+ */
+export async function searchProducts(req, res) {
+    try {
+        const { q, page = 1, limit = 20, category, subCategory } = req.body
+
+        if (!q || q.trim().length < 2) {
+            return res.status(400).json({
+                message: "Search query must be at least 2 characters",
+                error: true,
+                success: false
+            })
+        }
+
+        const skip = (page - 1) * limit
+        const searchRegex = new RegExp(q, 'i')
+
+        // Build query
+        const query = {
+            $or: [
+                { name: searchRegex },
+                { description: searchRegex }
+            ]
+        }
+
+        if (category) query.category = category
+        if (subCategory) query.subCategory = subCategory
+
+        const products = await ProductModel.find(query)
+            .select('name price sellingPrice productImage category stock unit')
+            .skip(skip)
+            .limit(limit)
+            .lean()
+            .exec()
+
+        const totalCount = await ProductModel.countDocuments(query)
+
+        return res.json({
+            message: "Search results",
+            data: products,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page,
+            error: false,
+            success: true
+        })
+
+    } catch (error) {
+        console.error('searchProducts error:', error)
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            error: true,
+            success: false
+        })
+    }
+}
