@@ -17,6 +17,13 @@ import {
 import auth from '../middleware/auth.js'
 import upload from '../middleware/multer.js'
 
+// ✓ Added imports for security rate limiters
+import { authLimiter, otpLimiter } from '../middleware/security.js'
+
+// ✓ Added imports for your route validators 
+// (Note: Adjust this path if your validation functions live in a different file)
+import { validateRegister, validateLogin, validateForgotPassword } from '../middleware/validators.js'
+
 const userRouter = Router()
 
 userRouter.post('/register', authLimiter, validateRegister, registerUserController)
