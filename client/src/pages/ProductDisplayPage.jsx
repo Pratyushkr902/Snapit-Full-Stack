@@ -20,8 +20,9 @@ const ProductDisplayPage = () => {
   const params = useParams()
   const navigate = useNavigate()
   
-  const rawProduct = params?.product || ''
-  let productId = rawProduct.split('-').pop()
+  // ✓ FIX: Resilient ID extraction fallback to support both :product and :productId parameters
+  const rawProduct = params?.product || params?.productId || ''
+  let productId = rawProduct.includes('-') ? rawProduct.split('-').pop() : rawProduct
 
   const [data, setData] = useState({ name: "", image: [], stock: 0, unit: "" })
   const [image, setImage] = useState(0)
@@ -37,7 +38,11 @@ const ProductDisplayPage = () => {
   }
 
   const fetchProductDetails = async () => {
-    if (!productId || productId.length !== 24) return
+    // Basic validation check for 24-char MongoDB ObjectIDs
+    if (!productId || productId.length !== 24) {
+      console.warn("⚠️ Invalid or missing tracking product ID:", productId);
+      return
+    }
     try {
       setLoading(true)
       const response = await Axios({

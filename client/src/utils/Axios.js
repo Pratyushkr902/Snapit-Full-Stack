@@ -62,9 +62,14 @@ Axios.interceptors.response.use(
             isRefreshing = true;
 
             try {
+                // Ensure the URL is clean and safe from duplication
+                const refreshUrl = SummaryApi.refreshToken.url.startsWith('http')
+                    ? SummaryApi.refreshToken.url
+                    : `${API_URL}${SummaryApi.refreshToken.url.startsWith('/') ? '' : '/'}${SummaryApi.refreshToken.url}`;
+
                 const refreshResponse = await axios({
                     method: 'post',
-                    url: `${API_URL}${SummaryApi.refreshToken.url}`,
+                    url: refreshUrl, // ✓ Normalized string variable
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${refreshToken}`
@@ -72,7 +77,7 @@ Axios.interceptors.response.use(
                     withCredentials: true
                 });
 
-                // FIX: handle both accesstoken (login) and accessToken (refresh) key names
+                // Handle variations of key names for access token string
                 const newAccessToken = refreshResponse.data?.data?.accesstoken 
                     || refreshResponse.data?.data?.accessToken;
 
