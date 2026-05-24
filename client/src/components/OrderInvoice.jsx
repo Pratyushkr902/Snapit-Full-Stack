@@ -99,7 +99,7 @@ const OrderInvoice = ({ order }) => {
   <div class="footer">
     <p>Thank you for shopping with <strong>Snapit</strong> 🛒</p>
     <p style="margin-top:6px;">Questions? WhatsApp us at <strong>+91 94720 26580</strong></p>
-    <p style="margin-top:4px;">Follow us: <strong>@snapit.official_</strong> on Instagram</p>
+    <p style="margin-top:4px;">Follow us: <strong>@snapitexpress</strong> on Instagram</p>
   </div>
 </body>
 </html>`

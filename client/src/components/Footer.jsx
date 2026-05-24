@@ -18,7 +18,7 @@ const Footer = () => {
                     <FaFacebook/>
                 </a>
                 <a 
-                    href='https://www.instagram.com/snapit.official._?igsh=eXNoMXk1NXRmb3dy&utm_source=qr' 
+                    href='https://www.instagram.com/snapitexpress/' 
                     target='_blank' 
                     rel='noreferrer'
                     className='hover:text-pink-500 transition-colors'

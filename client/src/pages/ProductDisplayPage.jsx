@@ -20,7 +20,7 @@ const ProductDisplayPage = () => {
   const params = useParams()
   const navigate = useNavigate()
   
-  // ✓ FIX: Resilient ID extraction fallback to support both :product and :productId parameters
+  // Resilient ID extraction fallback to support both :product and :productId parameters
   const rawProduct = params?.product || params?.productId || ''
   let productId = rawProduct.includes('-') ? rawProduct.split('-').pop() : rawProduct
 
@@ -112,20 +112,25 @@ const ProductDisplayPage = () => {
         </div>
       </div>
 
-      <div className='container mx-auto p-4 lg:p-8 grid lg:grid-cols-2 gap-8 mt-2'>
+      <div className='container mx-auto p-4 lg:p-8 grid lg:grid-cols-2 gap-6 lg:gap-8 mt-2'>
         
-        {/* Left: Gallery Column */}
-        <div className='space-y-4'>
-          {/* Main Image View Box */}
+        {/* Left: Gallery Column - MOBILE-FIRST COMPACT LAYOUT */}
+        <div className='space-y-3'>
+          {/* 
+            CRITICAL FIX: Mobile-first image container
+            - Mobile: max-h-[280px] (fits phone screen without massive scroll)
+            - Tablet: max-h-[340px]
+            - Desktop: max-h-[420px]
+            - Always aspect-square for consistent proportions
+          */}
           <div 
-            className='bg-white w-full aspect-square max-h-[300px] sm:max-h-[360px] lg:max-h-[420px] rounded-2xl flex items-center justify-center overflow-hidden border border-gray-100/70 shadow-sm relative group cursor-zoom-in'
+            className='bg-white w-full aspect-square max-h-[280px] sm:max-h-[340px] lg:max-h-[420px] rounded-2xl flex items-center justify-center overflow-hidden border border-gray-100/70 shadow-sm relative group cursor-zoom-in'
             onClick={() => setImageZoom(!imageZoom)}
           >
             {!loading && data?.image?.length > 0 ? (
               <img
                 src={data.image[image]?.replace("https://", "https://")}
-                // ✓ FIX: Applied absolute constraints to keep product image safely proportional and completely eliminate horizontal stretching
-                className={`absolute max-w-[85%] max-h-[85%] object-contain transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
+                className={`w-full h-full object-contain p-3 sm:p-4 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
                 alt={data.name}
               />
             ) : (
@@ -135,19 +140,20 @@ const ProductDisplayPage = () => {
             )}
           </div>
 
-          {/* Dots Indicator */}
+          {/* Carousel Dots - More compact on mobile */}
           <div className='flex items-center justify-center gap-1.5'>
             {data?.image?.map((img, index) => (
               <button
                 key={img + index}
                 onClick={() => setImage(index)}
                 className={`h-1.5 rounded-full transition-all ${index === image ? "bg-green-600 w-6" : "bg-gray-200 w-1.5"}`}
+                aria-label={`View image ${index + 1}`}
               />
             ))}
           </div>
 
-          {/* Thumbnails list */}
-          <div className='relative'>
+          {/* Thumbnail Gallery - Hidden on mobile to save space, shown on tablet+ */}
+          <div className='relative hidden sm:block'>
             <div ref={imageContainer} className='flex gap-2.5 overflow-x-auto scrollbar-none snap-x scroll-smooth px-1'>
               {data?.image?.map((img, index) => (
                 <button
@@ -163,22 +169,27 @@ const ProductDisplayPage = () => {
         </div>
 
         {/* Right: Product Info Column */}
-        <div className='space-y-5 flex flex-col justify-center'>
+        <div className='space-y-4 lg:space-y-5 flex flex-col justify-center'>
+          
+          {/* Delivery Badge */}
           <div className='flex items-center gap-2'>
             <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
           </div>
 
-          <h1 className='text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data.name}</h1>
-          <p className='text-gray-400 font-bold text-xs mt-0.5'>{data.unit}</p>
+          {/* Product Title - More compact on mobile */}
+          <div>
+            <h1 className='text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data.name}</h1>
+            <p className='text-gray-400 font-bold text-xs mt-1'>{data.unit}</p>
+          </div>
 
           <Divider />
 
-          {/* Price Component Box */}
-          <div className='bg-slate-950 text-white p-5 rounded-3xl shadow-xl flex items-center justify-between'>
+          {/* Price Component Box - Slightly smaller padding on mobile */}
+          <div className='bg-slate-950 text-white p-4 sm:p-5 rounded-3xl shadow-xl flex items-center justify-between'>
             <div>
               <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1'>Price Details</p>
-              <div className='flex items-baseline gap-3'>
-                <span className='text-3xl font-black tracking-tight'>
+              <div className='flex items-baseline gap-2 sm:gap-3'>
+                <span className='text-2xl sm:text-3xl font-black tracking-tight'>
                   {DisplayPriceInRupees(pricewithDiscount(Number(data.price || 0), Number(data.discount || 0)))}
                 </span>
                 {data.discount > 0 && (
@@ -195,11 +206,13 @@ const ProductDisplayPage = () => {
             )}
           </div>
 
+          {/* Wishlist Button */}
           {productId && <WishlistButton productId={productId} />}
 
+          {/* Add to Cart / Stock Status - CRITICAL: This must be visible without scrolling on mobile */}
           {!isOpen ? (
-            <div className='bg-indigo-50/60 border-2 border-indigo-100 border-dashed p-6 rounded-3xl text-center animate-pulse'>
-              <p className='font-black text-slate-800 text-base'>🌙 Snapit is resting</p>
+            <div className='bg-indigo-50/60 border-2 border-indigo-100 border-dashed p-4 sm:p-6 rounded-3xl text-center animate-pulse'>
+              <p className='font-black text-slate-800 text-sm sm:text-base'>🌙 Snapit is resting</p>
               <p className='text-xs text-indigo-600 font-bold mt-1 uppercase tracking-wider'>Ordering resumes at 8:00 AM</p>
             </div>
           ) : data.stock === 0 ? (
@@ -207,44 +220,44 @@ const ProductDisplayPage = () => {
               <p className='text-rose-600 font-black text-sm uppercase tracking-widest italic'>Out of stock</p>
             </div>
           ) : (
-            <div className='h-14 mt-2 shadow-md shadow-green-100/30 rounded-2xl overflow-hidden'>
+            <div className='h-12 sm:h-14 shadow-md shadow-green-100/30 rounded-2xl overflow-hidden'>
               <AddToCartButton data={data} />
             </div>
           )}
 
-          {/* Why Shop from Snapit */}
-          <div className='bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-4'>
-            <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider px-1'>
+          {/* Why Shop from Snapit - Collapsed on mobile, full on tablet+ */}
+          <div className='bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 space-y-3 sm:space-y-4'>
+            <h3 className='font-black text-slate-800 text-xs sm:text-sm uppercase tracking-wider px-1'>
               Why shop from Snapit?
             </h3>
             
-            <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-11 h-11 bg-blue-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'>
+            <div className='flex items-center gap-3 sm:gap-4 group cursor-pointer'>
+              <div className='w-10 h-10 sm:w-11 sm:h-11 bg-blue-50 rounded-2xl flex items-center justify-center p-2 sm:p-2.5 flex-shrink-0'>
                 <img src={image1} alt='superfast' className='object-contain' />
               </div>
               <div>
-                <p className='font-extrabold text-slate-800 text-sm'>Superfast Delivery</p>
-                <p className='text-xs text-gray-400 font-medium'>Directly from local dark stores in 10 minutes.</p>
+                <p className='font-extrabold text-slate-800 text-xs sm:text-sm'>Superfast Delivery</p>
+                <p className='text-[11px] sm:text-xs text-gray-400 font-medium'>Directly from local dark stores in 10 minutes.</p>
               </div>
             </div>
 
-            <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-11 h-11 bg-emerald-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'>
+            <div className='flex items-center gap-3 sm:gap-4 group cursor-pointer'>
+              <div className='w-10 h-10 sm:w-11 sm:h-11 bg-emerald-50 rounded-2xl flex items-center justify-center p-2 sm:p-2.5 flex-shrink-0'>
                 <img src={image2} alt='offers' className='object-contain' />
               </div>
               <div>
-                <p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p>
-                <p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p>
+                <p className='font-extrabold text-slate-800 text-xs sm:text-sm'>Best Prices & Offers</p>
+                <p className='text-[11px] sm:text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p>
               </div>
             </div>
 
-            <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-11 h-11 bg-purple-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'>
+            <div className='flex items-center gap-3 sm:gap-4 group cursor-pointer'>
+              <div className='w-10 h-10 sm:w-11 sm:h-11 bg-purple-50 rounded-2xl flex items-center justify-center p-2 sm:p-2.5 flex-shrink-0'>
                 <img src={image3} alt='assortment' className='object-contain' />
               </div>
               <div>
-                <p className='font-extrabold text-slate-800 text-sm'>Wide Assortment</p>
-                <p className='text-xs text-gray-400 font-medium'>Everything from Maggi to gym supplements available.</p>
+                <p className='font-extrabold text-slate-800 text-xs sm:text-sm'>Wide Assortment</p>
+                <p className='text-[11px] sm:text-xs text-gray-400 font-medium'>Everything from Maggi to gym supplements available.</p>
               </div>
             </div>
           </div>
@@ -252,7 +265,7 @@ const ProductDisplayPage = () => {
       </div>
 
       {/* Ratings and Reviews */}
-      <div className='container mx-auto px-4 mt-4 border-t border-gray-100/70 pt-4'>
+      <div className='container mx-auto px-4 mt-6 lg:mt-8 border-t border-gray-100/70 pt-4 lg:pt-6'>
         <ProductReviews productId={productId} />
       </div>
 
