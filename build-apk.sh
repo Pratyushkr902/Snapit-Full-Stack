@@ -17,19 +17,19 @@ cd "$BASE_DIR/client"
 npm run build
 
 echo -e "${BLUE}[2/5] Injecting web components into Android asset streams...${NC}"
-# ✅ FIX: Target your true native framework tracking directory path maps
-rm -rf "$BASE_DIR/android/app/src/main/assets/public"/*
-mkdir -p "$BASE_DIR/android/app/src/main/assets/public/"
-cp -Rf "$BASE_DIR/client/dist"/* "$BASE_DIR/android/app/src/main/assets/public/"
+rm -rf "$BASE_DIR/snapit-android/app/src/main/assets/public"/*
+mkdir -p "$BASE_DIR/snapit-android/app/src/main/assets/public/"
+cp -Rf "$BASE_DIR/client/dist"/* "$BASE_DIR/snapit-android/app/src/main/assets/public/"
 
-echo -e "${BLUE}[3/5] Compiling final installable production release APK packages...${NC}"
-cd "$BASE_DIR/android"
+echo -e "${BLUE}[3/5] Compiling final installable debug APK packages...${NC}"
+cd "$BASE_DIR/snapit-android"
 export JAVA_HOME="/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home"
-./gradlew clean assembleRelease
+# ✅ FIX: Changed from assembleRelease to assembleDebug to prevent signing crashes
+./gradlew clean assembleDebug
 
-echo -e "${BLUE}[4/5] Deploying and pushing release package live onto connected Android phone...${NC}"
-# ✅ FIX: Target the app sub-module output directory tracking structures exactly
-APK_PATH="app/build/outputs/apk/release/app-release.apk"
+echo -e "${BLUE}[4/5] Deploying and pushing package live onto connected Android phone...${NC}"
+# ✅ FIX: Target the generated debug APK file path
+APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
 
 if adb devices | grep -q -w "device"; then
     adb install -r "$APK_PATH"

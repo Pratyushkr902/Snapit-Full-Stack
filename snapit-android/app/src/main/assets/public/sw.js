@@ -1,14 +1,27 @@
-const CACHE_NAME = 'snapit-v1'
+const CACHE_NAME = 'snapit-v2'
 
-self.addEventListener('install', e => { self.skipWaiting() })
-self.addEventListener('activate', e => { self.clients.claim() })
+self.addEventListener('install', e => {
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', e => {
+  self.clients.claim()
+})
 
 self.addEventListener('fetch', e => {
-  // Only handle GET requests, skip non-HTTP requests
+  const url = e.request.url
+
+  // Skip everything except GET requests to same origin static assets
   if (e.request.method !== 'GET') return
-  if (!e.request.url.startsWith('http')) return
-  if (e.request.url.includes('/api/')) return
-  
+  if (!url.startsWith('http')) return
+  if (url.includes('/api/')) return
+  if (url.includes('onrender.com')) return
+  if (url.includes('socket.io')) return
+  if (url.includes('firestore') || url.includes('firebase')) return
+
+  // Only cache same-origin static assets
+  if (!url.includes(self.location.origin)) return
+
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   )
