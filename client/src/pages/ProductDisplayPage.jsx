@@ -20,9 +20,15 @@ const ProductDisplayPage = () => {
   const params = useParams()
   const navigate = useNavigate()
   
-  // Resilient ID extraction fallback to support both :product and :productId parameters
+  // Robust Regex Extractor — safely grabs the exact 24-char hex ID anywhere at the end of the string
   const rawProduct = params?.product || params?.productId || ''
-  let productId = rawProduct.includes('-') ? rawProduct.split('-').pop() : rawProduct
+  let productId = '';
+  
+  if (rawProduct) {
+    const cleanUrlTrack = rawProduct.split('?')[0].replace(/\/$/, '').trim();
+    const matchId = cleanUrlTrack.match(/[0-9a-fA-F]{24}$/);
+    productId = matchId ? matchId[0] : '';
+  }
 
   const [data, setData] = useState({ name: "", image: [], stock: 0, unit: "" })
   const [image, setImage] = useState(0)
@@ -38,17 +44,24 @@ const ProductDisplayPage = () => {
   }
 
   const fetchProductDetails = async () => {
-    // Basic validation check for 24-char MongoDB ObjectIDs
-    if (!productId || productId.length !== 24) {
-      console.warn("⚠️ Invalid or missing tracking product ID:", productId);
-      return
+    // ✅ FIX: Silent bail out during early rendering frames to eliminate terminal clutter
+    if (!productId) return; 
+
+    const isHex24 = /^[0-9a-fA-F]{24}$/.test(productId);
+    if (!isHex24) {
+      console.warn("⚠️ Invalid 24-char MongoDB ID layout format parsed:", productId);
+      return;
     }
+
     try {
       setLoading(true)
       const response = await Axios({
         url: '/api/product/get-product-details',
         method: 'post',
-        data: { productId: productId }
+        data: { 
+          productId: productId,
+          id: productId
+        }
       })
       const { data: responseData } = response
       if (responseData.success) setData(responseData.data)
@@ -66,8 +79,8 @@ const ProductDisplayPage = () => {
     return () => clearInterval(timer)
   }, [productId])
 
-  const handleScrollRight = () => { imageContainer.current.scrollLeft += 100 }
-  const handleScrollLeft = () => { imageContainer.current.scrollLeft -= 100 }
+  const handleScrollRight = () => { if (imageContainer.current) imageContainer.current.scrollLeft += 100 }
+  const handleScrollLeft = () => { if (imageContainer.current) imageContainer.current.scrollLeft -= 100 }
 
   const handleShareProductSystem = async () => {
     try {
@@ -114,22 +127,15 @@ const ProductDisplayPage = () => {
 
       <div className='container mx-auto p-4 lg:p-8 grid lg:grid-cols-2 gap-6 lg:gap-8 mt-2'>
         
-        {/* Left: Gallery Column - MOBILE-FIRST COMPACT LAYOUT */}
+        {/* Left: Gallery Column */}
         <div className='space-y-3'>
-          {/* 
-            CRITICAL FIX: Mobile-first image container
-            - Mobile: max-h-[280px] (fits phone screen without massive scroll)
-            - Tablet: max-h-[340px]
-            - Desktop: max-h-[420px]
-            - Always aspect-square for consistent proportions
-          */}
           <div 
             className='bg-white w-full aspect-square max-h-[280px] sm:max-h-[340px] lg:max-h-[420px] rounded-2xl flex items-center justify-center overflow-hidden border border-gray-100/70 shadow-sm relative group cursor-zoom-in'
             onClick={() => setImageZoom(!imageZoom)}
           >
             {!loading && data?.image?.length > 0 ? (
               <img
-                src={data.image[image]?.replace("https://", "https://")}
+                src={data.image[image]}
                 className={`w-full h-full object-contain p-3 sm:p-4 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
                 alt={data.name}
               />
@@ -140,7 +146,6 @@ const ProductDisplayPage = () => {
             )}
           </div>
 
-          {/* Carousel Dots - More compact on mobile */}
           <div className='flex items-center justify-center gap-1.5'>
             {data?.image?.map((img, index) => (
               <button
@@ -152,7 +157,6 @@ const ProductDisplayPage = () => {
             ))}
           </div>
 
-          {/* Thumbnail Gallery - Hidden on mobile to save space, shown on tablet+ */}
           <div className='relative hidden sm:block'>
             <div ref={imageContainer} className='flex gap-2.5 overflow-x-auto scrollbar-none snap-x scroll-smooth px-1'>
               {data?.image?.map((img, index) => (
@@ -161,7 +165,7 @@ const ProductDisplayPage = () => {
                   onClick={() => setImage(index)}
                   className={`min-w-20 w-20 h-20 rounded-2xl border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md scale-105' : 'border-transparent opacity-60 bg-white p-1'}`}
                 >
-                  <img src={img?.replace("https://", "https://")} alt='thumb' className='w-full h-full object-contain p-1' />
+                  <img src={img} alt='thumb' className='w-full h-full object-contain p-1' />
                 </button>
               ))}
             </div>
@@ -171,12 +175,10 @@ const ProductDisplayPage = () => {
         {/* Right: Product Info Column */}
         <div className='space-y-4 lg:space-y-5 flex flex-col justify-center'>
           
-          {/* Delivery Badge */}
           <div className='flex items-center gap-2'>
             <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
           </div>
 
-          {/* Product Title - More compact on mobile */}
           <div>
             <h1 className='text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data.name}</h1>
             <p className='text-gray-400 font-bold text-xs mt-1'>{data.unit}</p>
@@ -184,7 +186,6 @@ const ProductDisplayPage = () => {
 
           <Divider />
 
-          {/* Price Component Box - Slightly smaller padding on mobile */}
           <div className='bg-slate-950 text-white p-4 sm:p-5 rounded-3xl shadow-xl flex items-center justify-between'>
             <div>
               <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1'>Price Details</p>
@@ -206,10 +207,10 @@ const ProductDisplayPage = () => {
             )}
           </div>
 
-          {/* Wishlist Button */}
-          {productId && <WishlistButton productId={productId} />}
+          {productId && /^[0-9a-fA-F]{24}$/.test(productId) && (
+            <WishlistButton productId={productId} />
+          )}
 
-          {/* Add to Cart / Stock Status - CRITICAL: This must be visible without scrolling on mobile */}
           {!isOpen ? (
             <div className='bg-indigo-50/60 border-2 border-indigo-100 border-dashed p-4 sm:p-6 rounded-3xl text-center animate-pulse'>
               <p className='font-black text-slate-800 text-sm sm:text-base'>🌙 Snapit is resting</p>
@@ -225,7 +226,6 @@ const ProductDisplayPage = () => {
             </div>
           )}
 
-          {/* Why Shop from Snapit - Collapsed on mobile, full on tablet+ */}
           <div className='bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 space-y-3 sm:space-y-4'>
             <h3 className='font-black text-slate-800 text-xs sm:text-sm uppercase tracking-wider px-1'>
               Why shop from Snapit?
@@ -264,15 +264,17 @@ const ProductDisplayPage = () => {
         </div>
       </div>
 
-      {/* Ratings and Reviews */}
-      <div className='container mx-auto px-4 mt-6 lg:mt-8 border-t border-gray-100/70 pt-4 lg:pt-6'>
-        <ProductReviews productId={productId} />
-      </div>
-
-      <SmartSuggestions productId={productId} />
+      {productId && /^[0-9a-fA-F]{24}$/.test(productId) && (
+        <>
+          <div className='container mx-auto px-4 mt-6 lg:mt-8 border-t border-gray-100/70 pt-4 lg:pt-6'>
+            <ProductReviews productId={productId} />
+          </div>
+          <SmartSuggestions productId={productId} />
+        </>
+      )}
 
     </section>
   )
 }
 
-export default ProductDisplayPage
+export default ProductDisplayPage;

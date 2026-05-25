@@ -2,9 +2,6 @@
   "appId": "com.snapit.grocery",
   "appName": "Snapit",
   "webDir": "dist",
-  "android": {
-    "path": "../snapit-android"
-  },
   "server": {
     "androidScheme": "https",
     "hostname": "snapit.grocery",
@@ -12,5 +9,13 @@
     "allowNavigation": [
       "snapit-full-stack-2.onrender.com"
     ]
+  },
+  "plugins": {
+    "CapacitorCookies": {
+      "enabled": true
+    },
+    "CapacitorHttp": {
+      "enabled": true
+    }
   }
 }

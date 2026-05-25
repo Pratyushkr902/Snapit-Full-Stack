@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Snapit</string>
-    <string name="assetStatements">[{"relation": ["delegate_permission/common.handle_all_urls"], "target": {"namespace": "android_app", "package_name": "com.snapit.grocery", "sha256_cert_fingerprints": ["BD:B8:25:12:78:30:64:CC:DD:E3:F5:BF:FC:BD:E4:60:88:89:2D:9A:33:B3:98:EE:62:B5:A9:82:22:98:D9:91"]}}]</string>
-    <string name="launchUrl">https://snapit-full-stack-0.onrender.com</string>
-    <string name="hostName">snapit-full-stack-0.onrender.com</string>
-    <string name="webManifestUrl">https://snapit-full-stack-0.onrender.com/manifest.json</string>
-    <string name="shortcutUrl">https://snapit-full-stack-0.onrender.com</string>
-</resources>

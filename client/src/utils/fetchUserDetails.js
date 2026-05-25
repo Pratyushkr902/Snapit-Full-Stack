@@ -1,19 +1,23 @@
 import Axios from './Axios'
 import SummaryApi from '../common/SummaryApi'
+import { Preferences } from '@capacitor/preferences' // 🚀 Native persistent storage plugin
 
 const fetchUserDetails = async () => {
-    // ✅ Guard: don't call the API if there's no token
-    // This prevents the 401 on app load when user is not logged in
-    const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken')
-    if (!token) return null
-
     try {
+        // Read directly from secure native Android SharedPreferences
+        const { value: token } = await Preferences.get({ 
+            key: 'accessToken' 
+        })
+        
+        // If there's no native token recorded, abort instantly to stop 401 errors
+        if (!token) return null
+
         const response = await Axios({
             ...SummaryApi.userDetails
         })
         return response.data
     } catch (error) {
-        // Silently fail — user is simply not logged in
+        // Silently fail if session expires or network is dropped
         return null
     }
 }

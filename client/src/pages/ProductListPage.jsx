@@ -20,7 +20,9 @@ const ProductDisplayPage = () => {
   const params = useParams()
   const navigate = useNavigate()
   
-  let productId = params?.product?.split("-")?.slice(-1)[0]
+  // ✅ FIX 1: Robust fallback parsing to catch any route parameter naming variations
+  const routeParam = params?.product || params?.id || params?.productId || "";
+  const productId = routeParam.includes("-") ? routeParam.split("-").slice(-1)[0] : routeParam;
 
   const [data, setData] = useState({ name: "", image: [], stock: 0 })
   const [image, setImage] = useState(0)
@@ -36,11 +38,21 @@ const ProductDisplayPage = () => {
   }
 
   const fetchProductDetails = async () => {
+    // ✅ FIX 2: Silent guard rail to block malformed/undefined parameters from hitting the network
+    if (!productId || productId === "undefined" || productId.length < 12) {
+      console.warn("[Snapit Guard] Aborted details fetch: Product ID is malformed or missing.");
+      return;
+    }
+
     try {
       setLoading(true)
       const response = await Axios({
         ...SummaryApi.getProductDetails,
-        data: { productId }
+        // ✅ FIX 3: Sends BOTH key variations ('productId' and 'id') to keep the backend perfectly happy
+        data: { 
+          productId: productId,
+          id: productId 
+        }
       })
       const { data: responseData } = response
       if (responseData.success) setData(responseData.data)
@@ -58,8 +70,8 @@ const ProductDisplayPage = () => {
     return () => clearInterval(timer)
   }, [params, productId])
 
-  const handleScrollRight = () => { imageContainer.current.scrollLeft += 100 }
-  const handleScrollLeft = () => { imageContainer.current.scrollLeft -= 100 }
+  const handleScrollRight = () => { if (imageContainer.current) imageContainer.current.scrollLeft += 100 }
+  const handleScrollLeft = () => { if (imageContainer.current) imageContainer.current.scrollLeft -= 100 }
 
   const handleShareProductSystem = async () => {
     try {
@@ -81,7 +93,7 @@ const ProductDisplayPage = () => {
   return (
     <section key={productId} className='w-full bg-gradient-to-b from-white to-gray-50 pb-24 lg:pb-10 animate-fadeIn relative'>
       
-      {/* FIXED PREMIUM MINIMALIST ACTION HEADER */}
+      {/* ACTION HEADER */}
       <div className='sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'>
         <div className='container mx-auto px-4 py-3.5 flex items-center justify-between w-full'>
           <button 
@@ -92,7 +104,7 @@ const ProductDisplayPage = () => {
           </button>
 
           <h4 className='text-xs font-black tracking-wider text-slate-400 uppercase truncate max-w-[50%] select-none'>
-            {data.name || 'Product Details'}
+            {data?.name || 'Product Details'}
           </h4>
 
           <button 
@@ -113,13 +125,13 @@ const ProductDisplayPage = () => {
           >
             {!loading && data?.image?.length > 0 ? (
               <img
-                src={data.image[image]?.replace("https://", "https://")}
+                src={data.image[image]}
                 className={`w-full h-full object-contain p-6 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
                 alt={data.name}
               />
             ) : (
               <div className='w-full h-full bg-slate-50 animate-pulse flex items-center justify-center'>
-                <p className='text-gray-400 font-bold text-xs uppercase tracking-widest'>Loading...</p>
+                <p className='text-gray-400 font-bold text-xs uppercase tracking-widest'>Loading Asset...</p>
               </div>
             )}
           </div>
@@ -142,7 +154,7 @@ const ProductDisplayPage = () => {
                   onClick={() => setImage(index)}
                   className={`min-w-20 w-20 h-20 rounded-2xl border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md scale-105' : 'border-transparent opacity-60 bg-white p-1'}`}
                 >
-                  <img src={img?.replace("https://", "https://")} alt='thumb' className='w-full h-full object-contain p-1' />
+                  <img src={img} alt='thumb' className='w-full h-full object-contain p-1' />
                 </button>
               ))}
             </div>
@@ -155,8 +167,8 @@ const ProductDisplayPage = () => {
             <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
           </div>
 
-          <h1 className='text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data.name}</h1>
-          <p className='text-gray-400 font-bold text-xs mt-0.5'>{data.unit}</p>
+          <h1 className='text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data?.name}</h1>
+          <p className='text-gray-400 font-bold text-xs mt-0.5'>{data?.unit}</p>
 
           <Divider />
 
@@ -165,30 +177,32 @@ const ProductDisplayPage = () => {
               <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1'>Price Details</p>
               <div className='flex items-baseline gap-3'>
                 <span className='text-3xl font-black tracking-tight'>
-                  {DisplayPriceInRupees(pricewithDiscount(Number(data.price || 0), Number(data.discount || 0)))}
+                  {DisplayPriceInRupees(pricewithDiscount(Number(data?.price || 0), Number(data?.discount || 0)))}
                 </span>
-                {data.discount > 0 && (
+                {data?.discount > 0 && (
                   <span className='line-through text-gray-500 font-bold text-sm'>
-                    {DisplayPriceInRupees(Number(data.price || 0))}
+                    {DisplayPriceInRupees(Number(data?.price || 0))}
                   </span>
                 )}
               </div>
             </div>
-            {data.discount > 0 && (
+            {data?.discount > 0 && (
               <span className='bg-green-600 font-black text-xs px-3 py-1.5 rounded-xl text-white shadow-md uppercase tracking-wider'>
                 {data.discount}% OFF
               </span>
             )}
           </div>
 
-          {productId && <WishlistButton productId={productId} />}
+          {productId && productId !== "undefined" && productId.length >= 12 && (
+            <WishlistButton productId={productId} />
+          )}
 
           {!isOpen ? (
             <div className='bg-indigo-50/50 border-2 border-indigo-100 border-dashed p-6 rounded-3xl text-center'>
               <p className='font-black text-slate-800 text-base'>🌙 Shop is Closed</p>
               <p className='text-xs text-gray-500 font-semibold mt-0.5'>Ordering opens up at 7:00 AM</p>
             </div>
-          ) : data.stock === 0 ? (
+          ) : data?.stock === 0 ? (
             <div className='bg-rose-50 border border-rose-100 p-4 rounded-2xl text-center'>
               <p className='text-rose-600 font-black text-sm uppercase tracking-widest italic'>Out of stock</p>
             </div>
@@ -215,14 +229,16 @@ const ProductDisplayPage = () => {
         </div>
       </div>
 
-      {/* Embedded Slider Carousel */}
-      <SmartSuggestions productId={productId} />
-
-      <div className='container mx-auto px-4 mt-8'>
-        <ProductReviews productId={productId} />
-      </div>
+      {productId && productId !== "undefined" && productId.length >= 12 && (
+        <>
+          <SmartSuggestions productId={productId} />
+          <div className='container mx-auto px-4 mt-8'>
+            <ProductReviews productId={productId} />
+          </div>
+        </>
+      )}
     </section>
   )
 }
 
-export default ProductDisplayPage
+export default ProductDisplayPage;

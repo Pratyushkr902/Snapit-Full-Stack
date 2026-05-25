@@ -20,7 +20,6 @@ import WhatsAppButton from './components/WhatsAppButton'
 import { io } from "socket.io-client"; 
 import useNotifications from './hooks/useNotifications'
 
-// GLOBAL SOCKET CONNECTION
 export const socket = io("https://snapit-full-stack-2.onrender.com", {
   transports:           ["polling", "websocket"],
   withCredentials:      true,
@@ -39,6 +38,7 @@ function App() {
   useNotifications() 
 
   const [showCart, setShowCart] = useState(false)
+  const activeToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
 
   useEffect(() => {
     if (location.hash === "#/checkout") {
@@ -47,10 +47,7 @@ function App() {
   }, [location.pathname])
 
   const fetchUser = useCallback(async () => {
-    // ✅ FIX 1: Don't call API if no token exists
-    const token = localStorage.getItem('accesstoken')
-    if (!token) return
-
+    if (!activeToken) return
     try {
       const userData = await fetchUserDetails()
       if (userData?.success) { 
@@ -59,7 +56,7 @@ function App() {
     } catch (error) {
       console.log("Session Check: No active user found.")
     }
-  }, [dispatch])
+  }, [dispatch, activeToken])
 
   const fetchOrder = useCallback(async () => {
     if (!user?._id) return
@@ -77,15 +74,16 @@ function App() {
     try {
       dispatch(setLoadingCategory(true))
       const response = await Axios({ ...SummaryApi.getCategory })
-      if (response?.data?.success) {
-        const sortedData = [...response.data.data].sort((a, b) => 
-          (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase())
-        )
-        dispatch(setAllCategory(sortedData))
+      if (response?.data?.success && Array.isArray(response.data.data)) {
+        const sorted = response.data.data
+          .filter(cat => cat && typeof cat === 'object')
+          .sort((a, b) => String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase()))
+        dispatch(setAllCategory(sorted))
       }
     } catch (error) {
       console.error("Category fetch error", error)
     } finally {
+      // ✅ FIXED: always turn off loading even if fetch failed
       dispatch(setLoadingCategory(false))
     }
   }, [dispatch])
@@ -93,33 +91,33 @@ function App() {
   const fetchSubCategory = useCallback(async () => {
     try {
       const response = await Axios({ ...SummaryApi.getSubCategory })
-      if (response?.data?.success) {
-        const sortedData = [...response.data.data].sort((a, b) => 
-          (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase())
-        )
-        dispatch(setAllSubCategory(sortedData))
+      if (response?.data?.success && Array.isArray(response.data.data)) {
+        const sorted = response.data.data
+          .filter(sub => sub && typeof sub === 'object')
+          .sort((a, b) => String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase()))
+        dispatch(setAllSubCategory(sorted))
       }
     } catch (error) {
       console.error("SubCategory fetch error", error)
     }
   }, [dispatch])
 
+  // ✅ FIXED: fetch user only once when token is present
   useEffect(() => {
-    // ✅ FIX 2: fetchUser only runs if token exists
-    // fetchCategory and fetchSubCategory are public — always run
-    const token = localStorage.getItem('accesstoken')
-    if (token) {
-      fetchUser()
-    }
+    if (activeToken) fetchUser()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ✅ THE MAIN FIX: fetch categories ONCE on app mount only — NOT on every navigation.
+  // The old code had [location.pathname] in the dep array which re-fetched and reset
+  // loadingCategory=true on every page change, wiping all product sections from Home.
+  useEffect(() => {
     fetchCategory()
     fetchSubCategory()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (user?._id) {
-      fetchOrder()
-    }
-  }, [user?._id, fetchOrder])
+    if (user?._id) fetchOrder()
+  }, [user?._id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     socket.on('connect', () => console.log("🚀 Snapit Socket Connected:", socket.id));

@@ -1,45 +1,49 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { Link } from 'react-router-dom'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import AddToCartButton from './AddToCartButton'
 
+// ✅ Inline SVG fallback — never fails, no network needed
+const FALLBACK_IMG =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Crect x='90' y='80' width='120' height='100' rx='8' fill='%23e5e7eb'/%3E%3Ccircle cx='150' cy='210' r='18' fill='%23e5e7eb'/%3E%3Ctext x='150' y='255' text-anchor='middle' fill='%239ca3af' font-size='13' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
+
+// ✅ Safely extract a valid image src from various data shapes
+const getImageSrc = (image) => {
+    if (Array.isArray(image) && image.length > 0 && typeof image[0] === 'string' && image[0].startsWith('http')) {
+        return image[0]
+    }
+    if (typeof image === 'string' && image.startsWith('http')) {
+        return image
+    }
+    return FALLBACK_IMG
+}
+
 const CardProduct = ({ data }) => {
+    const [imgSrc, setImgSrc] = useState(() => getImageSrc(data?.image))
 
     const url = `/product/${valideURLConvert(data?.name || "")}-${data?._id}`
 
     const getProductLabel = () => {
         const title = data?.name?.toLowerCase() || ""
 
-        if (
-            title.includes("chicken") ||
-            title.includes("fish") ||
-            title.includes("meat")
-        ) {
+        if (title.includes("chicken") || title.includes("fish") || title.includes("meat")) {
             return { text: "Fresh", color: "bg-red-600" }
         }
-
-        if (
-            title.includes("organic") ||
-            title.includes("nature")
-        ) {
+        if (title.includes("organic") || title.includes("nature")) {
             return { text: "Organic", color: "bg-emerald-600" }
         }
-
         if (data?.discount > 20) {
             return { text: "Deal", color: "bg-orange-500" }
         }
-
         return null
     }
 
     const label = getProductLabel()
 
-    const handleImgError = (e) => {
-        e.target.onerror = null
-        e.target.src =
-            "https://res.cloudinary.com/daso5ntlt/image/upload/v1700000000/placeholder.png"
+    const handleImgError = () => {
+        setImgSrc(FALLBACK_IMG)
     }
 
     return (
@@ -50,30 +54,23 @@ const CardProduct = ({ data }) => {
         >
             {/* Product Label */}
             {label && (
-                <div
-                    className={`absolute top-2 left-2 z-10 ${label.color} text-white text-[7px] lg:text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider`}
-                >
+                <div className={`absolute top-2 left-2 z-10 ${label.color} text-white text-[7px] lg:text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider`}>
                     {label.text}
                 </div>
             )}
 
-            {/* FIX 1: Maximized image container — full width square, no internal padding */}
+            {/* Image Container */}
             <div className='w-full aspect-square rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] relative'>
-
-                {/* FIX 2: object-contain filling full container area */}
                 <img
-                    src={
-                        (data?.image && data.image.length > 0)
-                            ? data.image[0]
-                            : "https://via.placeholder.com/150"
-                    }
+                    src={imgSrc}
                     alt={data?.name || "Product"}
                     onError={handleImgError}
+                    loading="eager"
                     className='w-full h-full object-contain transition-transform duration-500 lg:group-hover:scale-105'
                 />
 
                 {/* Soft Overlay */}
-                <div className='absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent pointer-events-none'></div>
+                <div className='absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent pointer-events-none' />
 
                 {/* Low Stock Warning */}
                 {data?.stock < 10 && data?.stock > 0 && (
@@ -85,7 +82,7 @@ const CardProduct = ({ data }) => {
                 )}
             </div>
 
-            {/* FIX 3: Structured compact typography anchored at bottom */}
+            {/* Info Block */}
             <div className='flex flex-col mt-1.5 gap-0.5 flex-1'>
 
                 {/* Delivery + Discount Tags */}
@@ -100,28 +97,21 @@ const CardProduct = ({ data }) => {
                     )}
                 </div>
 
-                {/* Product Name — fixed 2-line clamp so all cards same height */}
+                {/* Product Name */}
                 <div className='font-bold text-slate-800 dark:text-zinc-100 text-[10px] lg:text-sm line-clamp-2 h-[28px] lg:h-[40px] leading-tight group-hover:text-green-700 transition-colors'>
                     {data?.name}
                 </div>
 
-                {/* Product Unit */}
+                {/* Unit */}
                 <div className='text-[9px] lg:text-xs text-neutral-400 italic leading-tight'>
                     {data?.unit}
                 </div>
 
-                {/* Price + Cart — pinned to bottom */}
+                {/* Price + Cart */}
                 <div className='flex items-center justify-between gap-1 mt-auto pt-1'>
-
-                    {/* Price */}
                     <div className='flex flex-col'>
                         <div className='font-black text-slate-900 dark:text-white text-[11px] lg:text-base leading-tight'>
-                            {DisplayPriceInRupees(
-                                pricewithDiscount(
-                                    data?.price || 0,
-                                    data?.discount || 0
-                                )
-                            )}
+                            {DisplayPriceInRupees(pricewithDiscount(data?.price || 0, data?.discount || 0))}
                         </div>
                         {Boolean(data?.discount) && (
                             <span className='text-[8px] lg:text-[10px] line-through text-neutral-400'>
@@ -130,24 +120,17 @@ const CardProduct = ({ data }) => {
                         )}
                     </div>
 
-                    {/* Add To Cart */}
-                    <div
-                        className='flex-shrink-0 w-[60px] lg:w-[90px]'
-                        onClick={(e) => e.preventDefault()}
-                    >
+                    <div className='flex-shrink-0 w-[60px] lg:w-[90px]' onClick={(e) => e.preventDefault()}>
                         {data?.stock == 0 ? (
                             <div className='border border-red-100 bg-red-50 px-1 py-1 rounded text-center'>
                                 <p className='text-red-500 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
-                                    Out of
-                                    <br />
-                                    stock
+                                    Out of<br />stock
                                 </p>
                             </div>
                         ) : (
                             <AddToCartButton data={data} />
                         )}
                     </div>
-
                 </div>
             </div>
         </Link>

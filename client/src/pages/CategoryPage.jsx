@@ -9,6 +9,21 @@ import CofirmBox from '../components/ConfirmBox'
 import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 
+// ✅ Inline SVG fallback — always works, no network dependency
+const FALLBACK_IMG =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='80' text-anchor='middle' fill='%239ca3af' font-size='11' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
+
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-2.onrender.com"
+
+// ✅ Safely resolve any image value (string, array, relative, absolute)
+const resolveImage = (image) => {
+  const raw = Array.isArray(image) ? image[0] : image
+  if (!raw || typeof raw !== 'string') return FALLBACK_IMG
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw
+  if (raw.startsWith('/')) return `${BACKEND_URL}${raw}`
+  return FALLBACK_IMG
+}
+
 const CategoryPage = () => {
   const [openUploadCategory, setOpenUploadCategory] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -17,8 +32,6 @@ const CategoryPage = () => {
   const [editData, setEditData] = useState({ name: "", image: "" })
   const [openConfimBoxDelete, setOpenConfirmBoxDelete] = useState(false)
   const [deleteCategory, setDeleteCategory] = useState({ _id: "" })
-
-  const BACKEND_URL = "https://snapit-full-stack-2.onrender.com"
 
   const fetchCategory = async () => {
     try {
@@ -73,6 +86,7 @@ const CategoryPage = () => {
         </button>
       </div>
 
+      {/* Loading skeletons */}
       {loading && (
         <div className='p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3'>
           {new Array(12).fill(null).map((_, i) => (
@@ -89,7 +103,8 @@ const CategoryPage = () => {
 
       {!categoryData[0] && !loading && <NoData />}
 
-      {!loading && (
+      {/* ✅ Category grid — images use resolveImage() for safe URL resolution */}
+      {!loading && categoryData.length > 0 && (
         <div className='p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3'>
           {categoryData.map((category) => (
             <div
@@ -99,15 +114,12 @@ const CategoryPage = () => {
               <div className='w-full aspect-square bg-slate-50 flex items-center justify-center p-3'>
                 <img
                   alt={category.name}
-                  src={
-                    category?.image && typeof category.image === 'string' && category.image.startsWith('http') 
-                      ? category.image.replace('https://', 'https://') 
-                      : `${BACKEND_URL}${category?.image || ''}`
-                  }
+                  src={resolveImage(category.image)}
                   className='w-full h-full object-contain'
-                  loading="lazy"
+                  loading="eager"
                   onError={(e) => {
-                    e.target.src = "https://placehold.co/150?text=Snapit";
+                    e.target.onerror = null
+                    e.target.src = FALLBACK_IMG
                   }}
                 />
               </div>
@@ -150,4 +162,4 @@ const CategoryPage = () => {
   )
 }
 
-export default CategoryPage;
+export default CategoryPage

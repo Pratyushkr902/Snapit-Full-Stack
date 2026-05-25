@@ -27,7 +27,20 @@ const addRefreshSubscriber = (callback) => {
     refreshSubscribers.push(callback);
 };
 
-// Request Interceptor: Inject bearer tokens seamlessly using both platform formats
+// Public routes whitelist that should never trigger auth redirects or token refreshes
+const publicRoutes = [
+    '/api/category/get',
+    '/api/subcategory/get',
+    '/api/product/get',
+    '/api/product/get-product-by-category',
+    '/api/product/get-product-by-category-and-subcategory',
+    '/api/product/get-product-details',
+    '/api/product/search-product',
+    '/api/user/login',
+    '/api/user/register'
+];
+
+// Request Interceptor: Inject bearer tokens seamlessly
 Axios.interceptors.request.use(
     async (config) => {
         const accessToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
@@ -39,12 +52,21 @@ Axios.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Seamless background token-refresh engine
+// Response Interceptor: Smart background token-refresh engine
 Axios.interceptors.response.use(
     (response) => response,
     async (error) => {
         const { config, response } = error;
         const originalRequest = config;
+
+        // ✅ FIX: Extract the relative URI pathway to check against our public whitelist
+        const requestUrl = originalRequest?.url ? originalRequest.url.replace(API_URL, '').split('?')[0] : '';
+        const isPublicRoute = publicRoutes.some(route => requestUrl.includes(route));
+
+        // If a public endpoint fails with an authorization code, do not intercept or redirect—let it fail gracefully
+        if (isPublicRoute) {
+            return Promise.reject(error);
+        }
 
         if (response && response.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
@@ -86,7 +108,6 @@ Axios.interceptors.response.use(
 
                 if (!newAccessToken) throw new Error("No access token in refresh response");
 
-                // Lock down both token types inside device memory arrays
                 localStorage.setItem('accesstoken', newAccessToken);
                 localStorage.setItem('accessToken', newAccessToken);
 
@@ -189,12 +210,10 @@ export const SummaryApi = {
     getReferralInfo: { url: '/api/referral/info', method: 'get' },
     applyFirstOrderBonus: { url: '/api/referral/first-order-bonus', method: 'post' },
 
-    // 🪙 WALLET ENGINE ENDPOINTS
     getWallet: { url: '/api/wallet/get', method: 'get' },
     addMoneyToWallet: { url: '/api/wallet/add-money', method: 'post' },
     payWithWallet: { url: '/api/wallet/pay', method: 'post' },
 
-    // 🥛 AUTOMATED SUBSCRIPTION ENDPOINTS
     getUserSubscriptions: { url: '/api/subscription/get', method: 'get' },
     updateSubscriptionStatus: { url: '/api/subscription/update-status', method: 'put' },
     cancelSubscription: { url: '/api/subscription/cancel', method: 'delete' }

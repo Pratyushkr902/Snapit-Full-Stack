@@ -43,7 +43,7 @@ import walletRouter from './route/wallet.route.js';
 import flashSaleRouter from './route/flashSale.route.js';
 import referralRouter from './route/referral.route.js';
 import reviewRouter from './route/review.route.js';
-import paymentRouter from './route/payment.route.js'; // Added payment route import
+import paymentRouter from './route/payment.route.js';
 
 const app = express();
 const server = http.createServer(app); 
@@ -52,11 +52,13 @@ const latestPositions = new Map();
 // --- CORS RULES (STABILIZED FOR NATIVE CAPACITOR & WEBVIEW COOKIE EXCHANGE) ---
 const allowedOrigins = [
     "http://localhost:5173",
-    "https://localhost:5173",                     // Dev web client local server layout
-    "https://localhost",                          // Capacitor Android webview runtime origin
-    "http://localhost",                           // Native Android WebView standard fallback loopback
-    "capacitor://localhost",                      // Capacitor iOS container origin
-    "null",                                       // String literal parsed from strict WebView sandboxes
+    "https://localhost:5173",                     
+    "https://localhost",                          
+    "http://localhost",                           
+    "capacitor://localhost",                      
+    "android://localhost",                        // 📱 FIXED: Essential for native Android WebView network handshakes
+    "https://snapit.grocery",                     
+    "null",                                       
     "https://snapit-full-stack.onrender.com",
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com"
@@ -64,13 +66,12 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Safe check for machine scripts or local server tasks
         if (!origin) {
             return callback(null, true);
         }
         
-        // Dynamic lookup inside lowercased whitelisted origin strings
-        if (allowedOrigins.includes(origin.toLowerCase())) {
+        const lowerOrigin = origin.toLowerCase().trim();
+        if (allowedOrigins.includes(lowerOrigin) || lowerOrigin.startsWith('http://localhost') || lowerOrigin.startsWith('capacitor://') || lowerOrigin.startsWith('android://')) {
             callback(null, true);
         } else {
             console.warn(`[CORS Blocked] Unauthorized request attempt from: ${origin}`);
@@ -90,18 +91,33 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
-            imgSrc: ["'self'", "data:", "https://*.openstreetmap.org", "https://res.cloudinary.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://api.qrserver.com"],
+            
+            imgSrc: [
+                "'self'", 
+                "data:", 
+                "blob:",
+                "https://*.openstreetmap.org", 
+                "https://res.cloudinary.com", 
+                "https://*.cloudinary.com",    
+                "http://res.cloudinary.com",   
+                "https://*.googleapis.com", 
+                "https://*.gstatic.com", 
+                "https://api.qrserver.com"
+            ],
+            
             frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
             connectSrc: [
                 "'self'", 
                 "https://api.razorpay.com", 
                 "https://*.razorpay.com", 
                 "https://*.googleapis.com", 
-                "ws:", "wss:", "https://*", "https://*", 
+                "ws:", "wss:", "https://*", 
                 "ws://*", "wss://*", 
                 "capacitor://*",
+                "android://*",                             // 🚀 FIXED: Allowed Android WebSocket and API content pipelines
                 "https://localhost",
                 "http://localhost",
+                "https://snapit.grocery",
                 "https://snapit-full-stack-2.onrender.com",
                 "https://snapit-full-stack.onrender.com",
                 "https://snapit-full-stack-0.onrender.com"
@@ -174,7 +190,7 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 app.use('/api/review', reviewRouter);
-app.use('/api/payment', paymentRouter); // Added payment route middleware mount
+app.use('/api/payment', paymentRouter);
 
 // --- HEALTH ROUTE ---
 app.get("/health", (req, res) => {
@@ -193,8 +209,6 @@ const possiblePaths = [
 ];
 
 const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
-console.log("🚀 Static Assets Path Resolved to:", clientBuildPath);
-
 app.use(express.static(clientBuildPath));
 
 // --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
@@ -205,7 +219,6 @@ app.get('/{*splat}', (req, res, next) => {
     
     res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
         if (err) {
-            console.error("❌ SendFile Error:", err.message);
             res.status(500).json({ 
                 error: "Frontend distribution layer build files not found.",
                 path: clientBuildPath 
@@ -224,11 +237,7 @@ setInterval(() => {
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
     console.log("✅ Database System Connected Successfully");
-    
-    // ✅ FIX: Start the background automation engine here!
     initSubscriptionCron();
-    console.log("⏰ Background Automation Cron Engine Activated.");
-
     server.listen(PORT, '0.0.0.0', () => { 
         console.log(`🚀 Snapit Server running on port ${PORT}`);
     });

@@ -5,11 +5,9 @@ export const AddSubCategoryController = async(request,response)=>{
     try {
         const { name, image, category } = request.body 
 
-        // FIXED: Changed && to ||. Previously, it only failed if ALL were missing. 
-        // Now it fails if ANY required field is missing.
-        if(!name || !image || !category || !category[0] ){
+        if(!name || !image || !category || !Array.isArray(category) || category.length === 0){
             return response.status(400).json({
-                message : "Provide name, image, and at least one category",
+                message : "Provide name, image asset, and at least one valid parent category reference array item.",
                 error : true,
                 success : false
             })
@@ -42,9 +40,7 @@ export const AddSubCategoryController = async(request,response)=>{
 
 export const getSubCategoryController = async(request,response)=>{
     try {
-        // Populating 'category' ensures the frontend table shows names, not just IDs
         const data = await SubCategoryModel.find().sort({createdAt : -1}).populate('category')
-        
         return response.json({
             message : "Sub Category data",
             data : data,
@@ -66,13 +62,12 @@ export const updateSubCategoryController = async(request,response)=>{
 
         if(!_id || !mongoose.Types.ObjectId.isValid(_id)){
             return response.status(400).json({
-                message : "Provide valid sub-category _id",
+                message : "Provide valid sub-category _id reference context.",
                 error : true,
                 success : false
             })
         }
 
-        // FIXED: Added { new: true } so the response contains the UPDATED data, not the old data
         const updateSubCategory = await SubCategoryModel.findByIdAndUpdate(_id, {
             name,
             image,
@@ -81,7 +76,7 @@ export const updateSubCategoryController = async(request,response)=>{
 
         if(!updateSubCategory){
             return response.status(404).json({
-                message : "Sub-category not found",
+                message : "Sub-category target record could not be found.",
                 error : true,
                 success : false
             })
@@ -109,7 +104,7 @@ export const deleteSubCategoryController = async(request,response)=>{
         
         if(!_id || !mongoose.Types.ObjectId.isValid(_id)){
             return response.status(400).json({
-                message : "Provide valid _id",
+                message : "Provide valid target selection _id.",
                 error : true,
                 success : false
             })

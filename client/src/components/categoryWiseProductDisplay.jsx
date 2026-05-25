@@ -9,19 +9,37 @@ import { FaAngleLeft, FaAngleRight } from "react-icons/fa6"
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-2.onrender.com"
+
+// ✅ Normalize image URLs — handles arrays, relative paths, and absolute URLs
+const normalizeImageField = (image) => {
+    if (Array.isArray(image)) {
+        return image.map(img =>
+            typeof img === 'string' && img.startsWith('/')
+                ? `${BACKEND_URL}${img}`
+                : img
+        )
+    }
+    if (typeof image === 'string' && image.startsWith('/')) {
+        return `${BACKEND_URL}${image}`
+    }
+    return image
+}
+
 const CategoryWiseProductDisplay = ({ id, name }) => {
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(false)
-    const [visible, setVisible] = useState(false) 
+    const [visible, setVisible] = useState(false)
     const containerRef = useRef()
     const sectionRef = useRef()
     const params = useParams()
 
     const currentProductId = params?.product?.split("-")?.slice(-1)[0]
-    const subCategoryData = useSelector(state => state.product.allSubCategory)
+    const subCategoryData = useSelector(state => state.product.allSubCategory) || []
     const loadingCardNumber = new Array(6).fill(null)
 
     useEffect(() => {
+        // ✅ FIXED: rootMargin 600px — triggers well before section enters viewport on mobile
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
@@ -29,13 +47,23 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     observer.disconnect()
                 }
             },
-            { rootMargin: '200px' }
+            { rootMargin: '600px', threshold: 0 }
         )
+
         if (sectionRef.current) observer.observe(sectionRef.current)
-        return () => observer.disconnect()
+
+        // ✅ FIXED: 2s timeout fallback — if observer never fires (mobile WebView bug),
+        //    force visible so products always load
+        const timer = setTimeout(() => setVisible(true), 2000)
+
+        return () => {
+            observer.disconnect()
+            clearTimeout(timer)
+        }
     }, [])
 
     const fetchCategoryWiseProduct = async () => {
+        if (!id) return   // ✅ FIXED: skip fetch if id is undefined (race condition guard)
         try {
             setLoading(true)
             const response = await Axios({
@@ -43,22 +71,14 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                 data: { id }
             })
             const { data: responseData } = response
-            if (responseData.success) {
-                const filteredData = responseData.data.filter(p => p._id !== currentProductId)
-                
-                // Bulletproof loop parsing mapping layer
-                const sanitizedProducts = filteredData.map(product => {
-                    let updatedProduct = { ...product };
-                    if (updatedProduct.image && typeof updatedProduct.image === 'string' && updatedProduct.image.startsWith('https://')) {
-                        updatedProduct.image = updatedProduct.image.replace('https://', 'https://');
-                    }
-                    if (updatedProduct.imageUrl && typeof updatedProduct.imageUrl === 'string' && updatedProduct.imageUrl.startsWith('https://')) {
-                        updatedProduct.imageUrl = updatedProduct.imageUrl.replace('https://', 'https://');
-                    }
-                    return updatedProduct;
-                });
 
-                setData(sanitizedProducts)
+            if (responseData.success && Array.isArray(responseData.data)) {
+                const filtered = responseData.data.filter(p => p?._id !== currentProductId)
+                const sanitized = filtered.map(product => ({
+                    ...product,
+                    image: normalizeImageField(product.image),
+                }))
+                setData(sanitized)
             }
         } catch (error) {
             AxiosToastError(error)
@@ -67,18 +87,26 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
         }
     }
 
+    // ✅ FIXED: also re-fetch if `id` changes (e.g. categories load after mount)
     useEffect(() => {
-        if (visible) fetchCategoryWiseProduct()
+        if (visible && id) fetchCategoryWiseProduct()
     }, [visible, id])
 
-    const handleScrollRight = () => { containerRef.current.scrollLeft += 280 }
-    const handleScrollLeft = () => { containerRef.current.scrollLeft -= 280 }
+    const handleScrollRight = () => { if (containerRef.current) containerRef.current.scrollLeft += 280 }
+    const handleScrollLeft = () => { if (containerRef.current) containerRef.current.scrollLeft -= 280 }
 
     const handleRedirectProductListpage = () => {
-        const subcategory = subCategoryData.find(sub =>
-            sub.category.some(c => c._id == id)
+        const safeSubData = Array.isArray(subCategoryData) ? subCategoryData : []
+        if (safeSubData.length === 0) {
+            return `/${valideURLConvert(name || "category")}-${id}`
+        }
+        const subcategory = safeSubData.find(sub =>
+            sub && Array.isArray(sub.category) && sub.category.some(c => c && c._id == id)
         )
-        return `/${valideURLConvert(name)}-${id}/${valideURLConvert(subcategory?.name)}-${subcategory?._id}`
+        if (!subcategory) {
+            return `/${valideURLConvert(name || "category")}-${id}`
+        }
+        return `/${valideURLConvert(name || "")}-${id}/${valideURLConvert(subcategory?.name || "")}-${subcategory?._id}`
     }
 
     const redirectURL = handleRedirectProductListpage()
@@ -101,28 +129,51 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     ref={containerRef}
                     style={{ scrollSnapType: 'x mandatory' }}
                 >
+                    {/* Loading skeletons while fetching */}
                     {loading && loadingCardNumber.map((_, index) => (
-                        <div key={"ld" + index} className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]' style={{ scrollSnapAlign: 'start' }}>
+                        <div
+                            key={"ld" + index}
+                            className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]'
+                            style={{ scrollSnapAlign: 'start' }}
+                        >
                             <CardLoading />
                         </div>
                     ))}
 
+                    {/* Pre-visible placeholder — clean pulse, no broken image boxes */}
                     {!visible && !loading && loadingCardNumber.map((_, index) => (
-                        <div key={"ph" + index} className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px] h-64 bg-slate-100 rounded-2xl animate-pulse' style={{ scrollSnapAlign: 'start' }}>
-                        </div>
+                        <div
+                            key={"ph" + index}
+                            className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px] h-64 bg-slate-100 dark:bg-zinc-800 rounded-2xl animate-pulse flex-shrink-0'
+                            style={{ scrollSnapAlign: 'start' }}
+                        />
                     ))}
 
-                    {!loading && data.map((p, index) => (
-                        <div
-                            key={p._id + "cat" + index}
-                            className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]'
-                            style={{ scrollSnapAlign: 'start' }}
-                        >
-                            <CardProduct data={p} />
+                    {/* Product cards */}
+                    {!loading && data.map((p, index) => {
+                        if (p && p._id) {
+                            return (
+                                <div
+                                    key={p._id + "cat" + index}
+                                    className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]'
+                                    style={{ scrollSnapAlign: 'start' }}
+                                >
+                                    <CardProduct data={p} />
+                                </div>
+                            )
+                        }
+                        return null
+                    })}
+
+                    {/* Empty state — when loaded but no products found */}
+                    {!loading && visible && data.length === 0 && (
+                        <div className='w-full py-8 text-center text-slate-400 text-sm font-medium'>
+                            No products available
                         </div>
-                    ))}
+                    )}
                 </div>
 
+                {/* Scroll buttons — desktop only */}
                 <div className='w-full left-0 right-0 container mx-auto px-2 absolute hidden lg:flex justify-between pointer-events-none'>
                     <button onClick={handleScrollLeft} className='pointer-events-auto z-10 bg-white shadow-xl text-slate-700 p-3 rounded-full'>
                         <FaAngleLeft size={16} />
@@ -136,4 +187,4 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     )
 }
 
-export default CategoryWiseProductDisplay;
+export default CategoryWiseProductDisplay
