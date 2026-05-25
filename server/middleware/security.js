@@ -1,12 +1,15 @@
 import rateLimit from 'express-rate-limit'
-import mongoSanitize from 'mongo-sanitize' // ✓ Using mongo-sanitize (Express 5 compatible)
+import mongoSanitize from 'mongo-sanitize'
 
 // --- RATE LIMITERS ---
 
-// Strict limiter for auth routes
+// Auth limiter — login/register
+// ✅ FIXED: increased max from 10 → 50 per 15 min window
+//    10 was too strict — normal users hit it during testing and repeated
+//    failed logins (e.g. wrong password twice) triggered 429s
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10,
+    max: 50,
     message: {
         success: false,
         error: true,
@@ -14,13 +17,13 @@ export const authLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skipSuccessfulRequests: false
+    skipSuccessfulRequests: true  // ✅ FIXED: don't count successful logins against the limit
 })
 
 // OTP limiter
 export const otpLimiter = rateLimit({
     windowMs: 10 * 60 * 1000, // 10 minutes
-    max: 5,
+    max: 10, // ✅ FIXED: raised from 5 → 10 (OTP resend + retry is common)
     message: {
         success: false,
         error: true,
@@ -31,7 +34,7 @@ export const otpLimiter = rateLimit({
 // General API limiter
 export const apiLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 100,
+    max: 200, // ✅ FIXED: raised from 100 → 200 (app makes many parallel requests on load)
     message: {
         success: false,
         error: true,
@@ -71,7 +74,6 @@ export const sanitizeInput = (req, res, next) => {
 }
 
 // --- OWNERSHIP CHECKER ---
-// Usage: checkOwnership(Model, 'paramField', 'userField')
 export const checkOwnership = (Model, idField = 'id', userField = 'userId') => {
     return async (req, res, next) => {
         try {
