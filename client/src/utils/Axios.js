@@ -1,144 +1,10 @@
 import axios from "axios";
 
-// =========================================================================
-// 1. GLOBAL INSTANCE CONFIGURATION & CROSS-PLATFORM INTERCEPTORS
-// =========================================================================
-
 const API_URL = "https://snapit-full-stack-2.onrender.com";
 
-const Axios = axios.create({
-    baseURL: API_URL,
-    withCredentials: true,
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    }
-});
-
-let isRefreshing = false;
-let refreshSubscribers = [];
-
-const onTokenRefreshed = (newAccessToken) => {
-    refreshSubscribers.forEach((callback) => callback(newAccessToken));
-    refreshSubscribers = [];
-};
-
-const addRefreshSubscriber = (callback) => {
-    refreshSubscribers.push(callback);
-};
-
-// Public routes whitelist that should never trigger auth redirects or token refreshes
-const publicRoutes = [
-    '/api/category/get',
-    '/api/subcategory/get',
-    '/api/product/get',
-    '/api/product/get-product-by-category',
-    '/api/product/get-product-by-category-and-subcategory',
-    '/api/product/get-product-details',
-    '/api/product/search-product',
-    '/api/user/login',
-    '/api/user/register'
-];
-
-// Request Interceptor: Inject bearer tokens seamlessly
-Axios.interceptors.request.use(
-    async (config) => {
-        const accessToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`;
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
-
-// Response Interceptor: Smart background token-refresh engine
-Axios.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        const { config, response } = error;
-        const originalRequest = config;
-
-        // ✅ FIX: Extract the relative URI pathway to check against our public whitelist
-        const requestUrl = originalRequest?.url ? originalRequest.url.replace(API_URL, '').split('?')[0] : '';
-        const isPublicRoute = publicRoutes.some(route => requestUrl.includes(route));
-
-        // If a public endpoint fails with an authorization code, do not intercept or redirect—let it fail gracefully
-        if (isPublicRoute) {
-            return Promise.reject(error);
-        }
-
-        if (response && response.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
-
-            const refreshToken = localStorage.getItem("refreshToken") || localStorage.getItem("refreshtoken");
-            if (!refreshToken) {
-                handleLogoutRedirect();
-                return Promise.reject(error);
-            }
-
-            if (isRefreshing) {
-                return new Promise((resolve) => {
-                    addRefreshSubscriber((newAccessToken) => {
-                        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-                        resolve(Axios(originalRequest));
-                    });
-                });
-            }
-
-            isRefreshing = true;
-
-            try {
-                const refreshUrl = SummaryApi.refreshToken.url.startsWith('http')
-                    ? SummaryApi.refreshToken.url
-                    : `${API_URL}${SummaryApi.refreshToken.url.startsWith('/') ? '' : '/'}${SummaryApi.refreshToken.url}`;
-
-                const refreshResponse = await axios({
-                    method: 'post',
-                    url: refreshUrl,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${refreshToken}`
-                    },
-                    withCredentials: true
-                });
-
-                const newAccessToken = refreshResponse.data?.data?.accesstoken 
-                    || refreshResponse.data?.data?.accessToken;
-
-                if (!newAccessToken) throw new Error("No access token in refresh response");
-
-                localStorage.setItem('accesstoken', newAccessToken);
-                localStorage.setItem('accessToken', newAccessToken);
-
-                isRefreshing = false;
-                onTokenRefreshed(newAccessToken);
-
-                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-                return Axios(originalRequest);
-
-            } catch (refreshError) {
-                isRefreshing = false;
-                refreshSubscribers = [];
-                handleLogoutRedirect();
-                return Promise.reject(refreshError);
-            }
-        }
-        return Promise.reject(error);
-    }
-);
-
-const handleLogoutRedirect = () => {
-    localStorage.clear();
-    if (typeof window !== "undefined") {
-        window.location.hash = "#/login";
-    }
-};
-
 // =========================================================================
-// 2. CENTRALIZED API ROUTE DICTIONARY WITH WALLET & SUBSCRIPTION MAPPINGS
+// 1. CENTRALIZED API ROUTE DICTIONARY WITH WALLET & SUBSCRIPTION MAPPINGS
 // =========================================================================
-
 export const baseURL = API_URL;
 
 export const SummaryApi = {
@@ -217,6 +83,137 @@ export const SummaryApi = {
     getUserSubscriptions: { url: '/api/subscription/get', method: 'get' },
     updateSubscriptionStatus: { url: '/api/subscription/update-status', method: 'put' },
     cancelSubscription: { url: '/api/subscription/cancel', method: 'delete' }
+};
+
+// =========================================================================
+// 2. GLOBAL INSTANCE CONFIGURATION & CROSS-PLATFORM INTERCEPTORS
+// =========================================================================
+
+const Axios = axios.create({
+    baseURL: API_URL,
+    withCredentials: true,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+});
+
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const onTokenRefreshed = (newAccessToken) => {
+    refreshSubscribers.forEach((callback) => callback(newAccessToken));
+    refreshSubscribers = [];
+};
+
+const addRefreshSubscriber = (callback) => {
+    refreshSubscribers.push(callback);
+};
+
+const publicRoutes = [
+    '/api/category/get',
+    '/api/subcategory/get',
+    '/api/product/get',
+    '/api/product/get-product-by-category',
+    '/api/product/get-product-by-category-and-subcategory',
+    '/api/product/get-product-details',
+    '/api/product/search-product',
+    '/api/user/login',
+    '/api/user/register'
+];
+
+// Request Interceptor: Inject bearer tokens seamlessly
+Axios.interceptors.request.use(
+    async (config) => {
+        const accessToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Response Interceptor: Smart background token-refresh engine
+Axios.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const { config, response } = error;
+        const originalRequest = config;
+
+        const requestUrl = originalRequest?.url ? originalRequest.url.replace(API_URL, '').split('?')[0] : '';
+        const isPublicRoute = publicRoutes.some(route => requestUrl.includes(route));
+
+        if (isPublicRoute) {
+            return Promise.reject(error);
+        }
+
+        if (response && response.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+
+            const refreshToken = localStorage.getItem("refreshToken") || localStorage.getItem("refreshtoken");
+            if (!refreshToken) {
+                handleLogoutRedirect();
+                return Promise.reject(error);
+            }
+
+            if (isRefreshing) {
+                return new Promise((resolve) => {
+                    addRefreshSubscriber((newAccessToken) => {
+                        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                        resolve(Axios(originalRequest));
+                    });
+                });
+            }
+
+            isRefreshing = true;
+
+            try {
+                // ✅ SummaryApi is now safely initialized and fully available here!
+                const refreshUrl = SummaryApi.refreshToken.url.startsWith('http')
+                    ? SummaryApi.refreshToken.url
+                    : `${API_URL}${SummaryApi.refreshToken.url.startsWith('/') ? '' : '/'}${SummaryApi.refreshToken.url}`;
+
+                const refreshResponse = await axios({
+                    method: 'post',
+                    url: refreshUrl,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${refreshToken}`
+                    },
+                    withCredentials: true
+                });
+
+                const newAccessToken = refreshResponse.data?.data?.accesstoken 
+                    || refreshResponse.data?.data?.accessToken;
+
+                if (!newAccessToken) throw new Error("No access token in refresh response");
+
+                localStorage.setItem('accesstoken', newAccessToken);
+                localStorage.setItem('accessToken', newAccessToken);
+
+                isRefreshing = false;
+                onTokenRefreshed(newAccessToken);
+
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                return Axios(originalRequest);
+
+            } catch (refreshError) {
+                isRefreshing = false;
+                refreshSubscribers = [];
+                handleLogoutRedirect();
+                return Promise.reject(refreshError);
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+const handleLogoutRedirect = () => {
+    localStorage.clear();
+    if (typeof window !== "undefined") {
+        window.location.hash = "#/login";
+    }
 };
 
 export default Axios;
