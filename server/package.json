@@ -2,12 +2,7 @@
   "name": "snapit-backend",
   "version": "1.0.0",
   "main": "server/index.js",
-  "type": "module",
-  "scripts": {
-    "start": "node server/index.js",
-    "dev": "nodemon server/index.js",
-    "build": "cd ../client && npm install && npm run build"
-  },
+  "type": "module","build": "cd ../client && npm install && npm run build"
   "author": "Pratyush Kumar",
   "license": "ISC",
   "dependencies": {
@@ -28,6 +23,7 @@
     "mongoose": "^9.6.1",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
     "razorpay": "^2.9.6",
     "resend": "^6.9.3",
     "socket.io": "^4.8.3",
