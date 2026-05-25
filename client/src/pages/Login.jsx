@@ -2,8 +2,7 @@ import React, { useState } from 'react'
 import { FaRegEyeSlash } from "react-icons/fa6";
 import { FaRegEye } from "react-icons/fa6";
 import toast from 'react-hot-toast';
-import Axios from '../utils/Axios';
-import SummaryApi from '../common/SummaryApi';
+import Axios, { SummaryApi } from '../utils/Axios'; // ✅ FIXED: Import SummaryApi from your core utility file instead of '../common/'
 import AxiosToastError from '../utils/AxiosToastError';
 import { Link, useNavigate } from 'react-router-dom';
 import fetchUserDetails from '../utils/fetchUserDetails';
@@ -36,6 +35,12 @@ const Login = () => {
         e.preventDefault()
 
         try {
+            // ✅ SAFETY FIX: Obliterate stale token residues from local storage before requesting a new handshake session
+            localStorage.removeItem('accesstoken');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('refreshtoken');
+
             const response = await Axios({
                 ...SummaryApi.login,
                 data : data
@@ -52,7 +57,7 @@ const Login = () => {
                 const token = response.data.data.accesstoken || response.data.data.accessToken;
                 const refresh = response.data.data.refreshToken || response.data.data.refreshtoken;
 
-                // ✅ FIX: Set BOTH lowercase and camelCase variations globally on device memory
+                // Set BOTH lowercase and camelCase variations globally on device memory
                 // This ensures that Axios can fetch credentials immediately across all page contexts
                 localStorage.setItem('accesstoken', token)
                 localStorage.setItem('accessToken', token)
@@ -102,8 +107,8 @@ const Login = () => {
                                 className='w-full outline-none'
                                 name='password'
                                 value={data.password}
-                                onChange={handleChange}
                                 placeholder='Enter your password'
+                                onChange={handleChange}
                             />
                             <div onClick={() => setShowPassword(preve => !preve)} className='cursor-pointer'>
                                 {
