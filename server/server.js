@@ -40,7 +40,7 @@ import walletRouter from './route/wallet.route.js';
 import flashSaleRouter from './route/flashSale.route.js';
 import referralRouter from './route/referral.route.js';
 import reviewRouter from './route/review.route.js';
-import paymentRouter from './routes/payment.route.js'; // Added payment route import
+import paymentRouter from './route/payment.route.js'; // Added payment route import
 
 const app = express();
 const server = http.createServer(app); 
