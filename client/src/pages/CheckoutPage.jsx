@@ -4,8 +4,7 @@ import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import AddAddress from '../components/AddAddress'
 import { useSelector } from 'react-redux'
 import AxiosToastError from '../utils/AxiosToastError'
-import Axios from '../utils/Axios'
-import SummaryApi from '../common/SummaryApi'
+import Axios, { SummaryApi } from '../utils/Axios' // ✅ FIXED: Safely destructure the clean route map
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 
@@ -196,8 +195,13 @@ const CheckoutPage = () => {
           handler: async function (response) {
             const verificationToast = toast.loading("Verifying transaction...")
             try {
+              // ✅ FIXED: Fallback verification handle guard map block check
+              const verifyUrl = SummaryApi.payment_verification?.url || '/api/order/verify-payment'
+              const verifyMethod = SummaryApi.payment_verification?.method || 'post'
+
               const verifyRes = await Axios({
-                ...SummaryApi.payment_verification,
+                url: verifyUrl,
+                method: verifyMethod,
                 data: {
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -265,7 +269,6 @@ const CheckoutPage = () => {
 
         {/* Right: Bill Info */}
         <div className='w-full lg:max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
-          {/* Coupon Input Element Box */}
           <div className='mx-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
             <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-2'>Promo Coupons</p>
             <div className='flex gap-2'>
