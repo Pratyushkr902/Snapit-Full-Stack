@@ -18,7 +18,7 @@ import OfferStrip from './components/OfferStrip';
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
 import { io } from "socket.io-client"; 
-import useNotifications from './hooks/useNotifications' // Merged and cleaned up imports
+import useNotifications from './hooks/useNotifications'
 
 // GLOBAL SOCKET CONNECTION
 export const socket = io("https://snapit-full-stack-2.onrender.com", {
@@ -36,12 +36,10 @@ function App() {
   const location = useLocation()
   const user = useSelector(state => state.user)
   
-  // INITIALIZE NOTIFICATION HOOK
   useNotifications() 
 
   const [showCart, setShowCart] = useState(false)
 
-  // Force-close the cart modal overlay instantly when path flips to checkout
   useEffect(() => {
     if (location.hash === "#/checkout") {
       setShowCart(false)
@@ -49,6 +47,10 @@ function App() {
   }, [location.pathname])
 
   const fetchUser = useCallback(async () => {
+    // ✅ FIX 1: Don't call API if no token exists
+    const token = localStorage.getItem('accesstoken')
+    if (!token) return
+
     try {
       const userData = await fetchUserDetails()
       if (userData?.success) { 
@@ -60,7 +62,7 @@ function App() {
   }, [dispatch])
 
   const fetchOrder = useCallback(async () => {
-    if(!user?._id) return; 
+    if (!user?._id) return
     try {
       const response = await Axios({ ...SummaryApi.getOrderItems })
       if (response?.data?.success) {
@@ -103,13 +105,18 @@ function App() {
   }, [dispatch])
 
   useEffect(() => {
-    fetchUser()
+    // ✅ FIX 2: fetchUser only runs if token exists
+    // fetchCategory and fetchSubCategory are public — always run
+    const token = localStorage.getItem('accesstoken')
+    if (token) {
+      fetchUser()
+    }
     fetchCategory()
     fetchSubCategory()
-  }, [fetchUser, fetchCategory, fetchSubCategory])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if(user?._id) {
+    if (user?._id) {
       fetchOrder()
     }
   }, [user?._id, fetchOrder])
@@ -138,12 +145,10 @@ function App() {
         
         <Toaster position="top-center" reverseOrder={false} />
 
-        {/* Global Cart Overlay — Explicit block to guarantee no flash or overlay loops on /checkout path */}
         {showCart && location.hash !== "#/checkout" && (
           <DisplayCartItem close={() => setShowCart(false)} />
         )}
 
-        {/* Mobile Cart Link */}
         {
           location.hash !== "#/checkout" && 
           location.hash !== "#/cart" && 
@@ -152,7 +157,6 @@ function App() {
           )
         }
 
-        {/* WhatsApp Support Button — hidden on dashboard and rider panel */}
         {!isDashboard && <WhatsAppButton />}
       </div>
     </GlobalProvider></RemoteConfigProvider>
