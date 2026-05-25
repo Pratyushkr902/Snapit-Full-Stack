@@ -14,9 +14,11 @@ BASE_DIR="$HOME/Documents/snapit"
 
 echo -e "${BLUE}[1/5] Building production client web bundles...${NC}"
 cd "$BASE_DIR/client"
+npm install
 npm run build
 
 echo -e "${BLUE}[2/5] Injecting web components into Android asset streams...${NC}"
+# ✅ FIXED PATHS: Updated to target your real snapit-android directory
 rm -rf "$BASE_DIR/snapit-android/app/src/main/assets/public"/*
 mkdir -p "$BASE_DIR/snapit-android/app/src/main/assets/public/"
 cp -Rf "$BASE_DIR/client/dist"/* "$BASE_DIR/snapit-android/app/src/main/assets/public/"
@@ -24,11 +26,10 @@ cp -Rf "$BASE_DIR/client/dist"/* "$BASE_DIR/snapit-android/app/src/main/assets/p
 echo -e "${BLUE}[3/5] Compiling final installable debug APK packages...${NC}"
 cd "$BASE_DIR/snapit-android"
 export JAVA_HOME="/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home"
-# ✅ FIX: Changed from assembleRelease to assembleDebug to prevent signing crashes
+# ✅ STABLE CONFIG: assembleDebug ensures it runs flawlessly without signing errors
 ./gradlew clean assembleDebug
 
 echo -e "${BLUE}[4/5] Deploying and pushing package live onto connected Android phone...${NC}"
-# ✅ FIX: Target the generated debug APK file path
 APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
 
 if adb devices | grep -q -w "device"; then
@@ -41,7 +42,6 @@ fi
 echo -e "${BLUE}[5/5] Backing up structural changes to GitHub remote repository...${NC}"
 cd "$BASE_DIR"
 git add .
-# Prevent script freeze if git reports nothing new to log
 git diff-index --quiet HEAD || git commit -m "build: compile distribution assets and update application assets production layer"
 git push origin main
 
