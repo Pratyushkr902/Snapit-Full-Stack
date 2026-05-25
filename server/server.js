@@ -23,6 +23,7 @@ import './models/subCategory.model.js';
 import './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
+import './models/wallet.model.js';
 
 console.log("RAZORPAY INTEGRITY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
