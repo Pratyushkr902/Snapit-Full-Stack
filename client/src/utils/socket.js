@@ -1,5 +1,5 @@
 import { io } from "socket.io-client"
-import { baseURL } from "./Axios.js" // ✅ FIXED: Dynamically inherits your production target automatically
+import { baseURL } from "./Axios.js" // ✅ FIXED: Dynamically inherits the production target automatically
 
 export const socket = io(baseURL, {
     // Handshake starts with polling to bypass Render's proxy restrictions cleanly
