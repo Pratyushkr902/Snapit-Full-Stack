@@ -88,8 +88,9 @@ export const getProductController = async(request,response)=>{
             ProductModel.countDocuments(query)
         ])
 
+        // ✅ FIXED: Using toObject() protects custom parameters and pre-populated objects cleanly
         const securedData = data.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -135,7 +136,7 @@ export const getProductByCategory = async(request,response)=>{
         }).limit(15)
 
         const securedData = product.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -193,7 +194,7 @@ export const getProductByCategoryAndSubCategory  = async(request,response)=>{
         ])
 
         const securedData = data.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -239,7 +240,7 @@ export const getProductDetails = async(request,response)=>{
         }
 
         const securedProduct = {
-            ...product._doc,
+            ...product.toObject(),
             image: secureImages(product.image)
         };
 
@@ -283,7 +284,7 @@ export const updateProductDetails = async(request,response)=>{
 
         return response.json({
             message : "updated successfully",
-            data : updateProduct,
+            data : updateProduct?.toObject() || updateProduct,
             error : false,
             success : true
         })
@@ -348,7 +349,7 @@ export const searchProduct = async(request,response)=>{
         ])
 
         const securedData = data.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -362,7 +363,6 @@ export const searchProduct = async(request,response)=>{
             page : page,
             limit : limit 
         })
-
 
     } catch (error) {
         return response.status(500).json({
@@ -394,7 +394,7 @@ export async function getFrequentlyBought(req, res) {
             .limit(5)
 
         const securedSuggestions = suggestions.map(prod => ({
-            ...prod._doc,
+            ...prod.toObject(),
             image: secureImages(prod.image)
         }));
 
@@ -432,7 +432,7 @@ export const updateProductEmails = async (req, res) => {
             error: false
         });
     } catch (error) {
-        return response.status(500).json({ 
+        return res.status(500).json({ 
             message: error.message || error,
             error: true,
             success: false 
