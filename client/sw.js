@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snapit-v2'
+const CACHE_NAME = 'snapit-v3' // ✅ Upgraded cache key index namespace structure
 const STATIC_ASSETS = ['/', '/index.html']
 
 self.addEventListener('install', (event) => {
@@ -26,10 +26,15 @@ self.addEventListener('fetch', (event) => {
     if (event.request.url.includes('firestore') || event.request.url.includes('firebase')) return
     if (!event.request.url.startsWith('http')) return
 
+    // ✅ FIXED: Explicitly block caching on your core JavaScript compilation chunks to prevent legacy URL loop replays
+    if (event.request.url.includes('.js') || event.request.url.includes('assets/')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // Only cache same-origin basic responses — never opaque cross-origin
                 if (
                     response &&
                     response.status === 200 &&
@@ -54,6 +59,7 @@ self.addEventListener('fetch', (event) => {
     )
 })
 
+// --- PUSH NOTIFICATION ENGINES ---
 self.addEventListener('push', (event) => {
     const data = event.data
         ? (() => { try { return event.data.json() } catch { return { title: event.data.text() } } })()
