@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { socket } from '../utils/socket'
@@ -33,13 +33,6 @@ const storeIcon = new L.DivIcon({
   iconAnchor: [16, 16],
 })
 
-const homeIcon = new L.DivIcon({
-  html: `<div style="background:#dc2626;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:16px;">🏠</div>`,
-  className: '',
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-})
-
 const STATUS_STEPS = [
   { key: 'Pending', label: 'Order Placed', icon: '📋' },
   { key: 'Confirmed', label: 'Confirmed', icon: '✅' },
@@ -47,6 +40,17 @@ const STATUS_STEPS = [
   { key: 'Out for Delivery', label: 'On the Way', icon: '🏍️' },
   { key: 'Delivered', label: 'Delivered', icon: '🎉' },
 ]
+
+// Map adjustment controller to smoothly follow the rider coordinate changes
+function ChangeMapCenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.panTo(center);
+    }
+  }, [center, map]);
+  return null;
+}
 
 const TrackingPage = () => {
   const { orderId } = useParams()
@@ -82,16 +86,19 @@ const TrackingPage = () => {
     socket.emit('join_order', orderId)
 
     const handleRiderMovement = (data) => {
-      if (data.latitude && data.longitude) {
+      // Your backend structure sends properties inside payload as latitude/longitude
+      if (data && data.latitude && data.longitude) {
         setRiderPos([data.latitude, data.longitude])
       }
     }
 
-    socket.on('rider_moved', handleRiderMovement)
+    // ✅ FIXED EVENT NAME: Changed from 'rider_moved' to 'receive_location'
+    socket.on('receive_location', handleRiderMovement)
     socket.on('connect', () => socket.emit('join_order', orderId))
 
     return () => {
-      socket.off('rider_moved', handleRiderMovement)
+      // ✅ CLEANUP ALIGNED
+      socket.off('receive_location', handleRiderMovement)
       socket.off('connect')
     }
   }, [orderId])
@@ -228,6 +235,9 @@ const TrackingPage = () => {
               <Popup>🏍️ Rider is on the way</Popup>
             </Marker>
           )}
+
+          {/* Core recentering hook to lock tracking camera window onto rider */}
+          <ChangeMapCenter center={mapCenter} />
         </MapContainer>
       </div>
 
@@ -312,4 +322,4 @@ const TrackingPage = () => {
   )
 }
 
-export default TrackingPage
+export default TrackingPage;

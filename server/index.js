@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import { initSubscriptionCron } from './config/cronEngine.js'; 
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Server } from 'socket.io'; 
@@ -24,6 +25,7 @@ import './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
 import './models/wallet.model.js';
+import './models/subscription.model.js';
 
 console.log("RAZORPAY INTEGRITY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
@@ -222,6 +224,11 @@ setInterval(() => {
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
     console.log("✅ Database System Connected Successfully");
+    
+    // ✅ FIX: Start the background automation engine here!
+    initSubscriptionCron();
+    console.log("⏰ Background Automation Cron Engine Activated.");
+
     server.listen(PORT, '0.0.0.0', () => { 
         console.log(`🚀 Snapit Server running on port ${PORT}`);
     });

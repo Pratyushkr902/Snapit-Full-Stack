@@ -7,7 +7,8 @@ const walletTransactionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['CREDIT', 'DEBIT'],
+        // ✅ CHANGED TO LOWERCASE: Matches tab aggregations inside your Wallet.jsx (.filter(t => t.type === 'debit'))
+        enum: ['credit', 'debit'], 
         required: true
     },
     description: {
@@ -16,12 +17,12 @@ const walletTransactionSchema = new mongoose.Schema({
         default: 'Grocery Wallet Transaction'
     },
     referenceId: {
-        type: String, // To store Razorpay Order ID / Payment ID
+        type: String, // Stores Razorpay Order ID / Payment ID or Order IDs
         sparse: true
     },
-    timestamp: {
+    date: {
         type: Date,
-        default: Date.now
+        default: Date.now // ✅ CHANGED FROM timestamp TO date: Matches frontend mapping layout (new Date(txn.date))
     }
 });
 

@@ -1,48 +1,63 @@
 import { io } from "socket.io-client";
 import { useEffect } from "react";
 
-// 1. UPDATED: Connect to your NEW Render Tracking Server
-// We use the Render URL instead of localhost to make it live for users
+// Connect to your live Render Tracking Server
 const socket = io("https://snapit-full-stack-2.onrender.com", {
+    path: '/socket.io/', // Explicitly match the custom path defined in your server's socket config
     transports: ["websocket", "polling"],
     withCredentials: true
 }); 
 
-const RiderGPS = ({ orderId }) => {
+const RiderGPS = ({ orderId = "SNAP-ORDER-9921" }) => {
 
   useEffect(() => {
     if (!orderId) return;
 
-    // 2. Start watching the GPS hardware on the phone/Mac
+    // Start watching the GPS hardware on the phone/device
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         
-        console.log("Rider sending location:", latitude, longitude);
+        console.log(`[Rider App] Broadcasting location for ${orderId}:`, latitude, longitude);
 
-        // 3. EMIT: Send the location to the server
-        // Keeping your exact event name "update_location"
-        socket.emit("update_location", {
+        // ✅ FIXED EVENT NAME: Changed from "update_location" to "send_location"
+        socket.emit("send_location", {
           orderId: orderId,
           latitude: latitude,
           longitude: longitude
         });
       },
-      (error) => console.error("GPS Error:", error),
+      (error) => {
+        console.error("❌ GPS Hardware Access Error:", error.message);
+      },
       {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        distanceFilter: 10 // Only send update if moved 10 meters
+        enableHighAccuracy: true,  // Forces high accuracy (GPS satellites & Wi-Fi triangulation)
+        maximumAge: 0,             // Prevents local webview cache from serving stale locations
+        timeout: 10000             
       }
     );
 
-    // Cleanup when the delivery is done
-    return () => navigator.geolocation.clearWatch(watchId);
+    // Clean up hardware tracking and connection hooks when the component unmounts
+    return () => {
+        navigator.geolocation.clearWatch(watchId);
+    };
   }, [orderId]);
 
   return (
-    <div className="bg-green-100 p-2 text-xs rounded text-green-700 font-bold">
-      GPS Tracking Active for Order: {orderId}
+    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center justify-between shadow-sm max-w-md mx-auto my-4">
+      <div className="flex items-center gap-3">
+        <span className="relative flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+        </span>
+        <div>
+          <h4 className="text-sm font-bold text-emerald-900">Rider GPS Engine Active</h4>
+          <p className="text-xs text-emerald-600 font-mono mt-0.5">Tracking ID: {orderId}</p>
+        </div>
+      </div>
+      <span className="text-xs bg-emerald-600 text-white px-2 py-1 rounded font-bold uppercase tracking-wider">
+        Live
+      </span>
     </div>
   );
 };

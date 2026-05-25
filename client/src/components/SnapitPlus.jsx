@@ -1,6 +1,6 @@
-// components/SnapitPlus.jsx
-// ✅ SNAPIT PLUS - Grocery subscription with free delivery, exclusive deals, cashback
 import { useState } from "react";
+import Axios from "../utils/Axios"; // Utilizing your established instances
+import { toast } from "react-hot-toast";
 
 const BENEFITS = [
   { icon: "🚚", title: "FREE Delivery", desc: "On all grocery orders ₹99+", savings: "Save ₹15-25/order" },
@@ -13,16 +13,74 @@ const BENEFITS = [
   { icon: "🎂", title: "Birthday Month Bonus", desc: "₹200 free wallet credit", savings: "Once a year" },
 ];
 
-export default function SnapitPlus() {
+export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
   const [plan, setPlan] = useState("monthly");
-  const [trialStarted, setTrialStarted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isMember, setIsMember] = useState(isAlreadyMember);
 
-  // Savings calculator
+  // Savings calculator configuration parameters
   const ordersPerMonth = 12;
   const deliveryPerOrder = 20;
   const withoutPlus = ordersPerMonth * deliveryPerOrder;
   const planPrice = plan === "monthly" ? 99 : 899;
   const savings = withoutPlus - planPrice;
+
+  const handleCheckoutPayment = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch Razorpay configuration key from your backend storage layer
+      const keyRes = await Axios.get('/api/payment/razorpay-key');
+      if (!keyRes.data.success) throw new Error("Could not acquire gateway keys.");
+
+      // 2. Generate Razorpay checkout transaction structure instance orderId
+      const orderRes = await Axios.post('/api/payment/subscribe-snapitplus', { planType: plan });
+      if (!orderRes.data.success) throw new Error("Order init engine pipeline failed.");
+
+      const { id: razorpay_order_id, amount, currency } = orderRes.data.order;
+
+      // 3. Configure and construct native checkout sheet interface configuration
+      const options = {
+        key: keyRes.data.key,
+        amount: amount,
+        currency: currency,
+        name: "Snapit Plus VIP",
+        description: `Premium Grocery Access Pass — ${plan === 'yearly' ? '12 Months' : '30 Days'}`,
+        image: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
+        order_id: razorpay_order_id,
+        handler: async function (response) {
+          try {
+            // 4. Dispatch security confirmation tokens to backend verify loop
+            const verifyRes = await Axios.post('/api/payment/verify-subscription', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              planType: plan
+            });
+
+            if (verifyRes.data.success) {
+              toast.success("Welcome to Snapit Plus Club! 🎉");
+              setIsMember(true);
+              if (onSuccess) onSuccess();
+            }
+          } catch (verifyErr) {
+            toast.error("Signature processing or activation error.");
+          }
+        },
+        theme: {
+          color: "#1B5E20" // Aligning with your primary corporate green hue identity rules
+        }
+      };
+
+      const gatewaySheet = new window.Razorpay(options);
+      gatewaySheet.open();
+
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to launch subscription gateway.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -32,50 +90,58 @@ export default function SnapitPlus() {
         <p style={styles.heroIcon}>⭐</p>
         <h1 style={styles.heroTitle}>Snapit Plus</h1>
         <p style={styles.heroTagline}>Your grocery store membership</p>
-        <div style={styles.heroBadge}>🆓 7-Day Free Trial</div>
+        {isMember ? (
+          <div style={{ ...styles.heroBadge, background: '#FFD700', color: '#000' }}>👑 Active VIP Member</div>
+        ) : (
+          <div style={styles.heroBadge}>⚡ Instant Activation</div>
+        )}
       </div>
 
       {/* Plan Toggle */}
-      <div style={styles.planRow}>
-        <button
-          style={{ ...styles.planBtn, ...(plan === "monthly" ? styles.planActive : {}) }}
-          onClick={() => setPlan("monthly")}
-        >
-          <p style={styles.planName}>Monthly</p>
-          <p style={styles.planPrice}>₹99 <span style={styles.planPer}>/mo</span></p>
-        </button>
-        <button
-          style={{ ...styles.planBtn, ...(plan === "yearly" ? styles.planActive : {}) }}
-          onClick={() => setPlan("yearly")}
-        >
-          <div style={styles.saveBadge}>SAVE ₹290</div>
-          <p style={styles.planName}>Yearly</p>
-          <p style={styles.planPrice}>₹899 <span style={styles.planPer}>/yr</span></p>
-          <p style={styles.planMonthly}>= ₹75/month</p>
-        </button>
-      </div>
+      {!isMember && (
+        <div style={styles.planRow}>
+          <button
+            style={{ ...styles.planBtn, ...(plan === "monthly" ? styles.planActive : {}) }}
+            onClick={() => setPlan("monthly")}
+          >
+            <p style={styles.planName}>Monthly</p>
+            <p style={styles.planPrice}>₹99 <span style={styles.planPer}>/mo</span></p>
+          </button>
+          <button
+            style={{ ...styles.planBtn, ...(plan === "yearly" ? styles.planActive : {}) }}
+            onClick={() => setPlan("yearly")}
+          >
+            <div style={styles.saveBadge}>SAVE ₹290</div>
+            <p style={styles.planName}>Yearly</p>
+            <p style={styles.planPrice}>₹899 <span style={styles.planPer}>/yr</span></p>
+            <p style={styles.planMonthly}>= ₹75/month</p>
+          </button>
+        </div>
+      )}
 
       {/* ROI Calculator */}
-      <div style={styles.roiCard}>
-        <h3 style={styles.roiTitle}>💡 Is it Worth It for You?</h3>
-        <p style={styles.roiNote}>Based on {ordersPerMonth} grocery orders/month</p>
-        <div style={styles.roiRows}>
-          <div style={styles.roiRow}>
-            <span>Delivery charges without Plus</span>
-            <span style={styles.roiCross}>₹{withoutPlus}</span>
-          </div>
-          <div style={styles.roiRow}>
-            <span>Plus membership</span>
-            <span style={{ color: "#2E7D32", fontWeight: 700 }}>₹{planPrice}</span>
-          </div>
-          <div style={{ ...styles.roiRow, borderTop: "1px solid #e0e0e0", paddingTop: 8, marginTop: 4 }}>
-            <span style={{ fontWeight: 700 }}>You Save</span>
-            <span style={{ color: savings > 0 ? "#2E7D32" : "#c62828", fontWeight: 800, fontSize: 16 }}>
-              {savings > 0 ? `₹${savings}/mo` : "Not worth it yet"}
-            </span>
+      {!isMember && (
+        <div style={styles.roiCard}>
+          <h3 style={styles.roiTitle}>💡 Is it Worth It for You?</h3>
+          <p style={styles.roiNote}>Based on {ordersPerMonth} grocery orders/month</p>
+          <div style={styles.roiRows}>
+            <div style={styles.roiRow}>
+              <span>Delivery charges without Plus</span>
+              <span style={styles.roiCross}>₹{withoutPlus}</span>
+            </div>
+            <div style={styles.roiRow}>
+              <span>Plus membership</span>
+              <span style={{ color: "#2E7D32", fontWeight: 700 }}>₹{planPrice}</span>
+            </div>
+            <div style={{ ...styles.roiRow, borderTop: "1px solid #e0e0e0", paddingTop: 8, marginTop: 4 }}>
+              <span style={{ fontWeight: 700 }}>You Save</span>
+              <span style={{ color: savings > 0 ? "#2E7D32" : "#c62828", fontWeight: 800, fontSize: 16 }}>
+                {savings > 0 ? `₹${savings}/mo` : "Not worth it yet"}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Benefits */}
       <div style={styles.benefitsCard}>
@@ -93,14 +159,20 @@ export default function SnapitPlus() {
       </div>
 
       {/* CTA */}
-      <button
-        style={{ ...styles.ctaBtn, opacity: trialStarted ? 0.75 : 1 }}
-        onClick={() => { setTrialStarted(true); alert("🎉 Your 7-day free trial has started!"); }}
-        disabled={trialStarted}
-      >
-        {trialStarted ? "✅ Trial Active — Enjoy Plus!" : "START FREE 7-DAY TRIAL"}
-      </button>
-      <p style={styles.ctaNote}>No payment needed now • Cancel before trial ends</p>
+      {isMember ? (
+        <div style={{ ...styles.ctaBtn, background: '#1B5E20', textAlign: 'center', cursor: 'default', boxShadow: 'none' }}>
+          ✓ MEMBERSHIP ACTIVE — ENJOY FREE DELIVERY
+        </div>
+      ) : (
+        <button
+          style={{ ...styles.ctaBtn, opacity: loading ? 0.75 : 1 }}
+          onClick={handleCheckoutPayment}
+          disabled={loading}
+        >
+          {loading ? "PROCESSING..." : `ACTIVATE SNAPIT PLUS — VALUE FOR ₹${planPrice}`}
+        </button>
+      )}
+      <p style={styles.ctaNote}>Secure conversion processed via standard Razorpay networks</p>
     </div>
   );
 }
@@ -147,7 +219,7 @@ const styles = {
   roiTitle: { fontSize: 15, fontWeight: 700, color: "#1a1a1a", margin: "0 0 4px" },
   roiNote: { fontSize: 12, color: "#888", margin: "0 0 12px" },
   roiRows: {},
-  roiRow: { display: "flex", justifyContent: "space-between", fontSize: 13, color: "#555", padding: "5px 0" },
+  roiRow: { display: "flex", justifycontent: "space-between", fontSize: 13, color: "#555", padding: "5px 0" },
   roiCross: { fontWeight: 600, color: "#c62828", textDecoration: "line-through" },
   benefitsCard: { background: "#fff", borderRadius: 16, padding: 16, marginBottom: 16 },
   benefitsTitle: { fontSize: 15, fontWeight: 700, color: "#1a1a1a", marginBottom: 14 },

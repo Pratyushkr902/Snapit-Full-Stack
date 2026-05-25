@@ -131,10 +131,19 @@ const userSchema = new mongoose.Schema({
     fcmToken: {
         type: String,
         default: null
+    },
+    // --- SNAPITPLUS SUBSCRIPTION LAYER ---
+    isSnapitPlusMember: {
+        type: Boolean,
+        default: false
+    },
+    snapitPlusExpiresAt: {
+        type: Date,
+        default: null
     }
 },{
     timestamps : true
 })
 
 const UserModel = mongoose.model("User", userSchema)
-export default UserModel
+export default UserModel;

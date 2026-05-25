@@ -2,6 +2,7 @@ import { Router } from 'express'
 import auth from '../middleware/auth.js'
 import { 
     CashOnDeliveryOrderController, 
+    WalletPaymentOrderController, // ✅ Imported the newly added balance controller
     getOrderDetailsController,
     getSellerOrdersController,   
     paymentController, 
@@ -21,6 +22,7 @@ import {
 const orderRouter = Router()
 
 orderRouter.post("/cash-on-delivery", auth, CashOnDeliveryOrderController)
+orderRouter.post("/wallet-order", auth, WalletPaymentOrderController) // ✅ Added Route for point-of-sale wallet deductions
 orderRouter.post('/checkout', auth, paymentController)
 orderRouter.post('/verify-payment', auth, verifyPaymentController)
 orderRouter.post('/webhook', webhookStripe) 
@@ -41,4 +43,4 @@ orderRouter.post("/collect-payment", auth, collectPaymentController)
 
 orderRouter.post("/coupon/apply", auth, applyCouponController)
 
-export default orderRouter
+export default orderRouter;

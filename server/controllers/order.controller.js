@@ -32,6 +32,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         const userId = request.userId; 
         const { list_items, totalAmt, addressId, subTotalAmt, lat, lng } = request.body;
 
+        // Verify stock parameters before continuing order execution
         for (const item of list_items) {
             const product = await ProductModel.findById(item.productId._id);
             if (!product || product.stock < (item.quantity || 1)) {
@@ -68,6 +69,16 @@ export async function CashOnDeliveryOrderController(request, response) {
             }
         }));
 
+        // --- ✅ NEW: DYNAMIC SNAPITPLUS CALCULATION OVERRIDE FOR COD ---
+        const currentUser = await UserModel.findById(userId);
+        let currentDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
+
+        if (currentUser && currentUser.isSnapitPlusMember && currentUser.snapitPlusExpiresAt) {
+            if (new Date() < new Date(currentUser.snapitPlusExpiresAt) && Number(subTotalAmt) >= 99) {
+                currentDeliveryFee = 0; // Waived under active plan policies!
+            }
+        }
+
         const payload = {
             userId,
             orderId: `ORD-${new mongoose.Types.ObjectId()}`,
@@ -80,7 +91,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             payment_status: "CASH ON DELIVERY",
             delivery_address: addressId,
             subTotalAmt,
-            totalAmt,
+            totalAmt, // Extracted directly from validated matching values
             delivery_status: "Pending",
             seller_status: "Pending",
             store_details: assignedStore,
@@ -96,6 +107,122 @@ export async function CashOnDeliveryOrderController(request, response) {
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
 
         return response.json({ message: "Order placed successfully.", error: false, success: true, data: generatedOrder });
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false });
+    }
+}
+
+// ✅ NEW: TARGET IMPLEMENTATION - WALLET COMPONENT DISPATCH CONTROLLER
+export async function WalletPaymentOrderController(request, response) {
+    try {
+        const userId = request.userId;
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng } = request.body;
+
+        // 1. Validate that user has a sufficient pre-funded account balance
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            return response.status(404).json({ message: "User account profile not found.", error: true, success: false });
+        }
+
+        const exactRequiredTotal = Number(totalAmt);
+        if ((user.walletBalance || 0) < exactRequiredTotal) {
+            return response.status(400).json({ 
+                message: `Insufficient wallet funds. You require ₹${exactRequiredTotal - (user.walletBalance || 0)} more.`, 
+                error: true, 
+                success: false 
+            });
+        }
+
+        // 2. Scan physical stock sheets to catch warehouse limits early
+        for (const item of list_items) {
+            const product = await ProductModel.findById(item.productId._id);
+            if (!product || product.stock < (item.quantity || 1)) {
+                return response.status(400).json({ message: `Item has sold out: ${item.productId?.name || 'Grocery Product'}`, error: true, success: false });
+            }
+        }
+
+        // 3. Deduct inventories cleanly
+        for (const item of list_items) {
+            await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } });
+        }
+
+        // 4. Group geographic warehouse assignments
+        let assignedStore = DEFAULT_STORE;
+        if (lat && lng) {
+            const nearbyMarts = await StoreModel.find({
+                location: { $near: { $geometry: { type: "Point", coordinates: [Number(lng), Number(lat)] }, $maxDistance: 5000 } }
+            }).limit(1);
+            if (nearbyMarts.length > 0) {
+                assignedStore = {
+                    storeId: nearbyMarts[0]._id,
+                    name: nearbyMarts[0].name,
+                    address: nearbyMarts[0].address,
+                    location: { lat: nearbyMarts[0].location.coordinates[1], lng: nearbyMarts[0].location.coordinates[0] }
+                };
+            }
+        }
+
+        const taggedCartItems = await Promise.all(list_items.map(async (el) => {
+            const product = await ProductModel.findById(el.productId._id);
+            return {
+                productId: el.productId._id,
+                name: el.productId.name,
+                image: el.productId.image[0],
+                quantity: el.quantity || 1,
+                price: el.productId.price,
+                seller_store_name: product ? getStoreForProduct(product, assignedStore.name) : null
+            };
+        }));
+
+        const transactionId = `WAL-ORD-${new mongoose.Types.ObjectId()}`;
+
+        // 5. Build dynamic tracking ledger data models
+        const ledgerRecord = {
+            type: "DEBIT",
+            amount: exactRequiredTotal,
+            description: `Grocery Purchase Order #${transactionId.slice(-8).toUpperCase()}`,
+            date: new Date()
+        };
+
+        // 6. Complete balance settlement and clear temporary user carts
+        await UserModel.findByIdAndUpdate(userId, {
+            $inc: { walletBalance: -exactRequiredTotal },
+            $push: { walletTransactions: ledgerRecord },
+            shopping_cart: []
+        });
+
+        const payload = {
+            userId,
+            orderId: transactionId,
+            cartItems: taggedCartItems,
+            product_details: {
+                name: list_items[0].productId.name + (list_items.length > 1 ? ` (+${list_items.length - 1} more)` : ""),
+                image: list_items[0].productId.image
+            },
+            paymentId: transactionId,
+            payment_status: "PAID",
+            delivery_address: addressId,
+            subTotalAmt,
+            totalAmt: exactRequiredTotal,
+            delivery_status: "Pending",
+            seller_status: "Pending",
+            store_details: assignedStore,
+            involved_stores: [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
+            rider_name: "Pratyush Sharma",
+            rider_contact: "9472026580",
+            payment_collected: true
+        };
+
+        const newOrder = new OrderModel(payload);
+        await newOrder.save();
+        await CartProductModel.deleteMany({ userId });
+
+        return response.json({ 
+            message: "Order charged and submitted successfully using Snapit Wallet Balance!", 
+            error: false, 
+            success: true, 
+            data: newOrder 
+        });
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false });
     }
@@ -135,7 +262,16 @@ export async function verifyPaymentController(request, response) {
             return response.status(400).json({ message: "Signature verification failed.", error: true, success: false });
         }
 
-        const expectedDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
+        // --- ✅ NEW: DYNAMIC SNAPITPLUS SECURITY GUARD FOR RAZORPAY ---
+        const user = await UserModel.findById(userId);
+        let expectedDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
+
+        if (user && user.isSnapitPlusMember && user.snapitPlusExpiresAt) {
+            if (new Date() < new Date(user.snapitPlusExpiresAt) && Number(subTotalAmt) >= 99) {
+                expectedDeliveryFee = 0; // Free delivery allowance verification pass
+            }
+        }
+
         const normalBaseTotal = Number(subTotalAmt) + expectedDeliveryFee;
         const verifiedCouponTotal = normalBaseTotal - Math.round(Number(subTotalAmt) * 0.15);
 
