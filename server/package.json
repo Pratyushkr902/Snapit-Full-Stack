@@ -2,7 +2,12 @@
   "name": "snapit-backend",
   "version": "1.0.0",
   "main": "server/index.js",
-  "type": "module","build": "cd ../client && npm install && npm run build"
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "build": "npm install && cd ../client && npm install && npm run build"
+  },
   "author": "Pratyush Kumar",
   "license": "ISC",
   "dependencies": {

@@ -26,7 +26,8 @@ const addRefreshSubscriber = (callback) => {
 
 Axios.interceptors.request.use(
     async (config) => {
-        const accessToken = localStorage.getItem('accesstoken');
+        // ✅ FIX: Cross-platform fallback search mapping both string schemas
+        const accessToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
@@ -44,7 +45,8 @@ Axios.interceptors.response.use(
         if (response && response.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
 
-            const refreshToken = localStorage.getItem("refreshToken");
+            // ✅ FIX: Cross-platform fallback lookups for mobile token refresh
+            const refreshToken = localStorage.getItem("refreshToken") || localStorage.getItem("refreshtoken");
             if (!refreshToken) {
                 handleLogoutRedirect();
                 return Promise.reject(error);
@@ -62,14 +64,13 @@ Axios.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // Ensure the URL is clean and safe from duplication
                 const refreshUrl = SummaryApi.refreshToken.url.startsWith('http')
                     ? SummaryApi.refreshToken.url
                     : `${API_URL}${SummaryApi.refreshToken.url.startsWith('/') ? '' : '/'}${SummaryApi.refreshToken.url}`;
 
                 const refreshResponse = await axios({
                     method: 'post',
-                    url: refreshUrl, // ✓ Normalized string variable
+                    url: refreshUrl,
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${refreshToken}`
@@ -77,13 +78,14 @@ Axios.interceptors.response.use(
                     withCredentials: true
                 });
 
-                // Handle variations of key names for access token string
                 const newAccessToken = refreshResponse.data?.data?.accesstoken 
                     || refreshResponse.data?.data?.accessToken;
 
                 if (!newAccessToken) throw new Error("No access token in refresh response");
 
+                // ✅ FIX: Store it in both lowercase and camelCase variations to protect cross-runtime modules
                 localStorage.setItem('accesstoken', newAccessToken);
+                localStorage.setItem('accessToken', newAccessToken);
 
                 isRefreshing = false;
                 onTokenRefreshed(newAccessToken);
