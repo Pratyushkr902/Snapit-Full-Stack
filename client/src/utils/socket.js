@@ -1,8 +1,8 @@
 import { io } from "socket.io-client"
-import { baseURL } from "./Axios.js" 
+import { baseURL } from "./Axios.js" // ✅ Dynamically inherits the production target automatically
 
 export const socket = io(baseURL, {
-    // ✅ FIXED: Prioritize 'websocket' first to bypass Render's proxy handshake stickiness
+    // ✅ FIXED: Prioritizing 'websocket' bypasses proxy round-robin load balancing limitations on Render
     transports:          ["websocket", "polling"],  
     path:                "/socket.io/",
     withCredentials:     true,
@@ -16,11 +16,18 @@ export const socket = io(baseURL, {
 
 // --- DEBUGGING LISTENERS ---
 socket.on("connect", () => {
-    console.log("🚀 Snapit Socket Connected Successfully! ID:", socket.id)
+    console.log("🚀 Snapit Socket Connected:", socket.id)
 })
 
 socket.on("connect_error", (err) => {
     console.log("❌ Socket Connection Error:", err.message)
+})
+
+socket.on("disconnect", (reason) => {
+    console.log("📡 Socket Disconnected:", reason)
+    if (reason === "io server disconnect") {
+        socket.connect();
+    }
 })
 
 export default socket;
