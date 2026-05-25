@@ -9,30 +9,37 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}[1/5] Building production client production web bundles...${NC}"
-cd ~/Documents/snapit/client
+# Ensure we baseline from the user's correct home workspace layout variables
+BASE_DIR="$HOME/Documents/snapit"
+
+echo -e "${BLUE}[1/5] Building production client web bundles...${NC}"
+cd "$BASE_DIR/client"
 npm run build
 
-echo -e "${BLUE}[2/5] Injecting compiled web components directly into Android application asset streams...${NC}"
-rm -rf ~/Documents/snapit/snapit-android/app/src/main/assets/public/*
-mkdir -p ~/Documents/snapit/snapit-android/app/src/main/assets/public/
-cp -Rf ~/Documents/snapit/client/dist/* ~/Documents/snapit/snapit-android/app/src/main/assets/public/
+echo -e "${BLUE}[2/5] Injecting web components into Android asset streams...${NC}"
+# ✅ FIX: Target your true native framework tracking directory path maps
+rm -rf "$BASE_DIR/android/app/src/main/assets/public"/*
+mkdir -p "$BASE_DIR/android/app/src/main/assets/public/"
+cp -Rf "$BASE_DIR/client/dist"/* "$BASE_DIR/android/app/src/main/assets/public/"
 
-echo -e "${BLUE}[3/5] Compiling final installable production release APK package variables...${NC}"
-cd ~/Documents/snapit/snapit-android
+echo -e "${BLUE}[3/5] Compiling final installable production release APK packages...${NC}"
+cd "$BASE_DIR/android"
 export JAVA_HOME="/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home"
 ./gradlew clean assembleRelease
 
-echo -e "${BLUE}[4/5] Deploying and pushing signed app wrapper package live onto connected Android phone...${NC}"
+echo -e "${BLUE}[4/5] Deploying and pushing release package live onto connected Android phone...${NC}"
+# ✅ FIX: Target the app sub-module output directory tracking structures exactly
+APK_PATH="app/build/outputs/apk/release/app-release.apk"
+
 if adb devices | grep -q -w "device"; then
-    adb install -r app/build/outputs/apk/release/app-release.apk
+    adb install -r "$APK_PATH"
     echo -e "${GREEN}✓ Application successfully loaded on connected test device!${NC}"
 else
-    echo -e "${YELLOW}⚠ No Android device found via adb wire bindings. Skipping local device execution step...${NC}"
+    echo -e "${YELLOW}⚠ No Android device found via adb wire bindings. Skipping local device execution...${NC}"
 fi
 
-echo -e "${BLUE}[5/5] Backing up matching structural changes to Github remote repository ledger line tracks...${NC}"
-cd ~/Documents/snapit
+echo -e "${BLUE}[5/5] Backing up structural changes to GitHub remote repository...${NC}"
+cd "$BASE_DIR"
 git add .
 # Prevent script freeze if git reports nothing new to log
 git diff-index --quiet HEAD || git commit -m "build: compile distribution assets and update application assets production layer"
