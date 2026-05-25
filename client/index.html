@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Snapit - Hyperlocal Grocery</title>
 
-    <!-- ✅ FIXED: Added cdn.razorpay.com to allow Razorpay risk bundle -->
+    <!-- ✅ FIXED: Added Firebase Remote Config + all required domains to CSP -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self' 'unsafe-inline'
@@ -20,7 +20,11 @@
         https://checkout.razorpay.com
         https://cdn.razorpay.com
         https://lumberjack.razorpay.com
-        https://lumberjack-dx.razorpay.com;
+        https://lumberjack-dx.razorpay.com
+        https://firebaseremoteconfig.googleapis.com
+        https://firebaseinstallations.googleapis.com
+        https://*.firebaseio.com
+        https://*.googleapis.com;
       img-src 'self' data: blob:
         https://res.cloudinary.com
         https://snapit-full-stack-2.onrender.com
