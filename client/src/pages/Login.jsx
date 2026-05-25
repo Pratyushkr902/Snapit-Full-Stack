@@ -32,7 +32,6 @@ const Login = () => {
 
     const valideValue = Object.values(data).every(el => el)
 
-
     const handleSubmit = async(e)=>{
         e.preventDefault()
 
@@ -48,9 +47,20 @@ const Login = () => {
 
             if(response.data.success){
                 toast.success(response.data.message)
-                localStorage.setItem('accesstoken',response.data.data.accesstoken)
-                localStorage.setItem('refreshToken',response.data.data.refreshToken)
+                
+                // Extract token references safely handling potential casing returns from API
+                const token = response.data.data.accesstoken || response.data.data.accessToken;
+                const refresh = response.data.data.refreshToken || response.data.data.refreshtoken;
 
+                // ✅ FIX: Set BOTH lowercase and camelCase variations globally on device memory
+                // This ensures that Axios can fetch credentials immediately across all page contexts
+                localStorage.setItem('accesstoken', token)
+                localStorage.setItem('accessToken', token)
+                
+                localStorage.setItem('refreshToken', refresh)
+                localStorage.setItem('refreshtoken', refresh)
+
+                // Fetch details now that headers are locked down with real token credentials
                 const userDetails = await fetchUserDetails()
                 dispatch(setUserDetails(userDetails.data))
 
@@ -64,10 +74,8 @@ const Login = () => {
         } catch (error) {
             AxiosToastError(error)
         }
-
-
-
     }
+
     return (
         <section className='w-full container mx-auto px-2'>
             <div className='bg-white my-4 w-full max-w-lg mx-auto rounded p-7'>
