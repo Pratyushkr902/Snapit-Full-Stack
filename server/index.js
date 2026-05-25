@@ -40,6 +40,7 @@ import walletRouter from './route/wallet.route.js';
 import flashSaleRouter from './route/flashSale.route.js';
 import referralRouter from './route/referral.route.js';
 import reviewRouter from './route/review.route.js';
+import paymentRouter from './routes/payment.route.js'; // Added payment route import
 
 const app = express();
 const server = http.createServer(app); 
@@ -170,6 +171,7 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 app.use('/api/review', reviewRouter);
+app.use('/api/payment', paymentRouter); // Added payment route middleware mount
 
 // --- HEALTH ROUTE ---
 app.get("/health", (req, res) => {
