@@ -59,7 +59,7 @@ const allowedOrigins = [
     "android://localhost",                        // 📱 FIXED: Essential for native Android WebView network handshakes
     "https://snapit.grocery",                     
     "null",                                       
-    "https://snapit-full-stack.onrender.com",
+    "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com"
 ];
@@ -119,7 +119,7 @@ app.use(helmet({
                 "http://localhost",
                 "https://snapit.grocery",
                 "https://snapit-full-stack-2.onrender.com",
-                "https://snapit-full-stack.onrender.com",
+                "https://snapit-full-stack-2.onrender.com",
                 "https://snapit-full-stack-0.onrender.com"
             ] 
         },
