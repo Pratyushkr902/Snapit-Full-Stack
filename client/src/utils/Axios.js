@@ -88,7 +88,6 @@ export const SummaryApi = {
 // =========================================================================
 // 2. GLOBAL INSTANCE CONFIGURATION & CROSS-PLATFORM INTERCEPTORS
 // =========================================================================
-
 const Axios = axios.create({
     baseURL: API_URL,
     withCredentials: true,
@@ -122,7 +121,6 @@ const publicRoutes = [
     '/api/user/register'
 ];
 
-// Request Interceptor: Inject bearer tokens seamlessly
 Axios.interceptors.request.use(
     async (config) => {
         const accessToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
@@ -134,13 +132,11 @@ Axios.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Smart background token-refresh engine
 Axios.interceptors.response.use(
     (response) => response,
     async (error) => {
         const { config, response } = error;
         const originalRequest = config;
-
         const requestUrl = originalRequest?.url ? originalRequest.url.replace(API_URL, '').split('?')[0] : '';
         const isPublicRoute = publicRoutes.some(route => requestUrl.includes(route));
 
@@ -150,7 +146,6 @@ Axios.interceptors.response.use(
 
         if (response && response.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
-
             const refreshToken = localStorage.getItem("refreshToken") || localStorage.getItem("refreshtoken");
             if (!refreshToken) {
                 handleLogoutRedirect();
@@ -169,7 +164,6 @@ Axios.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // ✅ SummaryApi is now safely initialized and fully available here!
                 const refreshUrl = SummaryApi.refreshToken.url.startsWith('http')
                     ? SummaryApi.refreshToken.url
                     : `${API_URL}${SummaryApi.refreshToken.url.startsWith('/') ? '' : '/'}${SummaryApi.refreshToken.url}`;
@@ -191,7 +185,6 @@ Axios.interceptors.response.use(
 
                 localStorage.setItem('accesstoken', newAccessToken);
                 localStorage.setItem('accessToken', newAccessToken);
-
                 isRefreshing = false;
                 onTokenRefreshed(newAccessToken);
 

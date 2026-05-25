@@ -56,10 +56,10 @@ const allowedOrigins = [
     "https://localhost",                          
     "http://localhost",                           
     "capacitor://localhost",                      
-    "android://localhost",                        // 📱 FIXED: Essential for native Android WebView network handshakes
+    "android://localhost",                        
     "https://snapit.grocery",                     
     "null",                                       
-    "https://snapit-full-stack-2.onrender.com",
+    "https://snapit-full-stack.onrender.com",     
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com"
 ];
@@ -88,9 +88,21 @@ app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
     contentSecurityPolicy: {
+        useDefaults: true,
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"],
+            
+            // ✅ FIXED CSP 1: Explicitly added all Razorpay script distribution paths to prevent bundle injection blocks
+            scriptSrc: [
+                "'self'", 
+                "'unsafe-inline'", 
+                "'unsafe-eval'",
+                "https://checkout.razorpay.com", 
+                "https://*.razorpay.com", 
+                "https://cdn.razorpay.com",
+                "https://*.googleapis.com", 
+                "https://unpkg.com"
+            ],
             
             imgSrc: [
                 "'self'", 
@@ -105,22 +117,28 @@ app.use(helmet({
                 "https://api.qrserver.com"
             ],
             
-            frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
+            // ✅ FIXED CSP 2: Allows frame contexts to spawn Razorpay overlay layers safely
+            frameSrc: [
+                "'self'", 
+                "https://api.razorpay.com", 
+                "https://*.razorpay.com",
+                "https://checkout.razorpay.com"
+            ],
+            
+            // ✅ FIXED CSP 3: Added support for full cross-origin polling, WebSockets, and wildcard fallback subdomains
             connectSrc: [
                 "'self'", 
                 "https://api.razorpay.com", 
                 "https://*.razorpay.com", 
+                "https://cdn.razorpay.com",
                 "https://*.googleapis.com", 
-                "ws:", "wss:", "https://*", 
-                "ws://*", "wss://*", 
-                "capacitor://*",
-                "android://*",                             // 🚀 FIXED: Allowed Android WebSocket and API content pipelines
-                "https://localhost",
-                "http://localhost",
-                "https://snapit.grocery",
+                "ws:", "wss:", "https://*", "ws://*", "wss://*", 
+                "capacitor://*", "android://*",                             
+                "https://localhost", "http://localhost", "https://snapit.grocery",
+                "https://snapit-full-stack.onrender.com",
                 "https://snapit-full-stack-2.onrender.com",
-                "https://snapit-full-stack-2.onrender.com",
-                "https://snapit-full-stack-0.onrender.com"
+                "https://snapit-full-stack-0.onrender.com",
+                "https://*.onrender.com" 
             ] 
         },
     },

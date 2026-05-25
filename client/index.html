@@ -6,10 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Snapit - Hyperlocal Grocery</title>
 
-    <!-- ✅ FIXED: Added Firebase Remote Config + all required domains to CSP -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline'
+      script-src 'self' 'unsafe-inline' 'unsafe-eval'
         https://checkout.razorpay.com
         https://cdn.razorpay.com
         https://*.googleapis.com
@@ -29,19 +28,21 @@
         https://res.cloudinary.com
         https://snapit-full-stack-2.onrender.com
         https://*.googleusercontent.com;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' https://fonts.gstatic.com;
-      frame-src https://api.razorpay.com https://checkout.razorpay.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com;
+      font-src 'self' data: https://fonts.gstatic.com;
+      frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;
     ">
 
     <link rel="manifest" href="/manifest.json">
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .catch(err => console.error('ServiceWorker registration failed: ', err));
+        });
       }
     </script>
 
-    <!-- Razorpay Script -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   </head>
   <body>
