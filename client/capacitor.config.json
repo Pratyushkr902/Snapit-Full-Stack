@@ -2,6 +2,9 @@
   "appId": "com.snapit.grocery",
   "appName": "Snapit",
   "webDir": "dist",
+  "android": {
+    "path": "../snapit-android"
+  },
   "server": {
     "androidScheme": "https",
     "hostname": "snapit.grocery",
