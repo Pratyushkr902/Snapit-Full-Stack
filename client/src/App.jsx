@@ -17,18 +17,10 @@ import RemoteConfigProvider from './provider/RemoteConfigProvider'
 import OfferStrip from './components/OfferStrip';
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
-import { io } from "socket.io-client"; 
-import useNotifications from './hooks/useNotifications'
+import socket from './socket.js';
+export { socket };
 
-export const socket = io("https://snapit-full-stack-2.onrender.com", {
-  transports:           ["polling", "websocket"],
-  withCredentials:      true,
-  path:                 "/socket.io/",
-  reconnection:         true,
-  reconnectionAttempts: 5,        
-  reconnectionDelay:    5000,    
-  timeout:              20000,
-});
+import useNotifications from './hooks/useNotifications'
 
 function App() {
   const dispatch = useDispatch()
@@ -83,7 +75,6 @@ function App() {
     } catch (error) {
       console.error("Category fetch error", error)
     } finally {
-      // ✅ FIXED: always turn off loading even if fetch failed
       dispatch(setLoadingCategory(false))
     }
   }, [dispatch])
@@ -102,14 +93,10 @@ function App() {
     }
   }, [dispatch])
 
-  // ✅ FIXED: fetch user only once when token is present
   useEffect(() => {
     if (activeToken) fetchUser()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ✅ THE MAIN FIX: fetch categories ONCE on app mount only — NOT on every navigation.
-  // The old code had [location.pathname] in the dep array which re-fetched and reset
-  // loadingCategory=true on every page change, wiping all product sections from Home.
   useEffect(() => {
     fetchCategory()
     fetchSubCategory()

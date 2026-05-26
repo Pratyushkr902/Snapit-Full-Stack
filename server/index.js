@@ -59,9 +59,7 @@ const allowedOrigins = [
     "android://localhost",                        
     "https://snapit.grocery",                     
     "null",                                       
-    "https://snapit-full-stack.onrender.com",     
     "https://snapit-full-stack-2.onrender.com",
-    "https://snapit-full-stack-0.onrender.com"
 ];
 
 app.use(cors({
@@ -92,7 +90,6 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             
-            // ✅ FIXED CSP 1: Explicitly added all Razorpay script distribution paths to prevent bundle injection blocks
             scriptSrc: [
                 "'self'", 
                 "'unsafe-inline'", 
@@ -117,7 +114,6 @@ app.use(helmet({
                 "https://api.qrserver.com"
             ],
             
-            // ✅ FIXED CSP 2: Allows frame contexts to spawn Razorpay overlay layers safely
             frameSrc: [
                 "'self'", 
                 "https://api.razorpay.com", 
@@ -125,21 +121,35 @@ app.use(helmet({
                 "https://checkout.razorpay.com"
             ],
             
-            // ✅ FIXED CSP 3: Added support for full cross-origin polling, WebSockets, and wildcard fallback subdomains
+            // FIXED: explicit domains + wss:// for WebSocket upgrades, no wildcards
             connectSrc: [
-                "'self'", 
-                "https://api.razorpay.com", 
-                "https://*.razorpay.com", 
+                "'self'",
+                "https://api.razorpay.com",
+                "https://*.razorpay.com",
                 "https://cdn.razorpay.com",
-                "https://*.googleapis.com", 
-                "ws:", "wss:", "https://*", "ws://*", "wss://*", 
-                "capacitor://*", "android://*",                             
-                "https://localhost", "http://localhost", "https://snapit.grocery",
-                "https://snapit-full-stack.onrender.com",
+                "https://lumberjack.razorpay.com",
+                "https://lumberjack-dx.razorpay.com",
+                "https://firebaseremoteconfig.googleapis.com",
+                "https://firebaseinstallations.googleapis.com",
+                "https://*.firebaseio.com",
+                "https://*.googleapis.com",
+                // Primary backend — both HTTP and WebSocket
                 "https://snapit-full-stack-2.onrender.com",
-                "https://snapit-full-stack-0.onrender.com",
-                "https://*.onrender.com" 
-            ] 
+                "wss://snapit-full-stack-2.onrender.com",
+                // Local dev
+                "http://localhost:5173",
+                "https://localhost:5173",
+                "ws://localhost:5173",
+                "wss://localhost:5173",
+                "http://localhost:8080",
+                "ws://localhost:8080",
+                // Native app origins
+                "capacitor://localhost",
+                "android://localhost",
+                // Production domain
+                "https://snapit.grocery",
+                "wss://snapit.grocery",
+            ]
         },
     },
 }));
