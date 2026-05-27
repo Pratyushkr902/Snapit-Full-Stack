@@ -4,9 +4,6 @@ import toast from 'react-hot-toast';
 import Axios, { SummaryApi } from '../utils/Axios'; 
 import AxiosToastError from '../utils/AxiosToastError';
 import { Link, useNavigate } from 'react-router-dom';
-import fetchUserDetails from '../utils/fetchUserDetails';
-import { useDispatch } from 'react-redux';
-import { setUserDetails } from '../store/userSlice';
 
 const Login = () => {
     const [data, setData] = useState({
@@ -15,7 +12,6 @@ const Login = () => {
     })
     const [showPassword, setShowPassword] = useState(false)
     const navigate = useNavigate()
-    const dispatch = useDispatch()
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -25,7 +21,6 @@ const Login = () => {
         }))
     }
 
-    // Ensures fields are fully populated and not just whitespace strings
     const isValidValue = data.email.trim() !== "" && data.password.trim() !== "";
 
     const handleSubmit = async (e) => {
@@ -33,7 +28,7 @@ const Login = () => {
         if (!isValidValue) return
 
         try {
-            // Obliterate stale token residues before starting a new session handshake
+            // Clean up old session keys completely
             localStorage.removeItem('accesstoken');
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
@@ -46,13 +41,12 @@ const Login = () => {
             
             if (response.data.error) {
                 toast.error(response.data.message)
-                return; // Stop execution if back-end responds with a structured rejection error
+                return;
             }
 
             if (response.data.success) {
                 toast.success(response.data.message)
                 
-                // Extract tokens safely regardless of API key casing variations
                 const token = response.data?.data?.accesstoken || response.data?.data?.accessToken;
                 const refresh = response.data?.data?.refreshToken || response.data?.data?.refreshtoken;
 
@@ -65,19 +59,12 @@ const Login = () => {
                     localStorage.setItem('refreshtoken', refresh)
                 }
 
-                // FIX: Guard your profile parsing schema to match the App.jsx architecture
-                const userDetails = await fetchUserDetails()
-                if (userDetails?.success && userDetails?.data?.data) {
-                    dispatch(setUserDetails(userDetails.data.data))
-                } else if (userDetails?.data) {
-                    // Fallback to match custom client resolution variations 
-                    dispatch(setUserDetails(userDetails.data))
-                }
-
                 setData({
                     email: "",
                     password: "",
                 })
+                
+                // Redirection will instantly trigger the App.jsx tracking effect to safely build the profile state
                 navigate("/")
             }
 
@@ -89,7 +76,6 @@ const Login = () => {
     return (
         <section className='w-full container mx-auto px-2'>
             <div className='bg-white my-4 w-full max-w-lg mx-auto rounded p-7 shadow-sm'>
-
                 <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
                     <div className='grid gap-1'>
                         <label htmlFor='email' className='font-medium text-gray-700'>Email :</label>
@@ -117,7 +103,6 @@ const Login = () => {
                                 onChange={handleChange}
                                 required
                             />
-                            {/* Converted into a semantic button element for accessibility support */}
                             <button 
                                 type="button"
                                 onClick={() => setShowPassword(prev => !prev)} 

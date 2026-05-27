@@ -34,33 +34,34 @@ function App() {
 
   const [showCart, setShowCart] = useState(false)
 
-  // Layout Route Checks — Using standard pathnames instead of hashes
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
   const isCheckoutOrCartPage = location.pathname.includes('/checkout') || location.pathname.includes('/cart');
 
-  // Automatically close side cart modal if user navigates to full cart or checkout pages
   useEffect(() => {
     if (isCheckoutOrCartPage) {
       setShowCart(false)
     }
   }, [location.pathname, isCheckoutOrCartPage])
 
-  // Fetch User Details — Reads token dynamically to avoid stale state traps
+  // Normalizes matching back-end payload parameters safely
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
     if (!token) return
     
     try {
       const userData = await fetchUserDetails()
-      if (userData?.success) { 
-        dispatch(setUserDetails(userData.data.data))
+      // Fallback check to ensure data structures match Redux store expectations exactly
+      if (userData?.success) {
+        const profileData = userData.data?.data || userData.data;
+        if (profileData) {
+          dispatch(setUserDetails(profileData))
+        }
       }
     } catch (error) {
       console.log("Session Check: No active user found.")
     }
   }, [dispatch])
 
-  // Fetch Orders
   const fetchOrder = useCallback(async () => {
     if (!user?._id) return
     try {
@@ -73,7 +74,6 @@ function App() {
     }
   }, [dispatch, user?._id])
 
-  // Fetch Categories
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
@@ -91,7 +91,6 @@ function App() {
     }
   }, [dispatch])
 
-  // Fetch Subcategories
   const fetchSubCategory = useCallback(async () => {
     try {
       const response = await Axios({ ...SummaryApi.getSubCategory })
@@ -106,23 +105,22 @@ function App() {
     }
   }, [dispatch])
 
-  // Check for user session on mount and whenever the path changes (handles post-login redirects beautifully)
+  // Triggers user tracking safely every single time a route change takes place
   useEffect(() => {
     fetchUser()
   }, [fetchUser, location.pathname]) 
 
-  // Global lookups fetched once on initialization
   useEffect(() => {
     fetchCategory()
     fetchSubCategory()
   }, [fetchCategory, fetchSubCategory]) 
 
-  // Sync active orders whenever user profile updates
   useEffect(() => {
-    fetchOrder()
-  }, [fetchOrder])
+    if (user?._id) {
+      fetchOrder()
+    }
+  }, [fetchOrder, user?._id])
 
-  // Real-time socket event mapping
   useEffect(() => {
     socket.on('connect', () => console.log("🚀 Snapit Socket Connected:", socket.id));
     socket.on('connect_error', (err) => console.log("📡 Socket connection effort:", err.message));
