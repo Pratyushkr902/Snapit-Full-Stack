@@ -17,7 +17,7 @@ import RemoteConfigProvider from './provider/RemoteConfigProvider'
 import OfferStrip from './components/OfferStrip';
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
-import socket from './socket.js';
+import socket from './utils/socket.js';
 export { socket };
 
 import useNotifications from './hooks/useNotifications'
