@@ -7,3 +7,9 @@ build/
 .DS_Store
 *.log
 snapit.keystore
+.env
+.env.local
+.env.development
+.env.production
+**/node_modules/
+**/dist/
