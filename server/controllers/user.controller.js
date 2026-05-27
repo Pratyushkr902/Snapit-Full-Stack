@@ -306,20 +306,32 @@ export async function forgotPasswordController(request, response) {
             })
         }
 
-        const otp = generatedOtp()
-        // FIX: Keep expiration as an accurate native Date object reference instance
+        // ✅ FIXED: Enforce clear string casting layout on the OTP code to keep email render utilities stable
+        const rawOtp = generatedOtp()
+        const stringOtp = String(rawOtp).trim()
+        
         const expireTime = new Date(Date.now() + 60 * 60 * 1000); 
 
         await UserModel.findByIdAndUpdate(user._id, {
-            forgot_password_otp: otp,
+            forgot_password_otp: stringOtp,
             forgot_password_expiry: expireTime
         })
 
-        await sendEmail({
-            sendTo: email,
-            subject: "Forgot password from Snapit",
-            html: forgotPasswordTemplate({ name: user.name, otp })
-        })
+        // Add explicit catch wrapping on the mail transport layer to locate underlying infrastructure issues early
+        try {
+            await sendEmail({
+                sendTo: email,
+                subject: "Forgot password from Snapit",
+                html: forgotPasswordTemplate({ name: user.name, otp: stringOtp })
+            })
+        } catch (emailError) {
+            console.error("🚨 Core Email Transport System Fail:", emailError.message);
+            return response.status(500).json({
+                message: "Failed to transmit OTP notification out to your mail delivery cluster. Check SMTP configurations.",
+                error: true,
+                success: false
+            });
+        }
 
         return response.json({
             message: "check your email",
@@ -357,7 +369,6 @@ export async function verifyForgotPasswordOtp(request, response) {
             })
         }
 
-        // FIX: Safely parse schema properties accurately into matching epoch comparative formats
         const currentTime = new Date()
         const expiryTime = new Date(user.forgot_password_expiry)
 
@@ -369,7 +380,7 @@ export async function verifyForgotPasswordOtp(request, response) {
             })
         }
 
-        if (String(otp) !== String(user.forgot_password_otp)) {
+        if (String(otp).trim() !== String(user.forgot_password_otp).trim()) {
             return response.status(400).json({
                 message: "Invalid otp",
                 error: true,
