@@ -1,0 +1,16 @@
+{
+  "" : {
+    "const-values" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM-primary.swiftconstvalues",
+    "dependencies" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM-primary.d",
+    "diagnostics" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM-primary.dia",
+    "emit-module-dependencies" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM-primary-emit-module.dia",
+    "pch" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM-primary.swiftdeps"
+  },
+  "/Users/pratyushkumar/Documents/snapit/client/ios/App/CapApp-SPM/Sources/CapApp-SPM/CapApp-SPM.swift" : {
+    "index-unit-output-path" : "/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM.o",
+    "llvm-bc" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM.bc",
+    "object" : "/Users/pratyushkumar/Documents/snapit/client/ios/App/build/Build/Intermediates.noindex/CapApp-SPM.build/Release-iphoneos/CapApp-SPM.build/Objects-normal/arm64/CapApp-SPM.o"
+  }
+}
