@@ -60,6 +60,7 @@ const allowedOrigins = [
     "https://snapit.grocery",                     
     "null",                                       
     "https://snapit-full-stack-2.onrender.com",
+    "https://snapit-full-stack-0.onrender.com",   // FIX 1: frontend origin added
 ];
 
 app.use(cors({
@@ -121,7 +122,6 @@ app.use(helmet({
                 "https://checkout.razorpay.com"
             ],
             
-            // FIXED: explicit domains + wss:// for WebSocket upgrades, no wildcards
             connectSrc: [
                 "'self'",
                 "https://api.razorpay.com",
@@ -136,6 +136,9 @@ app.use(helmet({
                 // Primary backend — both HTTP and WebSocket
                 "https://snapit-full-stack-2.onrender.com",
                 "wss://snapit-full-stack-2.onrender.com",
+                // FIX 2: Frontend origin added — both HTTP and WebSocket
+                "https://snapit-full-stack-0.onrender.com",
+                "wss://snapit-full-stack-0.onrender.com",
                 // Local dev
                 "http://localhost:5173",
                 "https://localhost:5173",
