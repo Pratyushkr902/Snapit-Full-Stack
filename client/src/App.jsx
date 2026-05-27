@@ -1,26 +1,29 @@
 import { Outlet, useLocation } from 'react-router-dom'
-import './App.css'
+import { useEffect, useCallback, useState } from 'react'; 
+import { useDispatch, useSelector } from 'react-redux'; 
+import { Toaster } from 'react-hot-toast';
+
 import Header from './components/Header'
 import Footer from './components/Footer'
-import { Toaster } from 'react-hot-toast';
-import { useEffect, useCallback, useState } from 'react'; 
+import CartMobileLink from './components/CartMobile'
+import OfferStrip from './components/OfferStrip';
+import DisplayCartItem from './components/DisplayCartItem'; 
+import WhatsAppButton from './components/WhatsAppButton'
+
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails } from './store/userSlice';
 import { setAllCategory, setAllSubCategory, setLoadingCategory } from './store/productSlice';
 import { setOrder } from './store/orderSlice'; 
-import { useDispatch, useSelector } from 'react-redux'; 
 import Axios from './utils/Axios';
 import SummaryApi from './common/SummaryApi';
 import GlobalProvider from './provider/GlobalProvider';
-import CartMobileLink from './components/CartMobile'
 import RemoteConfigProvider from './provider/RemoteConfigProvider'
-import OfferStrip from './components/OfferStrip';
-import DisplayCartItem from './components/DisplayCartItem'; 
-import WhatsAppButton from './components/WhatsAppButton'
-import socket from './utils/socket.js';
-export { socket };
-
 import useNotifications from './hooks/useNotifications'
+import socket from './utils/socket.js';
+
+import './App.css'
+
+export { socket };
 
 function App() {
   const dispatch = useDispatch()
@@ -30,26 +33,34 @@ function App() {
   useNotifications() 
 
   const [showCart, setShowCart] = useState(false)
-  const activeToken = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
 
+  // Layout Route Checks — Using standard pathnames instead of hashes
+  const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
+  const isCheckoutOrCartPage = location.pathname.includes('/checkout') || location.pathname.includes('/cart');
+
+  // Automatically close side cart modal if user navigates to full cart or checkout pages
   useEffect(() => {
-    if (location.hash === "#/checkout") {
+    if (isCheckoutOrCartPage) {
       setShowCart(false)
     }
-  }, [location.pathname])
+  }, [location.pathname, isCheckoutOrCartPage])
 
+  // Fetch User Details — Reads token dynamically to avoid stale state traps
   const fetchUser = useCallback(async () => {
-    if (!activeToken) return
+    const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
+    if (!token) return
+    
     try {
       const userData = await fetchUserDetails()
       if (userData?.success) { 
-        dispatch(setUserDetails(userData.data))
+        dispatch(setUserDetails(userData.data.data))
       }
     } catch (error) {
       console.log("Session Check: No active user found.")
     }
-  }, [dispatch, activeToken])
+  }, [dispatch])
 
+  // Fetch Orders
   const fetchOrder = useCallback(async () => {
     if (!user?._id) return
     try {
@@ -62,6 +73,7 @@ function App() {
     }
   }, [dispatch, user?._id])
 
+  // Fetch Categories
   const fetchCategory = useCallback(async () => {
     try {
       dispatch(setLoadingCategory(true))
@@ -79,6 +91,7 @@ function App() {
     }
   }, [dispatch])
 
+  // Fetch Subcategories
   const fetchSubCategory = useCallback(async () => {
     try {
       const response = await Axios({ ...SummaryApi.getSubCategory })
@@ -93,58 +106,60 @@ function App() {
     }
   }, [dispatch])
 
+  // Check for user session on mount and whenever the path changes (handles post-login redirects beautifully)
   useEffect(() => {
-    if (activeToken) fetchUser()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    fetchUser()
+  }, [fetchUser, location.pathname]) 
 
+  // Global lookups fetched once on initialization
   useEffect(() => {
     fetchCategory()
     fetchSubCategory()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchCategory, fetchSubCategory]) 
 
+  // Sync active orders whenever user profile updates
   useEffect(() => {
-    if (user?._id) fetchOrder()
-  }, [user?._id]) // eslint-disable-line react-hooks/exhaustive-deps
+    fetchOrder()
+  }, [fetchOrder])
 
+  // Real-time socket event mapping
   useEffect(() => {
     socket.on('connect', () => console.log("🚀 Snapit Socket Connected:", socket.id));
     socket.on('connect_error', (err) => console.log("📡 Socket connection effort:", err.message));
+    
     return () => {
       socket.off('connect');
       socket.off('connect_error');
     };
   }, []);
 
-  const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
-
   return (
-    <RemoteConfigProvider><GlobalProvider>
-      <div className="App">
-        <OfferStrip /><Header openCart={() => setShowCart(true)} />
-        
-        <main className='min-h-[78vh]'>
-          <Outlet />
-        </main>
-        
-        {!isDashboard && <Footer />}
-        
-        <Toaster position="top-center" reverseOrder={false} />
+    <RemoteConfigProvider>
+      <GlobalProvider>
+        <div className="App">
+          <OfferStrip />
+          <Header openCart={() => setShowCart(true)} />
+          
+          <main className='min-h-[78vh]'>
+            <Outlet />
+          </main>
+          
+          {!isDashboard && <Footer />}
+          
+          <Toaster position="top-center" reverseOrder={false} />
 
-        {showCart && location.hash !== "#/checkout" && (
-          <DisplayCartItem close={() => setShowCart(false)} />
-        )}
+          {showCart && !isCheckoutOrCartPage && (
+            <DisplayCartItem close={() => setShowCart(false)} />
+          )}
 
-        {
-          location.hash !== "#/checkout" && 
-          location.hash !== "#/cart" && 
-          !isDashboard && (
+          {!isCheckoutOrCartPage && !isDashboard && (
             <CartMobileLink />
-          )
-        }
+          )}
 
-        {!isDashboard && <WhatsAppButton />}
-      </div>
-    </GlobalProvider></RemoteConfigProvider>
+          {!isDashboard && <WhatsAppButton />}
+        </div>
+      </GlobalProvider>
+    </RemoteConfigProvider>
   )
 }
 

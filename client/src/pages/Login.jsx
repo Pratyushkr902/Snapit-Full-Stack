@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
-import { FaRegEyeSlash } from "react-icons/fa6";
-import { FaRegEye } from "react-icons/fa6";
+import { FaRegEyeSlash, FaRegEye } from "react-icons/fa6";
 import toast from 'react-hot-toast';
-import Axios, { SummaryApi } from '../utils/Axios'; // ✅ FIXED: Import SummaryApi from your core utility file instead of '../common/'
+import Axios, { SummaryApi } from '../utils/Axios'; 
 import AxiosToastError from '../utils/AxiosToastError';
 import { Link, useNavigate } from 'react-router-dom';
 import fetchUserDetails from '../utils/fetchUserDetails';
@@ -20,22 +19,21 @@ const Login = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target
-
-        setData((preve) => {
-            return {
-                ...preve,
-                [name]: value
-            }
-        })
+        setData((prev) => ({
+            ...prev,
+            [name]: value
+        }))
     }
 
-    const valideValue = Object.values(data).every(el => el)
+    // Ensures fields are fully populated and not just whitespace strings
+    const isValidValue = data.email.trim() !== "" && data.password.trim() !== "";
 
-    const handleSubmit = async(e)=>{
+    const handleSubmit = async (e) => {
         e.preventDefault()
+        if (!isValidValue) return
 
         try {
-            // ✅ SAFETY FIX: Obliterate stale token residues from local storage before requesting a new handshake session
+            // Obliterate stale token residues before starting a new session handshake
             localStorage.removeItem('accesstoken');
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
@@ -43,35 +41,42 @@ const Login = () => {
 
             const response = await Axios({
                 ...SummaryApi.login,
-                data : data
+                data: data
             })
             
-            if(response.data.error){
+            if (response.data.error) {
                 toast.error(response.data.message)
+                return; // Stop execution if back-end responds with a structured rejection error
             }
 
-            if(response.data.success){
+            if (response.data.success) {
                 toast.success(response.data.message)
                 
-                // Extract token references safely handling potential casing returns from API
-                const token = response.data.data.accesstoken || response.data.data.accessToken;
-                const refresh = response.data.data.refreshToken || response.data.data.refreshtoken;
+                // Extract tokens safely regardless of API key casing variations
+                const token = response.data?.data?.accesstoken || response.data?.data?.accessToken;
+                const refresh = response.data?.data?.refreshToken || response.data?.data?.refreshtoken;
 
-                // Set BOTH lowercase and camelCase variations globally on device memory
-                // This ensures that Axios can fetch credentials immediately across all page contexts
-                localStorage.setItem('accesstoken', token)
-                localStorage.setItem('accessToken', token)
-                
-                localStorage.setItem('refreshToken', refresh)
-                localStorage.setItem('refreshtoken', refresh)
+                if (token) {
+                    localStorage.setItem('accesstoken', token)
+                    localStorage.setItem('accessToken', token)
+                }
+                if (refresh) {
+                    localStorage.setItem('refreshToken', refresh)
+                    localStorage.setItem('refreshtoken', refresh)
+                }
 
-                // Fetch details now that headers are locked down with real token credentials
+                // FIX: Guard your profile parsing schema to match the App.jsx architecture
                 const userDetails = await fetchUserDetails()
-                dispatch(setUserDetails(userDetails.data))
+                if (userDetails?.success && userDetails?.data?.data) {
+                    dispatch(setUserDetails(userDetails.data.data))
+                } else if (userDetails?.data) {
+                    // Fallback to match custom client resolution variations 
+                    dispatch(setUserDetails(userDetails.data))
+                }
 
                 setData({
-                    email : "",
-                    password : "",
+                    email: "",
+                    password: "",
                 })
                 navigate("/")
             }
@@ -83,56 +88,64 @@ const Login = () => {
 
     return (
         <section className='w-full container mx-auto px-2'>
-            <div className='bg-white my-4 w-full max-w-lg mx-auto rounded p-7'>
+            <div className='bg-white my-4 w-full max-w-lg mx-auto rounded p-7 shadow-sm'>
 
                 <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
                     <div className='grid gap-1'>
-                        <label htmlFor='email'>Email :</label>
+                        <label htmlFor='email' className='font-medium text-gray-700'>Email :</label>
                         <input
                             type='email'
                             id='email'
-                            className='bg-blue-50 p-2 border rounded outline-none focus:border-primary-200'
+                            className='bg-blue-50 p-2 border rounded outline-none focus:border-green-700 transition-all'
                             name='email'
                             value={data.email}
                             onChange={handleChange}
                             placeholder='Enter your email'
+                            required
                         />
                     </div>
                     <div className='grid gap-1'>
-                        <label htmlFor='password'>Password :</label>
-                        <div className='bg-blue-50 p-2 border rounded flex items-center focus-within:border-primary-200'>
+                        <label htmlFor='password' className='font-medium text-gray-700'>Password :</label>
+                        <div className='bg-blue-50 p-2 border rounded flex items-center focus-within:border-green-700 transition-all'>
                             <input
                                 type={showPassword ? "text" : "password"}
                                 id='password'
-                                className='w-full outline-none'
+                                className='w-full bg-transparent outline-none'
                                 name='password'
                                 value={data.password}
                                 placeholder='Enter your password'
                                 onChange={handleChange}
+                                required
                             />
-                            <div onClick={() => setShowPassword(preve => !preve)} className='cursor-pointer'>
-                                {
-                                    showPassword ? (
-                                        <FaRegEye />
-                                    ) : (
-                                        <FaRegEyeSlash />
-                                    )
-                                }
-                            </div>
+                            {/* Converted into a semantic button element for accessibility support */}
+                            <button 
+                                type="button"
+                                onClick={() => setShowPassword(prev => !prev)} 
+                                className='cursor-pointer text-gray-500 hover:text-gray-700 focus:outline-none px-1'
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
+                            </button>
                         </div>
-                        <Link to={"/forgot-password"} className='block ml-auto hover:text-primary-200'>Forgot password ?</Link>
+                        <Link to={"/forgot-password"} className='block ml-auto text-sm text-gray-600 hover:text-green-700 transition-colors'>
+                            Forgot password ?
+                        </Link>
                     </div>
     
-                    <button disabled={!valideValue} className={` ${valideValue ? "bg-green-800 hover:bg-green-700" : "bg-gray-500" }    text-white py-2 rounded font-semibold my-3 tracking-wide`}>Login</button>
-
+                    <button 
+                        disabled={!isValidValue} 
+                        className={`${isValidValue ? "bg-green-800 hover:bg-green-700 active:scale-[0.99]" : "bg-gray-400 cursor-not-allowed"} text-white py-2 rounded font-semibold my-3 tracking-wide transition-all`}
+                    >
+                        Login
+                    </button>
                 </form>
 
-                <p>
-                    Don't have account? <Link to={"/register"} className='font-semibold text-green-700 hover:text-green-800'>Register</Link>
+                <p className='text-gray-600 text-center sm:text-left'>
+                    Don't have an account? <Link to={"/register"} className='font-semibold text-green-700 hover:text-green-800 underline decoration-transparent hover:decoration-green-800 transition-all'>Register</Link>
                 </p>
             </div>
         </section>
     )
 }
 
-export default Login
+export default Login;
