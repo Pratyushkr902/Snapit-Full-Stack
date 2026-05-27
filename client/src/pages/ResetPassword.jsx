@@ -1,152 +1,157 @@
 import React, { useEffect, useState } from 'react'
 import { FaRegEye, FaRegEyeSlash } from 'react-icons/fa6'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
+import Axios, { SummaryApi } from '../utils/Axios' // ✅ FIXED: Import from your core utilities folder
 import AxiosToastError from '../utils/AxiosToastError'
-import Axios from '../utils/Axios'
 
 const ResetPassword = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const [data,setData] = useState({
-    email : "",
-    newPassword : "",
-    confirmPassword : ""
+  const [data, setData] = useState({
+    email: "",
+    newPassword: "",
+    confirmPassword: ""
   })
-  const [showPassword,setShowPassword] = useState(false)
-  const [showConfirmPassword,setShowConfirmPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const valideValue = Object.values(data).every(el => el)
+  const isValidValue = data.newPassword.trim() !== "" && data.confirmPassword.trim() !== "";
 
-  useEffect(()=>{
-    if(!(location?.state?.data?.success)){
+  useEffect(() => {
+    // Check if email context came from internal router state redirect
+    if (location?.state?.email) {
+      setData((prev) => ({
+        ...prev,
+        email: location.state.email
+      }))
+    } else {
+      // ✅ FALLBACK: Parse explicit email search queries out of URL links coming from external emails
+      const searchParams = new URLSearchParams(location.search)
+      const emailParam = searchParams.get('email')
+      
+      if (emailParam) {
+        setData((prev) => ({
+          ...prev,
+          email: emailParam
+        }))
+      } else if (!(location?.state?.data?.success)) {
+        // Only kick out to homepage if there is no internal state AND no URL recovery parameter present
+        toast.error("Invalid or expired password reset link session.")
         navigate("/")
+      }
     }
-
-    if(location?.state?.email){
-        setData((preve)=>{
-            return{
-                ...preve,
-                email : location?.state?.email
-            }
-        })
-    }
-  },[])
+  }, [location, navigate])
 
   const handleChange = (e) => {
-        const { name, value } = e.target
+    const { name, value } = e.target
+    setData((prev) => ({
+      ...prev,
+      [name]: value
+    }))
+  }
 
-        setData((preve) => {
-            return {
-                ...preve,
-                [name]: value
-            }
-        })
-    }
-
-  console.log("data reset password",data)
-
-  const handleSubmit = async(e)=>{
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
-    ///optional 
-    if(data.newPassword !== data.confirmPassword){
-        toast.error("New password and confirm password must be same.")
-        return
+    if (data.newPassword !== data.confirmPassword) {
+      toast.error("New password and confirm password must match.")
+      return
     }
 
     try {
-        const response = await Axios({
-            ...SummaryApi.resetPassword, //change
-            data : data
+      const response = await Axios({
+        ...SummaryApi.resetpassword, // ✅ FIXED: Match the backend lower-case mapping name
+        data: data
+      })
+      
+      if (response.data.error) {
+        toast.error(response.data.message)
+      }
+
+      if (response.data.success) {
+        toast.success(response.data.message)
+        setData({
+          email: "",
+          newPassword: "",
+          confirmPassword: ""
         })
-        
-        if(response.data.error){
-            toast.error(response.data.message)
-        }
-
-        if(response.data.success){
-            toast.success(response.data.message)
-            navigate("/login")
-            setData({
-                email : "",
-                newPassword : "",
-                confirmPassword : ""
-            })
-            
-        }
-
+        navigate("/login")
+      }
     } catch (error) {
-        AxiosToastError(error)
+      AxiosToastError(error)
     }
-
-
-
-}
+  }
 
   return (
     <section className='w-full container mx-auto px-2'>
-            <div className='bg-white my-4 w-full max-w-lg mx-auto rounded p-7'>
-                <p className='font-semibold text-lg'>Enter Your Password </p>
-                <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
-                    <div className='grid gap-1'>
-                        <label htmlFor='newPassword'>New Password :</label>
-                        <div className='bg-blue-50 p-2 border rounded flex items-center focus-within:border-primary-200'>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                id='password'
-                                className='w-full outline-none'
-                                name='newPassword'
-                                value={data.newPassword}
-                                onChange={handleChange}
-                                placeholder='Enter your new password'
-                            />
-                            <div onClick={() => setShowPassword(preve => !preve)} className='cursor-pointer'>
-                                {
-                                    showPassword ? (
-                                        <FaRegEye />
-                                    ) : (
-                                        <FaRegEyeSlash />
-                                    )
-                                }
-                            </div>
-                        </div>
-                    </div>
+      <div className='bg-white my-4 w-full max-w-lg mx-auto rounded p-7 shadow-sm'>
+        <p className='font-semibold text-lg text-gray-800'>Enter Your New Password</p>
+        
+        {data.email && (
+          <p className='text-sm text-gray-500 mt-1'>Resetting password for: <span className='font-medium text-gray-700'>{data.email}</span></p>
+        )}
 
-                    <div className='grid gap-1'>
-                        <label htmlFor='confirmPassword'>Confirm Password :</label>
-                        <div className='bg-blue-50 p-2 border rounded flex items-center focus-within:border-primary-200'>
-                            <input
-                                type={showConfirmPassword ? "text" : "password"}
-                                id='password'
-                                className='w-full outline-none'
-                                name='confirmPassword'
-                                value={data.confirmPassword}
-                                onChange={handleChange}
-                                placeholder='Enter your confirm password'
-                            />
-                            <div onClick={() => setShowConfirmPassword(preve => !preve)} className='cursor-pointer'>
-                                {
-                                    showConfirmPassword ? (
-                                        <FaRegEye />
-                                    ) : (
-                                        <FaRegEyeSlash />
-                                    )
-                                }
-                            </div>
-                        </div>
-                    </div>
-             
-                    <button disabled={!valideValue} className={` ${valideValue ? "bg-green-800 hover:bg-green-700" : "bg-gray-500" }    text-white py-2 rounded font-semibold my-3 tracking-wide`}>Change Password</button>
-
-                </form>
-
-                <p>
-                    Already have account? <Link to={"/login"} className='font-semibold text-green-700 hover:text-green-800'>Login</Link>
-                </p>
+        <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
+          <div className='grid gap-1'>
+            <label htmlFor='newPassword' className='font-medium text-gray-700'>New Password :</label>
+            <div className='bg-blue-50 p-2 border rounded flex items-center focus-within:border-green-700 transition-all'>
+              <input
+                type={showPassword ? "text" : "password"}
+                id='newPassword'
+                className='w-full bg-transparent outline-none'
+                name='newPassword'
+                value={data.newPassword}
+                onChange={handleChange}
+                placeholder='Enter your new password'
+                required
+              />
+              <button
+                type='button'
+                onClick={() => setShowPassword(prev => !prev)}
+                className='cursor-pointer text-gray-500 hover:text-gray-700 px-1 focus:outline-none'
+              >
+                {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
+              </button>
             </div>
-        </section>
+          </div>
+
+          <div className='grid gap-1'>
+            <label htmlFor='confirmPassword' className='font-medium text-gray-700'>Confirm Password :</label>
+            <div className='bg-blue-50 p-2 border rounded flex items-center focus-within:border-green-700 transition-all'>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                id='confirmPassword'
+                className='w-full bg-transparent outline-none'
+                name='confirmPassword'
+                value={data.confirmPassword}
+                onChange={handleChange}
+                placeholder='Enter your confirm password'
+                required
+              />
+              <button
+                type='button'
+                onClick={() => setShowConfirmPassword(prev => !prev)}
+                className='cursor-pointer text-gray-500 hover:text-gray-700 px-1 focus:outline-none'
+              >
+                {showConfirmPassword ? <FaRegEye /> : <FaRegEyeSlash />}
+              </button>
+            </div>
+          </div>
+   
+          <button 
+            disabled={!isValidValue} 
+            className={`${isValidValue ? "bg-green-800 hover:bg-green-700 active:scale-[0.99]" : "bg-gray-400 cursor-not-allowed"} text-white py-2 rounded font-semibold my-3 tracking-wide transition-all`}
+          >
+            Change Password
+          </button>
+        </form>
+
+        <p className='text-gray-600 text-center sm:text-left mt-2'>
+          Already have an account? <Link to={"/login"} className='font-semibold text-green-700 hover:text-green-800 underline decoration-transparent hover:decoration-green-800 transition-all'>Login</Link>
+        </p>
+      </div>
+    </section>
   )
 }
 
