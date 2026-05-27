@@ -2,9 +2,9 @@ import React, { useState } from 'react'
 import { FaRegEyeSlash, FaRegEye } from "react-icons/fa6";
 import toast from 'react-hot-toast';
 import Axios from '../utils/Axios'; 
-import SummaryApi from '../common/SummaryApi'; // ✅ FIXED: Import directly from your core common constants directory
+import SummaryApi from '../common/SummaryApi'; 
 import AxiosToastError from '../utils/AxiosToastError';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUserDetails } from '../store/userSlice';
 import fetchUserDetails from '../utils/fetchUserDetails';
@@ -15,7 +15,6 @@ const Login = () => {
         password: "",
     })
     const [showPassword, setShowPassword] = useState(false)
-    const navigate = useNavigate()
     const dispatch = useDispatch()
 
     const handleChange = (e) => {
@@ -38,7 +37,6 @@ const Login = () => {
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('refreshtoken');
 
-            // This will now explicitly show up in your Network tab!
             const response = await Axios({
                 ...SummaryApi.login,
                 data: data
@@ -64,10 +62,9 @@ const Login = () => {
                     localStorage.setItem('refreshtoken', refresh)
                 }
 
-                // Hydrate Redux cleanly before shifting paths
+                // Force an immediate profile payload download right here
                 const userDetails = await fetchUserDetails()
                 if (userDetails?.success) {
-                    // ✅ FIXED: Target the backend's nested user payload object cleanly
                     const profileData = userDetails.data;
                     if (profileData) {
                         dispatch(setUserDetails(profileData))
@@ -79,7 +76,8 @@ const Login = () => {
                     password: "",
                 })
                 
-                navigate("/")
+                // ✅ FIXED: Direct window-hash transition guarantees the HashRouter catches the auth state instantly
+                window.location.hash = "/";
             }
 
         } catch (error) {
