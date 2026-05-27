@@ -1,9 +1,9 @@
 import { io } from "socket.io-client"
-import { baseURL } from "./Axios.js" // ✅ Dynamically inherits the production target automatically
+import { baseURL } from "./Axios.js" 
 
 export const socket = io(baseURL, {
-    // ✅ FIXED: Prioritizing 'websocket' bypasses proxy round-robin load balancing limitations on Render
-    transports:          ["websocket", "polling"],  
+    // ✅ FIXED: Strictly 'websocket' to prevent Render round-robin handshake loops
+    transports:          ["websocket"],  
     path:                "/socket.io/",
     withCredentials:     true,
     reconnection:        true,
