@@ -81,7 +81,7 @@ export async function registerUserController(request, response) {
         const newUser = new UserModel(payload)
         const save = await newUser.save()
 
-        const VerifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${save?._id}`
+        const VerifyEmailUrl = `${process.env.FRONTFrontend_URL || process.env.FRONTEND_URL}/verify-email?code=${save?._id}`
 
         await sendEmail({
             sendTo: email,
@@ -198,7 +198,7 @@ export async function loginController(request, response) {
             error: false,
             success: true,
             data: {
-                accesstoken,   // lowercase t — matches localStorage.setItem('accesstoken', ...)
+                accesstoken,
                 refreshToken
             }
         })
@@ -307,7 +307,8 @@ export async function forgotPasswordController(request, response) {
         }
 
         const otp = generatedOtp()
-        const expireTime = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        // FIX: Keep expiration as an accurate native Date object reference instance
+        const expireTime = new Date(Date.now() + 60 * 60 * 1000); 
 
         await UserModel.findByIdAndUpdate(user._id, {
             forgot_password_otp: otp,
@@ -356,9 +357,11 @@ export async function verifyForgotPasswordOtp(request, response) {
             })
         }
 
-        const currentTime = new Date().toISOString()
+        // FIX: Safely parse schema properties accurately into matching epoch comparative formats
+        const currentTime = new Date()
+        const expiryTime = new Date(user.forgot_password_expiry)
 
-        if (user.forgot_password_expiry < currentTime) {
+        if (expiryTime < currentTime) {
             return response.status(400).json({
                 message: "Otp is expired",
                 error: true,
@@ -366,7 +369,7 @@ export async function verifyForgotPasswordOtp(request, response) {
             })
         }
 
-        if (otp !== user.forgot_password_otp) {
+        if (String(otp) !== String(user.forgot_password_otp)) {
             return response.status(400).json({
                 message: "Invalid otp",
                 error: true,
@@ -399,7 +402,9 @@ export async function resetpassword(request, response) {
 
         if (!email || !newPassword || !confirmPassword) {
             return response.status(400).json({
-                message: "provide required fields email, newPassword, confirmPassword"
+                message: "provide required fields email, newPassword, confirmPassword",
+                error: true,
+                success: false
             })
         }
 
@@ -473,7 +478,7 @@ export async function refreshToken(request, response) {
             error: false,
             success: true,
             data: {
-                accesstoken: newAccessToken  // FIX: lowercase t — consistent with login response
+                accesstoken: newAccessToken
             }
         })
     } catch (error) {
