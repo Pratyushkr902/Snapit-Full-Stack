@@ -34,18 +34,20 @@ function App() {
   useNotifications() 
 
   const [showCart, setShowCart] = useState(false)
-  const [isAuthResolving, setIsAuthResolving] = useState(true) // ✅ Added state gate to block premature routing re-evaluation
+  const [isAuthResolving, setIsAuthResolving] = useState(true)
 
-  const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
-  const isCheckoutOrCartPage = location.pathname.includes('/checkout') || location.pathname.includes('/cart');
+  // ✅ FIXED: Normalize routing matching markers to track BOTH hash routes and path configurations cleanly
+  const currentNormalizedRoute = (location.pathname + (location.hash || "")).toLowerCase();
+
+  const isDashboard = currentNormalizedRoute.includes('dashboard') || currentNormalizedRoute.includes('rider-panel');
+  const isCheckoutOrCartPage = currentNormalizedRoute.includes('/checkout') || currentNormalizedRoute.includes('/cart');
 
   useEffect(() => {
     if (isCheckoutOrCartPage) {
       setShowCart(false)
     }
-  }, [location.pathname, isCheckoutOrCartPage])
+  }, [currentNormalizedRoute, isCheckoutOrCartPage])
 
-  // Normalizes matching back-end payload parameters safely
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
     if (!token) {
@@ -55,11 +57,8 @@ function App() {
     
     try {
       const userData = await fetchUserDetails()
-      
       if (userData?.success) {
-        // ✅ FIXED: Safely target response structures matching the back-end payload layout exactly
         const profileData = userData.data; 
-        
         if (profileData && profileData._id) {
           dispatch(setUserDetails(profileData))
         }
@@ -67,7 +66,7 @@ function App() {
     } catch (error) {
       console.log("Session Check: No active user found.")
     } finally {
-      setIsAuthResolving(false) // ✅ Unlock layout visibility once hydration passes successfully
+      setIsAuthResolving(false)
     }
   }, [dispatch])
 
@@ -114,10 +113,10 @@ function App() {
     }
   }, [dispatch])
 
-  // Triggers user tracking safely every single time a route change takes place
+  // ✅ FIXED: Force execution updates whenever the user transitions using Hash anchors or Standard layout clicks
   useEffect(() => {
     fetchUser()
-  }, [fetchUser, location.pathname]) 
+  }, [fetchUser, currentNormalizedRoute]) 
 
   useEffect(() => {
     fetchCategory()
@@ -140,11 +139,10 @@ function App() {
     };
   }, []);
 
-  // ✅ Prevent protective routing checks from redirecting users while memory hydration is in progress
   if (isAuthResolving) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-700"></div>
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-green-700"></div>
       </div>
     );
   }
