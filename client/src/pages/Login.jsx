@@ -1,9 +1,13 @@
 import React, { useState } from 'react'
 import { FaRegEyeSlash, FaRegEye } from "react-icons/fa6";
 import toast from 'react-hot-toast';
-import Axios, { SummaryApi } from '../utils/Axios'; 
+import Axios from '../utils/Axios'; 
+import SummaryApi from '../common/SummaryApi'; // ✅ FIXED: Import directly from your core common constants directory
 import AxiosToastError from '../utils/AxiosToastError';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { setUserDetails } from '../store/userSlice';
+import fetchUserDetails from '../utils/fetchUserDetails';
 
 const Login = () => {
     const [data, setData] = useState({
@@ -12,6 +16,7 @@ const Login = () => {
     })
     const [showPassword, setShowPassword] = useState(false)
     const navigate = useNavigate()
+    const dispatch = useDispatch()
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -28,12 +33,12 @@ const Login = () => {
         if (!isValidValue) return
 
         try {
-            // Clean up old session keys completely
             localStorage.removeItem('accesstoken');
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('refreshtoken');
 
+            // This will now explicitly show up in your Network tab!
             const response = await Axios({
                 ...SummaryApi.login,
                 data: data
@@ -59,12 +64,21 @@ const Login = () => {
                     localStorage.setItem('refreshtoken', refresh)
                 }
 
+                // Hydrate Redux cleanly before shifting paths
+                const userDetails = await fetchUserDetails()
+                if (userDetails?.success) {
+                    // ✅ FIXED: Target the backend's nested user payload object cleanly
+                    const profileData = userDetails.data;
+                    if (profileData) {
+                        dispatch(setUserDetails(profileData))
+                    }
+                }
+
                 setData({
                     email: "",
                     password: "",
                 })
                 
-                // Redirection will instantly trigger the App.jsx tracking effect to safely build the profile state
                 navigate("/")
             }
 
