@@ -13,6 +13,7 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
 import fs from 'fs';
+import adminRouter from './route/admin.route.js'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -217,7 +218,7 @@ app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral', referralRouter);
 app.use('/api/review', reviewRouter);
 app.use('/api/payment', paymentRouter);
-
+app.use('/api/admin', adminRouter);
 // --- HEALTH ROUTE ---
 app.get("/health", (req, res) => {
     res.json({ 
