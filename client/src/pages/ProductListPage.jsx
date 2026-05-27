@@ -1,101 +1,63 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import SummaryApi from '../common/SummaryApi'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
-import { FaAngleRight, FaAngleLeft, FaChevronLeft, FaShareNodes } from "react-icons/fa6";
-import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
-import Divider from '../components/Divider'
-import image1 from '../assets/minute_delivery.png'
-import image2 from '../assets/Best_Prices_Offers.png'
-import image3 from '../assets/Wide_Assortment.png'
-import { pricewithDiscount } from '../utils/PriceWithDiscount'
-import AddToCartButton from '../components/AddToCartButton'
-import SmartSuggestions from '../components/SmartSuggestions'
-import WishlistButton from '../components/WishlistButton'
-import ProductReviews from '../components/ProductReviews'
-import toast from 'react-hot-toast'
+import { FaChevronLeft } from "react-icons/fa6";
+import CardProduct from '../components/CardProduct' // ✅ Ensure your product grid card is imported
 
-const ProductDisplayPage = () => {
+const ProductListPage = () => {
   const params = useParams()
   const navigate = useNavigate()
   
-  // ✅ FIX 1: Robust fallback parsing to catch any route parameter naming variations
-  const routeParam = params?.product || params?.id || params?.productId || "";
-  const productId = routeParam.includes("-") ? routeParam.split("-").slice(-1)[0] : routeParam;
+  // Parse whichever route parameters are passed down through your app router structure
+  const routeParam = params?.product || params?.id || params?.productId || params?.category || "";
+  const categoryId = routeParam.includes("-") ? routeParam.split("-").slice(-1)[0] : routeParam;
+  const subCategoryId = params?.subCategory || "";
 
-  const [data, setData] = useState({ name: "", image: [], stock: 0 })
-  const [image, setImage] = useState(0)
+  // ✅ FIX: Initialize state as an Array to securely map multiple inventory products
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
-  const [imageZoom, setImageZoom] = useState(false)
-  const imageContainer = useRef()
-  const [isOpen, setIsOpen] = useState(true)
 
-  const checkShopStatus = () => {
-    const now = new Date()
-    const hours = now.getHours()
-    setIsOpen(hours >= 7 && hours < 21)
-  }
-
-  const fetchProductDetails = async () => {
-    // ✅ FIX 2: Silent guard rail to block malformed/undefined parameters from hitting the network
-    if (!productId || productId === "undefined" || productId.length < 12) {
-      console.warn("[Snapit Guard] Aborted details fetch: Product ID is malformed or missing.");
+  const fetchProductsList = useCallback(async () => {
+    if (!categoryId || categoryId === "undefined" || categoryId.length < 12) {
+      console.warn("[Snapit Guard] Aborted collection fetch: Category reference identifier is missing.");
       return;
     }
 
     try {
       setLoading(true)
       const response = await Axios({
-        ...SummaryApi.getProductDetails,
-        // ✅ FIX 3: Sends BOTH key variations ('productId' and 'id') to keep the backend perfectly happy
+        // Uses the standard cross-referencing category array controller endpoint
+        ...SummaryApi.getProductsByCategoryOrSubCategory, 
         data: { 
-          productId: productId,
-          id: productId 
+          categoryId: categoryId,
+          subCategoryId: subCategoryId 
         }
       })
+      
       const { data: responseData } = response
-      if (responseData.success) setData(responseData.data)
+      if (responseData.success) {
+        // Guarantee payload maps to an array structure fallback safely
+        setProducts(Array.isArray(responseData.data) ? responseData.data : [responseData.data])
+      }
     } catch (error) {
       AxiosToastError(error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [categoryId, subCategoryId])
 
   useEffect(() => {
-    fetchProductDetails()
-    checkShopStatus()
-    const timer = setInterval(checkShopStatus, 60000)
-    return () => clearInterval(timer)
-  }, [params, productId])
-
-  const handleScrollRight = () => { if (imageContainer.current) imageContainer.current.scrollLeft += 100 }
-  const handleScrollLeft = () => { if (imageContainer.current) imageContainer.current.scrollLeft -= 100 }
-
-  const handleShareProductSystem = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Buy ${data.name || 'this item'} on Snapit!`,
-          text: `Check out this amazing deal for ${data.name} on Snapit App.`,
-          url: window.location.href,
-        })
-      } else {
-        await navigator.clipboard.writeText(window.location.href)
-        toast.success('Product link copied! 📋')
-      }
-    } catch (err) {
-      console.log("Share cancelled")
-    }
-  }
+    fetchProductsList()
+  }, [fetchProductsList])
 
   return (
-    <section key={productId} className='w-full bg-gradient-to-b from-white to-gray-50 pb-24 lg:pb-10 animate-fadeIn relative'>
+    <section className='w-full bg-gradient-to-b from-white to-gray-50 min-h-[85vh] pb-24 lg:pb-10 animate-fadeIn relative'>
       
-      {/* ACTION HEADER */}
-      <div className='sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'>
-        <div className='container mx-auto px-4 py-3.5 flex items-center justify-between w-full'>
+      {/* FILTER TOP HEADER BAR */}
+      <div className='sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'>
+        <div className='container mx-auto px-4 py-3.5 flex items-center gap-4 w-full'>
           <button 
             onClick={() => navigate(-1)} 
             className='p-2.5 hover:bg-gray-50 active:scale-95 transition-all rounded-full text-gray-800 flex items-center justify-center border border-gray-100 bg-white shadow-sm'
@@ -103,142 +65,48 @@ const ProductDisplayPage = () => {
             <FaChevronLeft size={16} />
           </button>
 
-          <h4 className='text-xs font-black tracking-wider text-slate-400 uppercase truncate max-w-[50%] select-none'>
-            {data?.name || 'Product Details'}
-          </h4>
-
-          <button 
-            onClick={handleShareProductSystem}
-            className='p-2.5 hover:bg-gray-50 active:scale-95 transition-all rounded-full text-gray-800 flex items-center justify-center border border-gray-100 bg-white shadow-sm'
-          >
-            <FaShareNodes size={16} />
-          </button>
+          <div>
+            <h1 className='text-sm font-black tracking-tight text-slate-900 uppercase select-none'>
+              Store Catalog Shelf
+            </h1>
+            <p className='text-[11px] text-green-700 font-bold tracking-wide mt-0.5 uppercase'>
+              {loading ? "Scanning items..." : `${products.length} Products Available`}
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className='container mx-auto p-4 lg:p-8 grid lg:grid-cols-2 gap-8 mt-2'>
-        {/* Gallery */}
-        <div className='space-y-4'>
-          <div 
-            className='bg-white lg:min-h-[460px] rounded-[2rem] min-h-80 max-h-80 lg:max-h-[460px] flex items-center justify-center overflow-hidden border border-gray-100 shadow-md relative group cursor-zoom-in'
-            onClick={() => setImageZoom(!imageZoom)}
-          >
-            {!loading && data?.image?.length > 0 ? (
-              <img
-                src={data.image[image]}
-                className={`w-full h-full object-contain p-6 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`}
-                alt={data.name}
-              />
-            ) : (
-              <div className='w-full h-full bg-slate-50 animate-pulse flex items-center justify-center'>
-                <p className='text-gray-400 font-bold text-xs uppercase tracking-widest'>Loading Asset...</p>
+      <div className='container mx-auto p-4 lg:p-8 max-w-7xl mt-2'>
+        {loading ? (
+          /* SKELETON PLACEHOLDER LOADER GRID */
+          <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4'>
+            {[...Array(10)].map((_, index) => (
+              <div key={index} className='bg-white h-64 w-full rounded-3xl border border-gray-100/70 shadow-sm animate-pulse p-4 space-y-4'>
+                <div className='bg-slate-100 h-32 w-full rounded-2xl' />
+                <div className='bg-slate-100 h-4 w-3/4 rounded-lg' />
+                <div className='bg-slate-100 h-4 w-1/2 rounded-lg' />
               </div>
-            )}
-          </div>
-
-          <div className='flex items-center justify-center gap-1.5'>
-            {data?.image?.map((img, index) => (
-              <button
-                key={img + index}
-                onClick={() => setImage(index)}
-                className={`h-1.5 rounded-full transition-all ${index === image ? "bg-green-600 w-6" : "bg-gray-200 w-1.5"}`}
-              />
             ))}
           </div>
-
-          <div className='relative'>
-            <div ref={imageContainer} className='flex gap-2.5 overflow-x-auto scrollbar-none snap-x scroll-smooth px-1'>
-              {data?.image?.map((img, index) => (
-                <button
-                  key={img + index}
-                  onClick={() => setImage(index)}
-                  className={`min-w-20 w-20 h-20 rounded-2xl border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md scale-105' : 'border-transparent opacity-60 bg-white p-1'}`}
-                >
-                  <img src={img} alt='thumb' className='w-full h-full object-contain p-1' />
-                </button>
-              ))}
-            </div>
+        ) : products.length === 0 ? (
+          /* EMPTY GRID FALLBACK BLOCK */
+          <div className='flex flex-col items-center justify-center min-h-[45vh] bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm max-w-lg mx-auto mt-10'>
+            <p className='text-3xl mb-2'>📦</p>
+            <p className='text-slate-800 font-black text-sm tracking-wide uppercase text-center'>Shelf Segment Empty</p>
+            <p className='text-xs text-gray-400 font-medium text-center mt-1'>Check back shortly! New inventory stocks land in 10 minutes.</p>
           </div>
-        </div>
-
-        {/* Content Details */}
-        <div className='space-y-5'>
-          <div className='flex items-center gap-2'>
-            <span className='bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm'>⚡ 10 MINS</span>
+        ) : (
+          /* CORE LIVE PRODUCTS DISPLAY GRID */
+          <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4'>
+            {products.map((item) => (
+              <CardProduct key={item._id || item.id} data={item} />
+            ))}
           </div>
-
-          <h1 className='text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight'>{data?.name}</h1>
-          <p className='text-gray-400 font-bold text-xs mt-0.5'>{data?.unit}</p>
-
-          <Divider />
-
-          <div className='bg-slate-950 text-white p-5 rounded-3xl shadow-xl flex items-center justify-between'>
-            <div>
-              <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1'>Price Details</p>
-              <div className='flex items-baseline gap-3'>
-                <span className='text-3xl font-black tracking-tight'>
-                  {DisplayPriceInRupees(pricewithDiscount(Number(data?.price || 0), Number(data?.discount || 0)))}
-                </span>
-                {data?.discount > 0 && (
-                  <span className='line-through text-gray-500 font-bold text-sm'>
-                    {DisplayPriceInRupees(Number(data?.price || 0))}
-                  </span>
-                )}
-              </div>
-            </div>
-            {data?.discount > 0 && (
-              <span className='bg-green-600 font-black text-xs px-3 py-1.5 rounded-xl text-white shadow-md uppercase tracking-wider'>
-                {data.discount}% OFF
-              </span>
-            )}
-          </div>
-
-          {productId && productId !== "undefined" && productId.length >= 12 && (
-            <WishlistButton productId={productId} />
-          )}
-
-          {!isOpen ? (
-            <div className='bg-indigo-50/50 border-2 border-indigo-100 border-dashed p-6 rounded-3xl text-center'>
-              <p className='font-black text-slate-800 text-base'>🌙 Shop is Closed</p>
-              <p className='text-xs text-gray-500 font-semibold mt-0.5'>Ordering opens up at 7:00 AM</p>
-            </div>
-          ) : data?.stock === 0 ? (
-            <div className='bg-rose-50 border border-rose-100 p-4 rounded-2xl text-center'>
-              <p className='text-rose-600 font-black text-sm uppercase tracking-widest italic'>Out of stock</p>
-            </div>
-          ) : (
-            <div className='h-14 mt-4 shadow-md shadow-green-100/30 rounded-2xl overflow-hidden'>
-              <AddToCartButton data={data} />
-            </div>
-          )}
-
-          <div className='bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4'>
-            <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image1} alt='superfast' className='object-contain' /></div>
-              <div><p className='font-extrabold text-slate-800 text-sm'>Superfast Delivery</p><p className='text-xs text-gray-400 font-medium'>Directly from local dark stores in 10 minutes.</p></div>
-            </div>
-            <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image2} alt='offers' className='object-contain' /></div>
-              <div><p className='font-extrabold text-slate-800 text-sm'>Best Prices & Offers</p><p className='text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p></div>
-            </div>
-            <div className='flex items-center gap-4 group cursor-pointer'>
-              <div className='w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center p-2.5 flex-shrink-0'><img src={image3} alt='assortment' className='object-contain' /></div>
-              <div><p className='font-extrabold text-slate-800 text-sm'>Wide Assortment</p><p className='text-xs text-gray-400 font-medium'>Everything you need, available instantly.</p></div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
-      {productId && productId !== "undefined" && productId.length >= 12 && (
-        <>
-          <SmartSuggestions productId={productId} />
-          <div className='container mx-auto px-4 mt-8'>
-            <ProductReviews productId={productId} />
-          </div>
-        </>
-      )}
     </section>
   )
 }
 
-export default ProductDisplayPage;
+export default ProductListPage;
