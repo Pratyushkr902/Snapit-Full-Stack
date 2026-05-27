@@ -47,6 +47,10 @@ import reviewRouter from './route/review.route.js';
 import paymentRouter from './route/payment.route.js';
 
 const app = express();
+
+// ✅ FIX 1: Enable global reverse proxy awareness to satisfy express-rate-limit validation checks
+app.set('trust proxy', 1); 
+
 const server = http.createServer(app); 
 const latestPositions = new Map(); 
 
@@ -171,7 +175,8 @@ const io = new Server(server, {
         methods: ["GET", "POST"], 
         credentials: true 
     },
-    transports: ['polling', 'websocket'], 
+    // ✅ FIX 2: Restrict transports strictly to websocket to enforce clean persistent handshakes on Render
+    transports: ['websocket'], 
     pingTimeout: 60000,        
     pingInterval: 25000,       
     allowEIO3: true 
@@ -219,6 +224,7 @@ app.use('/api/referral', referralRouter);
 app.use('/api/review', reviewRouter);
 app.use('/api/payment', paymentRouter);
 app.use('/api/admin', adminRouter);
+
 // --- HEALTH ROUTE ---
 app.get("/health", (req, res) => {
     res.json({ 
@@ -230,18 +236,12 @@ app.get("/health", (req, res) => {
 
 // --- STATIC ASSETS MAPPING ---
 const possiblePaths = [
-    // Render: server/index.js runs from repo root via "node server/index.js"
-    // __dirname = /opt/render/project/src/server
-    // so ../client/dist is the correct relative path
     path.resolve(__dirname, '..', 'client', 'dist'),
-    // Explicit Render absolute path as guaranteed fallback
     '/opt/render/project/src/client/dist',
-    // Local dev fallbacks
     path.join(process.cwd(), 'client', 'dist'),
     path.join(process.cwd(), '..', 'client', 'dist'),
 ];
 
-// Boot-time path diagnostics — visible in Render logs
 console.log('📁 CWD:', process.cwd());
 console.log('📁 __dirname:', __dirname);
 possiblePaths.forEach(p => console.log(`  ${fs.existsSync(p) ? '✅' : '❌'} ${p}`));

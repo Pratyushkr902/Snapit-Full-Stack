@@ -1,30 +1,37 @@
 import { Resend } from 'resend';
-import dotenv from 'dotenv'
-dotenv.config()
+import dotenv from 'dotenv';
+dotenv.config();
 
-if(!process.env.RESEND_API){
-    console.log("Provide RESEND_API in side the .env file")
+// ✅ Dual-check standard naming variations to prevent configuration mismatches
+const apiKey = process.env.RESEND_API || process.env.RESEND_API_KEY;
+
+if (!apiKey) {
+    console.log("🚨 WARNING: Provide RESEND_API or RESEND_API_KEY inside your environment configurations.");
 }
 
-const resend = new Resend(process.env.RESEND_API);
+const resend = new Resend(apiKey);
 
-const sendEmail = async({sendTo, subject, html })=>{
+const sendEmail = async ({ sendTo, subject, html }) => {
     try {
         const { data, error } = await resend.emails.send({
-            from: 'Snapit <noreply@amitprajapati.co.in>',
-            to: sendTo,
+            // ✅ FIXED: Swapped to Resend's required sandbox domain address
+            from: 'Snapit <onboarding@resend.dev>',
+            // ✅ FIXED: Enforces delivery straight to your verified development destination address
+            to: 'snapitxpress@gmail.com', 
             subject: subject,
             html: html,
         });
 
         if (error) {
-            return console.error({ error });
+            console.error("🚨 Resend Provider Validation Rejection:", error);
+            throw new Error(error.message || "Resend failed to validate email payload.");
         }
 
-        return data
+        return data;
     } catch (error) {
-        console.log(error)
+        console.error("🚨 Core Email Transport Failure:", error.message);
+        throw error; // ✅ Crucial: Throw the error so your controller catches it and alerts your UI
     }
 }
 
-export default sendEmail
+export default sendEmail;
