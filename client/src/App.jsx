@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useCallback, useState } from 'react'; 
 import { useDispatch, useSelector } from 'react-redux'; 
 import { Toaster } from 'react-hot-toast';
@@ -28,11 +28,13 @@ export { socket };
 function App() {
   const dispatch = useDispatch()
   const location = useLocation()
+  const navigate = useNavigate()
   const user = useSelector(state => state.user)
   
   useNotifications() 
 
   const [showCart, setShowCart] = useState(false)
+  const [isAuthResolving, setIsAuthResolving] = useState(true) // ✅ Added state gate to block premature routing re-evaluation
 
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('rider-panel');
   const isCheckoutOrCartPage = location.pathname.includes('/checkout') || location.pathname.includes('/cart');
@@ -46,19 +48,26 @@ function App() {
   // Normalizes matching back-end payload parameters safely
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
-    if (!token) return
+    if (!token) {
+      setIsAuthResolving(false)
+      return
+    }
     
     try {
       const userData = await fetchUserDetails()
-      // Fallback check to ensure data structures match Redux store expectations exactly
+      
       if (userData?.success) {
-        const profileData = userData.data?.data || userData.data;
-        if (profileData) {
+        // ✅ FIXED: Safely target response structures matching the back-end payload layout exactly
+        const profileData = userData.data; 
+        
+        if (profileData && profileData._id) {
           dispatch(setUserDetails(profileData))
         }
       }
     } catch (error) {
       console.log("Session Check: No active user found.")
+    } finally {
+      setIsAuthResolving(false) // ✅ Unlock layout visibility once hydration passes successfully
     }
   }, [dispatch])
 
@@ -130,6 +139,15 @@ function App() {
       socket.off('connect_error');
     };
   }, []);
+
+  // ✅ Prevent protective routing checks from redirecting users while memory hydration is in progress
+  if (isAuthResolving) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-700"></div>
+      </div>
+    );
+  }
 
   return (
     <RemoteConfigProvider>
