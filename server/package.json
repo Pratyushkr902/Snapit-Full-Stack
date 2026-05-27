@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
-  "scripts": {
-    "start": "node server/index.js",
-    "dev": "nodemon server/index.js",
-    "build": "npm install && cd ../client && npm install && npm run build"
+ "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "build": "npm install && cd ../client && npm install && npm run build && cd .."
   },
   "author": "Pratyush Kumar",
   "license": "ISC",

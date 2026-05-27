@@ -13,7 +13,7 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './config/connectDB.js';
 import fs from 'fs';
-import adminRouter from './route/admin.route.js'
+import adminRouter from './route/admin.route.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -175,7 +175,7 @@ const io = new Server(server, {
         methods: ["GET", "POST"], 
         credentials: true 
     },
-    // ✅ FIX 2: Restrict transports strictly to websocket to enforce clean persistent handshakes on Render
+    // ✅ Restrict transports strictly to websocket to enforce clean persistent handshakes on Render
     transports: ['websocket'], 
     pingTimeout: 60000,        
     pingInterval: 25000,       
