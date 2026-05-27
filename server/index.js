@@ -60,7 +60,7 @@ const allowedOrigins = [
     "https://snapit.grocery",                     
     "null",                                       
     "https://snapit-full-stack-2.onrender.com",
-    "https://snapit-full-stack-0.onrender.com",   // FIX 1: frontend origin added
+    "https://snapit-full-stack-0.onrender.com",
 ];
 
 app.use(cors({
@@ -133,23 +133,18 @@ app.use(helmet({
                 "https://firebaseinstallations.googleapis.com",
                 "https://*.firebaseio.com",
                 "https://*.googleapis.com",
-                // Primary backend — both HTTP and WebSocket
                 "https://snapit-full-stack-2.onrender.com",
                 "wss://snapit-full-stack-2.onrender.com",
-                // FIX 2: Frontend origin added — both HTTP and WebSocket
                 "https://snapit-full-stack-0.onrender.com",
                 "wss://snapit-full-stack-0.onrender.com",
-                // Local dev
                 "http://localhost:5173",
                 "https://localhost:5173",
                 "ws://localhost:5173",
                 "wss://localhost:5173",
                 "http://localhost:8080",
                 "ws://localhost:8080",
-                // Native app origins
                 "capacitor://localhost",
                 "android://localhost",
-                // Production domain
                 "https://snapit.grocery",
                 "wss://snapit.grocery",
             ]
@@ -234,12 +229,25 @@ app.get("/health", (req, res) => {
 
 // --- STATIC ASSETS MAPPING ---
 const possiblePaths = [
-    path.join(process.cwd(), '..', 'client', 'dist'),
+    // Render: server/index.js runs from repo root via "node server/index.js"
+    // __dirname = /opt/render/project/src/server
+    // so ../client/dist is the correct relative path
+    path.resolve(__dirname, '..', 'client', 'dist'),
+    // Explicit Render absolute path as guaranteed fallback
+    '/opt/render/project/src/client/dist',
+    // Local dev fallbacks
     path.join(process.cwd(), 'client', 'dist'),
-    path.resolve(__dirname, '..', 'client', 'dist')
+    path.join(process.cwd(), '..', 'client', 'dist'),
 ];
 
+// Boot-time path diagnostics — visible in Render logs
+console.log('📁 CWD:', process.cwd());
+console.log('📁 __dirname:', __dirname);
+possiblePaths.forEach(p => console.log(`  ${fs.existsSync(p) ? '✅' : '❌'} ${p}`));
+
 const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+console.log('📦 Serving frontend from:', clientBuildPath);
+
 app.use(express.static(clientBuildPath));
 
 // --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
