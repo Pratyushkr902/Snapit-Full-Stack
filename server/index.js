@@ -57,17 +57,18 @@ const latestPositions = new Map();
 // --- CORS RULES (STABILIZED FOR NATIVE CAPACITOR & WEBVIEW COOKIE EXCHANGE) ---
 const allowedOrigins = [
     "http://localhost:5173",
-    "https://localhost:5173",                     
-    "https://localhost",                          
-    "http://localhost",                           
-    "capacitor://localhost",                      
-    "android://localhost",                        
-    "https://snapit.grocery",                     
-    "null",                                       
+    "https://localhost:5173",
+    "https://localhost",
+    "http://localhost",
+    "capacitor://localhost",
+    "android://localhost",
+    "https://snapit.grocery",
+    "null",
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com",
     "https://snapit-ashy.vercel.app",
-    "https://snapit-full-stack.vercel.app/",
+    "https://snapit-full-stack.vercel.app",
+    "https://snapit-full-stack-pratyushkr902s-projects.vercel.app",
     "https://snapit-backend-production.up.railway.app",
 ];
 
