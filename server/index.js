@@ -72,14 +72,29 @@ const allowedOrigins = [
     "https://snapit-backend-production.up.railway.app",
 ];
 
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
+            callback(null, true);
+        } else {
+            console.log(`[CORS Blocked] Unauthorized request attempt from: ${origin}`);
+            callback(new Error("Cross-Origin Request rejected by Snapit Engine policies."));
+        }
+    },
+    credentials: true,
+};
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin) {
-            return callback(null, true);
-        }
-        
+        if (!origin) return callback(null, true);
         const lowerOrigin = origin.toLowerCase().trim();
-        if (allowedOrigins.includes(lowerOrigin) || lowerOrigin.startsWith('http://localhost') || lowerOrigin.startsWith('capacitor://') || lowerOrigin.startsWith('android://')) {
+        if (
+            allowedOrigins.includes(lowerOrigin) ||
+            /\.vercel\.app$/.test(lowerOrigin) ||
+            lowerOrigin.startsWith('http://localhost') ||
+            lowerOrigin.startsWith('capacitor://') ||
+            lowerOrigin.startsWith('android://')
+        ) {
             callback(null, true);
         } else {
             console.warn(`[CORS Blocked] Unauthorized request attempt from: ${origin}`);
