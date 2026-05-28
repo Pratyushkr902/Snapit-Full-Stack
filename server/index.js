@@ -133,7 +133,7 @@ app.use(helmet({
                 "https://*.openstreetmap.org", 
                 "https://res.cloudinary.com", 
                 "https://*.cloudinary.com",    
-                "http://res.cloudinary.com",   
+                "https://res.cloudinary.com",   
                 "https://*.googleapis.com", 
                 "https://*.gstatic.com", 
                 "https://api.qrserver.com"
