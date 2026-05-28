@@ -17,8 +17,8 @@ const uploadImageController = async(request,response)=>{
         const upload = await uploadImageClodinary(file)
 
         // VALIDATION: Ensure Cloudinary returned a valid response object with a URL
-        if (!upload || !upload.url) {
-            throw new Error("Cloudinary upload failed or returned invalid data");
+        if (!upload || (!upload.secure_url && !upload.url)) {
+            upload.url = upload.secure_url || upload.url; if (!upload.url) throw new Error("Cloudinary upload failed or returned invalid data");
         }
 
         return response.json({
