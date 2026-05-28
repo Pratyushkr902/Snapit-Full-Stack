@@ -238,37 +238,8 @@ app.get("/health", (req, res) => {
     });
 });
 
-// --- STATIC ASSETS MAPPING ---
-const possiblePaths = [
-    path.resolve(__dirname, '..', 'client', 'dist'),
-    '/opt/render/project/src/client/dist',
-    path.join(process.cwd(), 'client', 'dist'),
-    path.join(process.cwd(), '..', 'client', 'dist'),
-];
-
-console.log('📁 CWD:', process.cwd());
-console.log('📁 __dirname:', __dirname);
-possiblePaths.forEach(p => console.log(`  ${fs.existsSync(p) ? '✅' : '❌'} ${p}`));
-
-const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
-console.log('📦 Serving frontend from:', clientBuildPath);
-
-app.use(express.static(clientBuildPath));
-
-// --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
-app.get('/{*splat}', (req, res, next) => {
-    if (req.url.startsWith('/api') || req.url.includes('.')) {
-        return res.status(404).json({ message: "Asset file or resource route completely unavailable.", success: false });
-    }
-    
-    res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
-        if (err) {
-            res.status(500).json({ 
-                error: "Frontend distribution layer build files not found.",
-                path: clientBuildPath 
-            });
-        }
-    });
+app.get('/{*splat}', (req, res) => {
+    res.status(404).json({ message: "Route not found.", success: false });
 });
 
 // --- KEEP ALIVE ---
