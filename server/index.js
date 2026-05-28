@@ -67,6 +67,7 @@ const allowedOrigins = [
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com",
     "https://snapit-ashy.vercel.app",
+    "https://snapit-frontend.netlify.app",
     "https://snapit-backend-production.up.railway.app",
 ];
 
@@ -144,6 +145,7 @@ app.use(helmet({
                 "wss://snapit-full-stack-2.onrender.com",
                 "https://snapit-full-stack-0.onrender.com",
     "https://snapit-ashy.vercel.app",
+    "https://snapit-frontend.netlify.app",
     "https://snapit-backend-production.up.railway.app",
                 "wss://snapit-full-stack-0.onrender.com",
                 "http://localhost:5173",
