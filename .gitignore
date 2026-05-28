@@ -13,3 +13,7 @@ snapit.keystore
 .env.production
 **/node_modules/
 **/dist/
+.vercel
+
+# Local Netlify folder
+.netlify

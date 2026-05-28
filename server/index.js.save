@@ -1,4 +1,5 @@
-import dotenv from 'dotenv';
+    res.status(404).json({ message: "Route not found.", success: false });
+});import dotenv from 'dotenv';
 dotenv.config();
 
 import { initSubscriptionCron } from './config/cronEngine.js'; 
@@ -67,7 +68,6 @@ const allowedOrigins = [
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com",
     "https://snapit-ashy.vercel.app",
-    "https://snapit-full-stack.vercel.app/",
     "https://snapit-backend-production.up.railway.app",
 ];
 
@@ -145,7 +145,6 @@ app.use(helmet({
                 "wss://snapit-full-stack-2.onrender.com",
                 "https://snapit-full-stack-0.onrender.com",
     "https://snapit-ashy.vercel.app",
-    "https://snapit-full-stack.vercel.app/",
     "https://snapit-backend-production.up.railway.app",
                 "wss://snapit-full-stack-0.onrender.com",
                 "http://localhost:5173",
@@ -240,8 +239,37 @@ app.get("/health", (req, res) => {
     });
 });
 
-app.get('/{*splat}', (req, res) => {
-    res.status(404).json({ message: "Route not found.", success: false });
+// --- STATIC ASSETS MAPPING ---
+const possiblePaths = [
+    path.resolve(__dirname, '..', 'client', 'dist'),
+    '/opt/render/project/src/client/dist',
+    path.join(process.cwd(), 'client', 'dist'),
+    path.join(process.cwd(), '..', 'client', 'dist'),
+];
+
+console.log('📁 CWD:', process.cwd());
+console.log('📁 __dirname:', __dirname);
+possiblePaths.forEach(p => console.log(`  ${fs.existsSync(p) ? '✅' : '❌'} ${p}`));
+
+const clientBuildPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+console.log('📦 Serving frontend from:', clientBuildPath);
+
+app.use(express.static(clientBuildPath));
+
+// --- SAFE INTERCEPTOR CATCH-ALL ROUTE ---
+app.get('/{*splat}', (req, res, next) => {
+    if (req.url.startsWith('/api') || req.url.includes('.')) {
+        return res.status(404).json({ message: "Asset file or resource route completely unavailable.", success: false });
+    }
+    
+    res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
+        if (err) {
+            res.status(500).json({ 
+                error: "Frontend distribution layer build files not found.",
+                path: clientBuildPath 
+            });
+        }
+    });
 });
 
 // --- KEEP ALIVE ---

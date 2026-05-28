@@ -71,7 +71,7 @@ const Login = () => {
                 
                 // FIX: navigate() keeps React Router's history intact.
                 // window.location.hash bypassed the router and caused a full re-render.
-                navigate("/")
+                  setTimeout(() => navigate("/"), 100)
             }
 
         } catch (error) {

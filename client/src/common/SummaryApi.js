@@ -161,6 +161,7 @@ const SummaryApi = {
     url : '/api/order/order-items',  // ← change from order-list to order-items
     method : 'get'
 },
+    getOrderDetails: { url: '/api/order/order-list', method: 'post' },
     getSellerOrders: {
         url: '/api/order/seller-orders',
         method: 'get'

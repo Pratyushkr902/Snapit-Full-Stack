@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snapit-v3' // ✅ Upgraded cache key index namespace structure
+const CACHE_NAME = 'snapit-v5'
 const STATIC_ASSETS = ['/', '/index.html']
 
 self.addEventListener('install', (event) => {
