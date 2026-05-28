@@ -14,10 +14,8 @@ const resend = new Resend(apiKey);
 const sendEmail = async ({ sendTo, subject, html }) => {
     try {
         const { data, error } = await resend.emails.send({
-            // ✅ FIXED: Swapped to Resend's required sandbox domain address
             from: 'Snapit <onboarding@resend.dev>',
-            // ✅ FIXED: Enforces delivery straight to your verified development destination address
-            to: 'snapitxpress@gmail.com', 
+            to: sendTo,  // ✅ use actual recipient
             subject: subject,
             html: html,
         });
