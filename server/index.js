@@ -161,7 +161,7 @@ app.use(helmet({
                 "wss://snapit-full-stack-2.onrender.com",
                 "https://snapit-full-stack-0.onrender.com",
     "https://snapit-ashy.vercel.app",
-    "https://snapit-full-stack.vercel.app/",
+    "https://snapit-full-stack.vercel.app",
     "https://snapit-backend-production.up.railway.app",
                 "wss://snapit-full-stack-0.onrender.com",
                 "http://localhost:5173",
@@ -198,7 +198,7 @@ const io = new Server(server, {
         credentials: true 
     },
     // ✅ Restrict transports strictly to websocket to enforce clean persistent handshakes on Render
-    transports: ['websocket'], 
+    transports: ['polling', 'websocket'], 
     pingTimeout: 60000,        
     pingInterval: 25000,       
     allowEIO3: true 
