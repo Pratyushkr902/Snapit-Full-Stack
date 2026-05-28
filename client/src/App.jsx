@@ -21,6 +21,9 @@ import RemoteConfigProvider from './provider/RemoteConfigProvider'
 import useNotifications from './hooks/useNotifications'
 import socket from './utils/socket.js';
 
+// FIX: Single source of truth for token key names.
+import { ACCESS_TOKEN_KEY } from './constants/storageKeys';
+
 import './App.css'
 
 export { socket };
@@ -28,7 +31,6 @@ export { socket };
 function App() {
   const dispatch = useDispatch()
   const location = useLocation()
-  const navigate = useNavigate()
   const user = useSelector(state => state.user)
   
   useNotifications() 
@@ -36,7 +38,6 @@ function App() {
   const [showCart, setShowCart] = useState(false)
   const [isAuthResolving, setIsAuthResolving] = useState(true)
 
-  // ✅ FIXED: Normalize routing matching markers to track BOTH hash routes and path configurations cleanly
   const currentNormalizedRoute = (location.pathname + (location.hash || "")).toLowerCase();
 
   const isDashboard = currentNormalizedRoute.includes('dashboard') || currentNormalizedRoute.includes('rider-panel');
@@ -48,8 +49,10 @@ function App() {
     }
   }, [currentNormalizedRoute, isCheckoutOrCartPage])
 
+  // FIX: fetchUser runs once on mount only — not on every route change.
+  // Re-fetching user on every navigation hammered the API unnecessarily.
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken');
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       setIsAuthResolving(false)
       return
@@ -59,13 +62,14 @@ function App() {
       const userData = await fetchUserDetails()
       if (userData?.success) {
         const profileData = userData.data; 
-        if (profileData && profileData._id) {
+        if (profileData?._id) {
           dispatch(setUserDetails(profileData))
         }
       }
     } catch (error) {
       console.log("Session Check: No active user found.")
     } finally {
+      // FIX: always resolves — no stuck spinner.
       setIsAuthResolving(false)
     }
   }, [dispatch])
@@ -113,10 +117,10 @@ function App() {
     }
   }, [dispatch])
 
-  // ✅ FIXED: Force execution updates whenever the user transitions using Hash anchors or Standard layout clicks
+  // FIX: Removed `currentNormalizedRoute` from deps — fetchUser only runs once on mount.
   useEffect(() => {
     fetchUser()
-  }, [fetchUser, currentNormalizedRoute]) 
+  }, [fetchUser])
 
   useEffect(() => {
     fetchCategory()
@@ -130,8 +134,8 @@ function App() {
   }, [fetchOrder, user?._id])
 
   useEffect(() => {
-    socket.on('connect', () => console.log("🚀 Snapit Socket Connected:", socket.id));
-    socket.on('connect_error', (err) => console.log("📡 Socket connection effort:", err.message));
+    socket.on('connect', () => console.log("🚀 Socket Connected:", socket.id));
+    socket.on('connect_error', (err) => console.log("📡 Socket error:", err.message));
     
     return () => {
       socket.off('connect');

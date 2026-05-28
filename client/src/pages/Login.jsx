@@ -4,10 +4,13 @@ import toast from 'react-hot-toast';
 import Axios from '../utils/Axios'; 
 import SummaryApi from '../common/SummaryApi'; 
 import AxiosToastError from '../utils/AxiosToastError';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUserDetails } from '../store/userSlice';
 import fetchUserDetails from '../utils/fetchUserDetails';
+
+// FIX: Single source of truth for token key names.
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../constants/storageKeys';
 
 const Login = () => {
     const [data, setData] = useState({
@@ -16,6 +19,8 @@ const Login = () => {
     })
     const [showPassword, setShowPassword] = useState(false)
     const dispatch = useDispatch()
+    // FIX: useNavigate instead of window.location.hash — keeps React Router in control.
+    const navigate = useNavigate()
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -32,10 +37,9 @@ const Login = () => {
         if (!isValidValue) return
 
         try {
-            localStorage.removeItem('accesstoken');
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('refreshtoken');
+            // FIX: Clear only the canonical keys — no more duplicate writes.
+            localStorage.removeItem(ACCESS_TOKEN_KEY);
+            localStorage.removeItem(REFRESH_TOKEN_KEY);
 
             const response = await Axios({
                 ...SummaryApi.login,
@@ -50,34 +54,24 @@ const Login = () => {
             if (response.data.success) {
                 toast.success(response.data.message)
                 
-                const token = response.data?.data?.accesstoken || response.data?.data?.accessToken;
+                // FIX: Read from one consistent key name on the response.
+                const token = response.data?.data?.accessToken || response.data?.data?.accesstoken;
                 const refresh = response.data?.data?.refreshToken || response.data?.data?.refreshtoken;
 
-                if (token) {
-                    localStorage.setItem('accesstoken', token)
-                    localStorage.setItem('accessToken', token)
-                }
-                if (refresh) {
-                    localStorage.setItem('refreshToken', refresh)
-                    localStorage.setItem('refreshtoken', refresh)
-                }
+                // FIX: Write to one key only — no redundant duplicates.
+                if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token);
+                if (refresh) localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
 
-                // Force an immediate profile payload download right here
                 const userDetails = await fetchUserDetails()
-                if (userDetails?.success) {
-                    const profileData = userDetails.data;
-                    if (profileData) {
-                        dispatch(setUserDetails(profileData))
-                    }
+                if (userDetails?.success && userDetails.data) {
+                    dispatch(setUserDetails(userDetails.data))
                 }
 
-                setData({
-                    email: "",
-                    password: "",
-                })
+                setData({ email: "", password: "" })
                 
-                // ✅ FIXED: Direct window-hash transition guarantees the HashRouter catches the auth state instantly
-                window.location.hash = "/";
+                // FIX: navigate() keeps React Router's history intact.
+                // window.location.hash bypassed the router and caused a full re-render.
+                navigate("/")
             }
 
         } catch (error) {
