@@ -66,6 +66,8 @@ const allowedOrigins = [
     "null",                                       
     "https://snapit-full-stack-2.onrender.com",
     "https://snapit-full-stack-0.onrender.com",
+    "https://snapit-ashy.vercel.app",
+    "https://snapit-backend-production.up.railway.app",
 ];
 
 app.use(cors({
@@ -141,6 +143,8 @@ app.use(helmet({
                 "https://snapit-full-stack-2.onrender.com",
                 "wss://snapit-full-stack-2.onrender.com",
                 "https://snapit-full-stack-0.onrender.com",
+    "https://snapit-ashy.vercel.app",
+    "https://snapit-backend-production.up.railway.app",
                 "wss://snapit-full-stack-0.onrender.com",
                 "http://localhost:5173",
                 "https://localhost:5173",
