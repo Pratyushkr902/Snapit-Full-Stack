@@ -6,6 +6,7 @@ import ProductModel from "../models/product.model.js";
 import StoreModel from "../models/store.model.js"; 
 import mongoose from "mongoose";
 import Razorpay from 'razorpay';
+import updateStreak from '../utils/updateStreak.js'  
 
 export const pricewithDiscount = (price, dis = 1) => {
     const discountAmout = Math.ceil((Number(price) * Number(dis)) / 100)
@@ -103,6 +104,7 @@ export async function CashOnDeliveryOrderController(request, response) {
 
         const generatedOrder = new OrderModel(payload);
         await generatedOrder.save();
+        await updateStreak(userId); 
         await CartProductModel.deleteMany({ userId });
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
 
@@ -215,6 +217,7 @@ export async function WalletPaymentOrderController(request, response) {
 
         const newOrder = new OrderModel(payload);
         await newOrder.save();
+        await updateStreak(userId);
         await CartProductModel.deleteMany({ userId });
 
         return response.json({ 
@@ -315,7 +318,7 @@ export async function verifyPaymentController(request, response) {
 
         const newOrder = new OrderModel(payload);
         await newOrder.save();
-
+        await updateStreak(userId);
         for (const item of list_items) {
             await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } });
         }

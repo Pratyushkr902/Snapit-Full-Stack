@@ -67,42 +67,25 @@ const userSchema = new mongoose.Schema({
     },
     role : {
         type : String,
-        // FIX: Added SELLER and RIDER to the enum so they are valid roles
         enum : ['ADMIN', 'USER', 'RIDER', 'rider', 'SELLER'],
         default : "USER"
     },
-    // FIX: store_name links a SELLER user to their store in product.store_inventory
-    // When a seller registers, save their store name here.
-    // This must exactly match the store_name used in product.store_inventory.
     store_name : {
         type : String,
         default : null
     },
-    // --- SNAPIT WALLET SYSTEM ---
     walletBalance: {
         type: Number,
         default: 0
     },
     walletTransactions: [
         {
-            type: {
-                type: String,
-                required: true
-            },
-            amount: {
-                type: Number,
-                required: true
-            },
-            description: {
-                type: String
-            },
-            date: {
-                type: Date,
-                default: Date.now
-            }
+            type: { type: String, required: true },
+            amount: { type: Number, required: true },
+            description: { type: String },
+            date: { type: Date, default: Date.now }
         }
     ],
-    // --- SNAPIT REFERRAL SYSTEM ---
     referralCode: {
         type: String,
         unique: true,
@@ -120,19 +103,16 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    // --- WISHLIST ---
     wishlist: [
         {
             type: mongoose.Schema.ObjectId,
             ref: 'product'
         }
     ],
-    // --- PUSH NOTIFICATIONS ---
     fcmToken: {
         type: String,
         default: null
     },
-    // --- SNAPITPLUS SUBSCRIPTION LAYER ---
     isSnapitPlusMember: {
         type: Boolean,
         default: false
@@ -140,6 +120,19 @@ const userSchema = new mongoose.Schema({
     snapitPlusExpiresAt: {
         type: Date,
         default: null
+    },
+    // --- STREAK SYSTEM ---
+    currentStreak: {
+        type: Number,
+        default: 0
+    },
+    lastOrderDate: {
+        type: Date,
+        default: null
+    },
+    claimedMilestones: {
+        type: [Number],
+        default: []
     }
 },{
     timestamps : true

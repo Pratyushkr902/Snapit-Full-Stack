@@ -16,6 +16,7 @@ import {
 } from '../controllers/user.controller.js'
 import auth from '../middleware/auth.js'
 import upload from '../middleware/multer.js'
+import { claimStreakReward } from '../controllers/streak.controller.js'
 
 // ✓ Added imports for security rate limiters
 import { authLimiter, otpLimiter } from '../middleware/security.js'
@@ -39,5 +40,6 @@ userRouter.post('/refresh-token', refreshToken)
 userRouter.get('/user-details', auth, userDetails)
 userRouter.get('/all-riders', auth, getAllRiders)
 userRouter.post('/save-fcm-token', auth, saveFcmTokenController)
+userRouter.post('/streak/claim', auth, claimStreakReward) 
 
 export default userRouter

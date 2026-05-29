@@ -1,27 +1,44 @@
-// components/StreakTracker.jsx
-// ✅ GROCERY STREAK - Order daily to earn rewards
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Axios from "../common/Axios.js"; // adjust path if needed
 
 const MILESTONES = [
-  { days: 3, reward: "₹20 off", icon: "🎁" },
-  { days: 7, reward: "Free Delivery (3 orders)", icon: "🚚" },
-  { days: 14, reward: "₹100 wallet credit", icon: "💰" },
-  { days: 30, reward: "Snapit Plus FREE", icon: "⭐" },
+  { days: 3,  reward: "₹20 off",                  icon: "🎁" },
+  { days: 7,  reward: "Free Delivery (3 orders)",  icon: "🚚" },
+  { days: 14, reward: "₹100 wallet credit",         icon: "💰" },
+  { days: 30, reward: "Snapit Plus FREE",           icon: "⭐" },
 ];
 
 const DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function StreakTracker() {
-  const [streak, setStreak] = useState(7);
-  const [claimedRewards, setClaimedRewards] = useState([3]);
+  const [streak, setStreak] = useState(0);
+  const [claimedRewards, setClaimedRewards] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Axios.get('/api/user/user-details').then(res => {
+      const data = res.data.data
+      setStreak(data.currentStreak || 0)
+      setClaimedRewards(data.claimedMilestones || [])
+    }).finally(() => setLoading(false))
+  }, [])
 
   const nextMilestone = MILESTONES.find((m) => m.days > streak);
   const claimable = MILESTONES.filter((m) => m.days <= streak && !claimedRewards.includes(m.days));
 
-  const handleClaim = (days) => {
-    setClaimedRewards((prev) => [...prev, days]);
-    alert(`🎉 Reward claimed: ${MILESTONES.find((m) => m.days === days)?.reward}`);
-  };
+  const handleClaim = async (days) => {
+    try {
+      const res = await Axios.post('/api/streak/claim', { milestone: days })
+      if (res.data.success) {
+        setClaimedRewards(prev => [...prev, days])
+        alert(`🎉 ${res.data.message}`)
+      }
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to claim reward")
+    }
+  }
+
+  if (loading) return <div style={{ padding: 20, textAlign: 'center' }}>Loading streak...</div>
 
   return (
     <div style={styles.container}>
@@ -105,7 +122,7 @@ export default function StreakTracker() {
         })}
       </div>
 
-      {/* Progress Bar to next milestone */}
+      {/* Progress Bar */}
       {nextMilestone && (
         <div style={styles.progressSection}>
           <div style={styles.progressBar}>
@@ -134,11 +151,7 @@ const styles = {
   nextHint: { fontSize: 12, color: "#2E7D32", fontWeight: 600, background: "#f1f8e9", padding: "4px 8px", borderRadius: 6, margin: 0 },
   daysGrid: { display: "flex", justifyContent: "space-between", marginBottom: 20 },
   dayCol: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4 },
-  dayCircle: {
-    width: 34, height: 34, borderRadius: "50%",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: 13, fontWeight: 700, transition: "all 0.3s",
-  },
+  dayCircle: { width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, transition: "all 0.3s" },
   dayText: { fontSize: 9, fontWeight: 600 },
   claimSection: { background: "#fff8e1", borderRadius: 14, padding: "12px 14px", marginBottom: 16, border: "1.5px solid #FFD54F" },
   claimTitle: { fontSize: 14, fontWeight: 700, color: "#F57F17", margin: "0 0 10px" },
