@@ -15,7 +15,10 @@ const Search = () => {
   const [isSearchPage, setIsSearchPage] = useState(false)
   const [isMobile] = useMobile()
   const params = useLocation()
-  const searchText = params.search.slice(3)
+
+  // FIXED: use URLSearchParams instead of brittle .slice(3)
+  const searchText = new URLSearchParams(params.search).get('q') || ''
+
   const [inputValue, setInputValue] = useState(searchText || '')
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -26,6 +29,12 @@ const Search = () => {
   useEffect(() => {
     setIsSearchPage(location.pathname === "/search")
   }, [location])
+
+  // FIXED: sync input value when URL changes (e.g. suggestion click)
+  useEffect(() => {
+    const q = new URLSearchParams(params.search).get('q') || ''
+    setInputValue(q)
+  }, [params.search])
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -50,7 +59,6 @@ const Search = () => {
         data: { search: query, page: 1 }
       })
       if (response.data.success) {
-        // Get unique product names as suggestions
         const names = response.data.data
           .slice(0, 6)
           .map(p => ({ name: p.name, image: p.image?.[0], _id: p._id }))
@@ -68,20 +76,18 @@ const Search = () => {
     setInputValue(value)
     setShowSuggestions(true)
 
-    // Debounce API call
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       fetchSuggestions(value)
     }, 300)
 
-    const url = `/search?q=${value}`
-    navigate(url)
+    navigate(`/search?q=${value}`)
   }
 
   const handleSuggestionClick = (name) => {
     setInputValue(name)
     setShowSuggestions(false)
-    navigate(`/search?q=${name}`)
+    navigate(`/search?q=${encodeURIComponent(name)}`)
   }
 
   const handleClear = () => {
@@ -139,7 +145,6 @@ const Search = () => {
           )}
         </div>
 
-        {/* Clear button */}
         {isSearchPage && inputValue && (
           <button onClick={handleClear} className='p-2 mr-1 text-slate-400 hover:text-slate-600'>
             <IoClose size={18} />
@@ -147,11 +152,8 @@ const Search = () => {
         )}
       </div>
 
-      {/* Suggestions Dropdown */}
       {isSearchPage && showSuggestions && (
         <div className='absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden'>
-
-          {/* Product suggestions */}
           {suggestions.length > 0 && (
             <div>
               <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 pt-3 pb-1'>Products</p>
@@ -171,12 +173,10 @@ const Search = () => {
             </div>
           )}
 
-          {/* Loading */}
           {loading && (
             <div className='px-4 py-3 text-xs text-slate-400 font-medium'>Searching...</div>
           )}
 
-          {/* Popular searches */}
           {!loading && suggestions.length === 0 && (
             <div className='p-4'>
               <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3'>Popular Searches</p>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Axios from "../utils/Axios"; // Utilizing your established instances
+import Axios from "../utils/Axios";
 import { toast } from "react-hot-toast";
 
 const BENEFITS = [
@@ -18,7 +18,6 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [isMember, setIsMember] = useState(isAlreadyMember);
 
-  // Savings calculator configuration parameters
   const ordersPerMonth = 12;
   const deliveryPerOrder = 20;
   const withoutPlus = ordersPerMonth * deliveryPerOrder;
@@ -28,47 +27,44 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
   const handleCheckoutPayment = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Razorpay configuration key from your backend storage layer
-      const keyRes = await Axios.get('/api/payment/razorpay-key');
+      const keyRes = await Axios({ url: '/api/payment/razorpay-key', method: 'get' });
       if (!keyRes.data.success) throw new Error("Could not acquire gateway keys.");
 
-      // 2. Generate Razorpay checkout transaction structure instance orderId
-      const orderRes = await Axios.post('/api/payment/subscribe-snapitplus', { planType: plan });
-      if (!orderRes.data.success) throw new Error("Order init engine pipeline failed.");
+      const orderRes = await Axios({ url: '/api/payment/subscribe-snapitplus', method: 'post', data: { planType: plan } });
+      if (!orderRes.data.success) throw new Error("Order creation failed.");
 
       const { id: razorpay_order_id, amount, currency } = orderRes.data.order;
 
-      // 3. Configure and construct native checkout sheet interface configuration
       const options = {
         key: keyRes.data.key,
-        amount: amount,
-        currency: currency,
+        amount,
+        currency,
         name: "Snapit Plus VIP",
         description: `Premium Grocery Access Pass — ${plan === 'yearly' ? '12 Months' : '30 Days'}`,
         image: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
         order_id: razorpay_order_id,
         handler: async function (response) {
           try {
-            // 4. Dispatch security confirmation tokens to backend verify loop
-            const verifyRes = await Axios.post('/api/payment/verify-subscription', {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              planType: plan
+            const verifyRes = await Axios({
+              url: '/api/payment/verify-subscription',
+              method: 'post',
+              data: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planType: plan
+              }
             });
-
             if (verifyRes.data.success) {
               toast.success("Welcome to Snapit Plus Club! 🎉");
               setIsMember(true);
               if (onSuccess) onSuccess();
             }
           } catch (verifyErr) {
-            toast.error("Signature processing or activation error.");
+            toast.error("Payment verification failed. Contact support.");
           }
         },
-        theme: {
-          color: "#1B5E20" // Aligning with your primary corporate green hue identity rules
-        }
+        theme: { color: "#1B5E20" }
       };
 
       const gatewaySheet = new window.Razorpay(options);
@@ -84,7 +80,6 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
 
   return (
     <div style={styles.page}>
-      {/* Hero */}
       <div style={styles.hero}>
         <div style={styles.heroGlow} />
         <p style={styles.heroIcon}>⭐</p>
@@ -97,20 +92,13 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
         )}
       </div>
 
-      {/* Plan Toggle */}
       {!isMember && (
         <div style={styles.planRow}>
-          <button
-            style={{ ...styles.planBtn, ...(plan === "monthly" ? styles.planActive : {}) }}
-            onClick={() => setPlan("monthly")}
-          >
+          <button style={{ ...styles.planBtn, ...(plan === "monthly" ? styles.planActive : {}) }} onClick={() => setPlan("monthly")}>
             <p style={styles.planName}>Monthly</p>
             <p style={styles.planPrice}>₹99 <span style={styles.planPer}>/mo</span></p>
           </button>
-          <button
-            style={{ ...styles.planBtn, ...(plan === "yearly" ? styles.planActive : {}) }}
-            onClick={() => setPlan("yearly")}
-          >
+          <button style={{ ...styles.planBtn, ...(plan === "yearly" ? styles.planActive : {}) }} onClick={() => setPlan("yearly")}>
             <div style={styles.saveBadge}>SAVE ₹290</div>
             <p style={styles.planName}>Yearly</p>
             <p style={styles.planPrice}>₹899 <span style={styles.planPer}>/yr</span></p>
@@ -119,7 +107,6 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
         </div>
       )}
 
-      {/* ROI Calculator */}
       {!isMember && (
         <div style={styles.roiCard}>
           <h3 style={styles.roiTitle}>💡 Is it Worth It for You?</h3>
@@ -143,7 +130,6 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
         </div>
       )}
 
-      {/* Benefits */}
       <div style={styles.benefitsCard}>
         <h3 style={styles.benefitsTitle}>Everything You Get</h3>
         {BENEFITS.map((b) => (
@@ -158,68 +144,41 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
         ))}
       </div>
 
-      {/* CTA */}
       {isMember ? (
         <div style={{ ...styles.ctaBtn, background: '#1B5E20', textAlign: 'center', cursor: 'default', boxShadow: 'none' }}>
           ✓ MEMBERSHIP ACTIVE — ENJOY FREE DELIVERY
         </div>
       ) : (
-        <button
-          style={{ ...styles.ctaBtn, opacity: loading ? 0.75 : 1 }}
-          onClick={handleCheckoutPayment}
-          disabled={loading}
-        >
-          {loading ? "PROCESSING..." : `ACTIVATE SNAPIT PLUS — VALUE FOR ₹${planPrice}`}
+        <button style={{ ...styles.ctaBtn, opacity: loading ? 0.75 : 1 }} onClick={handleCheckoutPayment} disabled={loading}>
+          {loading ? "PROCESSING..." : `ACTIVATE SNAPIT PLUS — ₹${planPrice}`}
         </button>
       )}
-      <p style={styles.ctaNote}>Secure conversion processed via standard Razorpay networks</p>
+      <p style={styles.ctaNote}>Secure payment via Razorpay</p>
     </div>
   );
 }
 
 const styles = {
   page: { background: "#f4f6f0", padding: 16, minHeight: "100vh" },
-  hero: {
-    background: "linear-gradient(160deg, #0D3B0F, #1B5E20)",
-    borderRadius: 20, padding: "28px 20px", textAlign: "center",
-    marginBottom: 16, position: "relative", overflow: "hidden",
-  },
-  heroGlow: {
-    position: "absolute", top: -40, right: -40,
-    width: 120, height: 120, borderRadius: "50%",
-    background: "rgba(102,187,106,0.2)",
-  },
+  hero: { background: "linear-gradient(160deg, #0D3B0F, #1B5E20)", borderRadius: 20, padding: "28px 20px", textAlign: "center", marginBottom: 16, position: "relative", overflow: "hidden" },
+  heroGlow: { position: "absolute", top: -40, right: -40, width: 120, height: 120, borderRadius: "50%", background: "rgba(102,187,106,0.2)" },
   heroIcon: { fontSize: 44, margin: "0 0 8px" },
   heroTitle: { fontSize: 34, fontWeight: 900, color: "#fff", margin: 0 },
   heroTagline: { fontSize: 14, color: "rgba(255,255,255,0.7)", margin: "8px 0 16px" },
-  heroBadge: {
-    display: "inline-block", background: "#66BB6A",
-    color: "#fff", fontWeight: 800, fontSize: 14,
-    padding: "6px 18px", borderRadius: 20,
-  },
+  heroBadge: { display: "inline-block", background: "#66BB6A", color: "#fff", fontWeight: 800, fontSize: 14, padding: "6px 18px", borderRadius: 20 },
   planRow: { display: "flex", gap: 12, marginBottom: 14 },
-  planBtn: {
-    flex: 1, background: "#fff", border: "2px solid #ddd",
-    borderRadius: 16, padding: "14px 12px", textAlign: "center",
-    cursor: "pointer", position: "relative", transition: "all 0.2s",
-  },
+  planBtn: { flex: 1, background: "#fff", border: "2px solid #ddd", borderRadius: 16, padding: "14px 12px", textAlign: "center", cursor: "pointer", position: "relative", transition: "all 0.2s" },
   planActive: { border: "2px solid #2E7D32", background: "#f1f8e9" },
   planName: { fontSize: 13, color: "#666", margin: 0 },
   planPrice: { fontSize: 22, fontWeight: 900, color: "#1a1a1a", margin: "4px 0 0" },
   planPer: { fontSize: 13, fontWeight: 400, color: "#888" },
   planMonthly: { fontSize: 11, color: "#2E7D32", fontWeight: 600, margin: "2px 0 0" },
-  saveBadge: {
-    position: "absolute", top: -10, left: "50%",
-    transform: "translateX(-50%)",
-    background: "#FF6F00", color: "#fff",
-    fontSize: 10, fontWeight: 800,
-    padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap",
-  },
+  saveBadge: { position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: "#FF6F00", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap" },
   roiCard: { background: "#fff", borderRadius: 16, padding: 16, marginBottom: 14 },
   roiTitle: { fontSize: 15, fontWeight: 700, color: "#1a1a1a", margin: "0 0 4px" },
   roiNote: { fontSize: 12, color: "#888", margin: "0 0 12px" },
   roiRows: {},
-  roiRow: { display: "flex", justifycontent: "space-between", fontSize: 13, color: "#555", padding: "5px 0" },
+  roiRow: { display: "flex", justifyContent: "space-between", fontSize: 13, color: "#555", padding: "5px 0" },
   roiCross: { fontWeight: 600, color: "#c62828", textDecoration: "line-through" },
   benefitsCard: { background: "#fff", borderRadius: 16, padding: 16, marginBottom: 16 },
   benefitsTitle: { fontSize: 15, fontWeight: 700, color: "#1a1a1a", marginBottom: 14 },
@@ -229,11 +188,6 @@ const styles = {
   bTitle: { fontSize: 13, fontWeight: 700, color: "#222", margin: 0 },
   bDesc: { fontSize: 11, color: "#888", margin: "2px 0 0" },
   bSavings: { fontSize: 10, color: "#2E7D32", fontWeight: 600, textAlign: "right", maxWidth: 80 },
-  ctaBtn: {
-    width: "100%", background: "linear-gradient(135deg, #1B5E20, #2E7D32)",
-    color: "#fff", border: "none", borderRadius: 14,
-    padding: "16px", fontWeight: 800, fontSize: 16,
-    cursor: "pointer", boxShadow: "0 4px 16px rgba(46,125,50,0.35)",
-  },
+  ctaBtn: { width: "100%", background: "linear-gradient(135deg, #1B5E20, #2E7D32)", color: "#fff", border: "none", borderRadius: 14, padding: "16px", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 4px 16px rgba(46,125,50,0.35)" },
   ctaNote: { textAlign: "center", fontSize: 12, color: "#888", margin: "10px 0 0" },
 };
