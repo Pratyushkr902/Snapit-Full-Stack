@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { FaRegEye, FaRegEyeSlash } from 'react-icons/fa6'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import Axios, { SummaryApi } from '../utils/Axios' // ✅ FIXED: Import from your core utilities folder
+import Axios from '../utils/Axios'
+import SummaryApi from '../common/SummaryApi' // ✅ FIXED: Import from your core utilities folder
 import AxiosToastError from '../utils/AxiosToastError'
 
 const ResetPassword = () => {
@@ -61,7 +62,7 @@ const ResetPassword = () => {
 
     try {
       const response = await Axios({
-        ...SummaryApi.resetpassword, // ✅ FIXED: Match the backend lower-case mapping name
+        ...SummaryApi.resetPassword, // ✅ FIXED: Match the backend lower-case mapping name
         data: data
       })
       
