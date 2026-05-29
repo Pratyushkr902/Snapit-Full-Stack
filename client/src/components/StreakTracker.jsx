@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Axios from "../common/Axios.js"; // adjust path if needed
+import Axios from "../utils/Axios.js"; // adjust path if needed
 
 const MILESTONES = [
   { days: 3,  reward: "₹20 off",                  icon: "🎁" },
