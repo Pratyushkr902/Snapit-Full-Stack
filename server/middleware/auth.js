@@ -4,13 +4,11 @@ const auth = async (request, response, next) => {
     try {
         let token = null
 
-        // 1. Extract Bearer token from Authorization header
         const authHeader = request?.headers?.authorization || request?.headers?.Authorization
         if (authHeader && authHeader.startsWith('Bearer ')) {
             token = authHeader.split(' ')[1]
         }
 
-        // 2. Cookie fallback lookups checking both casing schemas
         if (!token) {
             token = request.cookies?.accessToken || request.cookies?.accesstoken
         }
@@ -23,9 +21,7 @@ const auth = async (request, response, next) => {
             })
         }
 
-        // Verify using your environment string variables
-        const secretKey = process.env.SECRET_KEY_ACCESS_TOKEN || process.env.SECRET_KEY_JWT;
-        
+        const secretKey = process.env.SECRET_KEY_ACCESS_TOKEN
         const decode = jwt.verify(token, secretKey)
 
         if (!decode) {
@@ -36,8 +32,7 @@ const auth = async (request, response, next) => {
             })
         }
 
-        // ✅ FIX: Extract user ID safely supporting BOTH payload key schemas (_id and id)
-        request.userId = decode._id || decode.id;
+        request.userId = decode.id  // ✅ FIXED: was decode._id || decode.id
 
         if (!request.userId) {
             return response.status(401).json({
@@ -59,4 +54,4 @@ const auth = async (request, response, next) => {
     }
 }
 
-export default auth;
+export default auth

@@ -455,7 +455,6 @@ export async function resetpassword(request, response) {
         })
     }
 }
-
 export async function refreshToken(request, response) {
     try {
         const refreshToken = request.cookies.refreshToken || request?.headers?.authorization?.split(" ")[1]
@@ -479,7 +478,7 @@ export async function refreshToken(request, response) {
             });
         }
 
-        const userId = verifyToken?._id
+        const userId = verifyToken?.id  // ✅ FIXED: was verifyToken?._id
         const newAccessToken = await generatedAccessToken(userId)
 
         response.cookie('accessToken', newAccessToken, cookiesOption)
@@ -500,7 +499,6 @@ export async function refreshToken(request, response) {
         })
     }
 }
-
 export async function userDetails(request, response) {
     try {
         const userId = request.userId
