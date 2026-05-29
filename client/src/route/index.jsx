@@ -1,4 +1,4 @@
-import { createHashRouter } from "react-router-dom"; // Switched from createBrowserRouter to createHashRouter
+import { createHashRouter } from "react-router-dom";
 import App from "../App";
 import Home from "../pages/Home";
 import SearchPage from "../pages/Searchpage";
@@ -32,7 +32,11 @@ import ReferAndEarn from '../pages/ReferAndEarn';
 import WishlistPage from '../pages/WishlistPage';
 import TrackingPage from '../pages/TrackingPage';
 
-// Using Hash Router guarantees Capacitor Android packages resolve subpaths internally without reloads
+// ✅ NEW: Feature pages
+import SnapitPlus from '../components/SnapitPlus';
+import StreakTracker from '../components/StreakTracker';
+import MySubscriptions from '../pages/MySubscriptions';
+
 const router = createHashRouter([
     {
         path : "/",
@@ -81,6 +85,19 @@ const router = createHashRouter([
             {
                 path : "wishlist",
                 element : <WishlistPage />
+            },
+            // ✅ NEW ROUTES
+            {
+                path : "snapit-plus",
+                element : <SnapitPlus />
+            },
+            {
+                path : "streak",
+                element : <StreakTracker />
+            },
+            {
+                path : "subscriptions",
+                element : <MySubscriptions />
             },
             {
                 path : "rider-panel",

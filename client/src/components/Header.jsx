@@ -12,7 +12,6 @@ import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees';
 import { useGlobalContext } from '../provider/GlobalProvider';
 
 
-// FIXED: Receive openCart as a prop from App.jsx
 const Header = ({ openCart }) => {
     const [isMobile] = useMobile()
     const location = useLocation()
@@ -53,8 +52,6 @@ const Header = ({ openCart }) => {
     return (
         <header className='lg:h-24 lg:shadow-md sticky top-0 z-40 flex flex-col justify-center gap-1 bg-white shadow-sm'>
 
-            {/* FIXED: Removed DeliveryTimer ghost reference to fix white screen */}
-
             {
                 !(isSearchPage && isMobile) && (
                     <div className='container mx-auto flex flex-col lg:flex-row items-center px-3 py-2 lg:justify-between gap-2 lg:gap-4'>
@@ -88,7 +85,7 @@ const Header = ({ openCart }) => {
                                     </div>
                                 </div>
 
-                                {/* Mobile delivery info (shown when not logged in or timer removed) */}
+                                {/* Mobile delivery info */}
                                 <div className='flex lg:hidden flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
                                     <div className='flex items-center gap-1 leading-none'>
                                         <h2 className='font-black text-slate-900 text-[13px] uppercase tracking-tighter'>
@@ -123,17 +120,34 @@ const Header = ({ openCart }) => {
                         </div>
 
                         <div className='hidden lg:flex items-center gap-8 flex-shrink-0'>
-                            {
-                                user?._id && (
-                                    <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-all group shadow-sm active:scale-95">
-                                        <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
-                                        <div className='flex flex-col'>
-                                            <span className='font-black text-slate-700 text-[10px] uppercase leading-none'>Balance</span>
-                                            <span className='font-bold text-green-700 text-sm'>{DisplayPriceInRupees(user?.walletBalance || 0)}</span>
-                                        </div>
+
+                            {/* ✅ NEW: Snapit Plus & Streak quick links (desktop) */}
+                            {user?._id && (
+                                <div className='flex items-center gap-2'>
+                                    <Link
+                                        to="/snapit-plus"
+                                        className='flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 hover:bg-green-100 transition-all text-sm font-bold text-green-800 active:scale-95'
+                                    >
+                                        ⭐ Plus
                                     </Link>
-                                )
-                            }
+                                    <Link
+                                        to="/streak"
+                                        className='flex items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100 hover:bg-orange-100 transition-all text-sm font-bold text-orange-700 active:scale-95'
+                                    >
+                                        🔥 Streak
+                                    </Link>
+                                </div>
+                            )}
+
+                            {user?._id && (
+                                <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-all group shadow-sm active:scale-95">
+                                    <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
+                                    <div className='flex flex-col'>
+                                        <span className='font-black text-slate-700 text-[10px] uppercase leading-none'>Balance</span>
+                                        <span className='font-bold text-green-700 text-sm'>{DisplayPriceInRupees(user?.walletBalance || 0)}</span>
+                                    </div>
+                                </Link>
+                            )}
 
                             {
                                 user?._id ? (

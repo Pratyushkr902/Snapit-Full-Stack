@@ -91,6 +91,32 @@ const UserMenu = ({close}) => {
               <span>❤️</span> My Wishlist
             </Link>
             <Link onClick={handleClose} to={"/dashboard/address"} className='px-2 hover:bg-orange-200 py-1'>Save Address</Link>
+
+            {/* ✅ NEW FEATURE LINKS */}
+            <Divider/>
+            <Link onClick={handleClose} to={"/snapit-plus"} className='px-2 hover:bg-green-50 py-1 flex items-center gap-2 font-semibold text-green-800'>
+              <span>⭐</span>
+              <div>
+                <p className='leading-none'>Snapit Plus</p>
+                <p className='text-[10px] text-gray-400 font-normal'>Membership &amp; benefits</p>
+              </div>
+            </Link>
+            <Link onClick={handleClose} to={"/streak"} className='px-2 hover:bg-orange-50 py-1 flex items-center gap-2 font-semibold text-orange-700'>
+              <span>🔥</span>
+              <div>
+                <p className='leading-none'>Daily Streak</p>
+                <p className='text-[10px] text-gray-400 font-normal'>Order daily, earn rewards</p>
+              </div>
+            </Link>
+            <Link onClick={handleClose} to={"/subscriptions"} className='px-2 hover:bg-blue-50 py-1 flex items-center gap-2 font-semibold text-blue-700'>
+              <span>📦</span>
+              <div>
+                <p className='leading-none'>My Subscriptions</p>
+                <p className='text-[10px] text-gray-400 font-normal'>Manage recurring orders</p>
+              </div>
+            </Link>
+            <Divider/>
+
             <button onClick={handleLogout} className='text-left px-2 hover:bg-orange-200 py-1'>Log Out</button>
 
         </div>

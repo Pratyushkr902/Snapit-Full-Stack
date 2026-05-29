@@ -1,41 +1,42 @@
-import React, { useEffect } from 'react'
-import UserMenu from '../components/UserMenu'
-import { IoClose } from "react-icons/io5";
-import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+// ✅ Paste these Link items inside your UserMenu component
+// alongside your existing links like My Orders, Address, Wallet etc.
 
-const UserMenuMobile = () => {
-  const user = useSelector(state => state.user)
-  const navigate = useNavigate()
+import { Link } from 'react-router-dom'
 
-  useEffect(() => {
-    // FAST CHECK: Check localStorage immediately
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken')
-    
-    if (!token) {
-      // Only redirect if there is absolutely no token
-      navigate("/login")
-    }
-  }, [navigate])
+// --- ADD THESE 3 ITEMS ---
 
-  // If user state is still loading but token exists, we still show the menu
-  // rather than redirecting to login.
-  return (
-    <section className='bg-white h-full w-full py-2'>
-        <button 
-          onClick={() => window.history.back()} 
-          className='text-neutral-800 block w-fit ml-auto p-4 active:scale-95 transition-transform'
-        >
-          <IoClose size={25}/>
-        </button>
-        
-        <div className='container mx-auto px-3 pb-8'>
-           {/* If user is still loading, you could show a small spinner here, 
-               but UserMenu usually handles its own internal state */}
-           <UserMenu />
-        </div>
-    </section>
-  )
-}
+<Link
+    to="/snapit-plus"
+    onClick={close}
+    className='flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-green-50 transition-colors group'
+>
+    <span className='text-xl'>⭐</span>
+    <div>
+        <p className='font-semibold text-gray-800 text-sm'>Snapit Plus</p>
+        <p className='text-xs text-gray-400'>Membership & benefits</p>
+    </div>
+</Link>
 
-export default UserMenuMobile
+<Link
+    to="/streak"
+    onClick={close}
+    className='flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-orange-50 transition-colors group'
+>
+    <span className='text-xl'>🔥</span>
+    <div>
+        <p className='font-semibold text-gray-800 text-sm'>Daily Streak</p>
+        <p className='text-xs text-gray-400'>Order daily, earn rewards</p>
+    </div>
+</Link>
+
+<Link
+    to="/subscriptions"
+    onClick={close}
+    className='flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition-colors group'
+>
+    <span className='text-xl'>📦</span>
+    <div>
+        <p className='font-semibold text-gray-800 text-sm'>My Subscriptions</p>
+        <p className='text-xs text-gray-400'>Manage recurring orders</p>
+    </div>
+</Link>
