@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
- "scripts": {
+  "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
     "build": "npm install && cd ../client && npm install && npm run build && cd .."
@@ -29,6 +29,7 @@
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.10",
     "razorpay": "^2.9.6",
     "resend": "^6.9.3",
     "socket.io": "^4.8.3",
