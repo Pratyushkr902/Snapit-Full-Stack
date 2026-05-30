@@ -10,11 +10,15 @@ const SellerDashboard = () => {
     const [earningFilter, setEarningFilter] = useState('today'); // 'today' | 'week' | 'month' | 'all'
 
     const fetchNewOrders = async () => {
-        const response = await Axios({ ...SummaryApi.getOrderItems });
-        if (response.data.success) {
-            const data = Array.isArray(response.data.data) ? response.data.data : []
-            setAllOrders(data)
-            setOrders(data.filter(o => o.seller_status !== "Ready for Pickup"))
+        try {
+            const response = await Axios({ ...SummaryApi.getOrderItems });
+            if (response.data.success) {
+                const data = Array.isArray(response.data.data) ? response.data.data : [];
+                setAllOrders(data);
+                setOrders(data.filter(o => o.seller_status !== 'Ready for Pickup'));
+            }
+        } catch (error) {
+            toast.error('Failed to fetch orders');
         }
     };
 
@@ -22,10 +26,10 @@ const SellerDashboard = () => {
         const response = await Axios({
             url: '/api/order/update-seller-status',
             method: 'post',
-            data: { orderId, sellerStatus: "Ready for Pickup" }
+            data: { orderId, sellerStatus: 'Ready for Pickup' }
         });
         if (response.data.success) {
-            toast.success("Rider Notified! Order ready for pickup.");
+            toast.success('Rider Notified! Order ready for pickup.');
             fetchNewOrders();
         }
     };
@@ -33,48 +37,48 @@ const SellerDashboard = () => {
     useEffect(() => { fetchNewOrders(); }, []);
 
     // ── Earnings Calculations ─────────────────────────────────
-    const now = new Date()
+    const now = new Date();
 
     const filterByDate = (ordersList) => {
         return ordersList.filter(o => {
-            if (o.delivery_status !== 'Delivered') return false
-            const created = new Date(o.createdAt)
+            if (o.delivery_status !== 'Delivered') return false;
+            const created = new Date(o.createdAt);
             if (earningFilter === 'today') {
-                return created.toDateString() === now.toDateString()
+                return created.toDateString() === now.toDateString();
             }
             if (earningFilter === 'week') {
-                const weekAgo = new Date(now)
-                weekAgo.setDate(now.getDate() - 7)
-                return created >= weekAgo
+                const weekAgo = new Date(now);
+                weekAgo.setDate(now.getDate() - 7);
+                return created >= weekAgo;
             }
             if (earningFilter === 'month') {
                 return (
                     created.getMonth() === now.getMonth() &&
                     created.getFullYear() === now.getFullYear()
-                )
+                );
             }
-            return true // 'all'
-        })
-    }
+            return true; // 'all'
+        });
+    };
 
-    const filteredEarnings = filterByDate(allOrders)
-    const totalRevenue = filteredEarnings.reduce((acc, o) => acc + (Number(o.totalAmt) || 0), 0)
-    const totalOrders = filteredEarnings.length
-    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0
-    const totalDeliveryFees = filteredEarnings.reduce((acc, o) => acc + (Number(o.delivery_fee) || 0), 0)
-    const netRevenue = totalRevenue - totalDeliveryFees
+    const filteredEarnings = filterByDate(allOrders);
+    const totalRevenue = filteredEarnings.reduce((acc, o) => acc + (Number(o.totalAmt) || 0), 0);
+    const totalOrders = filteredEarnings.length;
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+    const totalDeliveryFees = filteredEarnings.reduce((acc, o) => acc + (Number(o.delivery_fee) || 0), 0);
+    const netRevenue = totalRevenue - totalDeliveryFees;
 
     // Group by date for earnings history
     const earningsByDate = filteredEarnings.reduce((acc, o) => {
-        const date = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-        if (!acc[date]) acc[date] = { total: 0, count: 0 }
-        acc[date].total += Number(o.totalAmt) || 0
-        acc[date].count += 1
-        return acc
-    }, {})
+        const date = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        if (!acc[date]) acc[date] = { total: 0, count: 0 };
+        acc[date].total += Number(o.totalAmt) || 0;
+        acc[date].count += 1;
+        return acc;
+    }, {});
 
-    const pendingOrders = orders.filter(o => o.delivery_status === 'Pending').length
-    const packingOrders = orders.filter(o => o.delivery_status === 'Packing').length
+    const pendingOrders = orders.filter(o => o.delivery_status === 'Pending').length;
+    const packingOrders = orders.filter(o => o.delivery_status === 'Packing').length;
 
     return (
         <div className='p-4 bg-orange-50 min-h-screen max-w-4xl mx-auto'>
@@ -161,7 +165,7 @@ const SellerDashboard = () => {
                 <div className='flex flex-col gap-4'>
 
                     {/* Filter Pills */}
-                    <div className='flex gap-2'>
+                    <div className='flex gap-2 flex-wrap'>
                         {[
                             { key: 'today', label: 'Today' },
                             { key: 'week', label: 'This Week' },

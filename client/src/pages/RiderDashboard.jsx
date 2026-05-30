@@ -7,7 +7,8 @@ import { MdPayment } from "react-icons/md";
 import { io } from 'socket.io-client';
 import CollectPayment from '../components/CollectPayment';
 
-const socket = io(import.meta.env.VITE_API_URL || "https://snapit-full-stack-2.onrender.com");
+// ✅ FIXED: removed hardcoded old URL fallback
+const socket = io(import.meta.env.VITE_API_URL);
 
 const RiderDashboard = () => {
     const [orders, setOrders] = useState([]);
@@ -15,6 +16,8 @@ const RiderDashboard = () => {
     const [filter, setFilter] = useState('Confirmed');
     const [isTracking, setIsTracking] = useState(false);
     const [paymentOrder, setPaymentOrder] = useState(null);
+    const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'earnings'
+    const [earningFilter, setEarningFilter] = useState('today'); // 'today' | 'week' | 'month' | 'all'
 
     const fetchRiderOrders = async () => {
         try {
@@ -55,8 +58,8 @@ const RiderDashboard = () => {
                 data: { orderId: order.orderId, status: 'Out for Delivery' }
             });
             if (response.data.success) {
-                toast.success('Order picked up — now Out for Delivery!')
-                setIsTracking(true)
+                toast.success('Order picked up — now Out for Delivery!');
+                setIsTracking(true);
                 fetchRiderOrders();
             }
         } catch (error) {
@@ -70,6 +73,39 @@ const RiderDashboard = () => {
         return () => clearInterval(interval);
     }, []);
 
+    // ── Earnings Calculations ─────────────────────────────────
+    const now = new Date();
+
+    const filterByDate = (list) => list.filter(o => {
+        const created = new Date(o.createdAt);
+        if (earningFilter === 'today') return created.toDateString() === now.toDateString();
+        if (earningFilter === 'week') {
+            const weekAgo = new Date(now);
+            weekAgo.setDate(now.getDate() - 7);
+            return created >= weekAgo;
+        }
+        if (earningFilter === 'month') {
+            return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+        }
+        return true; // 'all'
+    });
+
+    const deliveredOrders = orders.filter(o => o.delivery_status === 'Delivered');
+    const filteredEarnings = filterByDate(deliveredOrders);
+    const totalEarned = filteredEarnings.reduce((acc, o) => acc + (Number(o.delivery_fee) || 0), 0);
+    const totalDelivered = filteredEarnings.length;
+    const avgFee = totalDelivered > 0 ? Math.round(totalEarned / totalDelivered) : 0;
+
+    // Group by date
+    const earningsByDate = filteredEarnings.reduce((acc, o) => {
+        const date = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        if (!acc[date]) acc[date] = { total: 0, count: 0 };
+        acc[date].total += Number(o.delivery_fee) || 0;
+        acc[date].count += 1;
+        return acc;
+    }, {});
+
+    // ── Orders Tab Filters ────────────────────────────────────
     const filteredOrders = orders.filter(o => {
         if (filter === 'Delivered') return o.delivery_status === 'Delivered';
         if (o.delivery_status === 'Delivered' || o.delivery_status === 'Cancelled') return false;
@@ -91,7 +127,8 @@ const RiderDashboard = () => {
     return (
         <div className='container mx-auto p-4 min-h-screen bg-slate-50'>
 
-            <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4'>
+            {/* Header */}
+            <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4'>
                 <div>
                     <h1 className='text-3xl font-black text-slate-900'>RIDER COMMAND</h1>
                     <p className='text-slate-500 font-bold text-xs uppercase tracking-widest'>Snapit Logistics - Bihar</p>
@@ -110,132 +147,241 @@ const RiderDashboard = () => {
                 </div>
             </div>
 
-            <div className='flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide'>
-                {['All', 'Confirmed', 'Out for Delivery', 'Delivered'].map(t => (
-                    <button
-                        key={t}
-                        onClick={() => setFilter(t)}
-                        className={`px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filter === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200'}`}
-                    >
-                        {t === 'Confirmed' ? 'Ready for Pickup' : t}
-                    </button>
-                ))}
+            {/* Tabs */}
+            <div className='flex gap-2 mb-6 bg-white rounded-2xl p-1 shadow-sm border border-slate-100'>
+                <button
+                    onClick={() => setActiveTab('orders')}
+                    className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all ${activeTab === 'orders' ? 'bg-blue-600 text-white shadow' : 'text-slate-500'}`}
+                >
+                    🛵 Orders
+                </button>
+                <button
+                    onClick={() => setActiveTab('earnings')}
+                    className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all ${activeTab === 'earnings' ? 'bg-green-600 text-white shadow' : 'text-slate-500'}`}
+                >
+                    💰 Earnings
+                </button>
             </div>
 
-            <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
-                {filteredOrders.length === 0 ? (
-                    <div className='col-span-full py-20 text-center bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200'>
-                        <p className='text-slate-400 font-bold italic'>No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders.</p>
-                        <button onClick={fetchRiderOrders} className='mt-2 text-xs text-blue-600 font-bold underline'>Refresh</button>
+            {/* ── ORDERS TAB ── */}
+            {activeTab === 'orders' && (
+                <>
+                    <div className='flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide'>
+                        {['All', 'Confirmed', 'Out for Delivery', 'Delivered'].map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setFilter(t)}
+                                className={`px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${filter === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200'}`}
+                            >
+                                {t === 'Confirmed' ? 'Ready for Pickup' : t}
+                            </button>
+                        ))}
                     </div>
-                ) : (
-                    filteredOrders.map((order) => (
-                        <div key={order._id} className='bg-white shadow-sm rounded-[2.5rem] p-6 border border-slate-100 flex flex-col hover:shadow-md transition-shadow'>
 
-                            <div className='flex justify-between items-start mb-4'>
-                                <div className='flex-1'>
-                                    <span className='text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase'>
-                                        {order.orderId}
-                                    </span>
-                                    <h2 className='text-sm font-bold text-slate-800 mt-3 leading-tight'>
-                                        {order.delivery_address?.address_line || order.address_details?.address_line || "📍 Address not provided"}
-                                    </h2>
-                                    <p className='text-xs text-slate-500 font-medium mt-1'>
-                                        {order.userId?.name || order.address_details?.name || "Snapit User"}
-                                    </p>
-                                </div>
-                                <div className='flex gap-2'>
-                                    <a
-                                        href={`tel:${order.delivery_address?.mobile || order.userId?.mobile || order.address_details?.mobile}`}
-                                        className='p-3 bg-green-50 text-green-600 rounded-2xl hover:bg-green-600 hover:text-white transition-all'
-                                    >
-                                        <FaPhone size={18} />
-                                    </a>
-                                    <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`}
-                                        target="_blank" rel="noreferrer"
-                                        className='p-3 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all'
-                                    >
-                                        <FaMapMarkedAlt size={18} />
-                                    </a>
-                                </div>
+                    <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
+                        {filteredOrders.length === 0 ? (
+                            <div className='col-span-full py-20 text-center bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200'>
+                                <p className='text-slate-400 font-bold italic'>No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders.</p>
+                                <button onClick={fetchRiderOrders} className='mt-2 text-xs text-blue-600 font-bold underline'>Refresh</button>
                             </div>
+                        ) : (
+                            filteredOrders.map((order) => (
+                                <div key={order._id} className='bg-white shadow-sm rounded-[2.5rem] p-6 border border-slate-100 flex flex-col hover:shadow-md transition-shadow'>
 
-                            <div className='bg-orange-50 rounded-2xl p-3 mb-3 border border-orange-100'>
-                                <p className='text-[10px] font-black text-orange-600 uppercase flex items-center gap-1 mb-1'>
-                                    <FaStore /> Pickup Point
-                                </p>
-                                <p className='text-xs font-bold text-slate-700'>
-                                    {order.store_details?.name || "Snapit Main Store - Paliganj"}
-                                </p>
+                                    <div className='flex justify-between items-start mb-4'>
+                                        <div className='flex-1'>
+                                            <span className='text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase'>
+                                                {order.orderId}
+                                            </span>
+                                            <h2 className='text-sm font-bold text-slate-800 mt-3 leading-tight'>
+                                                {order.delivery_address?.address_line || order.address_details?.address_line || "📍 Address not provided"}
+                                            </h2>
+                                            <p className='text-xs text-slate-500 font-medium mt-1'>
+                                                {order.userId?.name || order.address_details?.name || "Snapit User"}
+                                            </p>
+                                        </div>
+                                        <div className='flex gap-2'>
+                                            <a
+                                                href={`tel:${order.delivery_address?.mobile || order.userId?.mobile || order.address_details?.mobile}`}
+                                                className='p-3 bg-green-50 text-green-600 rounded-2xl hover:bg-green-600 hover:text-white transition-all'
+                                            >
+                                                <FaPhone size={18} />
+                                            </a>
+                                            <a
+                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`}
+                                                target="_blank" rel="noreferrer"
+                                                className='p-3 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all'
+                                            >
+                                                <FaMapMarkedAlt size={18} />
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <div className='bg-orange-50 rounded-2xl p-3 mb-3 border border-orange-100'>
+                                        <p className='text-[10px] font-black text-orange-600 uppercase flex items-center gap-1 mb-1'>
+                                            <FaStore /> Pickup Point
+                                        </p>
+                                        <p className='text-xs font-bold text-slate-700'>
+                                            {order.store_details?.name || "Snapit Main Store - Paliganj"}
+                                        </p>
+                                    </div>
+
+                                    <div className='bg-slate-50 rounded-2xl p-3 mb-4'>
+                                        <p className='text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2'>
+                                            <FaShoppingBasket /> Items
+                                        </p>
+                                        {order.cartItems?.map((item, i) => (
+                                            <div key={i} className='flex justify-between text-xs py-1 font-bold text-slate-700'>
+                                                <span className='line-clamp-1 mr-2'>{item.productId?.name || item.name}</span>
+                                                <span className='text-blue-600'>×{item.quantity}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className='flex justify-between items-end mb-4 mt-auto'>
+                                        <div>
+                                            <p className='text-[10px] font-black text-slate-400 uppercase'>Collect</p>
+                                            <p className='text-2xl font-black text-slate-900'>₹{order.totalAmt}</p>
+                                            <p className='text-[10px] text-slate-400 mt-0.5'>
+                                                {order.payment_status === 'CASH ON DELIVERY' ? '💵 Cash' : '✅ Paid Online'}
+                                            </p>
+                                        </div>
+                                        <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${
+                                            order.delivery_status === 'Confirmed' ? 'bg-orange-100 text-orange-600' :
+                                            order.delivery_status === 'Out for Delivery' ? 'bg-blue-100 text-blue-600' :
+                                            'bg-green-100 text-green-600'
+                                        }`}>
+                                            {order.delivery_status === 'Confirmed' ? 'Ready' : order.delivery_status}
+                                        </div>
+                                    </div>
+
+                                    {order.delivery_status === 'Confirmed' && (
+                                        <button
+                                            onClick={() => handlePickup(order)}
+                                            className='w-full py-4 rounded-2xl font-black text-white bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2 active:scale-95'
+                                        >
+                                            <FaCheckCircle /> PICKUP FROM STORE
+                                        </button>
+                                    )}
+
+                                    {order.delivery_status === 'Out for Delivery' && (
+                                        <button
+                                            onClick={() => setPaymentOrder(order)}
+                                            className='w-full py-4 rounded-2xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center justify-center gap-2 active:scale-95'
+                                        >
+                                            <MdPayment size={20} /> COLLECT PAYMENT
+                                        </button>
+                                    )}
+
+                                    {order.delivery_status === 'Delivered' && (
+                                        <div className='w-full py-3 rounded-2xl bg-green-50 border-2 border-green-200 text-green-700 font-black text-sm text-center'>
+                                            ✅ Delivered
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </>
+            )}
+
+            {/* ── EARNINGS TAB ── */}
+            {activeTab === 'earnings' && (
+                <div className='flex flex-col gap-4'>
+
+                    {/* Filter Pills */}
+                    <div className='flex gap-2 flex-wrap'>
+                        {[
+                            { key: 'today', label: 'Today' },
+                            { key: 'week', label: 'This Week' },
+                            { key: 'month', label: 'This Month' },
+                            { key: 'all', label: 'All Time' },
+                        ].map(f => (
+                            <button
+                                key={f.key}
+                                onClick={() => setEarningFilter(f.key)}
+                                className={`px-4 py-2 rounded-full text-xs font-black transition-all border ${earningFilter === f.key ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-200'}`}
+                            >
+                                {f.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className='grid grid-cols-2 gap-3'>
+                        <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
+                            <p className='text-[10px] font-black text-slate-400 uppercase'>Total Earned</p>
+                            <p className='text-2xl font-black text-green-600 mt-1'>₹{totalEarned.toLocaleString()}</p>
+                        </div>
+                        <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
+                            <p className='text-[10px] font-black text-slate-400 uppercase'>Deliveries Done</p>
+                            <p className='text-2xl font-black text-slate-900 mt-1'>{totalDelivered}</p>
+                        </div>
+                        <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100 col-span-2'>
+                            <p className='text-[10px] font-black text-slate-400 uppercase'>Avg Delivery Fee</p>
+                            <p className='text-2xl font-black text-blue-600 mt-1'>₹{avgFee}</p>
+                        </div>
+                    </div>
+
+                    {/* Daily Breakdown */}
+                    <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
+                        <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-3'>Daily Breakdown</h3>
+                        {Object.keys(earningsByDate).length === 0 ? (
+                            <p className='text-slate-400 text-sm text-center py-4'>No deliveries in this period.</p>
+                        ) : (
+                            <div className='flex flex-col gap-2'>
+                                {Object.entries(earningsByDate)
+                                    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+                                    .map(([date, data]) => (
+                                        <div key={date} className='flex justify-between items-center py-2 border-b border-slate-50 last:border-0'>
+                                            <div>
+                                                <p className='font-bold text-slate-700 text-sm'>{date}</p>
+                                                <p className='text-[10px] text-slate-400'>{data.count} delivery{data.count > 1 ? 's' : ''}</p>
+                                            </div>
+                                            <p className='font-black text-green-600'>₹{data.total.toLocaleString()}</p>
+                                        </div>
+                                    ))}
                             </div>
+                        )}
+                    </div>
 
-                            <div className='bg-slate-50 rounded-2xl p-3 mb-4'>
-                                <p className='text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2'>
-                                    <FaShoppingBasket /> Items
-                                </p>
-                                {order.cartItems?.map((item, i) => (
-                                    <div key={i} className='flex justify-between text-xs py-1 font-bold text-slate-700'>
-                                        <span className='line-clamp-1 mr-2'>{item.productId?.name || item.name}</span>
-                                        <span className='text-blue-600'>×{item.quantity}</span>
+                    {/* Recent Delivered Orders */}
+                    <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
+                        <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-3'>Recent Deliveries</h3>
+                        {filteredEarnings.length === 0 ? (
+                            <p className='text-slate-400 text-sm text-center py-4'>No deliveries yet.</p>
+                        ) : (
+                            <div className='flex flex-col gap-2'>
+                                {filteredEarnings.slice(0, 10).map(order => (
+                                    <div key={order._id} className='flex justify-between items-center py-2 border-b border-slate-50 last:border-0'>
+                                        <div>
+                                            <p className='font-bold text-slate-700 text-xs font-mono'>{order.orderId}</p>
+                                            <p className='text-[10px] text-slate-400 mt-0.5'>
+                                                {order.delivery_address?.address_line?.slice(0, 30) || 'Address on file'}
+                                            </p>
+                                        </div>
+                                        <div className='text-right'>
+                                            <p className='font-black text-green-600'>₹{order.delivery_fee || 0}</p>
+                                            <p className='text-[10px] text-slate-400'>{new Date(order.createdAt).toLocaleDateString()}</p>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
+                        )}
+                    </div>
 
-                            <div className='flex justify-between items-end mb-4 mt-auto'>
-                                <div>
-                                    <p className='text-[10px] font-black text-slate-400 uppercase'>Collect</p>
-                                    <p className='text-2xl font-black text-slate-900'>₹{order.totalAmt}</p>
-                                    <p className='text-[10px] text-slate-400 mt-0.5'>
-                                        {order.payment_status === 'CASH ON DELIVERY' ? '💵 Cash' : '✅ Paid Online'}
-                                    </p>
-                                </div>
-                                <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${
-                                    order.delivery_status === 'Confirmed' ? 'bg-orange-100 text-orange-600' :
-                                    order.delivery_status === 'Out for Delivery' ? 'bg-blue-100 text-blue-600' :
-                                    'bg-green-100 text-green-600'
-                                }`}>
-                                    {order.delivery_status === 'Confirmed' ? 'Ready' : order.delivery_status}
-                                </div>
-                            </div>
+                </div>
+            )}
 
-                            {order.delivery_status === 'Confirmed' && (
-                                <button
-                                    onClick={() => handlePickup(order)}
-                                    className='w-full py-4 rounded-2xl font-black text-white bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2 active:scale-95'
-                                >
-                                    <FaCheckCircle /> PICKUP FROM STORE
-                                </button>
-                            )}
-
-                            {order.delivery_status === 'Out for Delivery' && (
-                                <button
-                                    onClick={() => setPaymentOrder(order)}
-                                    className='w-full py-4 rounded-2xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center justify-center gap-2 active:scale-95'
-                                >
-                                    <MdPayment size={20} /> COLLECT PAYMENT
-                                </button>
-                            )}
-
-                            {order.delivery_status === 'Delivered' && (
-                                <div className='w-full py-3 rounded-2xl bg-green-50 border-2 border-green-200 text-green-700 font-black text-sm text-center'>
-                                    ✅ Delivered
-                                </div>
-                            )}
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* CollectPayment Modal — onClose added */}
+            {/* CollectPayment Modal */}
             {paymentOrder && (
                 <CollectPayment
                     order={paymentOrder}
                     onClose={() => setPaymentOrder(null)}
                     onSuccess={() => {
-                        setPaymentOrder(null)
-                        setIsTracking(false)
-                        fetchRiderOrders()
+                        setPaymentOrder(null);
+                        setIsTracking(false);
+                        fetchRiderOrders();
                     }}
                 />
             )}
