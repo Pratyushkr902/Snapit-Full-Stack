@@ -5,7 +5,7 @@ import UserModel from '../models/user.model.js'
 
 const razorpay = new Razorpay({
     key_id:     process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
+   key_secret: process.env.RAZORPAY_SECRET_KEY
 })
 
 // GET /api/payment/razorpay-key
@@ -44,7 +44,7 @@ export const verifyPayment = async (req, res) => {
         // Verify signature
         const sign = razorpay_order_id + '|' + razorpay_payment_id
         const expected = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
             .update(sign)
             .digest('hex')
 
@@ -96,7 +96,7 @@ export const verifySubscription = async (req, res) => {
 
         const sign = razorpay_order_id + '|' + razorpay_payment_id;
         const expected = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
             .update(sign)
             .digest('hex');
 
