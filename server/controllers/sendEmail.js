@@ -1,28 +1,24 @@
-import nodemailer from 'nodemailer';
+import * as Brevo from '@getbrevo/brevo';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+const apiInstance = new Brevo.TransactionalEmailsApi();
+apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
 
 const sendEmail = async ({ sendTo, subject, html }) => {
     try {
-        const info = await transporter.sendMail({
-            from: `Snapit <${process.env.EMAIL_USER}>`,
-            to: sendTo,
-            subject: subject,
-            html: html,
-        });
-        console.log("✅ Email sent:", info.messageId);
-        return info;
+        const sendSmtpEmail = new Brevo.SendSmtpEmail();
+        sendSmtpEmail.to = [{ email: sendTo }];
+        sendSmtpEmail.sender = { name: 'Snapit', email: 'snapitxpress@gmail.com' };
+        sendSmtpEmail.subject = subject;
+        sendSmtpEmail.htmlContent = html;
+
+        const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log('✅ Email sent:', result.messageId);
+        return result;
     } catch (error) {
-        console.error("🚨 Email failed:", error.message);
-        return null; // don't throw — registration/OTP succeeds even if email fails
+        console.error('🚨 Email failed:', error.message);
+        return null; // don't throw — registration succeeds even if email fails
     }
 }
 
