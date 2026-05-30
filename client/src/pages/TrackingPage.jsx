@@ -7,7 +7,7 @@ import { socket } from '../utils/socket'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
-import { FaMotorcycle, FaStore, FaHome, FaPhone } from 'react-icons/fa'
+import { FaPhone } from 'react-icons/fa'
 import { IoArrowBack } from 'react-icons/io5'
 
 // Fix Leaflet default marker icons
@@ -18,7 +18,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 })
 
-// Custom rider icon
+// Custom icons
 const riderIcon = new L.DivIcon({
   html: `<div style="background:#16a34a;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:18px;">🏍️</div>`,
   className: '',
@@ -41,15 +41,35 @@ const STATUS_STEPS = [
   { key: 'Delivered', label: 'Delivered', icon: '🎉' },
 ]
 
-// Map adjustment controller to smoothly follow the rider coordinate changes
+// 👇 Your shop's fixed coordinates
+const SHOP_LAT = 25.2921
+const SHOP_LNG = 84.8170
+
+// Haversine formula — straight line distance in km
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// 3 min/km + 5 min prep time
+function getEstimatedMinutes(lat1, lng1, lat2, lng2) {
+  const distance = getDistanceKm(lat1, lng1, lat2, lng2)
+  return Math.round(distance * 3 + 5)
+}
+
 function ChangeMapCenter({ center }) {
-  const map = useMap();
+  const map = useMap()
   useEffect(() => {
-    if (center) {
-      map.panTo(center);
-    }
-  }, [center, map]);
-  return null;
+    if (center) map.panTo(center)
+  }, [center, map])
+  return null
 }
 
 const TrackingPage = () => {
@@ -59,11 +79,12 @@ const TrackingPage = () => {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [riderPos, setRiderPos] = useState(null)
+  const [eta, setEta] = useState(null)           // in minutes (number)
+  const [etaSource, setEtaSource] = useState('') // 'rider' | 'store'
 
-  // Default store location (Paliganj)
-  const storeLocation = [25.2921, 84.8170]
+  const storeLocation = [SHOP_LAT, SHOP_LNG]
 
-  // Fetch order details
+  // ── Fetch order ──────────────────────────────────────────────
   const fetchOrder = async () => {
     try {
       const response = await Axios({ ...SummaryApi.getOrderItems })
@@ -80,52 +101,80 @@ const TrackingPage = () => {
     }
   }
 
-  // Socket for live tracking
+  // ── Initial ETA (shop → customer) once order loads ───────────
+  useEffect(() => {
+    if (!order) return
+    if (order.delivery_status === 'Delivered') {
+      setEta(null)
+      return
+    }
+    // Only calculate if we have customer coordinates saved on the order
+    if (order?.deliveryLocation?.lat && order?.deliveryLocation?.lng) {
+      const mins = getEstimatedMinutes(
+        SHOP_LAT, SHOP_LNG,
+        order.deliveryLocation.lat,
+        order.deliveryLocation.lng
+      )
+      setEta(mins)
+      setEtaSource('store')
+    }
+  }, [order])
+
+  // ── Socket: live rider position → recalculate ETA ────────────
   useEffect(() => {
     if (!orderId) return
     socket.emit('join_order', orderId)
 
     const handleRiderMovement = (data) => {
-      // Your backend structure sends properties inside payload as latitude/longitude
-      if (data && data.latitude && data.longitude) {
+      if (data?.latitude && data?.longitude) {
         setRiderPos([data.latitude, data.longitude])
+
+        // Recalculate ETA from rider's live position → customer
+        if (order?.deliveryLocation?.lat && order?.deliveryLocation?.lng) {
+          const mins = getEstimatedMinutes(
+            data.latitude, data.longitude,
+            order.deliveryLocation.lat,
+            order.deliveryLocation.lng
+          )
+          setEta(mins)
+          setEtaSource('rider')
+        }
       }
     }
 
-    // ✅ FIXED EVENT NAME: Changed from 'rider_moved' to 'receive_location'
     socket.on('receive_location', handleRiderMovement)
     socket.on('connect', () => socket.emit('join_order', orderId))
 
     return () => {
-      // ✅ CLEANUP ALIGNED
       socket.off('receive_location', handleRiderMovement)
       socket.off('connect')
     }
-  }, [orderId])
+  }, [orderId, order])
 
+  // ── Poll order status every 15s ───────────────────────────────
   useEffect(() => {
     fetchOrder()
     const interval = setInterval(fetchOrder, 15000)
     return () => clearInterval(interval)
   }, [orderId])
 
+  // ── Helpers ───────────────────────────────────────────────────
   const getCurrentStepIndex = () => {
     if (!order) return 0
     const idx = STATUS_STEPS.findIndex(s => s.key === order.delivery_status)
     return idx === -1 ? 0 : idx
   }
 
-  const getETA = () => {
-    const status = order?.delivery_status
-    if (status === 'Delivered') return 'Delivered!'
-    if (status === 'Out for Delivery') return '~5 mins away'
-    if (status === 'Packing') return '~10 mins'
-    return '~15 mins'
+  const formatEta = () => {
+    if (!eta) return null
+    if (eta <= 1) return 'Less than a minute'
+    return `~${eta} min${eta > 1 ? 's' : ''}`
   }
 
   const mapCenter = riderPos || storeLocation
   const currentStep = getCurrentStepIndex()
 
+  // ── Loading ───────────────────────────────────────────────────
   if (loading) {
     return (
       <div className='min-h-screen bg-slate-50 flex items-center justify-center'>
@@ -175,12 +224,21 @@ const TrackingPage = () => {
         </div>
       </div>
 
-      {/* ETA Banner */}
+      {/* ETA Banner — real distance-based */}
       {order.delivery_status !== 'Delivered' && (
         <div className='bg-green-600 text-white px-4 py-3 flex items-center justify-between'>
           <div>
             <p className='text-[11px] font-bold opacity-80 uppercase tracking-wider'>Estimated Arrival</p>
-            <p className='text-xl font-black'>{getETA()}</p>
+            {formatEta() ? (
+              <>
+                <p className='text-xl font-black'>{formatEta()}</p>
+                <p className='text-[10px] opacity-70 mt-0.5'>
+                  {etaSource === 'rider' ? 'Based on rider's live location' : 'Estimated from store'}
+                </p>
+              </>
+            ) : (
+              <p className='text-xl font-black'>Calculating...</p>
+            )}
           </div>
           <div className='text-4xl animate-bounce'>🏍️</div>
         </div>
@@ -208,13 +266,9 @@ const TrackingPage = () => {
             attribution='&copy; OpenStreetMap'
             url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
           />
-
-          {/* Store marker */}
           <Marker position={storeLocation} icon={storeIcon}>
             <Popup>🏪 Snapit Store — Paliganj</Popup>
           </Marker>
-
-          {/* Rider marker (live) */}
           {riderPos && (
             <>
               <Marker position={riderPos} icon={riderIcon}>
@@ -228,15 +282,11 @@ const TrackingPage = () => {
               />
             </>
           )}
-
-          {/* No live position — show store only with pulse */}
           {!riderPos && order.delivery_status === 'Out for Delivery' && (
             <Marker position={storeLocation} icon={riderIcon}>
               <Popup>🏍️ Rider is on the way</Popup>
             </Marker>
           )}
-
-          {/* Core recentering hook to lock tracking camera window onto rider */}
           <ChangeMapCenter center={mapCenter} />
         </MapContainer>
       </div>
@@ -245,13 +295,11 @@ const TrackingPage = () => {
       <div className='bg-white mx-4 mt-4 rounded-2xl p-4 shadow-sm border border-slate-100'>
         <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-4'>Order Progress</h3>
         <div className='flex items-center justify-between relative'>
-          {/* Progress line */}
           <div className='absolute top-4 left-4 right-4 h-0.5 bg-slate-100 z-0'></div>
           <div
             className='absolute top-4 left-4 h-0.5 bg-green-500 z-0 transition-all duration-700'
             style={{ width: `${(currentStep / (STATUS_STEPS.length - 1)) * 90}%` }}
           ></div>
-
           {STATUS_STEPS.map((step, i) => (
             <div key={step.key} className='flex flex-col items-center gap-1 z-10 flex-1'>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm border-2 transition-all ${
@@ -305,7 +353,6 @@ const TrackingPage = () => {
             <p className='text-green-700 font-black mt-1'>{DisplayPriceInRupees(order.totalAmt)}</p>
           </div>
         </div>
-
         <div className='mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs'>
           <div>
             <p className='text-slate-400 font-bold uppercase tracking-wider text-[9px]'>Payment</p>
@@ -322,4 +369,4 @@ const TrackingPage = () => {
   )
 }
 
-export default TrackingPage;
+export default TrackingPage

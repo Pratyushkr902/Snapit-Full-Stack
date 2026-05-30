@@ -4,7 +4,7 @@ import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import AddAddress from '../components/AddAddress'
 import { useSelector } from 'react-redux'
 import AxiosToastError from '../utils/AxiosToastError'
-import Axios, { SummaryApi } from '../utils/Axios' // ✅ FIXED: Safely destructure the clean route map
+import Axios, { SummaryApi } from '../utils/Axios'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 
@@ -32,21 +32,25 @@ const CheckoutPage = () => {
 
   const handleApplyPromoCoupon = async () => {
     if (!couponCode.trim()) return toast.error("Please enter a coupon code!")
-    if (couponCode.trim().toUpperCase() !== 'FIRST15' && couponCode.trim().toUpperCase() !== 'SNAPIT15' && couponCode.trim().toUpperCase() !== 'FIRSTORDER') {
+    if (
+      couponCode.trim().toUpperCase() !== 'FIRST15' &&
+      couponCode.trim().toUpperCase() !== 'SNAPIT15' &&
+      couponCode.trim().toUpperCase() !== 'FIRSTORDER'
+    ) {
       return toast.error("Invalid code. Use 'FIRST15' for your first-purchase offer!")
     }
 
     try {
       setIsVerifyingCoupon(true)
       const loadingToast = toast.loading("Checking eligibility...")
-      
+
       const response = await Axios({
         ...SummaryApi.applyFirstTimeCoupon,
         data: { couponCode: couponCode.trim().toUpperCase(), totalAmt: grandTotal }
       })
 
       toast.dismiss(loadingToast)
-      
+
       if (response.data.success) {
         const calculatedSavings = Math.round(totalPrice * 0.15)
         setDiscountAmount(calculatedSavings)
@@ -66,7 +70,7 @@ const CheckoutPage = () => {
 
   const checkServiceArea = () => {
     const selectedAddr = addressList[selectAddress]
-    if (!selectedAddr) return true 
+    if (!selectedAddr) return true
     const cityLower = (selectedAddr.city || '').toLowerCase()
     const lineLower = (selectedAddr.address_line || '').toLowerCase()
     const isServiceable = SERVICEABLE_AREAS.some(
@@ -116,7 +120,8 @@ const CheckoutPage = () => {
           lat: coords.lat,
           lng: coords.lng,
           amount: grandTotal,
-          orderId: "SNAP-WLT-" + Date.now()
+          orderId: "SNAP-WLT-" + Date.now(),
+          deliveryLocation: { lat: coords.lat, lng: coords.lng } // ✅ ETA
         }
       })
       toast.dismiss(loadingToast)
@@ -149,7 +154,8 @@ const CheckoutPage = () => {
           delivery_fee: deliveryFee,
           totalAmt: grandTotal,
           lat: coords.lat,
-          lng: coords.lng
+          lng: coords.lng,
+          deliveryLocation: { lat: coords.lat, lng: coords.lng } // ✅ ETA
         }
       })
       toast.dismiss(loadingToast)
@@ -171,6 +177,10 @@ const CheckoutPage = () => {
       if (!addressList[selectAddress]) return toast.error("Please select a delivery address")
       if (!checkServiceArea()) return
 
+      // ✅ Get coords before payment (was missing in online payment)
+      let coords = { lat: 25.2921, lng: 84.8170 }
+      try { coords = await getCoordinates() } catch (e) {}
+
       const loadingToast = toast.loading("Preparing transaction...")
       const response = await Axios({
         ...SummaryApi.payment_url,
@@ -179,7 +189,8 @@ const CheckoutPage = () => {
           addressId: addressList[selectAddress]?._id,
           subTotalAmt: totalPrice,
           delivery_fee: deliveryFee,
-          totalAmt: grandTotal
+          totalAmt: grandTotal,
+          deliveryLocation: { lat: coords.lat, lng: coords.lng } // ✅ ETA
         }
       })
       const { data: responseData } = response
@@ -195,7 +206,6 @@ const CheckoutPage = () => {
           handler: async function (response) {
             const verificationToast = toast.loading("Verifying transaction...")
             try {
-              // ✅ FIXED: Fallback verification handle guard map block check
               const verifyUrl = SummaryApi.payment_verification?.url || '/api/order/verify-payment'
               const verifyMethod = SummaryApi.payment_verification?.method || 'post'
 
@@ -210,7 +220,8 @@ const CheckoutPage = () => {
                   addressId: addressList[selectAddress]?._id,
                   subTotalAmt: totalPrice,
                   delivery_fee: deliveryFee,
-                  totalAmt: grandTotal
+                  totalAmt: grandTotal,
+                  deliveryLocation: { lat: coords.lat, lng: coords.lng } // ✅ ETA
                 }
               })
               toast.dismiss(verificationToast)
@@ -250,7 +261,13 @@ const CheckoutPage = () => {
               addressList.map((address, index) => (
                 <label key={address._id || index} className={`${!address.status && "hidden"} cursor-pointer`}>
                   <div className={`border rounded-xl p-3 flex gap-3 hover:bg-blue-50 transition-all ${Number(selectAddress) === index ? 'border-green-400 bg-green-50 shadow-sm' : ''}`}>
-                    <input type='radio' value={index} checked={Number(selectAddress) === index} onChange={e => setSelectAddress(Number(e.target.value))} name='address' />
+                    <input
+                      type='radio'
+                      value={index}
+                      checked={Number(selectAddress) === index}
+                      onChange={e => setSelectAddress(Number(e.target.value))}
+                      name='address'
+                    />
                     <div className='flex-1'>
                       <p className='font-bold text-slate-800'>{address.address_line}</p>
                       <p className='text-sm text-slate-600'>{address.city}, {address.pincode}</p>
@@ -261,7 +278,10 @@ const CheckoutPage = () => {
             ) : (
               <p className='text-neutral-500 p-2 text-sm'>No addresses found.</p>
             )}
-            <div onClick={() => setOpenAddress(true)} className='h-14 border-2 border-dashed border-neutral-300 flex justify-center items-center cursor-pointer rounded-xl text-neutral-500 font-bold text-sm'>
+            <div
+              onClick={() => setOpenAddress(true)}
+              className='h-14 border-2 border-dashed border-neutral-300 flex justify-center items-center cursor-pointer rounded-xl text-neutral-500 font-bold text-sm'
+            >
               + Add New Address
             </div>
           </div>
@@ -281,9 +301,20 @@ const CheckoutPage = () => {
                 className='flex-1 px-3 py-2 border border-slate-200 rounded-xl uppercase text-sm font-bold text-slate-800 focus:outline-none'
               />
               {couponApplied ? (
-                <button onClick={() => { setCouponApplied(false); setDiscountAmount(0); setCouponCode('') }} className='px-3 bg-red-100 text-red-600 font-bold text-xs rounded-xl'>Remove</button>
+                <button
+                  onClick={() => { setCouponApplied(false); setDiscountAmount(0); setCouponCode('') }}
+                  className='px-3 bg-red-100 text-red-600 font-bold text-xs rounded-xl'
+                >
+                  Remove
+                </button>
               ) : (
-                <button onClick={handleApplyPromoCoupon} disabled={isVerifyingCoupon} className='px-4 py-2 bg-slate-900 text-white font-black text-xs uppercase rounded-xl'>Apply</button>
+                <button
+                  onClick={handleApplyPromoCoupon}
+                  disabled={isVerifyingCoupon}
+                  className='px-4 py-2 bg-slate-900 text-white font-black text-xs uppercase rounded-xl'
+                >
+                  Apply
+                </button>
               )}
             </div>
           </div>
@@ -303,9 +334,27 @@ const CheckoutPage = () => {
           </div>
 
           <div className='w-full flex flex-col gap-3 p-4'>
-            <button disabled={cartItemsList.length === 0} className='py-4 bg-green-700 text-white rounded-2xl font-black uppercase' onClick={handleWalletPayment}>Pay via Wallet</button>
-            <button disabled={cartItemsList.length === 0} className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase' onClick={handleOnlinePayment}>Online Payment</button>
-            <button disabled={cartItemsList.length === 0} className='py-4 border-2 border-slate-900 text-slate-950 rounded-2xl font-black uppercase' onClick={handleCashOnDelivery}>Cash on Delivery</button>
+            <button
+              disabled={cartItemsList.length === 0}
+              className='py-4 bg-green-700 text-white rounded-2xl font-black uppercase'
+              onClick={handleWalletPayment}
+            >
+              Pay via Wallet
+            </button>
+            <button
+              disabled={cartItemsList.length === 0}
+              className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase'
+              onClick={handleOnlinePayment}
+            >
+              Online Payment
+            </button>
+            <button
+              disabled={cartItemsList.length === 0}
+              className='py-4 border-2 border-slate-900 text-slate-950 rounded-2xl font-black uppercase'
+              onClick={handleCashOnDelivery}
+            >
+              Cash on Delivery
+            </button>
           </div>
         </div>
       </div>
@@ -314,4 +363,4 @@ const CheckoutPage = () => {
   )
 }
 
-export default CheckoutPage;
+export default CheckoutPage

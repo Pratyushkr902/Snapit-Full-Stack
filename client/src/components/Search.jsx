@@ -16,7 +16,6 @@ const Search = () => {
   const [isMobile] = useMobile()
   const params = useLocation()
 
-  // FIXED: use URLSearchParams instead of brittle .slice(3)
   const searchText = new URLSearchParams(params.search).get('q') || ''
 
   const [inputValue, setInputValue] = useState(searchText || '')
@@ -30,7 +29,6 @@ const Search = () => {
     setIsSearchPage(location.pathname === "/search")
   }, [location])
 
-  // FIXED: sync input value when URL changes (e.g. suggestion click)
   useEffect(() => {
     const q = new URLSearchParams(params.search).get('q') || ''
     setInputValue(q)
@@ -50,22 +48,33 @@ const Search = () => {
   const fetchSuggestions = async (query) => {
     if (!query || query.length < 2) {
       setSuggestions([])
+      setShowSuggestions(true) // show popular searches instead
       return
     }
     try {
       setLoading(true)
+      // ✅ FIXED: spread replaced with explicit url/method to ensure data is sent correctly
       const response = await Axios({
-        ...SummaryApi.searchProduct,
-        data: { search: query, page: 1 }
+        url: SummaryApi.searchProduct.url,
+        method: SummaryApi.searchProduct.method,
+        data: { search: query, page: 1, limit: 6 }
       })
       if (response.data.success) {
-        const names = response.data.data
+        const names = (response.data.data || [])
           .slice(0, 6)
-          .map(p => ({ name: p.name, image: p.image?.[0], _id: p._id }))
+          .map(p => ({
+            name: p.name,
+            // ✅ FIXED: handle both array and string image formats
+            image: Array.isArray(p.image) ? p.image[0] : p.image,
+            _id: p._id
+          }))
+          .filter(p => p.name) // ✅ filter out any products with no name
         setSuggestions(names)
+        setShowSuggestions(true)
       }
     } catch (error) {
       console.error('Suggestion error', error)
+      setSuggestions([])
     } finally {
       setLoading(false)
     }
@@ -93,6 +102,7 @@ const Search = () => {
   const handleClear = () => {
     setInputValue('')
     setSuggestions([])
+    setShowSuggestions(false)
     navigate('/search?q=')
   }
 
@@ -140,7 +150,13 @@ const Search = () => {
               value={inputValue}
               className='bg-transparent w-full h-full outline-none text-sm text-slate-800'
               onChange={handleOnChange}
-              onFocus={() => inputValue.length >= 2 && setShowSuggestions(true)}
+              onFocus={() => {
+                if (inputValue.length >= 2) {
+                  fetchSuggestions(inputValue) // ✅ re-fetch on focus if input has value
+                } else {
+                  setShowSuggestions(true) // show popular on empty focus
+                }
+              }}
             />
           )}
         </div>
@@ -154,17 +170,33 @@ const Search = () => {
 
       {isSearchPage && showSuggestions && (
         <div className='absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden'>
-          {suggestions.length > 0 && (
+
+          {/* Loading state */}
+          {loading && (
+            <div className='px-4 py-3 text-xs text-slate-400 font-medium flex items-center gap-2'>
+              <div className='w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full animate-spin'></div>
+              Searching...
+            </div>
+          )}
+
+          {/* Suggestions list */}
+          {!loading && suggestions.length > 0 && (
             <div>
               <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 pt-3 pb-1'>Products</p>
               {suggestions.map((item, i) => (
                 <button
-                  key={i}
+                  key={item._id || i}
+                  onMouseDown={(e) => e.preventDefault()} // ✅ prevent input blur before click fires
                   onClick={() => handleSuggestionClick(item.name)}
                   className='w-full flex items-center gap-3 px-4 py-2.5 hover:bg-green-50 transition-all text-left'
                 >
                   {item.image && (
-                    <img src={item.image} className='w-8 h-8 object-contain rounded-lg bg-slate-50' alt='' />
+                    <img
+                      src={item.image}
+                      className='w-8 h-8 object-contain rounded-lg bg-slate-50 flex-shrink-0'
+                      alt=''
+                      onError={(e) => { e.target.style.display = 'none' }}
+                    />
                   )}
                   <span className='text-sm font-medium text-slate-700 line-clamp-1'>{item.name}</span>
                   <IoSearch size={12} className='ml-auto text-slate-300 flex-shrink-0' />
@@ -173,10 +205,7 @@ const Search = () => {
             </div>
           )}
 
-          {loading && (
-            <div className='px-4 py-3 text-xs text-slate-400 font-medium'>Searching...</div>
-          )}
-
+          {/* Popular searches — shown when no input or no results */}
           {!loading && suggestions.length === 0 && (
             <div className='p-4'>
               <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3'>Popular Searches</p>
@@ -184,6 +213,7 @@ const Search = () => {
                 {POPULAR.map(item => (
                   <button
                     key={item}
+                    onMouseDown={(e) => e.preventDefault()} // ✅ prevent blur before click
                     onClick={() => handleSuggestionClick(item)}
                     className='text-xs font-bold bg-slate-100 hover:bg-green-100 hover:text-green-700 text-slate-600 px-3 py-1.5 rounded-full transition-all'
                   >
@@ -193,6 +223,7 @@ const Search = () => {
               </div>
             </div>
           )}
+
         </div>
       )}
     </div>
