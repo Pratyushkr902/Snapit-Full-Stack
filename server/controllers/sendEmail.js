@@ -1,21 +1,31 @@
-import * as Brevo from '@getbrevo/brevo';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const apiInstance = new Brevo.TransactionalEmailsApi();
-apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
-
 const sendEmail = async ({ sendTo, subject, html }) => {
     try {
-        const sendSmtpEmail = new Brevo.SendSmtpEmail();
-        sendSmtpEmail.to = [{ email: sendTo }];
-        sendSmtpEmail.sender = { name: 'Snapit', email: 'snapitxpress@gmail.com' };
-        sendSmtpEmail.subject = subject;
-        sendSmtpEmail.htmlContent = html;
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'api-key': process.env.BREVO_API_KEY
+            },
+            body: JSON.stringify({
+                sender: { name: 'Snapit', email: 'snapitxpress@gmail.com' },
+                to: [{ email: sendTo }],
+                subject: subject,
+                htmlContent: html
+            })
+        });
 
-        const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-        console.log('✅ Email sent:', result.messageId);
-        return result;
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('🚨 Brevo error:', JSON.stringify(data));
+            return null;
+        }
+
+        console.log('✅ Email sent:', data.messageId);
+        return data;
     } catch (error) {
         console.error('🚨 Email failed:', error.message);
         return null; // don't throw — registration succeeds even if email fails
