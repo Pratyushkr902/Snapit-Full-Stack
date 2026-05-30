@@ -233,7 +233,7 @@ const TrackingPage = () => {
               <>
                 <p className='text-xl font-black'>{formatEta()}</p>
                 <p className='text-[10px] opacity-70 mt-0.5'>
-                  {etaSource === 'rider' ? 'Based on rider's live location' : 'Estimated from store'}
+                  {etaSource === 'rider' ? "Based on rider's live location" : 'Estimated from store'}
                 </p>
               </>
             ) : (
