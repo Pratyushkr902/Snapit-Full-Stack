@@ -158,10 +158,13 @@ const SummaryApi = {
         method : 'post'
     },
     getOrderItems : {
-    url : '/api/order/order-items',  // ← change from order-list to order-items
-    method : 'get'
-},
-    getOrderDetails: { url: '/api/order/order-list', method: 'post' },
+        url : '/api/order/order-items',
+        method : 'get'
+    },
+    getOrderDetails: {
+        url: '/api/order/order-list',
+        method: 'post'
+    },
     getSellerOrders: {
         url: '/api/order/seller-orders',
         method: 'get'
@@ -246,9 +249,38 @@ const SummaryApi = {
         url: '/api/review/wishlist/get',
         method: 'get'
     },
-    // ✅ FIXED: Corrected route tracking prefix mapping to stop 404 network dropouts
     applyFirstTimeCoupon: {
         url: '/api/order/coupon/apply',
+        method: 'post'
+    },
+
+    // ── Rewards & Coins ──────────────────────────────────────
+    getCoinsBalance: {
+        url: '/api/coins/balance',
+        method: 'get'
+    },
+    getCheckinStatus: {
+        url: '/api/checkin/status',
+        method: 'get'
+    },
+    claimCheckin: {
+        url: '/api/checkin/claim',
+        method: 'post'
+    },
+    getStreakMe: {
+        url: '/api/streak/me',
+        method: 'get'
+    },
+    claimStreakMilestone: {
+        url: '/api/streak/claim',
+        method: 'post'
+    },
+    validatePromo: {
+        url: '/api/promo/validate',
+        method: 'post'
+    },
+    redeemCoins: {
+        url: '/api/coins/redeem',
         method: 'post'
     }
 }

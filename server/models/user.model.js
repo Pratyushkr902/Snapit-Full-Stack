@@ -121,7 +121,7 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    // --- STREAK SYSTEM ---
+    // --- STREAK SYSTEM (already existed) ---
     currentStreak: {
         type: Number,
         default: 0
@@ -132,6 +132,23 @@ const userSchema = new mongoose.Schema({
     },
     claimedMilestones: {
         type: [Number],
+        default: []
+    },
+    // --- COINS & REWARDS SYSTEM (new) ---
+    coins: {
+        type: Number,
+        default: 0
+    },
+    lastCheckin: {
+        type: Date,
+        default: null
+    },
+    checkinHistory: {
+        type: [Date],
+        default: []
+    },
+    usedPromoCodes: {
+        type: [String],
         default: []
     }
 },{
