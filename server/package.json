@@ -11,6 +11,7 @@
   "author": "Pratyush Kumar",
   "license": "ISC",
   "dependencies": {
+    "@getbrevo/brevo": "^5.0.4",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
     "compression": "^1.8.1",
