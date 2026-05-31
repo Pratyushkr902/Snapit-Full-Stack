@@ -28,7 +28,16 @@ const DEFAULT_STORE = {
     location: { lat: 25.330951, lng: 84.800609 }
 }
 
-// ✅ SCRATCH CARDS POOL — 8 brands, 3 random cards per order
+// ✅ Helper — calculates delivery fee (reused across all controllers)
+const calcDeliveryFee = (subTotalAmt, user) => {
+    if (Number(subTotalAmt) >= 399) return 0;
+    if (user?.isSnapitPlusMember && user?.snapitPlusExpiresAt) {
+        if (new Date() < new Date(user.snapitPlusExpiresAt) && Number(subTotalAmt) >= 99) return 0;
+    }
+    return 12;
+}
+
+// ✅ SCRATCH CARDS POOL
 const SCRATCH_CARDS_POOL = [
     { brand: "Nykaa",      discount: "20% OFF", code: "NYK20SNAP",  expires_days: 7 },
     { brand: "boAt",       discount: "15% OFF", code: "BOAT15IT",   expires_days: 5 },
@@ -40,7 +49,6 @@ const SCRATCH_CARDS_POOL = [
     { brand: "Beardo",     discount: "12% OFF", code: "BERD12SN",   expires_days: 6 },
 ]
 
-// ✅ Helper — picks 3 random cards, adds expiry date
 export const getRandomScratchCards = () => {
     return [...SCRATCH_CARDS_POOL]
         .sort(() => Math.random() - 0.5)
@@ -52,6 +60,24 @@ export const getRandomScratchCards = () => {
             expires_days: c.expires_days,
             expires_at:   new Date(Date.now() + c.expires_days * 86400000)
         }))
+}
+
+// ✅ Helper — resolve assigned store from lat/lng
+const resolveStore = async (lat, lng) => {
+    if (lat && lng) {
+        const nearby = await StoreModel.find({
+            location: { $near: { $geometry: { type: "Point", coordinates: [Number(lng), Number(lat)] }, $maxDistance: 5000 } }
+        }).limit(1);
+        if (nearby.length > 0) {
+            return {
+                storeId:  nearby[0]._id,
+                name:     nearby[0].name,
+                address:  nearby[0].address,
+                location: { lat: nearby[0].location.coordinates[1], lng: nearby[0].location.coordinates[0] }
+            };
+        }
+    }
+    return DEFAULT_STORE;
 }
 
 export async function CashOnDeliveryOrderController(request, response) {
@@ -68,20 +94,11 @@ export async function CashOnDeliveryOrderController(request, response) {
             await product.save();
         }
 
-        let assignedStore = DEFAULT_STORE
-        if (lat && lng) {
-            const nearbyMarts = await StoreModel.find({
-                location: { $near: { $geometry: { type: "Point", coordinates: [Number(lng), Number(lat)] }, $maxDistance: 5000 } }
-            }).limit(1);
-            if (nearbyMarts.length > 0) {
-                assignedStore = {
-                    storeId: nearbyMarts[0]._id,
-                    name: nearbyMarts[0].name,
-                    address: nearbyMarts[0].address,
-                    location: { lat: nearbyMarts[0].location.coordinates[1], lng: nearbyMarts[0].location.coordinates[0] }
-                };
-            }
-        }
+        const currentUser = await UserModel.findById(userId);
+        // ✅ delivery_fee calculated and saved
+        const delivery_fee = calcDeliveryFee(subTotalAmt, currentUser);
+
+        const assignedStore = await resolveStore(lat, lng);
 
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
             const product = await ProductModel.findById(el.productId._id)
@@ -95,16 +112,6 @@ export async function CashOnDeliveryOrderController(request, response) {
             }
         }));
 
-        const currentUser = await UserModel.findById(userId);
-        let currentDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
-
-        if (currentUser && currentUser.isSnapitPlusMember && currentUser.snapitPlusExpiresAt) {
-            if (new Date() < new Date(currentUser.snapitPlusExpiresAt) && Number(subTotalAmt) >= 99) {
-                currentDeliveryFee = 0;
-            }
-        }
-
-        // ✅ Generate 3 scratch cards for this order (all users get cards)
         const scratchCards = getRandomScratchCards()
 
         const payload = {
@@ -120,6 +127,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             delivery_address: addressId,
             subTotalAmt,
             totalAmt,
+            delivery_fee,       // ✅ saved
             delivery_status:  "Pending",
             seller_status:    "Pending",
             store_details:    assignedStore,
@@ -127,7 +135,6 @@ export async function CashOnDeliveryOrderController(request, response) {
             rider_name:       "Pratyush Sharma",
             rider_contact:    "9472026580",
             payment_collected: false,
-            // ✅ Save promo + scratch data on the order
             coupon_used:      couponCode || null,
             discount_amount:  Number(discountAmt) || 0,
             scratch_cards:    scratchCards
@@ -144,7 +151,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             error:         false,
             success:       true,
             data:          generatedOrder,
-            scratch_cards: scratchCards   // ✅ Frontend uses this to show scratch cards
+            scratch_cards: scratchCards
         });
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false });
@@ -165,8 +172,7 @@ export async function WalletPaymentOrderController(request, response) {
         if ((user.walletBalance || 0) < exactRequiredTotal) {
             return response.status(400).json({
                 message: `Insufficient wallet funds. You require ₹${exactRequiredTotal - (user.walletBalance || 0)} more.`,
-                error: true,
-                success: false
+                error: true, success: false
             });
         }
 
@@ -181,20 +187,10 @@ export async function WalletPaymentOrderController(request, response) {
             await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } });
         }
 
-        let assignedStore = DEFAULT_STORE;
-        if (lat && lng) {
-            const nearbyMarts = await StoreModel.find({
-                location: { $near: { $geometry: { type: "Point", coordinates: [Number(lng), Number(lat)] }, $maxDistance: 5000 } }
-            }).limit(1);
-            if (nearbyMarts.length > 0) {
-                assignedStore = {
-                    storeId: nearbyMarts[0]._id,
-                    name:    nearbyMarts[0].name,
-                    address: nearbyMarts[0].address,
-                    location: { lat: nearbyMarts[0].location.coordinates[1], lng: nearbyMarts[0].location.coordinates[0] }
-                };
-            }
-        }
+        // ✅ delivery_fee calculated and saved
+        const delivery_fee = calcDeliveryFee(subTotalAmt, user);
+
+        const assignedStore = await resolveStore(lat, lng);
 
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
             const product = await ProductModel.findById(el.productId._id);
@@ -209,7 +205,6 @@ export async function WalletPaymentOrderController(request, response) {
         }));
 
         const transactionId = `WAL-ORD-${new mongoose.Types.ObjectId()}`;
-
         const ledgerRecord = {
             type:        "DEBIT",
             amount:      exactRequiredTotal,
@@ -223,7 +218,6 @@ export async function WalletPaymentOrderController(request, response) {
             shopping_cart: []
         });
 
-        // ✅ Generate 3 scratch cards for this order
         const scratchCards = getRandomScratchCards()
 
         const payload = {
@@ -239,6 +233,7 @@ export async function WalletPaymentOrderController(request, response) {
             delivery_address: addressId,
             subTotalAmt,
             totalAmt:         exactRequiredTotal,
+            delivery_fee,       // ✅ saved
             delivery_status:  "Pending",
             seller_status:    "Pending",
             store_details:    assignedStore,
@@ -246,7 +241,6 @@ export async function WalletPaymentOrderController(request, response) {
             rider_name:       "Pratyush Sharma",
             rider_contact:    "9472026580",
             payment_collected: true,
-            // ✅ Save promo + scratch data on the order
             coupon_used:      couponCode || null,
             discount_amount:  Number(discountAmt) || 0,
             scratch_cards:    scratchCards
@@ -262,7 +256,7 @@ export async function WalletPaymentOrderController(request, response) {
             error:         false,
             success:       true,
             data:          newOrder,
-            scratch_cards: scratchCards   // ✅ Frontend uses this to show scratch cards
+            scratch_cards: scratchCards
         });
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false });
@@ -308,18 +302,12 @@ export async function verifyPaymentController(request, response) {
         }
 
         const user = await UserModel.findById(userId);
-        let expectedDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
+        // ✅ delivery_fee calculated and saved
+        const delivery_fee = calcDeliveryFee(subTotalAmt, user);
 
-        if (user && user.isSnapitPlusMember && user.snapitPlusExpiresAt) {
-            if (new Date() < new Date(user.snapitPlusExpiresAt) && Number(subTotalAmt) >= 99) {
-                expectedDeliveryFee = 0;
-            }
-        }
-
-        const normalBaseTotal     = Number(subTotalAmt) + expectedDeliveryFee;
-        // ✅ Now accepts totalAmt reduced by surprise discount (₹2–5) instead of 15% hardcoded
-        const maxAllowedDiscount  = 5  // max surprise discount we give
-        const minAcceptableTotal  = normalBaseTotal - maxAllowedDiscount
+        const normalBaseTotal    = Number(subTotalAmt) + delivery_fee;
+        const maxAllowedDiscount = 5;
+        const minAcceptableTotal = normalBaseTotal - maxAllowedDiscount;
 
         if (Number(totalAmt) > normalBaseTotal || Number(totalAmt) < minAcceptableTotal) {
             return response.status(422).json({ message: "Security Warning: Price alteration alert.", error: true, success: false });
@@ -337,7 +325,6 @@ export async function verifyPaymentController(request, response) {
             }
         }));
 
-        // ✅ Generate 3 scratch cards for this order
         const scratchCards = getRandomScratchCards()
 
         const payload = {
@@ -353,6 +340,7 @@ export async function verifyPaymentController(request, response) {
             delivery_address: addressId,
             subTotalAmt,
             totalAmt,
+            delivery_fee,       // ✅ saved
             delivery_status:  "Pending",
             seller_status:    "Pending",
             store_details:    DEFAULT_STORE,
@@ -360,7 +348,6 @@ export async function verifyPaymentController(request, response) {
             rider_name:       "Pratyush Sharma",
             rider_contact:    "9472026580",
             payment_collected: true,
-            // ✅ Save promo + scratch data on the order
             coupon_used:      couponCode || null,
             discount_amount:  Number(discountAmt) || 0,
             scratch_cards:    scratchCards
@@ -382,7 +369,7 @@ export async function verifyPaymentController(request, response) {
             error:         false,
             success:       true,
             data:          newOrder,
-            scratch_cards: scratchCards   // ✅ Frontend uses this to show scratch cards
+            scratch_cards: scratchCards
         });
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false });
@@ -504,9 +491,9 @@ export const getDailySalesReport = async (req, res) => {
             delivery_status: { $ne: 'Cancelled' }
         })
 
-        const totalRevenue      = orders.reduce((acc, o) => acc + (Number(o.totalAmt) || 0), 0)
-        const deliveredOrders   = orders.filter(o => o.delivery_status === 'Delivered')
-        const pendingOrders     = orders.filter(o => o.delivery_status !== 'Delivered')
+        const totalRevenue    = orders.reduce((acc, o) => acc + (Number(o.totalAmt) || 0), 0)
+        const deliveredOrders = orders.filter(o => o.delivery_status === 'Delivered')
+        const pendingOrders   = orders.filter(o => o.delivery_status !== 'Delivered')
 
         return res.json({
             message: "Daily report",
@@ -570,10 +557,6 @@ export async function webhookStripe(request, response) {
     return response.json({ message: "Webhook received", success: true })
 }
 
-// ✅ UPDATED applyCouponController
-// - FIRSTUSER code gives ₹2–5 random surprise discount (safe margins)
-// - Checks server-side if user already has any order (cannot be faked from frontend)
-// - Min order ₹149 enforced
 export const applyCouponController = async (request, response) => {
     try {
         const { couponCode, totalAmt } = request.body
@@ -592,7 +575,6 @@ export const applyCouponController = async (request, response) => {
         const upper = couponCode.trim().toUpperCase()
 
         if (upper === "FIRSTUSER") {
-            // ✅ Server checks DB — user cannot bypass this from frontend
             const previousOrder = await OrderModel.findOne({ userId })
             if (previousOrder)
                 return response.status(400).json({
@@ -601,7 +583,6 @@ export const applyCouponController = async (request, response) => {
                     success: false
                 })
 
-            // ✅ Random ₹2–₹5 — honest "Surprise Discount", safe on your margins
             const discount = Math.floor(Math.random() * 4) + 2
             const newTotal  = Number(totalAmt) - discount
 
@@ -625,9 +606,6 @@ export const applyCouponController = async (request, response) => {
     }
 }
 
-// ✅ NEW: getScratchCardsController
-// Called by frontend after any order to get scratch cards
-// Regular users get cards after every order automatically
 export const getScratchCardsController = async (request, response) => {
     try {
         const cards = getRandomScratchCards()

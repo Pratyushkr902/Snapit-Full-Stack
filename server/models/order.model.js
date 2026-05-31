@@ -46,6 +46,11 @@ const orderSchema = new mongoose.Schema({
         type : Number,
         default : 0
     },
+    // ✅ ADDED: delivery_fee saved on order so seller earnings are correct
+    delivery_fee : {
+        type : Number,
+        default : 0
+    },
     invoice_receipt : {
         type : String,
         default : ""
@@ -100,7 +105,6 @@ const orderSchema = new mongoose.Schema({
     deliveredAt: {
         type: Date
     },
-    // ✅ PROMO & SCRATCH CARD FIELDS
     coupon_used: {
         type: String,
         default: null
