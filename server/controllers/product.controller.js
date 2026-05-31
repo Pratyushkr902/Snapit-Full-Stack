@@ -98,7 +98,7 @@ export const getProductByCategoryAndSubCategory = async(request,response)=>{
         if(!mongoose.Types.ObjectId.isValid(categoryId)) return response.status(400).json({ message: "Invalid Category ID format", error: true, success: false })
         if(!page) page = 1
         if(!limit) limit = 10
-        const query = { category: { $in: [categoryId] } }
+        const query = { category: { $in: [new mongoose.Types.ObjectId(categoryId)] } }
         if(subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId))
             query.subCategory = { $in: [subCategoryId] }
         const skip = (page - 1) * limit
