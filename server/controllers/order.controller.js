@@ -2,11 +2,11 @@ import crypto from 'crypto';
 import CartProductModel from "../models/cartproduct.model.js";
 import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
-import ProductModel from "../models/product.model.js"; 
-import StoreModel from "../models/store.model.js"; 
+import ProductModel from "../models/product.model.js";
+import StoreModel from "../models/store.model.js";
 import mongoose from "mongoose";
 import Razorpay from 'razorpay';
-import updateStreak from '../utils/updateStreak.js'  
+import updateStreak from '../utils/updateStreak.js'
 
 export const pricewithDiscount = (price, dis = 1) => {
     const discountAmout = Math.ceil((Number(price) * Number(dis)) / 100)
@@ -28,12 +28,37 @@ const DEFAULT_STORE = {
     location: { lat: 25.330951, lng: 84.800609 }
 }
 
+// ✅ SCRATCH CARDS POOL — 8 brands, 3 random cards per order
+const SCRATCH_CARDS_POOL = [
+    { brand: "Nykaa",      discount: "20% OFF", code: "NYK20SNAP",  expires_days: 7 },
+    { brand: "boAt",       discount: "15% OFF", code: "BOAT15IT",   expires_days: 5 },
+    { brand: "Mamaearth",  discount: "₹50 OFF", code: "MAMA50SN",   expires_days: 7 },
+    { brand: "Wow Skin",   discount: "25% OFF", code: "WOW25SNAP",  expires_days: 3 },
+    { brand: "mCaffeine",  discount: "₹30 OFF", code: "MCAF30IT",   expires_days: 5 },
+    { brand: "Plum",       discount: "10% OFF", code: "PLUM10SN",   expires_days: 7 },
+    { brand: "Minimalist", discount: "₹40 OFF", code: "MINI40SN",   expires_days: 4 },
+    { brand: "Beardo",     discount: "12% OFF", code: "BERD12SN",   expires_days: 6 },
+]
+
+// ✅ Helper — picks 3 random cards, adds expiry date
+export const getRandomScratchCards = () => {
+    return [...SCRATCH_CARDS_POOL]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map(c => ({
+            brand:        c.brand,
+            discount:     c.discount,
+            code:         c.code,
+            expires_days: c.expires_days,
+            expires_at:   new Date(Date.now() + c.expires_days * 86400000)
+        }))
+}
+
 export async function CashOnDeliveryOrderController(request, response) {
     try {
-        const userId = request.userId; 
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng } = request.body;
+        const userId = request.userId;
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt } = request.body;
 
-        // Verify stock parameters before continuing order execution
         for (const item of list_items) {
             const product = await ProductModel.findById(item.productId._id);
             if (!product || product.stock < (item.quantity || 1)) {
@@ -61,66 +86,76 @@ export async function CashOnDeliveryOrderController(request, response) {
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
             const product = await ProductModel.findById(el.productId._id)
             return {
-                productId: el.productId._id,
-                name: el.productId.name,
-                image: el.productId.image[0],
-                quantity: el.quantity || 1,
-                price: el.productId.price,
+                productId:         el.productId._id,
+                name:              el.productId.name,
+                image:             el.productId.image[0],
+                quantity:          el.quantity || 1,
+                price:             el.productId.price,
                 seller_store_name: product ? getStoreForProduct(product, assignedStore.name) : null
             }
         }));
 
-        // --- ✅ NEW: DYNAMIC SNAPITPLUS CALCULATION OVERRIDE FOR COD ---
         const currentUser = await UserModel.findById(userId);
         let currentDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
 
         if (currentUser && currentUser.isSnapitPlusMember && currentUser.snapitPlusExpiresAt) {
             if (new Date() < new Date(currentUser.snapitPlusExpiresAt) && Number(subTotalAmt) >= 99) {
-                currentDeliveryFee = 0; // Waived under active plan policies!
+                currentDeliveryFee = 0;
             }
         }
 
+        // ✅ Generate 3 scratch cards for this order (all users get cards)
+        const scratchCards = getRandomScratchCards()
+
         const payload = {
             userId,
-            orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-            cartItems: taggedCartItems,
+            orderId:          `ORD-${new mongoose.Types.ObjectId()}`,
+            cartItems:        taggedCartItems,
             product_details: {
-                name: list_items[0].productId.name + (list_items.length > 1 ? ` (+${list_items.length - 1} more)` : ""),
+                name:  list_items[0].productId.name + (list_items.length > 1 ? ` (+${list_items.length - 1} more)` : ""),
                 image: list_items[0].productId.image
             },
-            paymentId: "",
-            payment_status: "CASH ON DELIVERY",
+            paymentId:        "",
+            payment_status:   "CASH ON DELIVERY",
             delivery_address: addressId,
             subTotalAmt,
-            totalAmt, // Extracted directly from validated matching values
-            delivery_status: "Pending",
-            seller_status: "Pending",
-            store_details: assignedStore,
-            involved_stores: [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
-            rider_name: "Pratyush Sharma",
-            rider_contact: "9472026580",
-            payment_collected: false
+            totalAmt,
+            delivery_status:  "Pending",
+            seller_status:    "Pending",
+            store_details:    assignedStore,
+            involved_stores:  [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
+            rider_name:       "Pratyush Sharma",
+            rider_contact:    "9472026580",
+            payment_collected: false,
+            // ✅ Save promo + scratch data on the order
+            coupon_used:      couponCode || null,
+            discount_amount:  Number(discountAmt) || 0,
+            scratch_cards:    scratchCards
         };
 
         const generatedOrder = new OrderModel(payload);
         await generatedOrder.save();
-        await updateStreak(userId); 
+        await updateStreak(userId);
         await CartProductModel.deleteMany({ userId });
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
 
-        return response.json({ message: "Order placed successfully.", error: false, success: true, data: generatedOrder });
+        return response.json({
+            message:       "Order placed successfully.",
+            error:         false,
+            success:       true,
+            data:          generatedOrder,
+            scratch_cards: scratchCards   // ✅ Frontend uses this to show scratch cards
+        });
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false });
     }
 }
 
-// ✅ NEW: TARGET IMPLEMENTATION - WALLET COMPONENT DISPATCH CONTROLLER
 export async function WalletPaymentOrderController(request, response) {
     try {
         const userId = request.userId;
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng } = request.body;
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt } = request.body;
 
-        // 1. Validate that user has a sufficient pre-funded account balance
         const user = await UserModel.findById(userId);
         if (!user) {
             return response.status(404).json({ message: "User account profile not found.", error: true, success: false });
@@ -128,14 +163,13 @@ export async function WalletPaymentOrderController(request, response) {
 
         const exactRequiredTotal = Number(totalAmt);
         if ((user.walletBalance || 0) < exactRequiredTotal) {
-            return response.status(400).json({ 
-                message: `Insufficient wallet funds. You require ₹${exactRequiredTotal - (user.walletBalance || 0)} more.`, 
-                error: true, 
-                success: false 
+            return response.status(400).json({
+                message: `Insufficient wallet funds. You require ₹${exactRequiredTotal - (user.walletBalance || 0)} more.`,
+                error: true,
+                success: false
             });
         }
 
-        // 2. Scan physical stock sheets to catch warehouse limits early
         for (const item of list_items) {
             const product = await ProductModel.findById(item.productId._id);
             if (!product || product.stock < (item.quantity || 1)) {
@@ -143,12 +177,10 @@ export async function WalletPaymentOrderController(request, response) {
             }
         }
 
-        // 3. Deduct inventories cleanly
         for (const item of list_items) {
             await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } });
         }
 
-        // 4. Group geographic warehouse assignments
         let assignedStore = DEFAULT_STORE;
         if (lat && lng) {
             const nearbyMarts = await StoreModel.find({
@@ -157,7 +189,7 @@ export async function WalletPaymentOrderController(request, response) {
             if (nearbyMarts.length > 0) {
                 assignedStore = {
                     storeId: nearbyMarts[0]._id,
-                    name: nearbyMarts[0].name,
+                    name:    nearbyMarts[0].name,
                     address: nearbyMarts[0].address,
                     location: { lat: nearbyMarts[0].location.coordinates[1], lng: nearbyMarts[0].location.coordinates[0] }
                 };
@@ -167,52 +199,57 @@ export async function WalletPaymentOrderController(request, response) {
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
             const product = await ProductModel.findById(el.productId._id);
             return {
-                productId: el.productId._id,
-                name: el.productId.name,
-                image: el.productId.image[0],
-                quantity: el.quantity || 1,
-                price: el.productId.price,
+                productId:         el.productId._id,
+                name:              el.productId.name,
+                image:             el.productId.image[0],
+                quantity:          el.quantity || 1,
+                price:             el.productId.price,
                 seller_store_name: product ? getStoreForProduct(product, assignedStore.name) : null
             };
         }));
 
         const transactionId = `WAL-ORD-${new mongoose.Types.ObjectId()}`;
 
-        // 5. Build dynamic tracking ledger data models
         const ledgerRecord = {
-            type: "DEBIT",
-            amount: exactRequiredTotal,
+            type:        "DEBIT",
+            amount:      exactRequiredTotal,
             description: `Grocery Purchase Order #${transactionId.slice(-8).toUpperCase()}`,
-            date: new Date()
+            date:        new Date()
         };
 
-        // 6. Complete balance settlement and clear temporary user carts
         await UserModel.findByIdAndUpdate(userId, {
-            $inc: { walletBalance: -exactRequiredTotal },
-            $push: { walletTransactions: ledgerRecord },
+            $inc:          { walletBalance: -exactRequiredTotal },
+            $push:         { walletTransactions: ledgerRecord },
             shopping_cart: []
         });
 
+        // ✅ Generate 3 scratch cards for this order
+        const scratchCards = getRandomScratchCards()
+
         const payload = {
             userId,
-            orderId: transactionId,
-            cartItems: taggedCartItems,
+            orderId:          transactionId,
+            cartItems:        taggedCartItems,
             product_details: {
-                name: list_items[0].productId.name + (list_items.length > 1 ? ` (+${list_items.length - 1} more)` : ""),
+                name:  list_items[0].productId.name + (list_items.length > 1 ? ` (+${list_items.length - 1} more)` : ""),
                 image: list_items[0].productId.image
             },
-            paymentId: transactionId,
-            payment_status: "PAID",
+            paymentId:        transactionId,
+            payment_status:   "PAID",
             delivery_address: addressId,
             subTotalAmt,
-            totalAmt: exactRequiredTotal,
-            delivery_status: "Pending",
-            seller_status: "Pending",
-            store_details: assignedStore,
-            involved_stores: [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
-            rider_name: "Pratyush Sharma",
-            rider_contact: "9472026580",
-            payment_collected: true
+            totalAmt:         exactRequiredTotal,
+            delivery_status:  "Pending",
+            seller_status:    "Pending",
+            store_details:    assignedStore,
+            involved_stores:  [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
+            rider_name:       "Pratyush Sharma",
+            rider_contact:    "9472026580",
+            payment_collected: true,
+            // ✅ Save promo + scratch data on the order
+            coupon_used:      couponCode || null,
+            discount_amount:  Number(discountAmt) || 0,
+            scratch_cards:    scratchCards
         };
 
         const newOrder = new OrderModel(payload);
@@ -220,11 +257,12 @@ export async function WalletPaymentOrderController(request, response) {
         await updateStreak(userId);
         await CartProductModel.deleteMany({ userId });
 
-        return response.json({ 
-            message: "Order charged and submitted successfully using Snapit Wallet Balance!", 
-            error: false, 
-            success: true, 
-            data: newOrder 
+        return response.json({
+            message:       "Order charged and submitted successfully using Snapit Wallet Balance!",
+            error:         false,
+            success:       true,
+            data:          newOrder,
+            scratch_cards: scratchCards   // ✅ Frontend uses this to show scratch cards
         });
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false });
@@ -235,15 +273,15 @@ export async function paymentController(request, response) {
     try {
         const { totalAmt, addressId } = request.body;
         const razorpay = new Razorpay({
-            key_id: String(process.env.RAZORPAY_KEY_ID).trim(),
+            key_id:     String(process.env.RAZORPAY_KEY_ID).trim(),
             key_secret: String(process.env.RAZORPAY_SECRET_KEY).trim()
         });
 
         const options = {
-            amount: Math.round(Number(totalAmt) * 100),
+            amount:   Math.round(Number(totalAmt) * 100),
             currency: "INR",
-            receipt: `rcpt_${new mongoose.Types.ObjectId()}`,
-            notes: { userId: request.userId, addressId }
+            receipt:  `rcpt_${new mongoose.Types.ObjectId()}`,
+            notes:    { userId: request.userId, addressId }
         };
 
         const order = await razorpay.orders.create(options);
@@ -256,7 +294,11 @@ export async function paymentController(request, response) {
 export async function verifyPaymentController(request, response) {
     try {
         const userId = request.userId;
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, list_items, addressId, subTotalAmt, totalAmt } = request.body;
+        const {
+            razorpay_order_id, razorpay_payment_id, razorpay_signature,
+            list_items, addressId, subTotalAmt, totalAmt,
+            couponCode, discountAmt
+        } = request.body;
 
         const expectedSignature = crypto.createHmac("sha256", String(process.env.RAZORPAY_SECRET_KEY).trim())
             .update(razorpay_order_id + "|" + razorpay_payment_id).digest("hex");
@@ -265,60 +307,69 @@ export async function verifyPaymentController(request, response) {
             return response.status(400).json({ message: "Signature verification failed.", error: true, success: false });
         }
 
-        // --- ✅ NEW: DYNAMIC SNAPITPLUS SECURITY GUARD FOR RAZORPAY ---
         const user = await UserModel.findById(userId);
         let expectedDeliveryFee = Number(subTotalAmt) >= 399 ? 0 : 12;
 
         if (user && user.isSnapitPlusMember && user.snapitPlusExpiresAt) {
             if (new Date() < new Date(user.snapitPlusExpiresAt) && Number(subTotalAmt) >= 99) {
-                expectedDeliveryFee = 0; // Free delivery allowance verification pass
+                expectedDeliveryFee = 0;
             }
         }
 
-        const normalBaseTotal = Number(subTotalAmt) + expectedDeliveryFee;
-        const verifiedCouponTotal = normalBaseTotal - Math.round(Number(subTotalAmt) * 0.15);
+        const normalBaseTotal     = Number(subTotalAmt) + expectedDeliveryFee;
+        // ✅ Now accepts totalAmt reduced by surprise discount (₹2–5) instead of 15% hardcoded
+        const maxAllowedDiscount  = 5  // max surprise discount we give
+        const minAcceptableTotal  = normalBaseTotal - maxAllowedDiscount
 
-        if (Number(totalAmt) !== normalBaseTotal && Number(totalAmt) !== verifiedCouponTotal) {
+        if (Number(totalAmt) > normalBaseTotal || Number(totalAmt) < minAcceptableTotal) {
             return response.status(422).json({ message: "Security Warning: Price alteration alert.", error: true, success: false });
         }
 
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
             const product = await ProductModel.findById(el.productId._id)
             return {
-                productId: el.productId._id,
-                name: el.productId.name,
-                image: el.productId.image[0],
-                quantity: el.quantity || 1,
-                price: el.productId.price,
+                productId:         el.productId._id,
+                name:              el.productId.name,
+                image:             el.productId.image[0],
+                quantity:          el.quantity || 1,
+                price:             el.productId.price,
                 seller_store_name: product ? getStoreForProduct(product, DEFAULT_STORE.name) : null
             }
         }));
 
+        // ✅ Generate 3 scratch cards for this order
+        const scratchCards = getRandomScratchCards()
+
         const payload = {
             userId,
-            orderId: razorpay_order_id,
-            cartItems: taggedCartItems,
+            orderId:          razorpay_order_id,
+            cartItems:        taggedCartItems,
             product_details: {
-                name: list_items[0].productId.name + (list_items.length > 1 ? ` (+${list_items.length - 1} more)` : ""),
+                name:  list_items[0].productId.name + (list_items.length > 1 ? ` (+${list_items.length - 1} more)` : ""),
                 image: list_items[0].productId.image
             },
-            paymentId: razorpay_payment_id,
-            payment_status: "PAID",
+            paymentId:        razorpay_payment_id,
+            payment_status:   "PAID",
             delivery_address: addressId,
             subTotalAmt,
             totalAmt,
-            delivery_status: "Pending",
-            seller_status: "Pending",
-            store_details: DEFAULT_STORE,
-            involved_stores: [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
-            rider_name: "Pratyush Sharma",
-            rider_contact: "9472026580",
-            payment_collected: true
+            delivery_status:  "Pending",
+            seller_status:    "Pending",
+            store_details:    DEFAULT_STORE,
+            involved_stores:  [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
+            rider_name:       "Pratyush Sharma",
+            rider_contact:    "9472026580",
+            payment_collected: true,
+            // ✅ Save promo + scratch data on the order
+            coupon_used:      couponCode || null,
+            discount_amount:  Number(discountAmt) || 0,
+            scratch_cards:    scratchCards
         };
 
         const newOrder = new OrderModel(payload);
         await newOrder.save();
         await updateStreak(userId);
+
         for (const item of list_items) {
             await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } });
         }
@@ -326,7 +377,13 @@ export async function verifyPaymentController(request, response) {
         await CartProductModel.deleteMany({ userId });
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
 
-        return response.json({ message: "Order placed successfully!", error: false, success: true, data: newOrder });
+        return response.json({
+            message:       "Order placed successfully!",
+            error:         false,
+            success:       true,
+            data:          newOrder,
+            scratch_cards: scratchCards   // ✅ Frontend uses this to show scratch cards
+        });
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false });
     }
@@ -443,23 +500,23 @@ export const getDailySalesReport = async (req, res) => {
         tomorrow.setDate(tomorrow.getDate() + 1)
 
         const orders = await OrderModel.find({
-            createdAt: { $gte: today, $lt: tomorrow },
+            createdAt:       { $gte: today, $lt: tomorrow },
             delivery_status: { $ne: 'Cancelled' }
         })
 
-        const totalRevenue = orders.reduce((acc, o) => acc + (Number(o.totalAmt) || 0), 0)
-        const deliveredOrders = orders.filter(o => o.delivery_status === 'Delivered')
-        const pendingOrders = orders.filter(o => o.delivery_status !== 'Delivered')
+        const totalRevenue      = orders.reduce((acc, o) => acc + (Number(o.totalAmt) || 0), 0)
+        const deliveredOrders   = orders.filter(o => o.delivery_status === 'Delivered')
+        const pendingOrders     = orders.filter(o => o.delivery_status !== 'Delivered')
 
         return res.json({
             message: "Daily report",
-            error: false,
+            error:   false,
             success: true,
             data: {
-                totalOrders: orders.length,
+                totalOrders:     orders.length,
                 totalRevenue,
                 deliveredOrders: deliveredOrders.length,
-                pendingOrders: pendingOrders.length,
+                pendingOrders:   pendingOrders.length,
                 orders
             }
         })
@@ -513,36 +570,73 @@ export async function webhookStripe(request, response) {
     return response.json({ message: "Webhook received", success: true })
 }
 
+// ✅ UPDATED applyCouponController
+// - FIRSTUSER code gives ₹2–5 random surprise discount (safe margins)
+// - Checks server-side if user already has any order (cannot be faked from frontend)
+// - Min order ₹149 enforced
 export const applyCouponController = async (request, response) => {
     try {
         const { couponCode, totalAmt } = request.body
         const userId = request.userId
 
-        if (!couponCode || !totalAmt) {
+        if (!couponCode || !totalAmt)
             return response.status(400).json({ message: "Coupon code and amount required", error: true, success: false })
-        }
+
+        if (Number(totalAmt) < 149)
+            return response.status(400).json({ message: "Minimum order ₹149 required to use a promo code", error: true, success: false })
 
         const user = await UserModel.findById(userId)
-        if (!user) {
+        if (!user)
             return response.status(404).json({ message: "User not found", error: true, success: false })
-        }
 
-        if (couponCode === "FIRSTORDER" || couponCode === "SNAPIT15" || couponCode === "FIRST15") {
-            const orderCount = await OrderModel.countDocuments({ userId })
-            if (orderCount > 0) {
-                return response.status(400).json({ message: "Coupon only valid on first order", error: true, success: false })
-            }
-            const discount = Math.round(Number(totalAmt) * 0.15)
-            const newTotal = Number(totalAmt) - discount
+        const upper = couponCode.trim().toUpperCase()
+
+        if (upper === "FIRSTUSER") {
+            // ✅ Server checks DB — user cannot bypass this from frontend
+            const previousOrder = await OrderModel.findOne({ userId })
+            if (previousOrder)
+                return response.status(400).json({
+                    message: "This code is for first-time customers only",
+                    error:   true,
+                    success: false
+                })
+
+            // ✅ Random ₹2–₹5 — honest "Surprise Discount", safe on your margins
+            const discount = Math.floor(Math.random() * 4) + 2
+            const newTotal  = Number(totalAmt) - discount
+
             return response.json({
-                message: "Coupon applied successfully!",
-                error: false,
+                message: `Lucky coupon! You got ₹${discount} surprise discount`,
+                error:   false,
                 success: true,
-                data: { discount, newTotal, couponCode }
+                data: {
+                    couponCode:     "FIRSTUSER",
+                    discount_label: "Surprise Discount",
+                    discount,
+                    newTotal
+                }
             })
         }
 
         return response.status(400).json({ message: "Invalid coupon code", error: true, success: false })
+
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false })
+    }
+}
+
+// ✅ NEW: getScratchCardsController
+// Called by frontend after any order to get scratch cards
+// Regular users get cards after every order automatically
+export const getScratchCardsController = async (request, response) => {
+    try {
+        const cards = getRandomScratchCards()
+        return response.json({
+            message: "Scratch cards ready",
+            error:   false,
+            success: true,
+            data:    cards
+        })
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false })
     }

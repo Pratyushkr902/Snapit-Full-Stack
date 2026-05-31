@@ -10,20 +10,16 @@ const orderSchema = new mongoose.Schema({
         required : [true, "Provide orderId"],
         unique : true
     },
-    // Keep for backward compatibility
     productId : {
         type : mongoose.Schema.ObjectId,
         ref : "product"
     },
-    // FIX: Each cart item now knows which store/seller it belongs to
     cartItems: [{
         productId:  { type: mongoose.Schema.ObjectId, ref: "product" },
         quantity:   { type: Number, default: 1 },
         name:       String,
         image:      String,
         price:      Number,
-        // FIX: store_name of the seller who owns this product
-        // Matched from product.store_inventory at order creation time
         seller_store_name: { type: String, default: null }
     }],
     product_details : {
@@ -54,7 +50,6 @@ const orderSchema = new mongoose.Schema({
         type : String,
         default : ""
     },
-    // --- SELLER & STORE LOGIC ---
     seller_status: {
         type: String,
         enum: ["Pending", "Packing", "Ready for Pickup"],
@@ -69,10 +64,7 @@ const orderSchema = new mongoose.Schema({
             lng: { type: Number, default: 84.8170 }
         }
     },
-    // FIX: Array of store names involved in this order.
-    // Used to efficiently query "which orders belong to seller X".
     involved_stores: [{ type: String }],
-
     delivery_status : {
         type : String,
         enum : ["Pending", "Confirmed", "Out for Delivery", "Delivered", "Cancelled"],
@@ -84,9 +76,8 @@ const orderSchema = new mongoose.Schema({
     },
     rider_contact : {
         type : String,
-        default : "9472026580" 
+        default : "9472026580"
     },
-    // --- CASH SETTLEMENT LOGIC ---
     payment_collected: {
         type: Boolean,
         default: false
@@ -99,15 +90,28 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    isSettled: { 
-        type: Boolean, 
-        default: false 
+    isSettled: {
+        type: Boolean,
+        default: false
     },
-    settledAt: { 
-        type: Date 
+    settledAt: {
+        type: Date
     },
     deliveredAt: {
         type: Date
+    },
+    // ✅ PROMO & SCRATCH CARD FIELDS
+    coupon_used: {
+        type: String,
+        default: null
+    },
+    discount_amount: {
+        type: Number,
+        default: 0
+    },
+    scratch_cards: {
+        type: Array,
+        default: []
     }
 },{
     timestamps : true
