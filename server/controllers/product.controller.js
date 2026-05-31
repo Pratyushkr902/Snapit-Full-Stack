@@ -52,7 +52,13 @@ export const getProductByCategory = async(request,response)=>{
         const { id } = request.body
         if(!id) return response.status(400).json({ message: "provide category id", error: true, success: false })
         if(!mongoose.Types.ObjectId.isValid(id)) return response.status(400).json({ message: "Invalid Category ID", error: true, success: false })
-        const product = await ProductModel.find({ category: { $in: id } }).select(LIST_FIELDS).limit(15).lean()
+
+        // ✅ FIXED: wrap id in array and cast to ObjectId so $in correctly
+        //    matches against the category ObjectId array stored on each product
+        const product = await ProductModel.find({
+            category: { $in: [new mongoose.Types.ObjectId(id)] }
+        }).select(LIST_FIELDS).limit(15).lean()
+
         return response.json({
             message: "category product list", error: false, success: true,
             data: product.map(prod => ({ ...prod, image: secureImages(prod.image) }))
