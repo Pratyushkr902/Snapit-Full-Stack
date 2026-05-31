@@ -1,0 +1,57 @@
+{
+  "packageId": "com.snapit.app",
+  "host": "snapit-client.vercel.app",
+  "name": "Snapit",
+  "launcherName": "snapit",
+  "display": "standalone",
+  "themeColor": "#16A34A",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#FFFFFF",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://snapit-client.vercel.app/snapit-icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "/Users/pratyushkumar/Documents/snapit/snapit-apk/android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "2",
+  "appVersionCode": 2,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://snapit-client.vercel.app/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://snapit-client.vercel.app/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [
+    "https://snapit-client.vercel.app"
+  ],
+  "retainedBundles": [],
+  "protocolHandlers": [
+    {
+      "protocol": "upi",
+      "url": "https://snapit-client.vercel.app/?upi=%s"
+    }
+  ],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "2"
+}
