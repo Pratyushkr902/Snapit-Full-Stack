@@ -98,14 +98,32 @@ export const getProductByCategoryAndSubCategory = async(request,response)=>{
         if(!mongoose.Types.ObjectId.isValid(categoryId)) return response.status(400).json({ message: "Invalid Category ID format", error: true, success: false })
         if(!page) page = 1
         if(!limit) limit = 10
-        const query = { category: { $in: [new mongoose.Types.ObjectId(categoryId)] } }
-        if(subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId))
-            query.subCategory = { $in: [subCategoryId] }
+
         const skip = (page - 1) * limit
-        const [data, dataCount] = await Promise.all([
+        const hasValidSubCategory = subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId)
+
+        // ✅ FIXED: Try with subcategory first, fall back to category-only if empty
+        let query = { category: { $in: [new mongoose.Types.ObjectId(categoryId)] } }
+        if(hasValidSubCategory) {
+            query.subCategory = { $in: [new mongoose.Types.ObjectId(subCategoryId)] }
+        }
+
+        let [data, dataCount] = await Promise.all([
             ProductModel.find(query).sort({createdAt: -1}).skip(skip).limit(limit).populate('category subCategory'),
             ProductModel.countDocuments(query)
         ])
+
+        // ✅ FALLBACK: If subcategory filter returns nothing, show all products in category
+        if(dataCount === 0 && hasValidSubCategory) {
+            const fallbackQuery = { category: { $in: [new mongoose.Types.ObjectId(categoryId)] } }
+            const results = await Promise.all([
+                ProductModel.find(fallbackQuery).sort({createdAt: -1}).skip(skip).limit(limit).populate('category subCategory'),
+                ProductModel.countDocuments(fallbackQuery)
+            ])
+            data = results[0]
+            dataCount = results[1]
+        }
+
         return response.json({
             message: "Product list", success: true, error: false,
             data: data.map(prod => ({ ...prod._doc, image: secureImages(prod.image) })),
