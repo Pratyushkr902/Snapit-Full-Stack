@@ -38,6 +38,22 @@ const productSchema = new mongoose.Schema({
         type : Number,
         default : 0 
     },
+    // ── PRICING SYSTEM ──────────────────────────────────────
+    // sellerPrice: what the seller earns (their cost)
+    // snapitMargin: profit added by Snapit on top
+    // sellingPrice / price: what customer pays (sellerPrice + snapitMargin)
+    sellerPrice : {
+        type : Number,
+        default : null
+    },
+    snapitMargin : {
+        type : Number,
+        default : 0
+    },
+    sellingPrice : {
+        type : Number,
+        default : null
+    },
     price : {
         type : Number,
         default : null 
@@ -95,6 +111,15 @@ productSchema.index({
 
 // MULTI-STORE & FLASH SALE MIDDLEWARE
 productSchema.pre('save', async function() {
+
+    // ── 0. AUTO CALCULATE sellingPrice from sellerPrice + snapitMargin ──
+    if (this.sellerPrice != null) {
+        const margin = Number(this.snapitMargin) || 0;
+        this.sellingPrice = Number(this.sellerPrice) + margin;
+        // price is always what the customer pays
+        this.price = this.sellingPrice;
+    }
+
     // 1. Calculate Total Stock from all stores combined
     if (Array.isArray(this.store_inventory) && this.store_inventory.length > 0) {
         this.stock = this.store_inventory.reduce((acc, curr) => acc + (Number(curr.stock) || 0), 0);

@@ -1,46 +1,40 @@
-import { Router } from 'express'
-import auth from '../middleware/auth.js'
-import { 
-    createProductController, 
-    deleteProductDetails, 
-    getProductByCategory, 
-    getProductByCategoryAndSubCategory, 
-    getProductController, 
-    getProductDetails, 
-    searchProduct, 
+import express from 'express';
+import {
+    createProductController,
+    getProductController,
+    getProductByCategory,
+    getProductsByCategories,
+    getProductByCategoryAndSubCategory,
+    getProductDetails,
     updateProductDetails,
+    deleteProductDetails,
+    searchProduct,
     getFrequentlyBought,
-    updateProductEmails // ADDED: Controller for Bulk Email Update
-} from '../controllers/product.controller.js'
-import { admin } from '../middleware/Admin.js'
+    updateProductEmails,
+    recalculateMRP,
+    getPricingBreakdown,
+} from '../controllers/product.controller.js';
+import { admin } from '../middleware/auth.js';
 
-const productRouter = Router()
+const productRouter = express.Router();
 
-// --- CREATE & READ ---
-productRouter.post("/create", auth, admin, createProductController)
-productRouter.post('/get', getProductController)
-productRouter.post("/get-product-by-category", getProductByCategory)
+// ── Existing routes ──────────────────────────────────────────
+productRouter.post('/create',                              admin, createProductController);
+productRouter.post('/get',                                        getProductController);
+productRouter.post('/get-product-by-category',                    getProductByCategory);
+productRouter.post('/get-products-by-categories',                 getProductsByCategories);
+productRouter.post('/get-product-by-category-and-subcategory',    getProductByCategoryAndSubCategory);
+productRouter.post('/get-product-details',                        getProductDetails);
+productRouter.put('/update-product-details',               admin, updateProductDetails);
+productRouter.delete('/delete-product',                    admin, deleteProductDetails);
+productRouter.post('/search-product',                             searchProduct);
+productRouter.get('/frequently-bought',                           getFrequentlyBought);
+productRouter.post('/fix-emails',                          admin, updateProductEmails);
 
-// FIXED: Corrected spelling and removed duplicate entry
-productRouter.post('/get-product-by-category-and-subcategory', getProductByCategoryAndSubCategory)
+// ── NEW: Pricing & MRP routes ────────────────────────────────
+// Manually trigger MRP recalculation for all products
+productRouter.get('/recalculate-mrp',   admin, recalculateMRP);
+// Get full pricing breakdown (admin panel)
+productRouter.get('/pricing-breakdown', admin, getPricingBreakdown);
 
-productRouter.post('/get-product-details', getProductDetails)
-
-// --- RECOMMENDATION SYSTEM ---
-// This fuels the "People also bought" section on your product pages
-productRouter.get('/frequently-bought', getFrequentlyBought)
-
-// --- UPDATE & DELETE ---
-productRouter.put('/update-product-details', auth, admin, updateProductDetails)
-
-// Note: Ensure your frontend Axios call uses 'DELETE' method to match this
-productRouter.delete('/delete-product', auth, admin, deleteProductDetails)
-
-// --- SEARCH ---
-productRouter.post('/search-product', searchProduct)
-
-// --- ADMIN & MAINTENANCE ---
-// Trigger this once to change info@blinkit.com to info@snapit.com across all products
-productRouter.post('/bulk-update-email', auth, admin, updateProductEmails)
-
-export default productRouter
+export default productRouter;
