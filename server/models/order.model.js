@@ -15,11 +15,13 @@ const orderSchema = new mongoose.Schema({
         ref : "product"
     },
     cartItems: [{
-        productId:  { type: mongoose.Schema.ObjectId, ref: "product" },
-        quantity:   { type: Number, default: 1 },
-        name:       String,
-        image:      String,
-        price:      Number,
+        productId:         { type: mongoose.Schema.ObjectId, ref: "product" },
+        quantity:          { type: Number, default: 1 },
+        name:              String,
+        image:             String,
+        price:             Number,   // customer pays (sellerPrice + snapitMargin)
+        sellerPrice:       Number,   // ✅ what seller earns
+        snapitMargin:      Number,   // ✅ snapit's cut
         seller_store_name: { type: String, default: null }
     }],
     product_details : {
@@ -46,7 +48,6 @@ const orderSchema = new mongoose.Schema({
         type : Number,
         default : 0
     },
-    // ✅ ADDED: delivery_fee saved on order so seller earnings are correct
     delivery_fee : {
         type : Number,
         default : 0

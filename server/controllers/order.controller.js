@@ -28,7 +28,6 @@ const DEFAULT_STORE = {
     location: { lat: 25.330951, lng: 84.800609 }
 }
 
-// ✅ Helper — calculates delivery fee (reused across all controllers)
 const calcDeliveryFee = (subTotalAmt, user) => {
     if (Number(subTotalAmt) >= 399) return 0;
     if (user?.isSnapitPlusMember && user?.snapitPlusExpiresAt) {
@@ -37,7 +36,6 @@ const calcDeliveryFee = (subTotalAmt, user) => {
     return 12;
 }
 
-// ✅ SCRATCH CARDS POOL
 const SCRATCH_CARDS_POOL = [
     { brand: "Nykaa",      discount: "20% OFF", code: "NYK20SNAP",  expires_days: 7 },
     { brand: "boAt",       discount: "15% OFF", code: "BOAT15IT",   expires_days: 5 },
@@ -62,7 +60,6 @@ export const getRandomScratchCards = () => {
         }))
 }
 
-// ✅ Helper — resolve assigned store from lat/lng
 const resolveStore = async (lat, lng) => {
     if (lat && lng) {
         const nearby = await StoreModel.find({
@@ -95,9 +92,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         }
 
         const currentUser = await UserModel.findById(userId);
-        // ✅ delivery_fee calculated and saved
         const delivery_fee = calcDeliveryFee(subTotalAmt, currentUser);
-
         const assignedStore = await resolveStore(lat, lng);
 
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
@@ -107,7 +102,9 @@ export async function CashOnDeliveryOrderController(request, response) {
                 name:              el.productId.name,
                 image:             el.productId.image[0],
                 quantity:          el.quantity || 1,
-                price:             el.productId.price,
+                price:             el.productId.price,                          // customer pays
+                sellerPrice:       product?.sellerPrice ?? el.productId.price,  // ✅ seller earns
+                snapitMargin:      product?.snapitMargin ?? 0,                   // ✅ snapit cut
                 seller_store_name: product ? getStoreForProduct(product, assignedStore.name) : null
             }
         }));
@@ -127,7 +124,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             delivery_address: addressId,
             subTotalAmt,
             totalAmt,
-            delivery_fee,       // ✅ saved
+            delivery_fee,
             delivery_status:  "Pending",
             seller_status:    "Pending",
             store_details:    assignedStore,
@@ -187,9 +184,7 @@ export async function WalletPaymentOrderController(request, response) {
             await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } });
         }
 
-        // ✅ delivery_fee calculated and saved
         const delivery_fee = calcDeliveryFee(subTotalAmt, user);
-
         const assignedStore = await resolveStore(lat, lng);
 
         const taggedCartItems = await Promise.all(list_items.map(async (el) => {
@@ -199,7 +194,9 @@ export async function WalletPaymentOrderController(request, response) {
                 name:              el.productId.name,
                 image:             el.productId.image[0],
                 quantity:          el.quantity || 1,
-                price:             el.productId.price,
+                price:             el.productId.price,                          // customer pays
+                sellerPrice:       product?.sellerPrice ?? el.productId.price,  // ✅ seller earns
+                snapitMargin:      product?.snapitMargin ?? 0,                   // ✅ snapit cut
                 seller_store_name: product ? getStoreForProduct(product, assignedStore.name) : null
             };
         }));
@@ -233,7 +230,7 @@ export async function WalletPaymentOrderController(request, response) {
             delivery_address: addressId,
             subTotalAmt,
             totalAmt:         exactRequiredTotal,
-            delivery_fee,       // ✅ saved
+            delivery_fee,
             delivery_status:  "Pending",
             seller_status:    "Pending",
             store_details:    assignedStore,
@@ -302,7 +299,6 @@ export async function verifyPaymentController(request, response) {
         }
 
         const user = await UserModel.findById(userId);
-        // ✅ delivery_fee calculated and saved
         const delivery_fee = calcDeliveryFee(subTotalAmt, user);
 
         const normalBaseTotal    = Number(subTotalAmt) + delivery_fee;
@@ -320,7 +316,9 @@ export async function verifyPaymentController(request, response) {
                 name:              el.productId.name,
                 image:             el.productId.image[0],
                 quantity:          el.quantity || 1,
-                price:             el.productId.price,
+                price:             el.productId.price,                          // customer pays
+                sellerPrice:       product?.sellerPrice ?? el.productId.price,  // ✅ seller earns
+                snapitMargin:      product?.snapitMargin ?? 0,                   // ✅ snapit cut
                 seller_store_name: product ? getStoreForProduct(product, DEFAULT_STORE.name) : null
             }
         }));
@@ -340,7 +338,7 @@ export async function verifyPaymentController(request, response) {
             delivery_address: addressId,
             subTotalAmt,
             totalAmt,
-            delivery_fee,       // ✅ saved
+            delivery_fee,
             delivery_status:  "Pending",
             seller_status:    "Pending",
             store_details:    DEFAULT_STORE,
