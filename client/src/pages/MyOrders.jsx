@@ -1,63 +1,12 @@
-import React, { useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
+import React from 'react'
+import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import NoData from '../components/NoData'
-import ReorderButton from '../components/ReorderButton'
 import OrderInvoice from '../components/OrderInvoice'
-import Axios from '../utils/Axios'
-import SummaryApi from '../common/SummaryApi'
-import toast from 'react-hot-toast'
-import { useGlobalContext } from '../provider/GlobalProvider'
 
 const MyOrders = () => {
   const orders = useSelector(state => state.orders.order)
   const navigate = useNavigate()
-  const { fetchCartItem } = useGlobalContext()
-  const [reorderingId, setReorderingId] = useState(null)
-
-  const handleOrderAgain = async (order) => {
-    try {
-      setReorderingId(order._id)
-
-      // Add all cart items from the order back to cart
-      const cartItems = order.cartItems || []
-
-      if (cartItems.length === 0) {
-        // Fallback: if no cartItems array, add the single product
-        const response = await Axios({
-          ...SummaryApi.addTocart,
-          data: {
-            productId: order.product_details?._id || order.productId,
-            quantity: order.quantity || 1
-          }
-        })
-        if (response.data.success) {
-          toast.success('Item added to cart!')
-          if (fetchCartItem) fetchCartItem()
-          navigate('/cart')
-        }
-      } else {
-        // Add all items from original order
-        const promises = cartItems.map(item =>
-          Axios({
-            ...SummaryApi.addTocart,
-            data: {
-              productId: item.productId?._id || item.productId,
-              quantity: item.quantity || 1
-            }
-          })
-        )
-        await Promise.all(promises)
-        toast.success(`${cartItems.length} item${cartItems.length > 1 ? 's' : ''} added to cart!`)
-        if (fetchCartItem) fetchCartItem()
-        navigate('/cart')
-      }
-    } catch (error) {
-      toast.error('Could not add items to cart')
-    } finally {
-      setReorderingId(null)
-    }
-  }
 
   return (
     <div className='bg-neutral-50 min-h-screen pb-10'>
@@ -78,7 +27,6 @@ const MyOrders = () => {
               key={order._id + index + "order"}
               className='bg-white rounded-xl p-5 shadow-sm border border-neutral-200 flex flex-col gap-4 hover:shadow-md transition-shadow'
             >
-              {/* Header: ID and Status */}
               <div className='flex justify-between items-center border-b pb-3'>
                 <div className='flex flex-col'>
                   <p className='text-[10px] uppercase tracking-widest text-neutral-400 font-bold'>Order ID</p>
@@ -93,7 +41,6 @@ const MyOrders = () => {
                 </span>
               </div>
 
-              {/* Product Body */}
               <div className='flex gap-4 items-start'>
                 <img
                   src={order.product_details.image[0]}
@@ -113,40 +60,13 @@ const MyOrders = () => {
                 </div>
               </div>
 
-              {/* Action Footer */}
               <div className='flex flex-wrap gap-3 mt-2 pt-3 border-t'>
-                {/* LIVE TRACKING */}
                 <button
                   onClick={() => navigate(`/dashboard/order-tracking/${order.orderId}`)}
                   className='flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg shadow-slate-200 flex items-center justify-center gap-2'
                 >
                   📍 Track Live
                 </button>
-
-                {/* ORDER AGAIN — only for delivered orders */}
-                {order.delivery_status === 'Delivered' && (
-                  <button
-                    onClick={() => handleOrderAgain(order)}
-                    disabled={reorderingId === order._id}
-                    className='flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg shadow-green-100 flex items-center justify-center gap-2'
-                  >
-                    {reorderingId === order._id ? (
-                      <>
-                        <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
-                        Adding...
-                      </>
-                    ) : (
-                      <>🔁 Order Again</>
-                    )}
-                  </button>
-                )}
-
-                {/* REORDER */}
-                <div className='flex-1'>
-                  <ReorderButton orderId={order._id} />
-                </div>
-
-                {/* INVOICE — only shows for delivered orders */}
                 <OrderInvoice order={order} />
               </div>
             </div>
