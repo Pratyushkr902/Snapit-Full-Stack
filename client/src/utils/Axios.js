@@ -128,6 +128,12 @@ Axios.interceptors.request.use(
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
+
+        // ✅ FIX: Remove Content-Type for FormData so browser sets multipart/form-data automatically
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type'];
+        }
+
         return config;
     },
     (error) => Promise.reject(error)
