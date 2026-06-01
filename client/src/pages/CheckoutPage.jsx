@@ -31,7 +31,6 @@ const CheckoutPage = () => {
   const deliveryFee = totalPrice >= 399 ? 0 : 12
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
-  // ✅ UPDATED: Now only accepts FIRSTUSER, gives ₹2–5 surprise discount
   const handleApplyPromoCoupon = async () => {
     if (!couponCode.trim()) return toast.error('Please enter a coupon code!')
 
@@ -60,8 +59,8 @@ const CheckoutPage = () => {
 
       if (response.data.success) {
         const { discount, newTotal, discount_label } = response.data.data
-        setDiscountAmount(discount)           // ₹2–5 from server
-        setDiscountLabel(discount_label)      // "Surprise Discount"
+        setDiscountAmount(discount)
+        setDiscountLabel(discount_label)
         setCouponApplied(true)
         toast.success(`Lucky coupon! ₹${discount} surprise discount applied 🎉`)
       }
@@ -127,7 +126,6 @@ const CheckoutPage = () => {
           amount:           grandTotal,
           orderId:          'SNAP-WLT-' + Date.now(),
           deliveryLocation: { lat: coords.lat, lng: coords.lng },
-          // ✅ Pass coupon data so backend saves it on the order
           couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
           discountAmt:      discountAmount
         }
@@ -137,7 +135,6 @@ const CheckoutPage = () => {
         toast.success('Paid successfully using Snapit Wallet! 💸')
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
-        // ✅ Pass scratch cards to success page
         navigate('/success', {
           state: {
             text:          'Order',
@@ -170,7 +167,6 @@ const CheckoutPage = () => {
           lat:              coords.lat,
           lng:              coords.lng,
           deliveryLocation: { lat: coords.lat, lng: coords.lng },
-          // ✅ Pass coupon data so backend saves it on the order
           couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
           discountAmt:      discountAmount
         }
@@ -180,7 +176,6 @@ const CheckoutPage = () => {
         toast.success(response.data.message)
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
-        // ✅ Pass scratch cards to success page
         navigate('/success', {
           state: {
             text:          'Order',
@@ -244,7 +239,6 @@ const CheckoutPage = () => {
                   delivery_fee:        deliveryFee,
                   totalAmt:            grandTotal,
                   deliveryLocation:    { lat: coords.lat, lng: coords.lng },
-                  // ✅ Pass coupon data so backend saves it on the order
                   couponCode:          couponApplied ? couponCode.trim().toUpperCase() : null,
                   discountAmt:         discountAmount
                 }
@@ -254,7 +248,6 @@ const CheckoutPage = () => {
                 toast.success('Order Placed Successfully! 🛒')
                 if (fetchCartItem) fetchCartItem()
                 if (fetchOrder) fetchOrder()
-                // ✅ Pass scratch cards to success page
                 navigate('/success', {
                   state: {
                     text:          'Order',
@@ -322,39 +315,41 @@ const CheckoutPage = () => {
         {/* Right: Bill Info */}
         <div className='w-full lg:max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
 
-          {/* ✅ UPDATED Promo Code Section */}
+          {/* ✅ FIXED Promo Code Section - button no longer overflows */}
           <div className='mx-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
             <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-1'>Promo Code</p>
             <p className='text-[10px] text-slate-400 mb-2'>
               First-time customer? Use <span className='font-black text-slate-600'>FIRSTUSER</span> on orders ₹149+
             </p>
-            <div className='flex gap-2'>
+
+            {/* ✅ FIX: stack on mobile, row on sm+ to prevent overflow */}
+            <div className='flex flex-col sm:flex-row gap-2'>
               <input
                 type='text'
                 value={couponCode}
                 onChange={e => setCouponCode(e.target.value)}
                 disabled={couponApplied}
                 placeholder={couponApplied ? 'Code applied! 🎉' : 'Enter FIRSTUSER'}
-                className='flex-1 px-3 py-2 border border-slate-200 rounded-xl uppercase text-sm font-bold text-slate-800 focus:outline-none disabled:bg-green-50 disabled:border-green-200'
+                className='w-full px-3 py-2.5 border border-slate-200 rounded-xl uppercase text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-400 disabled:bg-green-50 disabled:border-green-200'
               />
               {couponApplied ? (
                 <button
                   onClick={() => { setCouponApplied(false); setDiscountAmount(0); setDiscountLabel(''); setCouponCode('') }}
-                  className='px-3 bg-red-100 text-red-600 font-bold text-xs rounded-xl'
+                  className='w-full sm:w-auto px-4 py-2.5 bg-red-100 text-red-600 font-black text-xs rounded-xl whitespace-nowrap'
                 >
-                  Remove
+                  ✕ Remove
                 </button>
               ) : (
                 <button
                   onClick={handleApplyPromoCoupon}
                   disabled={isVerifyingCoupon}
-                  className='px-4 py-2 bg-slate-900 text-white font-black text-xs uppercase rounded-xl disabled:opacity-50'
+                  className='w-full sm:w-auto px-5 py-2.5 bg-slate-900 text-white font-black text-xs uppercase rounded-xl disabled:opacity-50 whitespace-nowrap'
                 >
-                  {isVerifyingCoupon ? '...' : 'Apply'}
+                  {isVerifyingCoupon ? 'Checking...' : 'Apply'}
                 </button>
               )}
             </div>
-            {/* ✅ Show surprise discount badge after applying */}
+
             {couponApplied && (
               <div className='mt-2 flex items-center gap-1.5 text-green-700 bg-green-50 border border-dashed border-green-300 rounded-xl px-3 py-1.5'>
                 <span className='text-base'>🎟️</span>
@@ -375,7 +370,6 @@ const CheckoutPage = () => {
               <p>Delivery Charge</p>
               <p>{deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}</p>
             </div>
-            {/* ✅ Shows actual ₹2–5 amount, not fake 15% */}
             {couponApplied && (
               <div className='flex justify-between text-green-600 font-bold bg-green-50 p-2 rounded-lg border border-green-200 border-dashed'>
                 <p>🎟️ {discountLabel || 'Surprise Discount'} (FIRSTUSER)</p>
