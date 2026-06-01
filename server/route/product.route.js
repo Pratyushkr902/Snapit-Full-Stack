@@ -19,7 +19,7 @@ import { admin } from '../middleware/auth.js';
 const productRouter = express.Router();
 
 // ── Existing routes ──────────────────────────────────────────
-productRouter.post('/create',                              admin, createProductController);
+productRouter.post('/create',                              auth, admin, createProductController);
 productRouter.post('/get',                                        getProductController);
 productRouter.post('/get-product-by-category',                    getProductByCategory);
 productRouter.post('/get-products-by-categories',                 getProductsByCategories);
