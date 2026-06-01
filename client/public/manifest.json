@@ -6,7 +6,8 @@
   "background_color": "#ffffff",
   "theme_color": "#16a34a",
   "icons": [
-    { "src": "/snapit-icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/snapit-icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/snapit-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/snapit-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/snapit-icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
