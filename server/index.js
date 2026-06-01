@@ -45,7 +45,10 @@ import referralRouter from './route/referral.route.js';
 import reviewRouter from './route/review.route.js';
 import paymentRouter from './route/payment.route.js';
 import adminRouter from './route/admin.route.js';
+import streakRouter from './route/streak.route.js';
+import subscriptionRouter from './route/subscription.route.js';
 
+import './utils/subscriptionCron.js';
 const app = express();
 
 // ✅ Enable global reverse proxy awareness
@@ -206,6 +209,8 @@ app.use('/api/wallet',     walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral',   referralRouter);
 app.use('/api/review',     reviewRouter);
+app.use('/api/streak',        streakRouter);
+app.use('/api/subscription',  subscriptionRouter);
 app.use('/api/payment',    paymentRouter);
 app.use('/api/admin',      adminRouter);
 
