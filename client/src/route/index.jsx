@@ -32,116 +32,57 @@ import ReferAndEarn from '../pages/ReferAndEarn';
 import WishlistPage from '../pages/WishlistPage';
 import TrackingPage from '../pages/TrackingPage';
 import AllDealsPage from '../pages/AllDealsPage';
-
-// ✅ NEW: Feature pages
 import SnapitPlus from '../components/SnapitPlus';
 import StreakTracker from '../components/StreakTracker';
 import MySubscriptions from '../pages/MySubscriptions';
-
-// ✅ NEW: Seller pages
 import SellerOrders from '../pages/SellerOrders';
 import SellerEarnings from '../pages/SellerEarnings';
+
+// ✅ NEW: Seller Dashboard with Products panel
+import SellerDashboard from '../pages/SellerDashboard';
 
 const router = createHashRouter([
     {
         path : "/",
         element : <App/>,
         children : [
-            {
-                path : "",
-                element : <Home/>
-            },
-            {
-                path : "search",
-                element : <SearchPage/>
-            },
-            {
-                path : 'login',
-                element : <Login/>
-            },
-            {
-                path : "register",
-                element : <Register/>
-            },
-            {
-                path : "forgot-password",
-                element : <ForgotPassword/>
-            },
-            {
-                path : "verification-otp",
-                element : <OtpVerification/>
-            },
-            {
-                path : "reset-password",
-                element : <ResetPassword/>
-            },
-            {
-                path : "user",
-                element : <UserMenuMobile/>
-            },
-            {
-                path : "wallet",
-                element : <Wallet />
-            },
-            {
-                path : "refer",
-                element : <ReferAndEarn />
-            },
-            {
-                path : "wishlist",
-                element : <WishlistPage />
-            },
-            {
-                path : "deals",
-                element : <AllDealsPage />
-            },
-            // ✅ NEW ROUTES
-            {
-                path : "snapit-plus",
-                element : <SnapitPlus />
-            },
-            {
-                path : "streak",
-                element : <StreakTracker />
-            },
-            {
-                path : "subscriptions",
-                element : <MySubscriptions />
-            },
-            {
-                path : "rider-panel",
-                element : <RiderDashboard />
-            },
+            { path : "", element : <Home/> },
+            { path : "search", element : <SearchPage/> },
+            { path : "login", element : <Login/> },
+            { path : "register", element : <Register/> },
+            { path : "forgot-password", element : <ForgotPassword/> },
+            { path : "verification-otp", element : <OtpVerification/> },
+            { path : "reset-password", element : <ResetPassword/> },
+            { path : "user", element : <UserMenuMobile/> },
+            { path : "wallet", element : <Wallet /> },
+            { path : "refer", element : <ReferAndEarn /> },
+            { path : "wishlist", element : <WishlistPage /> },
+            { path : "deals", element : <AllDealsPage /> },
+            { path : "snapit-plus", element : <SnapitPlus /> },
+            { path : "streak", element : <StreakTracker /> },
+            { path : "subscriptions", element : <MySubscriptions /> },
+            { path : "rider-panel", element : <RiderDashboard /> },
             {
                 path : "dashboard",
                 element : <Dashboard/>,
                 children : [
-                    {
-                        path : "profile",
-                        element : <Profile/>
-                    },
+                    { path : "profile", element : <Profile/> },
                     {
                         path : "admin-summary",
                         element : <AdminPermision><AdminSummary/></AdminPermision>
                     },
+                    { path : "myorders", element : <MyOrders/> },
+                    { path : "address", element : <Address/> },
+
+                    // ✅ FIXED: removed AdminPermision so sellers can access
+                    { path : "store-orders", element : <StoreOrders/> },
+
+                    // ✅ NEW: Full seller panel (packing + products + history + earnings)
+                    { path : "seller-dashboard", element : <SellerDashboard /> },
+
+                    { path : "order-tracking/:id", element : <RiderTracking /> },
                     {
-                        path : "myorders",
-                        element : <MyOrders/>
-                    },
-                    {
-                        path : "address",
-                        element : <Address/>
-                    },
-                    {
-                        path : "store-orders",
-                        element : <AdminPermision><StoreOrders/></AdminPermision>
-                    },
-                    {
-                        path : "order-tracking/:id",
-                        element : <RiderTracking />
-                    },
-                    {
-                        path : 'category',
+                        path : "category",
                         element : <AdminPermision><CategoryPage/></AdminPermision>
                     },
                     {
@@ -149,57 +90,29 @@ const router = createHashRouter([
                         element : <AdminPermision><SubCategoryPage/></AdminPermision>
                     },
                     {
-                        path : 'upload-product',
+                        path : "upload-product",
                         element : <AdminPermision><UploadProduct/></AdminPermision>
                     },
                     {
-                        path : 'product',
+                        path : "product",
                         element : <AdminPermision><ProductAdmin/></AdminPermision>
                     },
-                    // ✅ NEW: Seller routes
-                    {
-                        path : "seller-orders",
-                        element : <SellerOrders />
-                    },
-                    {
-                        path : "seller-earnings",
-                        element : <SellerEarnings />
-                    }
+                    { path : "seller-orders", element : <SellerOrders /> },
+                    { path : "seller-earnings", element : <SellerEarnings /> },
                 ]
             },
-            {
-                path : "track/:orderId",
-                element : <TrackingPage />
-            },
+            { path : "track/:orderId", element : <TrackingPage /> },
             {
                 path : ":category",
                 children : [
-                    {
-                        path : ":subCategory",
-                        element : <ProductListPage/>
-                    }
+                    { path : ":subCategory", element : <ProductListPage/> }
                 ]
             },
-            {
-                path : "product/:product",
-                element : <ProductDisplayPage/>
-            },
-            {
-                path : 'cart',
-                element : <CartMobile/>
-            },
-            {
-                path : "checkout",
-                element : <CheckoutPage/>
-            },
-            {
-                path : "success",
-                element : <Success/>
-            },
-            {
-                path : 'cancel',
-                element : <Cancel/>
-            }
+            { path : "product/:product", element : <ProductDisplayPage/> },
+            { path : "cart", element : <CartMobile/> },
+            { path : "checkout", element : <CheckoutPage/> },
+            { path : "success", element : <Success/> },
+            { path : "cancel", element : <Cancel/> },
         ]
     }
 ])
