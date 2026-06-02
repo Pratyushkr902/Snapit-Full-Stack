@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // ✅ CRITICAL FIXED DOMAIN TARGET: 
-const API_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-2.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com";
 // =========================================================================
 // 1. CENTRALIZED API ROUTE DICTIONARY WITH WALLET & SUBSCRIPTION MAPPINGS
 // =========================================================================
