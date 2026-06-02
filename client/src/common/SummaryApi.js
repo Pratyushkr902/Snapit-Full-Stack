@@ -169,6 +169,11 @@ const SummaryApi = {
         url: '/api/order/seller-orders',
         method: 'get'
     },
+    // ✅ NEW: Seller earnings endpoint
+    getSellerEarnings: {
+        url: '/api/order/seller-earnings',
+        method: 'get'
+    },
     getRiderLocation: {
         url: '/api/order/get-rider-location',
         method: 'post'

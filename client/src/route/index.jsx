@@ -38,6 +38,10 @@ import SnapitPlus from '../components/SnapitPlus';
 import StreakTracker from '../components/StreakTracker';
 import MySubscriptions from '../pages/MySubscriptions';
 
+// ✅ NEW: Seller pages
+import SellerOrders from '../pages/SellerOrders';
+import SellerEarnings from '../pages/SellerEarnings';
+
 const router = createHashRouter([
     {
         path : "/",
@@ -151,6 +155,15 @@ const router = createHashRouter([
                     {
                         path : 'product',
                         element : <AdminPermision><ProductAdmin/></AdminPermision>
+                    },
+                    // ✅ NEW: Seller routes
+                    {
+                        path : "seller-orders",
+                        element : <SellerOrders />
+                    },
+                    {
+                        path : "seller-earnings",
+                        element : <SellerEarnings />
                     }
                 ]
             },

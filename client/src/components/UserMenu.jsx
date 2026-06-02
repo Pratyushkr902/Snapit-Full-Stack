@@ -76,13 +76,37 @@ const UserMenu = ({close}) => {
 
             {/* SELLER ACCESS */}
             {(user?.role === "SELLER" || user?.role === "ADMIN") && (
-              <Link
-                onClick={handleClose}
-                to={"/dashboard/store-orders"}
-                className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-600 mb-1'
-              >
-                Store Orders (Pack Items)
-              </Link>
+              <>
+                <Link
+                  onClick={handleClose}
+                  to={"/dashboard/store-orders"}
+                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-600 mb-1'
+                >
+                  Store Orders (Pack Items)
+                </Link>
+                <Link
+                  onClick={handleClose}
+                  to={"/dashboard/seller-orders"}
+                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-semibold text-orange-700 flex items-center gap-2'
+                >
+                  <span>🧾</span>
+                  <div>
+                    <p className='leading-none'>Order History</p>
+                    <p className='text-[10px] text-gray-400 font-normal'>All past seller orders</p>
+                  </div>
+                </Link>
+                <Link
+                  onClick={handleClose}
+                  to={"/dashboard/seller-earnings"}
+                  className='px-2 bg-green-50 hover:bg-green-100 py-1 font-semibold text-green-700 flex items-center gap-2 mb-1'
+                >
+                  <span>💰</span>
+                  <div>
+                    <p className='leading-none'>Earnings</p>
+                    <p className='text-[10px] text-gray-400 font-normal'>Revenue & payouts</p>
+                  </div>
+                </Link>
+              </>
             )}
 
             {/* COMMON LINKS */}
