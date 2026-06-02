@@ -31,6 +31,7 @@ import AdminSummary from '../components/AdminSummary';
 import ReferAndEarn from '../pages/ReferAndEarn';
 import WishlistPage from '../pages/WishlistPage';
 import TrackingPage from '../pages/TrackingPage';
+import AllDealsPage from '../pages/AllDealsPage';
 
 // ✅ NEW: Feature pages
 import SnapitPlus from '../components/SnapitPlus';
@@ -85,6 +86,10 @@ const router = createHashRouter([
             {
                 path : "wishlist",
                 element : <WishlistPage />
+            },
+            {
+                path : "deals",
+                element : <AllDealsPage />
             },
             // ✅ NEW ROUTES
             {
