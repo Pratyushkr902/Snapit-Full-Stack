@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
 import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay'
+import TodayDeals from '../components/TodayDeals'
 
 // ✅ Inline SVG fallback — no network request, never fails
 const FALLBACK_IMG =
@@ -61,8 +62,7 @@ const Home = () => {
               ))
             : Array.isArray(categoryData) && categoryData.map((cat) => {
                 if (!cat) return null;
-                
-                // 🚀 FIXED: Prioritizes cat.icon to match the category schema variable signature
+
                 const rawImg = cat?.icon || cat?.image || cat?.imageUrl || '';
                 let finalSrc = FALLBACK_IMG;
 
@@ -118,7 +118,10 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 3. PRODUCT SECTIONS */}
+      {/* 3. TODAY'S DEALS */}
+      <TodayDeals />
+
+      {/* 4. PRODUCT SECTIONS */}
       <div className='flex flex-col gap-1 lg:gap-8 pb-24'>
         {loadingCategory
           ? new Array(3).fill(null).map((_, i) => (
@@ -146,6 +149,7 @@ const Home = () => {
             })
         }
       </div>
+
     </section>
   )
 }
