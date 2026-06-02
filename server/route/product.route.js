@@ -14,7 +14,8 @@ import {
     recalculateMRP,
     getPricingBreakdown,
 } from '../controllers/product.controller.js';
-import auth, { admin } from '../middleware/auth.js';
+import auth from '../middleware/auth.js'
+import { admin } from '../middleware/Admin.js'
 
 const productRouter = express.Router();
 

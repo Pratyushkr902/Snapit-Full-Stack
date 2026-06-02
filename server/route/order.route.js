@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import auth from '../middleware/auth.js'
+import { admin, seller, rider } from '../middleware/Admin.js'
 import {
     CashOnDeliveryOrderController,
     WalletPaymentOrderController,
@@ -16,32 +17,35 @@ import {
     getLastOrder,
     collectPaymentController,
     applyCouponController,
-    getScratchCardsController, // ✅ NEW
+    getScratchCardsController,
     getOrderItems
 } from '../controllers/order.controller.js'
 
 const orderRouter = Router()
 
-orderRouter.post("/cash-on-delivery",    auth, CashOnDeliveryOrderController)
-orderRouter.post("/wallet-order",        auth, WalletPaymentOrderController)
-orderRouter.post('/checkout',            auth, paymentController)
-orderRouter.post('/verify-payment',      auth, verifyPaymentController)
-orderRouter.post('/webhook',             webhookStripe)
+// ── Customer routes ──────────────────────────────────────────
+orderRouter.post("/cash-on-delivery",   auth, CashOnDeliveryOrderController)
+orderRouter.post("/wallet-order",       auth, WalletPaymentOrderController)
+orderRouter.post('/checkout',           auth, paymentController)
+orderRouter.post('/verify-payment',     auth, verifyPaymentController)
+orderRouter.post('/webhook',            webhookStripe)
+orderRouter.get("/order-list",          auth, getOrderDetailsController)
+orderRouter.get("/order-items",         auth, getOrderItems)
+orderRouter.get('/last-order',          auth, getLastOrder)
+orderRouter.post("/coupon/apply",       auth, applyCouponController)
+orderRouter.get("/scratch-cards",       auth, getScratchCardsController)
 
-orderRouter.get("/order-list",           auth, getOrderDetailsController)
-orderRouter.get("/order-items",          auth, getOrderItems)
-orderRouter.get("/seller-orders",        auth, getSellerOrdersController)
-orderRouter.get('/last-order',           auth, getLastOrder)
+// ── Admin only ───────────────────────────────────────────────
+orderRouter.get("/daily-report",        auth, admin,  getDailySalesReport)
+orderRouter.post("/settle-cash",        auth, admin,  settleRiderCashController)
 
-orderRouter.post("/get-rider-location",  auth, getRiderLocationController)
-orderRouter.put("/update-status",        auth, updateOrderStatusController)
-orderRouter.post("/update-seller-status",auth, updateSellerOrderStatusController)
+// ── Seller only ──────────────────────────────────────────────
+orderRouter.get("/seller-orders",         auth, seller, getSellerOrdersController)
+orderRouter.post("/update-seller-status", auth, seller, updateSellerOrderStatusController)
 
-orderRouter.get("/daily-report",         auth, getDailySalesReport)
-orderRouter.post("/settle-cash",         auth, settleRiderCashController)
-orderRouter.post("/collect-payment",     auth, collectPaymentController)
+// ── Rider only ───────────────────────────────────────────────
+orderRouter.post("/get-rider-location",   auth, rider, getRiderLocationController)
+orderRouter.put("/update-status",         auth, rider, updateOrderStatusController)
+orderRouter.post("/collect-payment",      auth, rider, collectPaymentController)
 
-orderRouter.post("/coupon/apply",        auth, applyCouponController)
-orderRouter.get("/scratch-cards",        auth, getScratchCardsController)  // ✅ NEW
-
-export default orderRouter;
+export default orderRouter
