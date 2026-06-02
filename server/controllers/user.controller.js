@@ -182,7 +182,8 @@ export async function loginController(request, response) {
             })
         }
 
-        const accesstoken = await generatedAccessToken(user._id)
+        // ✅ FIXED: pass user.role so JWT includes role field
+        const accesstoken = await generatedAccessToken(user._id, user.role)
         const refreshToken = await genertedRefreshToken(user._id)
 
         await UserModel.findByIdAndUpdate(user._id, {
@@ -306,18 +307,16 @@ export async function forgotPasswordController(request, response) {
             })
         }
 
-        // ✅ FIXED: Enforce clear string casting layout on the OTP code to keep email render utilities stable
         const rawOtp = generatedOtp()
         const stringOtp = String(rawOtp).trim()
-        
-        const expireTime = new Date(Date.now() + 60 * 60 * 1000); 
+
+        const expireTime = new Date(Date.now() + 60 * 60 * 1000);
 
         await UserModel.findByIdAndUpdate(user._id, {
             forgot_password_otp: stringOtp,
             forgot_password_expiry: expireTime
         })
 
-        // Add explicit catch wrapping on the mail transport layer to locate underlying infrastructure issues early
         try {
             await sendEmail({
                 sendTo: email,
@@ -455,6 +454,7 @@ export async function resetpassword(request, response) {
         })
     }
 }
+
 export async function refreshToken(request, response) {
     try {
         const refreshToken = request.cookies.refreshToken || request?.headers?.authorization?.split(" ")[1]
@@ -478,8 +478,20 @@ export async function refreshToken(request, response) {
             });
         }
 
-        const userId = verifyToken?.id  // ✅ FIXED: was verifyToken?._id
-        const newAccessToken = await generatedAccessToken(userId)
+        const userId = verifyToken?.id
+
+        // ✅ FIXED: fetch user from DB so we have user.role available
+        const user = await UserModel.findById(userId)
+        if (!user) {
+            return response.status(401).json({
+                message: "User not found",
+                error: true,
+                success: false
+            })
+        }
+
+        // ✅ FIXED: pass user.role so refreshed token also includes role
+        const newAccessToken = await generatedAccessToken(userId, user.role)
 
         response.cookie('accessToken', newAccessToken, cookiesOption)
 
@@ -499,6 +511,7 @@ export async function refreshToken(request, response) {
         })
     }
 }
+
 export async function userDetails(request, response) {
     try {
         const userId = request.userId
