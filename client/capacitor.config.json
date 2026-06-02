@@ -10,6 +10,14 @@
       "snapit-full-stack-2.onrender.com"
     ]
   },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "hardwareAccelerated": true,
+    "backgroundColor": "#ffffff",
+    "initialFocus": true
+  },
   "plugins": {
     "CapacitorCookies": {
       "enabled": true
