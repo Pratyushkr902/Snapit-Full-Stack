@@ -11,6 +11,7 @@ import { HiOutlineExternalLink } from "react-icons/hi";
 
 const UserMenu = ({close}) => {
    const user = useSelector((state) => state.user)
+   const role = user?.role?.replace(/['"]/g, '').trim().toUpperCase()
    const dispatch = useDispatch()
    const navigate = useNavigate()
 
@@ -40,7 +41,7 @@ const UserMenu = ({close}) => {
           <span className='max-w-52 text-ellipsis line-clamp-1'>
             {user?.name || user?.mobile}
             <span className='ml-1 font-medium text-red-600'>
-              {user?.role === "ADMIN" ? "(Admin)" : user?.role === "RIDER" ? "(Rider)" : user?.role === "SELLER" ? "(Seller)" : ""}
+              {role === "ADMIN" ? "(Admin)" : role === "RIDER" ? "(Rider)" : role === "SELLER" ? "(Seller)" : ""}
             </span>
           </span>
           <Link onClick={handleClose} to={"/dashboard/profile"} className='hover:text-primary-200'>
@@ -53,7 +54,7 @@ const UserMenu = ({close}) => {
         <div className='text-sm grid gap-1'>
 
             {/* ADMIN ONLY LINKS */}
-            {user?.role === "ADMIN" && (
+            {role === "ADMIN" && (
               <>
                 <Link onClick={handleClose} to={"/dashboard/admin-summary"} className='px-2 hover:bg-orange-200 py-1 font-bold text-secondary-100'>Admin Dashboard</Link>
                 <Link onClick={handleClose} to={"/dashboard/category"} className='px-2 hover:bg-orange-200 py-1'>Category</Link>
@@ -64,7 +65,7 @@ const UserMenu = ({close}) => {
             )}
 
             {/* RIDER ACCESS */}
-            {(user?.role === "rider" || user?.role === "RIDER" || user?.role === "ADMIN") && (
+            {(role === "RIDER" || role === "ADMIN") && (
               <Link
                 onClick={handleClose}
                 to={"/rider-panel"}
@@ -75,7 +76,7 @@ const UserMenu = ({close}) => {
             )}
 
             {/* SELLER ACCESS */}
-            {(user?.role === "SELLER" || user?.role === "ADMIN") && (
+            {(role === "SELLER" || role === "ADMIN") && (
               <>
                 <Link
                   onClick={handleClose}
