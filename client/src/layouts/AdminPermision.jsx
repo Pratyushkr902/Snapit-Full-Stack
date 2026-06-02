@@ -6,8 +6,7 @@ import isAdmin from '../utils/isAdmin'
 const AdminPermision = ({ children }) => {
     const user = useSelector(state => state.user)
     const location = useLocation()
-
-    const role = user?.role
+    const role = user?.role?.replace(/['"]/g, '').trim().toUpperCase()
 
     // SELLER gets access to store-orders only
     const isSellerRoute = location.pathname.includes('/dashboard/store-orders')
@@ -15,9 +14,9 @@ const AdminPermision = ({ children }) => {
 
     // RIDER gets access to rider-panel only
     const isRiderRoute = location.pathname.includes('/rider-panel')
-    const isRider = role === "RIDER" || role === "rider"
+    const isRider = role === "RIDER"
 
-    const hasAccess = isAdmin(role)
+    const hasAccess = isAdmin(user?.role)
         || (isSeller && isSellerRoute)
         || (isRider && isRiderRoute)
 
