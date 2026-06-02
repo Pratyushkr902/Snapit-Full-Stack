@@ -2,60 +2,104 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
-import toast from "react-hot-toast"
+import AddToCartButton from "./AddToCartButton"
 
-// ── Constants ────────────────────────────────────────────────────────────────
-const GREEN  = "#1a7c3e"
-const ORANGE = "#E8520A"
-const BLUE   = "#1a5c9e"
-const PURPLE = "#7B3FA0"
-
-// Keywords used to detect combo vs B1G1 from the unit field
+// ── Keywords to detect deal type from unit field ─────────────────────────────
 const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "bundle", "duo", "trio"]
 const BOGO_KEYWORDS  = ["b1g1", "buy 1 get 1", "buy one get one", "bogo", "free item", "1+1"]
 
-const isComboUnit  = (unit = "") => COMBO_KEYWORDS.some(k => unit.toLowerCase().includes(k))
-const isBogoUnit   = (unit = "") => BOGO_KEYWORDS.some(k => unit.toLowerCase().includes(k))
+const isComboUnit = (unit = "") => COMBO_KEYWORDS.some(k => unit.toLowerCase().includes(k))
+const isBogoUnit  = (unit = "") => BOGO_KEYWORDS.some(k => unit.toLowerCase().includes(k))
 
-// ── Styles ───────────────────────────────────────────────────────────────────
-const S = {
-  root:        { fontFamily: "'Inter', sans-serif", background: "#fff", paddingBottom: 8 },
-  sectionHead: { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 14px 12px" },
-  sectionTitle:{ fontSize:22, fontWeight:800, color:"#111", letterSpacing:-0.3 },
-  seeAllBtn:   { display:"flex", alignItems:"center", gap:6, background:GREEN, color:"#fff", fontSize:13, fontWeight:600, borderRadius:22, padding:"7px 16px", border:"none", cursor:"pointer" },
-  timerStrip:  { display:"flex", alignItems:"center", gap:8, margin:"0 14px 14px", background:"#FFF4EC", border:"1px solid #FDDBB8", borderRadius:10, padding:"9px 13px" },
-  timerLabel:  { fontSize:12, fontWeight:700, color:"#7A3E0A", letterSpacing:0.4 },
-  timerUnits:  { display:"flex", alignItems:"center", gap:4, marginLeft:"auto" },
-  tUnit:       { background:ORANGE, color:"#fff", fontSize:13, fontWeight:800, borderRadius:6, padding:"3px 8px", minWidth:30, textAlign:"center" },
-  tColon:      { fontWeight:800, color:ORANGE, fontSize:14 },
-  subRow:      { display:"flex", alignItems:"center", padding:"4px 14px 10px" },
-  subTitle:    { fontSize:15, fontWeight:700, color:"#111" },
-  subLabelCombo:{ fontSize:11, fontWeight:700, color:PURPLE, background:"#F3EAFC", borderRadius:5, padding:"2px 8px", marginLeft:8 },
-  subLabelBogo: { fontSize:11, fontWeight:700, color:BLUE,   background:"#E6F0FC", borderRadius:5, padding:"2px 8px", marginLeft:8 },
-  scrollWrap:  { display:"flex", gap:12, overflowX:"auto", padding:"0 14px 4px", scrollbarWidth:"none" },
-  card:        { flex:"0 0 158px", background:"#fff", border:"1px solid #e8e8e8", borderRadius:12, overflow:"hidden", position:"relative" },
-  cardImg:     { width:"100%", height:110, display:"flex", alignItems:"center", justifyContent:"center", background:"#f9f9f9", padding:8 },
-  onlyLeft:    { position:"absolute", top:88, left:0, right:0, background:"#FFEAEA", color:"#C0392B", fontSize:10, fontWeight:700, textAlign:"center", padding:"3px 0", letterSpacing:0.3 },
-  topBadge:    { position:"absolute", top:8, left:8, borderRadius:6, fontSize:10, fontWeight:700, padding:"3px 8px", color:"#fff" },
-  tagRow:      { display:"flex", alignItems:"center", gap:5, padding:"8px 9px 4px" },
-  tagMin:      { background:GREEN,  color:"#fff", fontSize:10, fontWeight:700, borderRadius:5, padding:"2px 7px" },
-  tagOff:      { background:ORANGE, color:"#fff", fontSize:10, fontWeight:700, borderRadius:5, padding:"2px 7px" },
-  tagBogo:     { background:BLUE,   color:"#fff", fontSize:10, fontWeight:700, borderRadius:5, padding:"2px 7px" },
-  cardName:    { fontSize:13, fontWeight:600, color:"#111", padding:"2px 9px 2px", lineHeight:1.3 },
-  cardQty:     { fontSize:12, color:"#888", padding:"1px 9px 5px" },
-  cardFooter:  { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"4px 9px 10px" },
-  priceCol:    { display:"flex", flexDirection:"column" },
-  price:       { fontSize:15, fontWeight:800, color:"#111" },
-  mrp:         { fontSize:11, color:"#aaa", textDecoration:"line-through" },
-  qtyCtrl:     { display:"flex", alignItems:"center", background:GREEN, borderRadius:8, overflow:"hidden" },
-  qtyBtn:      { background:GREEN, border:"none", color:"#fff", fontSize:18, fontWeight:700, width:28, height:28, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" },
-  qtyNum:      { background:"#fff", color:GREEN, fontSize:13, fontWeight:800, width:24, height:28, display:"flex", alignItems:"center", justifyContent:"center" },
-  divider:     { height:8, background:"#F4F4F4", margin:"12px 0" },
-  emptyText:   { fontSize:13, color:"#aaa", padding:"8px 14px 4px" },
-  skeleton:    { flex:"0 0 158px", height:220, background:"#f0f0f0", borderRadius:12, animation:"pulse 1.5s ease-in-out infinite" },
+// ── Skeleton card ─────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div className="flex-shrink-0 w-36 rounded-xl border border-slate-100 overflow-hidden animate-pulse">
+      <div className="w-full h-28 bg-slate-100" />
+      <div className="p-2 space-y-2">
+        <div className="h-3 bg-slate-100 rounded w-4/5" />
+        <div className="h-3 bg-slate-100 rounded w-3/5" />
+        <div className="h-7 bg-slate-100 rounded w-full mt-2" />
+      </div>
+    </div>
+  )
 }
 
-// ── Countdown Timer ──────────────────────────────────────────────────────────
+// ── Single product card ───────────────────────────────────────────────────────
+function DealCard({ product, isCombo }) {
+  const navigate = useNavigate()
+
+  const discount = product.price && product.sellingPrice && product.price !== product.sellingPrice
+    ? Math.round(((product.price - product.sellingPrice) / product.price) * 100)
+    : null
+
+  return (
+    <div
+      className="flex-shrink-0 w-36 bg-white rounded-xl border border-slate-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow relative"
+      onClick={() => navigate(`/product/${product._id}`)}
+    >
+      {/* Image */}
+      <div className="w-full h-28 bg-slate-50 flex items-center justify-center p-2">
+        <img
+          src={product.image?.[0]}
+          alt={product.name}
+          className="w-full h-full object-contain"
+          onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }}
+          loading="lazy"
+        />
+      </div>
+
+      {/* Top badge */}
+      <span className={`absolute top-2 left-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded ${isCombo ? "bg-purple-500" : "bg-blue-500"}`}>
+        {isCombo ? "COMBO" : "B1G1"}
+      </span>
+
+      {/* Low stock */}
+      {product.stock > 0 && product.stock <= 10 && (
+        <div className="absolute top-[88px] left-0 right-0 bg-red-50 text-red-600 text-[9px] font-bold text-center py-0.5 tracking-wide">
+          ONLY {product.stock} LEFT
+        </div>
+      )}
+
+      {/* Tags row */}
+      <div className="flex items-center gap-1 px-2 pt-2">
+        <span className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">10 MIN</span>
+        {isCombo && discount > 0
+          ? <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">{discount}% OFF</span>
+          : <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">FREE ITEM</span>
+        }
+      </div>
+
+      {/* Name */}
+      <p className="text-xs font-semibold text-slate-800 line-clamp-2 px-2 pt-1 leading-tight">
+        {product.name}
+      </p>
+
+      {/* Unit */}
+      <p className="text-[10px] text-slate-400 px-2 pb-1">{product.unit}</p>
+
+      {/* Price + Add to cart */}
+      <div
+        className="flex items-center justify-between px-2 pb-2 gap-1"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex flex-col">
+          <span className="text-sm font-bold text-slate-800">
+            ₹{product.sellingPrice ?? product.price}
+          </span>
+          {discount > 0 && (
+            <span className="text-[10px] text-slate-400 line-through">₹{product.price}</span>
+          )}
+        </div>
+        <div className="w-16">
+          <AddToCartButton data={product} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Countdown timer ───────────────────────────────────────────────────────────
 function CountdownTimer({ initialSeconds }) {
   const [secs, setSecs] = useState(initialSeconds)
   useEffect(() => {
@@ -66,143 +110,43 @@ function CountdownTimer({ initialSeconds }) {
   const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0")
   const s = String(secs % 60).padStart(2, "0")
   return (
-    <div style={S.timerStrip}>
-      <span style={{ fontSize:15, color:ORANGE }}>⏱</span>
-      <span style={S.timerLabel}>ENDS IN</span>
-      <div style={S.timerUnits}>
-        <span style={S.tUnit}>{h}</span><span style={S.tColon}>:</span>
-        <span style={S.tUnit}>{m}</span><span style={S.tColon}>:</span>
-        <span style={S.tUnit}>{s}</span>
+    <div className="flex items-center gap-2 mx-4 mb-4 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
+      <span className="text-orange-500 text-sm">⏱</span>
+      <span className="text-[11px] font-bold text-orange-800 tracking-wide">ENDS IN</span>
+      <div className="flex items-center gap-1 ml-auto">
+        {[h, m, s].map((unit, i) => (
+          <span key={i} className="flex items-center gap-1">
+            <span className="bg-orange-500 text-white text-xs font-bold rounded px-1.5 py-0.5 min-w-[26px] text-center">{unit}</span>
+            {i < 2 && <span className="text-orange-500 font-bold text-sm">:</span>}
+          </span>
+        ))}
       </div>
     </div>
   )
 }
 
-// ── Qty Control ──────────────────────────────────────────────────────────────
-function QtyControl({ productId, onAdd }) {
-  const [qty, setQty] = useState(1)
-  const handleAdd = () => { setQty(q => q + 1); onAdd && onAdd(productId) }
-  const handleMinus = () => setQty(q => Math.max(1, q - 1))
-  return (
-    <div style={S.qtyCtrl}>
-      <button style={S.qtyBtn} onClick={handleMinus}>−</button>
-      <span style={S.qtyNum}>{qty}</span>
-      <button style={S.qtyBtn} onClick={handleAdd}>+</button>
-    </div>
-  )
-}
-
-// ── Product Card ─────────────────────────────────────────────────────────────
-function ProductCard({ product, isCombo }) {
-  const navigate = useNavigate()
-  const badgeBg = isCombo ? PURPLE : BLUE
-  const discount = product.price && product.sellingPrice
-    ? Math.round(((product.price - product.sellingPrice) / product.price) * 100)
-    : null
-
-  const handleAddToCart = async (productId) => {
-    try {
-      const res = await Axios({ ...SummaryApi.addTocart, data: { productId, quantity: 1 } })
-      if (res.data.success) toast.success("Added to cart!")
-    } catch {
-      toast.error("Login to add to cart")
-    }
-  }
-
-  return (
-    <div style={S.card} onClick={() => navigate(`/product/${product._id}`)} className="cursor-pointer">
-      {/* Image */}
-      <div style={S.cardImg}>
-        <img
-          src={product.image?.[0]}
-          alt={product.name}
-          style={{ width:"100%", height:"100%", objectFit:"contain" }}
-          onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }}
-        />
-      </div>
-
-      {/* Top badge */}
-      <span style={{ ...S.topBadge, background: badgeBg }}>
-        {isCombo ? "COMBO" : "B1G1"}
-      </span>
-
-      {/* Low stock */}
-      {product.stock <= 10 && product.stock > 0 && (
-        <div style={S.onlyLeft}>ONLY {product.stock} LEFT</div>
-      )}
-
-      {/* Tags */}
-      <div style={S.tagRow}>
-        <span style={S.tagMin}>10 MIN</span>
-        {isCombo && discount > 0
-          ? <span style={S.tagOff}>{discount}% OFF</span>
-          : <span style={S.tagBogo}>FREE ITEM</span>
-        }
-      </div>
-
-      {/* Name & unit */}
-      <div style={S.cardName}>{product.name}</div>
-      <div style={S.cardQty}>{product.unit}</div>
-
-      {/* Price + qty */}
-      <div style={S.cardFooter} onClick={e => e.stopPropagation()}>
-        <div style={S.priceCol}>
-          <span style={S.price}>₹{product.sellingPrice ?? product.price}</span>
-          {product.price && product.sellingPrice && product.price !== product.sellingPrice && (
-            <span style={S.mrp}>₹{product.price}</span>
-          )}
-        </div>
-        <QtyControl productId={product._id} onAdd={handleAddToCart} />
-      </div>
-    </div>
-  )
-}
-
-// ── Skeleton loader ──────────────────────────────────────────────────────────
-function SkeletonRow() {
-  return (
-    <div style={S.scrollWrap}>
-      {[1,2,3].map(i => <div key={i} style={S.skeleton} />)}
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
-    </div>
-  )
-}
-
-// ── Main Component ───────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 export default function TodayDeals() {
   const [comboProducts, setComboProducts] = useState([])
   const [bogoProducts,  setBogoProducts]  = useState([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    fetchDeals()
-  }, [])
+  useEffect(() => { fetchDeals() }, [])
 
   const fetchDeals = async () => {
     try {
       setLoading(true)
-      // Fetch all products — paginate through pages until we have enough deals
-      let page = 1
-      let allProducts = []
-      let hasMore = true
-
+      let page = 1, allProducts = [], hasMore = true
       while (hasMore && allProducts.length < 200) {
-        const res = await Axios({
-          ...SummaryApi.getProduct,
-          data: { page, limit: 100 }
-        })
+        const res = await Axios({ ...SummaryApi.getProduct, data: { page, limit: 100 } })
         const data = res.data?.data ?? []
         allProducts = [...allProducts, ...data]
         hasMore = data.length === 100
         page++
       }
-
-      const combos = allProducts.filter(p => isComboUnit(p.unit))
-      const bogos  = allProducts.filter(p => isBogoUnit(p.unit))
-
-      setComboProducts(combos)
-      setBogoProducts(bogos)
+      setComboProducts(allProducts.filter(p => isComboUnit(p.unit)))
+      setBogoProducts(allProducts.filter(p => isBogoUnit(p.unit)))
     } catch (err) {
       console.error("TodayDeals fetch error:", err)
     } finally {
@@ -210,58 +154,67 @@ export default function TodayDeals() {
     }
   }
 
-  // Don't render the section at all if no deals found after loading
   if (!loading && comboProducts.length === 0 && bogoProducts.length === 0) return null
 
   return (
-    <div style={S.root}>
-      {/* Header */}
-      <div style={S.sectionHead}>
-        <span style={S.sectionTitle}>Today's Deals 🔥</span>
-        <button style={S.seeAllBtn} onClick={() => navigate("/deals")}>
-          See All →
-        </button>
+    // ── Outer page frame ──────────────────────────────────────────────────────
+    <div className="container mx-auto px-4 my-4">
+      <div className="bg-green-50 border border-green-100 rounded-2xl py-4 overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 mb-3">
+          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
+            Today's Deals 🔥
+          </h2>
+          <button
+            onClick={() => navigate("/deals")}
+            className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-full px-4 py-1.5 transition-colors"
+          >
+            See All →
+          </button>
+        </div>
+
+        {/* Countdown */}
+        <CountdownTimer initialSeconds={8 * 3600 + 42 * 60 + 17} />
+
+        {/* ── Combo Offers ── */}
+        {(loading || comboProducts.length > 0) && (
+          <>
+            <div className="flex items-center gap-2 px-4 mb-2">
+              <span className="text-sm font-bold text-slate-700">Combo Offers</span>
+              <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-100 rounded px-2 py-0.5">SAVE MORE</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-hide" style={{ scrollbarWidth:"none" }}>
+              {loading
+                ? [1,2,3].map(i => <SkeletonCard key={i} />)
+                : comboProducts.map(p => <DealCard key={p._id} product={p} isCombo={true} />)
+              }
+            </div>
+          </>
+        )}
+
+        {/* Divider */}
+        {(loading || (comboProducts.length > 0 && bogoProducts.length > 0)) && (
+          <div className="mx-4 my-4 border-t border-green-100" />
+        )}
+
+        {/* ── Buy 1 Get 1 ── */}
+        {(loading || bogoProducts.length > 0) && (
+          <>
+            <div className="flex items-center gap-2 px-4 mb-2">
+              <span className="text-sm font-bold text-slate-700">Buy 1 Get 1 Free</span>
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5">FREE ITEM</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth:"none" }}>
+              {loading
+                ? [1,2,3].map(i => <SkeletonCard key={i} />)
+                : bogoProducts.map(p => <DealCard key={p._id} product={p} isCombo={false} />)
+              }
+            </div>
+          </>
+        )}
+
       </div>
-
-      {/* Countdown */}
-      <CountdownTimer initialSeconds={8 * 3600 + 42 * 60 + 17} />
-
-      {/* ── Combo Offers ── */}
-      {(loading || comboProducts.length > 0) && (
-        <>
-          <div style={S.subRow}>
-            <span style={S.subTitle}>Combo Offers</span>
-            <span style={S.subLabelCombo}>SAVE MORE</span>
-          </div>
-          {loading
-            ? <SkeletonRow />
-            : <div style={S.scrollWrap}>
-                {comboProducts.map(p => (
-                  <ProductCard key={p._id} product={p} isCombo={true} />
-                ))}
-              </div>
-          }
-        </>
-      )}
-
-      {/* ── Buy 1 Get 1 ── */}
-      {(loading || bogoProducts.length > 0) && (
-        <>
-          <div style={S.divider} />
-          <div style={S.subRow}>
-            <span style={S.subTitle}>Buy 1 Get 1 Free</span>
-            <span style={S.subLabelBogo}>FREE ITEM</span>
-          </div>
-          {loading
-            ? <SkeletonRow />
-            : <div style={S.scrollWrap}>
-                {bogoProducts.map(p => (
-                  <ProductCard key={p._id} product={p} isCombo={false} />
-                ))}
-              </div>
-          }
-        </>
-      )}
     </div>
   )
 }
