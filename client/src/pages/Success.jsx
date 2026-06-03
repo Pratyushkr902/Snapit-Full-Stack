@@ -10,7 +10,6 @@ const EMOJIS = [
   { icon: '🤩', label: 'Amazing', value: 5, color: 'border-purple-200 bg-purple-50 hover:bg-purple-100' },
 ]
 
-// Brand color map for scratch card backgrounds
 const BRAND_COLORS = {
   'Nykaa':      { bg: '#FBEAF0', text: '#72243E' },
   'boAt':       { bg: '#EEEDFE', text: '#3C3489' },
@@ -24,11 +23,11 @@ const BRAND_COLORS = {
 
 // ── Single scratch card component ──────────────────────────────────────────────
 const ScratchCard = ({ card }) => {
-  const canvasRef  = useRef(null)
+  const canvasRef    = useRef(null)
   const containerRef = useRef(null)
-  const painting   = useRef(false)
-  const revealed   = useRef(false)
-  const [done, setDone] = useState(false)
+  const painting     = useRef(false)
+  const revealed     = useRef(false)
+  const [done, setDone]     = useState(false)
   const [copied, setCopied] = useState(false)
 
   const colors = BRAND_COLORS[card.brand] || { bg: '#F1EFE8', text: '#444441' }
@@ -44,15 +43,12 @@ const ScratchCard = ({ card }) => {
     canvas.height = h
 
     const ctx = canvas.getContext('2d')
-    // Draw scratch surface
     ctx.fillStyle = colors.bg
     ctx.fillRect(0, 0, w, h)
-    // Subtle dot pattern
     ctx.fillStyle = 'rgba(0,0,0,0.06)'
     for (let r = 0; r < h; r += 7)
       for (let c = 0; c < w; c += 7)
         if ((r + c) % 14 === 0) ctx.fillRect(c, r, 3, 3)
-    // Hint text
     ctx.fillStyle = colors.text
     ctx.font = 'bold 10px sans-serif'
     ctx.textAlign = 'center'
@@ -71,7 +67,6 @@ const ScratchCard = ({ card }) => {
     ctx.beginPath()
     ctx.arc(x, y, 18, 0, Math.PI * 2)
     ctx.fill()
-    // Check how much is cleared
     const data = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height).data
     let clear = 0
     for (let i = 3; i < data.length; i += 4) if (data[i] < 128) clear++
@@ -84,9 +79,9 @@ const ScratchCard = ({ card }) => {
     }
   }
 
-  const onMouseDown = e => { painting.current = true; const r = canvasRef.current.getBoundingClientRect(); const p = getPos(e, r); scratch(p.x, p.y) }
-  const onMouseMove = e => { if (!painting.current) return; const r = canvasRef.current.getBoundingClientRect(); const p = getPos(e, r); scratch(p.x, p.y) }
-  const onMouseUp   = () => { painting.current = false }
+  const onMouseDown  = e => { painting.current = true; const r = canvasRef.current.getBoundingClientRect(); const p = getPos(e, r); scratch(p.x, p.y) }
+  const onMouseMove  = e => { if (!painting.current) return; const r = canvasRef.current.getBoundingClientRect(); const p = getPos(e, r); scratch(p.x, p.y) }
+  const onMouseUp    = () => { painting.current = false }
   const onTouchStart = e => { e.preventDefault(); painting.current = true; const r = canvasRef.current.getBoundingClientRect(); const p = getPos(e, r); scratch(p.x, p.y) }
   const onTouchMove  = e => { e.preventDefault(); if (!painting.current) return; const r = canvasRef.current.getBoundingClientRect(); const p = getPos(e, r); scratch(p.x, p.y) }
   const onTouchEnd   = () => { painting.current = false }
@@ -105,7 +100,6 @@ const ScratchCard = ({ card }) => {
       className='relative rounded-2xl overflow-hidden border border-slate-100'
       style={{ aspectRatio: '2/3' }}
     >
-      {/* Revealed content underneath */}
       <div className='absolute inset-0 flex flex-col items-center justify-center gap-1 p-2 bg-white'>
         <p className='text-[9px] font-black text-slate-400 uppercase tracking-wide'>{card.brand}</p>
         <p className='text-lg font-black text-slate-800 text-center leading-tight'>{card.discount}</p>
@@ -118,7 +112,6 @@ const ScratchCard = ({ card }) => {
         <p className='text-[8px] text-slate-400 mt-0.5'>Valid {card.expires_days} days</p>
       </div>
 
-      {/* Scratch canvas on top */}
       <canvas
         ref={canvasRef}
         className='absolute inset-0 rounded-2xl transition-opacity duration-300 cursor-cell'
@@ -138,8 +131,22 @@ const ScratchCard = ({ card }) => {
 // ── Main Success page ──────────────────────────────────────────────────────────
 const Success = () => {
   const location = useLocation()
-  const isOrder     = Boolean(location?.state?.text)
-  const scratchCards = location?.state?.scratch_cards || []   // ✅ passed from CheckoutPage
+  const isOrder = Boolean(location?.state?.text)
+
+  // ✅ FIX: Read scratch cards from router state first,
+  // fall back to sessionStorage if state was lost (e.g. page refresh)
+  const scratchCards = (() => {
+    const fromState = location?.state?.scratch_cards
+    if (fromState && fromState.length > 0) return fromState
+    try {
+      const stored = sessionStorage.getItem('pending_scratch_cards')
+      if (stored) {
+        sessionStorage.removeItem('pending_scratch_cards') // consume once
+        return JSON.parse(stored)
+      }
+    } catch (e) {}
+    return []
+  })()
 
   const [selectedRating, setSelectedRating] = useState(null)
   const [comment, setComment]               = useState('')
@@ -153,7 +160,7 @@ const Success = () => {
       const t = setTimeout(() => setShowCards(true), 1200)
       return () => clearTimeout(t)
     }
-  }, [isOrder, scratchCards])
+  }, []) // ✅ FIX: empty deps — scratchCards is stable (computed once from location/sessionStorage)
 
   const handleFeedbackSubmit = async () => {
     if (!selectedRating) return toast.error('Please select a rating')
@@ -203,7 +210,7 @@ const Success = () => {
         </div>
       )}
 
-      {/* ✅ SCRATCH CARDS SECTION — shows for ALL users after every order */}
+      {/* ✅ SCRATCH CARDS SECTION */}
       {isOrder && showCards && scratchCards.length > 0 && (
         <div className='w-full max-w-sm mb-6'>
           <div className='bg-white rounded-3xl shadow-xl border border-slate-100 p-5'>
@@ -226,7 +233,7 @@ const Success = () => {
         </div>
       )}
 
-      {/* ✅ Fallback if scratch cards didn't come through */}
+      {/* Fallback if scratch cards didn't come through */}
       {isOrder && showCards && scratchCards.length === 0 && (
         <div className='w-full max-w-sm mb-6'>
           <div className='bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-4 text-center'>

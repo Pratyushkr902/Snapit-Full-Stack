@@ -12,7 +12,7 @@ import EditSubCategory from '../components/EditSubCategory'
 import CofirmBox from '../components/ConfirmBox'
 import toast from 'react-hot-toast'
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-2.onrender.com"
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com"
 
 // ✅ Inline SVG fallback — never fails
 const FALLBACK_IMG =

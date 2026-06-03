@@ -17,6 +17,7 @@ import SubCategoryPage from "../pages/SubCategoryPage";
 import UploadProduct from "../pages/UploadProduct";
 import ProductAdmin from "../pages/ProductAdmin";
 import AdminPermision from "../layouts/AdminPermision";
+import SellerPermission from "../layouts/SellerPermission";
 import ProductListPage from "../pages/ProductListPage";
 import ProductDisplayPage from "../pages/ProductDisplayPage";
 import CartMobile from "../pages/CartMobile";
@@ -35,10 +36,6 @@ import AllDealsPage from '../pages/AllDealsPage';
 import SnapitPlus from '../components/SnapitPlus';
 import StreakTracker from '../components/StreakTracker';
 import MySubscriptions from '../pages/MySubscriptions';
-import SellerOrders from '../pages/SellerOrders';
-import SellerEarnings from '../pages/SellerEarnings';
-
-// ✅ NEW: Seller Dashboard with Products panel
 import SellerDashboard from '../pages/SellerDashboard';
 
 const router = createHashRouter([
@@ -73,13 +70,15 @@ const router = createHashRouter([
                     },
                     { path : "myorders", element : <MyOrders/> },
                     { path : "address", element : <Address/> },
-
-                    // ✅ FIXED: removed AdminPermision so sellers can access
                     { path : "store-orders", element : <StoreOrders/> },
-
-                    // ✅ NEW: Full seller panel (packing + products + history + earnings)
-                    { path : "seller-dashboard", element : <SellerDashboard /> },
-
+                    {
+                        path : "seller-dashboard",
+                        element : <SellerPermission><SellerDashboard /></SellerPermission>
+                    },
+                    {
+                        path : "upload-product",
+                        element : <SellerPermission><UploadProduct/></SellerPermission>
+                    },
                     { path : "order-tracking/:id", element : <RiderTracking /> },
                     {
                         path : "category",
@@ -90,21 +89,17 @@ const router = createHashRouter([
                         element : <AdminPermision><SubCategoryPage/></AdminPermision>
                     },
                     {
-                        path : "upload-product",
-                        element : <AdminPermision><UploadProduct/></AdminPermision>
-                    },
-                    {
                         path : "product",
                         element : <AdminPermision><ProductAdmin/></AdminPermision>
                     },
-                    { path : "seller-orders", element : <SellerOrders /> },
-                    { path : "seller-earnings", element : <SellerEarnings /> },
                 ]
             },
             { path : "track/:orderId", element : <TrackingPage /> },
             {
                 path : ":category",
                 children : [
+                    // ✅ FIX: added index route so /:category alone (no subcategory) also renders ProductListPage
+                    { index: true, element : <ProductListPage/> },
                     { path : ":subCategory", element : <ProductListPage/> }
                 ]
             },

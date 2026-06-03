@@ -8,59 +8,63 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUserDetails } from '../store/userSlice';
 import fetchUserDetails from '../utils/fetchUserDetails';
-
-// FIX: Single source of truth for token key names.
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../constants/storageKeys';
 
 const Login = () => {
-    const [data, setData] = useState({
-        email: "",
-        password: "",
-    })
+    const [data, setData] = useState({ email: "", password: "" })
     const [showPassword, setShowPassword] = useState(false)
     const dispatch = useDispatch()
-    // FIX: useNavigate instead of window.location.hash — keeps React Router in control.
     const navigate = useNavigate()
 
     const handleChange = (e) => {
         const { name, value } = e.target
-        setData((prev) => ({
-            ...prev,
-            [name]: value
-        }))
+        setData((prev) => ({ ...prev, [name]: value }))
     }
 
-    const isValidValue = data.email.trim() !== "" && data.password.trim() !== "";
+    const isValidValue = data.email.trim() !== "" && data.password.trim() !== ""
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (!isValidValue) return
 
         try {
-            // FIX: Clear only the canonical keys — no more duplicate writes.
-            localStorage.removeItem(ACCESS_TOKEN_KEY);
-            localStorage.removeItem(REFRESH_TOKEN_KEY);
+            // ✅ Clear ALL stale auth data before fresh login
+            localStorage.removeItem(ACCESS_TOKEN_KEY)
+            localStorage.removeItem(REFRESH_TOKEN_KEY)
+            localStorage.removeItem('accesstoken')
+            localStorage.removeItem('accessToken')
+            localStorage.removeItem('refreshToken')
+            localStorage.removeItem('refreshtoken')
+            localStorage.removeItem('persist:root')  // ✅ CRITICAL — prevents stale Redux state overriding fresh login
+            localStorage.removeItem('user')
 
             const response = await Axios({
                 ...SummaryApi.login,
                 data: data
             })
-            
+
             if (response.data.error) {
                 toast.error(response.data.message)
-                return;
+                return
             }
 
             if (response.data.success) {
                 toast.success(response.data.message)
-                
-                // FIX: Read from one consistent key name on the response.
-                const token = response.data?.data?.accessToken || response.data?.data?.accesstoken;
-                const refresh = response.data?.data?.refreshToken || response.data?.data?.refreshtoken;
 
-                // FIX: Write to one key only — no redundant duplicates.
-                if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token);
-                if (refresh) localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
+                const token   = response.data?.data?.accessToken   || response.data?.data?.accesstoken
+                const refresh = response.data?.data?.refreshToken  || response.data?.data?.refreshtoken
+
+                // ✅ Save both key variants so Axios interceptor always finds them
+                if (token) {
+                    localStorage.setItem('accessToken', token)
+                    localStorage.setItem('accesstoken', token)
+                    localStorage.setItem(ACCESS_TOKEN_KEY, token)
+                }
+                if (refresh) {
+                    localStorage.setItem('refreshToken', refresh)
+                    localStorage.setItem('refreshtoken', refresh)
+                    localStorage.setItem(REFRESH_TOKEN_KEY, refresh)
+                }
 
                 const userDetails = await fetchUserDetails()
                 if (userDetails?.success && userDetails.data) {
@@ -68,10 +72,7 @@ const Login = () => {
                 }
 
                 setData({ email: "", password: "" })
-                
-                // FIX: navigate() keeps React Router's history intact.
-                // window.location.hash bypassed the router and caused a full re-render.
-                  setTimeout(() => navigate("/"), 100)
+                setTimeout(() => navigate("/"), 100)
             }
 
         } catch (error) {
@@ -109,9 +110,9 @@ const Login = () => {
                                 onChange={handleChange}
                                 required
                             />
-                            <button 
+                            <button
                                 type="button"
-                                onClick={() => setShowPassword(prev => !prev)} 
+                                onClick={() => setShowPassword(prev => !prev)}
                                 className='cursor-pointer text-gray-500 hover:text-gray-700 focus:outline-none px-1'
                                 aria-label={showPassword ? "Hide password" : "Show password"}
                             >
@@ -122,9 +123,9 @@ const Login = () => {
                             Forgot password ?
                         </Link>
                     </div>
-    
-                    <button 
-                        disabled={!isValidValue} 
+
+                    <button
+                        disabled={!isValidValue}
                         className={`${isValidValue ? "bg-green-800 hover:bg-green-700 active:scale-[0.99]" : "bg-gray-400 cursor-not-allowed"} text-white py-2 rounded font-semibold my-3 tracking-wide transition-all`}
                     >
                         Login
@@ -139,4 +140,4 @@ const Login = () => {
     )
 }
 
-export default Login;
+export default Login

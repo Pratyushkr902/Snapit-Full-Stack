@@ -5,17 +5,21 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Snapit - Hyperlocal Grocery</title>
+
+
     <link rel="manifest" href="/manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-  }
-</script>
-    <!-- Razorpay Script -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .catch(err => console.error('ServiceWorker registration failed: ', err));
+        });
+      }
+    </script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script type="module" crossorigin src="/assets/index-Cc6NxxH3.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-B2Hw3L0v.css">
-  </head>
+  <script type="module" crossorigin src="/assets/index-D12fT09d.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-AEzvXKb5.css">
+</head>
   <body>
     <div id="root"></div>
   </body>

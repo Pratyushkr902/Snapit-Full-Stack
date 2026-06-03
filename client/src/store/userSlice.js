@@ -1,18 +1,20 @@
 import { createSlice } from "@reduxjs/toolkit"
 
+const emptyUser = {
+    _id: "", name: "", email: "", avatar: "", mobile: "",
+    verify_email: "", last_login_date: "", status: "",
+    address_details: [], shopping_cart: [], orderHistory: [], role: ""
+}
+
 // ✅ Read saved user instantly on app start — no timing gap
 const initialValue = (() => {
     try {
         const stored = localStorage.getItem('user')
         if (stored) return JSON.parse(stored)
     } catch {
-        return {}
+        return emptyUser
     }
-    return {
-        _id: "", name: "", email: "", avatar: "", mobile: "",
-        verify_email: "", last_login_date: "", status: "",
-        address_details: [], shopping_cart: [], orderHistory: [], role: ""
-    }
+    return emptyUser
 })()
 
 const userSlice = createSlice({
@@ -38,7 +40,6 @@ const userSlice = createSlice({
         },
         updatedAvatar: (state, action) => {
             state.avatar = action.payload
-            // ✅ Keep localStorage in sync
             const stored = localStorage.getItem('user')
             if (stored) {
                 const parsed = JSON.parse(stored)
@@ -46,10 +47,14 @@ const userSlice = createSlice({
             }
         },
         logout: (state) => {
-            // ✅ Clear everything including localStorage
+            // ✅ Clear ALL token variants + persisted Redux state
             localStorage.removeItem('user')
             localStorage.removeItem('accesstoken')
+            localStorage.removeItem('accessToken')
             localStorage.removeItem('refreshToken')
+            localStorage.removeItem('refreshtoken')
+            localStorage.removeItem('persist:root')  // ✅ CRITICAL FIX
+
             state._id             = ""
             state.name            = ""
             state.email           = ""

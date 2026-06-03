@@ -101,6 +101,21 @@ const CheckoutPage = () => {
     })
   }
 
+  // ✅ FIX: Helper that saves scratch cards to sessionStorage before navigating
+  // so they survive even if React Router state is lost on refresh
+  const navigateToSuccess = (scratchCards) => {
+    const cards = scratchCards || []
+    try {
+      sessionStorage.setItem('pending_scratch_cards', JSON.stringify(cards))
+    } catch (e) {}
+    navigate('/success', {
+      state: {
+        text:          'Order',
+        scratch_cards: cards
+      }
+    })
+  }
+
   const handleWalletPayment = async () => {
     try {
       if (!addressList[selectAddress]) return toast.error('Please select a delivery address')
@@ -135,12 +150,7 @@ const CheckoutPage = () => {
         toast.success('Paid successfully using Snapit Wallet! 💸')
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
-        navigate('/success', {
-          state: {
-            text:          'Order',
-            scratch_cards: response.data.scratch_cards || []
-          }
-        })
+        navigateToSuccess(response.data.scratch_cards)  // ✅ FIXED
       }
     } catch (error) {
       AxiosToastError(error)
@@ -176,12 +186,7 @@ const CheckoutPage = () => {
         toast.success(response.data.message)
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
-        navigate('/success', {
-          state: {
-            text:          'Order',
-            scratch_cards: response.data.scratch_cards || []
-          }
-        })
+        navigateToSuccess(response.data.scratch_cards)  // ✅ FIXED
       }
     } catch (error) {
       AxiosToastError(error)
@@ -248,12 +253,7 @@ const CheckoutPage = () => {
                 toast.success('Order Placed Successfully! 🛒')
                 if (fetchCartItem) fetchCartItem()
                 if (fetchOrder) fetchOrder()
-                navigate('/success', {
-                  state: {
-                    text:          'Order',
-                    scratch_cards: verifyRes.data.scratch_cards || []
-                  }
-                })
+                navigateToSuccess(verifyRes.data.scratch_cards)  // ✅ FIXED
               }
             } catch (err) {
               toast.dismiss(verificationToast)
@@ -315,14 +315,11 @@ const CheckoutPage = () => {
         {/* Right: Bill Info */}
         <div className='w-full lg:max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
 
-          {/* ✅ FIXED Promo Code Section - button no longer overflows */}
           <div className='mx-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
             <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-1'>Promo Code</p>
             <p className='text-[10px] text-slate-400 mb-2'>
               First-time customer? Use <span className='font-black text-slate-600'>FIRSTUSER</span> on orders ₹149+
             </p>
-
-            {/* ✅ FIX: stack on mobile, row on sm+ to prevent overflow */}
             <div className='flex flex-col sm:flex-row gap-2'>
               <input
                 type='text'

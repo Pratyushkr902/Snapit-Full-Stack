@@ -51,7 +51,6 @@ import subscriptionRouter from './route/subscription.route.js';
 import './utils/subscriptionCron.js';
 const app = express();
 
-// ✅ Enable global reverse proxy awareness
 app.set('trust proxy', 1); 
 
 const server = http.createServer(app); 
@@ -67,8 +66,8 @@ const allowedOrigins = [
     "android://localhost",
     "https://snapit.grocery",
     "null",
-    "https://snapit-full-stack-2.onrender.com",
-    "https://snapit-full-stack-0.onrender.com",
+    "https://snapit-backend-bn8r.onrender.com",
+    "https://snapit-client.vercel.app",
     "https://snapit-ashy.vercel.app",
     "https://snapit-full-stack.vercel.app",
     "https://snapit-full-stack-pratyushkr902s-projects.vercel.app",
@@ -128,13 +127,12 @@ app.use(helmet({
                 "https://firebaseremoteconfig.googleapis.com",
                 "https://firebaseinstallations.googleapis.com",
                 "https://*.firebaseio.com", "https://*.googleapis.com",
-                "https://snapit-full-stack-2.onrender.com",
-                "wss://snapit-full-stack-2.onrender.com",
-                "https://snapit-full-stack-0.onrender.com",
+                "https://snapit-backend-bn8r.onrender.com",
+                "wss://snapit-backend-bn8r.onrender.com",
+                "https://snapit-client.vercel.app",
                 "https://snapit-ashy.vercel.app",
                 "https://snapit-full-stack.vercel.app",
                 "https://snapit-backend-production.up.railway.app",
-                "wss://snapit-full-stack-0.onrender.com",
                 "http://localhost:5173", "https://localhost:5173",
                 "ws://localhost:5173", "wss://localhost:5173",
                 "http://localhost:8080", "ws://localhost:8080",
@@ -155,7 +153,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- SOCKET.IO HANDLING LAYER ---
+// --- SOCKET.IO ---
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: { 
@@ -195,7 +193,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// --- API ROUTES MOUNTING ---
+// --- API ROUTES ---
 app.use('/api/user',       userRouter);
 app.use('/api/category',   categoryRouter);
 app.use('/api/file',       uploadRouter);
@@ -209,8 +207,8 @@ app.use('/api/wallet',     walletRouter);
 app.use('/api/flash-sale', flashSaleRouter);
 app.use('/api/referral',   referralRouter);
 app.use('/api/review',     reviewRouter);
-app.use('/api/streak',        streakRouter);
-app.use('/api/subscription',  subscriptionRouter);
+app.use('/api/streak',     streakRouter);
+app.use('/api/subscription', subscriptionRouter);
 app.use('/api/payment',    paymentRouter);
 app.use('/api/admin',      adminRouter);
 
@@ -228,14 +226,12 @@ app.get('/{*splat}', (req, res) => {
 });
 
 // --- KEEP ALIVE ---
-const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-full-stack-2.onrender.com';
+const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-backend-bn8r.onrender.com';
 setInterval(() => {
     fetch(`${SELF_URL}/health`).catch(() => {});
 }, 14 * 60 * 1000); 
 
-// ── DAILY MRP RECALCULATION CRON ────────────────────────────
-// Runs every day at midnight (00:00)
-// Recalculates price = sellerPrice + snapitMargin for all products
+// --- DAILY MRP RECALCULATION CRON ---
 cron.schedule('0 0 * * *', async () => {
     console.log('[CRON] ⏰ Running daily MRP recalculation...');
     try {
@@ -254,9 +250,7 @@ cron.schedule('0 0 * * *', async () => {
     } catch (err) {
         console.error('[CRON] ❌ MRP recalculation failed:', err.message);
     }
-}, {
-    timezone: "Asia/Kolkata"  // IST timezone for Paliganj
-});
+}, { timezone: "Asia/Kolkata" });
 
 // --- ENGINE BOOT ---
 const PORT = process.env.PORT || 8080;

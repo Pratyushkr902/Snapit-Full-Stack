@@ -2,27 +2,57 @@
   "name": "Snapit - 10 Min Grocery Delivery",
   "short_name": "Snapit",
   "description": "Order groceries and get delivery in 10 minutes from Snapit",
+  "id": "com.snapit.app",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#16a34a",
+  "background_color": "#F0D296",
+  "theme_color": "#F0D296",
   "orientation": "portrait",
+  "lang": "en",
+  "categories": ["food", "shopping", "lifestyle"],
   "icons": [
     {
       "src": "/snapit-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/snapit-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/snapit-icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/snapit-icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["food", "shopping", "lifestyle"],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/screenshots/screen1.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Home screen of Snapit"
+    },
+    {
+      "src": "/screenshots/screen2.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Browse groceries on Snapit"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Search Products",

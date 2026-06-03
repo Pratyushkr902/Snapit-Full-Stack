@@ -65,7 +65,7 @@ const allowedOrigins = [
     "android://localhost",                        
     "https://snapit.grocery",                     
     "null",                                       
-    "https://snapit-full-stack-2.onrender.com",
+    "https://snapit-backend-bn8r.onrender.com",
     "https://snapit-full-stack-0.onrender.com",
     "https://snapit-ashy.vercel.app",
     "https://snapit-backend-production.up.railway.app",
@@ -144,7 +144,7 @@ app.use(helmet({
                 "https://firebaseinstallations.googleapis.com",
                 "https://*.firebaseio.com",
                 "https://*.googleapis.com",
-                "https://snapit-full-stack-2.onrender.com",
+                "https://snapit-backend-bn8r.onrender.com",
                 "wss://snapit-full-stack-2.onrender.com",
                 "https://snapit-full-stack-0.onrender.com",
     "https://snapit-ashy.vercel.app",
@@ -276,7 +276,7 @@ app.get('/{*splat}', (req, res, next) => {
 });
 
 // --- KEEP ALIVE ---
-const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-full-stack-2.onrender.com';
+const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-backend-bn8r.onrender.com';
 setInterval(() => {
     fetch(`${SELF_URL}/health`).catch(() => {});
 }, 14 * 60 * 1000); 

@@ -10,7 +10,8 @@ const ProductListPage = () => {
   const params = useParams()
   const navigate = useNavigate()
 
-  // Extract 24-char MongoDB ObjectId from the end of a URL slug like "snacks-munchies-69b57255a8b9adccd30c61cb"
+  // Extract 24-char MongoDB ObjectId from the end of a URL slug
+  // e.g. "snacks-munchies-69b57255a8b9adccd30c61cb" → "69b57255a8b9adccd30c61cb"
   const extractId = (param) => {
     if (!param) return ""
     const match = param.match(/[0-9a-fA-F]{24}$/)
@@ -23,32 +24,51 @@ const ProductListPage = () => {
     return param.replace(/-[0-9a-fA-F]{24}$/, '').replace(/-/g, ' ')
   }
 
-  const categoryId = extractId(params?.category || "")
+  const categoryId    = extractId(params?.category    || "")
   const subCategoryId = extractId(params?.subCategory || "")
-  const categoryName = extractName(params?.category || "")
+  const categoryName    = extractName(params?.category    || "")
   const subCategoryName = extractName(params?.subCategory || "")
 
   const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading]   = useState(false)
 
   const pageTitle = subCategoryName || categoryName || "Products"
 
   const fetchProductsList = useCallback(async () => {
     if (!categoryId) {
-      console.warn("[Snapit] No valid categoryId in URL:", params)
+      console.warn("[ProductListPage] No valid categoryId in URL:", params)
       return
     }
+
     try {
       setLoading(true)
-      const response = await Axios({
-        ...SummaryApi.getProductByCategoryAndSubCategory,
-        data: {
-          categoryId,
-          subCategoryId: subCategoryId || undefined,
-          page: 1,
-          limit: 60
-        }
-      })
+
+      let response
+
+      if (subCategoryId) {
+        // ✅ FIX: both IDs present → use the combined endpoint
+        response = await Axios({
+          ...SummaryApi.getProductByCategoryAndSubCategory,
+          data: {
+            categoryId,
+            subCategoryId,
+            page: 1,
+            limit: 60,
+          }
+        })
+      } else {
+        // ✅ FIX: no subCategory in URL → fall back to category-only endpoint
+        // This is the path taken when "See All" has no matching subcategory
+        response = await Axios({
+          ...SummaryApi.getProductByCategory,
+          data: {
+            id: categoryId,
+            page: 1,
+            limit: 60,
+          }
+        })
+      }
+
       const { data: responseData } = response
       if (responseData.success) {
         setProducts(Array.isArray(responseData.data) ? responseData.data : [])
@@ -64,7 +84,6 @@ const ProductListPage = () => {
     fetchProductsList()
   }, [fetchProductsList])
 
-  // Scroll to top on page load
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [categoryId, subCategoryId])

@@ -9,9 +9,8 @@ import { FaAngleLeft, FaAngleRight } from "react-icons/fa6"
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-2.onrender.com"
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com"
 
-// ✅ Normalize image URLs — handles arrays, relative paths, and absolute URLs
 const normalizeImageField = (image) => {
     if (Array.isArray(image)) {
         return image.map(img =>
@@ -39,7 +38,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     const loadingCardNumber = new Array(6).fill(null)
 
     useEffect(() => {
-        // ✅ FIXED: rootMargin 600px — triggers well before section enters viewport on mobile
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
@@ -52,8 +50,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
 
         if (sectionRef.current) observer.observe(sectionRef.current)
 
-        // ✅ FIXED: 2s timeout fallback — if observer never fires (mobile WebView bug),
-        //    force visible so products always load
         const timer = setTimeout(() => setVisible(true), 2000)
 
         return () => {
@@ -63,7 +59,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     }, [])
 
     const fetchCategoryWiseProduct = async () => {
-        if (!id) return   // ✅ FIXED: skip fetch if id is undefined (race condition guard)
+        if (!id) return
         try {
             setLoading(true)
             const response = await Axios({
@@ -87,26 +83,32 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
         }
     }
 
-    // ✅ FIXED: also re-fetch if `id` changes (e.g. categories load after mount)
     useEffect(() => {
         if (visible && id) fetchCategoryWiseProduct()
     }, [visible, id])
 
     const handleScrollRight = () => { if (containerRef.current) containerRef.current.scrollLeft += 280 }
-    const handleScrollLeft = () => { if (containerRef.current) containerRef.current.scrollLeft -= 280 }
+    const handleScrollLeft  = () => { if (containerRef.current) containerRef.current.scrollLeft -= 280 }
 
     const handleRedirectProductListpage = () => {
         const safeSubData = Array.isArray(subCategoryData) ? subCategoryData : []
-        if (safeSubData.length === 0) {
-            return `/${valideURLConvert(name || "category")}-${id}`
-        }
+
+        const categorySlug = `${valideURLConvert(name || "category")}-${id}`
+
+        // ✅ FIX: look for a subcategory that belongs to this category
         const subcategory = safeSubData.find(sub =>
             sub && Array.isArray(sub.category) && sub.category.some(c => c && c._id == id)
         )
-        if (!subcategory) {
-            return `/${valideURLConvert(name || "category")}-${id}`
+
+        if (subcategory) {
+            // Two-segment URL: /:category/:subCategory  ← matches the router route
+            const subSlug = `${valideURLConvert(subcategory.name || "all")}-${subcategory._id}`
+            return `/${categorySlug}/${subSlug}`
         }
-        return `/${valideURLConvert(name || "")}-${id}/${valideURLConvert(subcategory?.name || "")}-${subcategory?._id}`
+
+        // ✅ FIX: no subcategory found → use the index route /:category
+        // The router now has { index: true, element: <ProductListPage/> } for this case
+        return `/${categorySlug}`
     }
 
     const redirectURL = handleRedirectProductListpage()
@@ -129,7 +131,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     ref={containerRef}
                     style={{ scrollSnapType: 'x mandatory' }}
                 >
-                    {/* Loading skeletons while fetching */}
                     {loading && loadingCardNumber.map((_, index) => (
                         <div
                             key={"ld" + index}
@@ -140,7 +141,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                         </div>
                     ))}
 
-                    {/* Pre-visible placeholder — clean pulse, no broken image boxes */}
                     {!visible && !loading && loadingCardNumber.map((_, index) => (
                         <div
                             key={"ph" + index}
@@ -149,7 +149,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                         />
                     ))}
 
-                    {/* Product cards */}
                     {!loading && data.map((p, index) => {
                         if (p && p._id) {
                             return (
@@ -165,7 +164,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                         return null
                     })}
 
-                    {/* Empty state — when loaded but no products found */}
                     {!loading && visible && data.length === 0 && (
                         <div className='w-full py-8 text-center text-slate-400 text-sm font-medium'>
                             No products available
@@ -173,7 +171,6 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     )}
                 </div>
 
-                {/* Scroll buttons — desktop only */}
                 <div className='w-full left-0 right-0 container mx-auto px-2 absolute hidden lg:flex justify-between pointer-events-none'>
                     <button onClick={handleScrollLeft} className='pointer-events-auto z-10 bg-white shadow-xl text-slate-700 p-3 rounded-full'>
                         <FaAngleLeft size={16} />
