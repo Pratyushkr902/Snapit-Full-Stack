@@ -68,6 +68,7 @@ const allowedOrigins = [
     "null",
     "https://snapit-backend-bn8r.onrender.com",
     "https://snapit-client.vercel.app",
+    "https://snapit.pages.dev",
     "https://snapit-ashy.vercel.app",
     "https://snapit-full-stack.vercel.app",
     "https://snapit-full-stack-pratyushkr902s-projects.vercel.app",
