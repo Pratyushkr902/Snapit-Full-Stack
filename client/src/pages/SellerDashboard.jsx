@@ -7,14 +7,13 @@ import { FaCloudUploadAlt } from 'react-icons/fa';
 import { MdDelete } from 'react-icons/md';
 import { IoClose } from 'react-icons/io5';
 
-// ── FIX: robust field getters ─────────────────────────────────
+// ── Robust field getters ───────────────────────────────────────
 const getOrderAmount = (o) =>
     Number(o.totalAmt ?? o.total_amount ?? o.amount ?? o.subTotalAmt ?? 0);
 
 const getDeliveryFee = (o) =>
     Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? 0);
 
-// FIX: item price — tries sellerPrice first, then price, then unit_price
 const getItemSellerPrice = (item) =>
     Number(item.sellerPrice ?? item.seller_price ?? item.price ?? item.unit_price ?? 0);
 
@@ -23,36 +22,44 @@ const getItemSnapitMargin = (item) =>
 
 const getSellerEarning = (order) =>
     (order.cartItems || []).reduce(
-        (acc, item) => acc + getItemSellerPrice(item) * (Number(item.quantity) || 1),
-        0
+        (acc, item) => acc + getItemSellerPrice(item) * (Number(item.quantity) || 1), 0
     );
 
 const getSnapitEarning = (order) =>
     (order.cartItems || []).reduce(
-        (acc, item) => acc + getItemSnapitMargin(item) * (Number(item.quantity) || 1),
-        0
+        (acc, item) => acc + getItemSnapitMargin(item) * (Number(item.quantity) || 1), 0
     );
 
+// ── Total sales = gross - delivery charge (no delivery) ───────
+const getTotalSalesExDelivery = (orders) =>
+    orders.reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
+
+// ── Floating value formatter ───────────────────────────────────
+const fmtINR = (n) =>
+    `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const fmt2 = (n) => Number(n).toFixed(2);
+
 const SellerDashboard = () => {
-    const [allOrders, setAllOrders] = useState([]);
-    const [activeTab, setActiveTab] = useState('packing');
+    const [allOrders, setAllOrders]       = useState([]);
+    const [activeTab, setActiveTab]       = useState('packing');
     const [earningFilter, setEarningFilter] = useState('all');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading]           = useState(true);
     const [historySearch, setHistorySearch] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
 
-    // ── PRODUCTS STATE ─────────────────────────────────────────
-    const [productTab, setProductTab] = useState('list');
-    const [products, setProducts] = useState([]);
+    // ── Products ───────────────────────────────────────────────
+    const [productTab, setProductTab]       = useState('list');
+    const [products, setProducts]           = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
-    const [imageLoading, setImageLoading] = useState(false);
-    const [editingStock, setEditingStock] = useState({});
-    const [productForm, setProductForm] = useState({
+    const [imageLoading, setImageLoading]   = useState(false);
+    const [editingStock, setEditingStock]   = useState({});
+    const [productForm, setProductForm]     = useState({
         name: '', description: '', image: [], category: [],
         subCategory: [], unit: '', stock: '', sellerPrice: '',
         snapitMargin: '', discount: '',
     });
-    const [selectCategory, setSelectCategory] = useState('');
+    const [selectCategory, setSelectCategory]       = useState('');
     const [selectSubCategory, setSelectSubCategory] = useState('');
 
     const allCategory    = useSelector(state => state.product.allCategory);
@@ -60,7 +67,7 @@ const SellerDashboard = () => {
 
     const sellingPrice = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
 
-    // ── FETCH ORDERS ───────────────────────────────────────────
+    // ── Fetch Orders ───────────────────────────────────────────
     const fetchOrders = async () => {
         try {
             setLoading(true);
@@ -69,14 +76,14 @@ const SellerDashboard = () => {
                 const data = Array.isArray(response.data.data) ? response.data.data : [];
                 setAllOrders(data);
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to fetch orders');
         } finally {
             setLoading(false);
         }
     };
 
-    // ── FETCH PRODUCTS ─────────────────────────────────────────
+    // ── Fetch Products ─────────────────────────────────────────
     const fetchProducts = async () => {
         setProductsLoading(true);
         try {
@@ -84,7 +91,7 @@ const SellerDashboard = () => {
             if (response.data.success) {
                 setProducts(Array.isArray(response.data.data) ? response.data.data : []);
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to fetch products');
         } finally {
             setProductsLoading(false);
@@ -101,7 +108,7 @@ const SellerDashboard = () => {
                 toast.success('Rider Notified! Order ready for pickup.');
                 fetchOrders();
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to update order');
         }
     };
@@ -119,7 +126,7 @@ const SellerDashboard = () => {
                 setProductForm(prev => ({ ...prev, image: [...prev.image, imageUrl] }));
                 toast.success('Image uploaded!');
             }
-        } catch (error) {
+        } catch {
             toast.error('Image upload failed');
         } finally {
             setImageLoading(false);
@@ -151,7 +158,7 @@ const SellerDashboard = () => {
                 setProductTab('list');
                 fetchProducts();
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to upload product');
         }
     };
@@ -169,7 +176,7 @@ const SellerDashboard = () => {
                 setEditingStock(prev => { const n = { ...prev }; delete n[productId]; return n; });
                 fetchProducts();
             }
-        } catch (error) {
+        } catch {
             toast.error('Stock update failed');
         }
     };
@@ -182,7 +189,7 @@ const SellerDashboard = () => {
                 toast.success('Product deleted');
                 fetchProducts();
             }
-        } catch (error) {
+        } catch {
             toast.error('Delete failed');
         }
     };
@@ -197,8 +204,8 @@ const SellerDashboard = () => {
         if (activeTab === 'products') fetchProducts();
     }, [activeTab]);
 
-    const now = new Date();
-    const isDelivered = (order) => (order.delivery_status || '').trim().toLowerCase() === 'delivered';
+    const now        = new Date();
+    const isDelivered = (o) => (o.delivery_status || '').trim().toLowerCase() === 'delivered';
 
     const packingOrders = allOrders.filter(o =>
         o.seller_status !== 'Ready for Pickup' &&
@@ -225,16 +232,24 @@ const SellerDashboard = () => {
     const totalSellerEarning = filteredEarnings.reduce((a, o) => a + getSellerEarning(o), 0);
     const totalSnapitEarning = filteredEarnings.reduce((a, o) => a + getSnapitEarning(o), 0);
     const totalOrders        = filteredEarnings.length;
-    const avgNet             = totalOrders > 0 ? Math.round(totalSellerEarning / totalOrders) : 0;
+    const avgNet             = totalOrders > 0 ? totalSellerEarning / totalOrders : 0;
 
-    // FIX: product earnings use robust getItemSellerPrice
+    // ── Total Sales WITHOUT delivery charge ──────────────────
+    const totalSalesExDelivery = filteredEarnings.reduce(
+        (a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0
+    );
+    const allTimeTotalSales = allOrders
+        .filter(isDelivered)
+        .reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
+
+    // ── Product earnings (floating) ───────────────────────────
     const productEarnings = filteredEarnings.reduce((acc, order) => {
         (order.cartItems || []).forEach(item => {
             const name = item.productId?.name || item.name || 'Unknown Product';
             const qty  = Number(item.quantity) || 1;
             const sp   = getItemSellerPrice(item);
             if (!acc[name]) acc[name] = { qty: 0, revenue: 0 };
-            acc[name].qty += qty;
+            acc[name].qty     += qty;
             acc[name].revenue += sp * qty;
         });
         return acc;
@@ -243,16 +258,17 @@ const SellerDashboard = () => {
 
     const byDate = filteredEarnings.reduce((acc, o) => {
         const d = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-        if (!acc[d]) acc[d] = { gross: 0, sellerNet: 0, snapit: 0, delivery: 0, count: 0 };
-        acc[d].gross     += getOrderAmount(o);
-        acc[d].delivery  += getDeliveryFee(o);
-        acc[d].sellerNet += getSellerEarning(o);
-        acc[d].snapit    += getSnapitEarning(o);
-        acc[d].count     += 1;
+        if (!acc[d]) acc[d] = { gross: 0, sellerNet: 0, snapit: 0, delivery: 0, salesExDelivery: 0, count: 0 };
+        acc[d].gross          += getOrderAmount(o);
+        acc[d].delivery       += getDeliveryFee(o);
+        acc[d].sellerNet      += getSellerEarning(o);
+        acc[d].snapit         += getSnapitEarning(o);
+        acc[d].salesExDelivery += getOrderAmount(o) - getDeliveryFee(o);
+        acc[d].count          += 1;
         return acc;
     }, {});
 
-    const allSorted = [...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const allSorted      = [...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const historyFiltered = allSorted.filter(order => {
         if (historyFilter === 'delivered' && !isDelivered(order)) return false;
         if (historyFilter === 'pending' && (order.delivery_status || '').toLowerCase() !== 'pending') return false;
@@ -270,23 +286,26 @@ const SellerDashboard = () => {
 
     const statusColor = (s) => {
         const st = (s || '').toLowerCase();
-        if (st === 'delivered') return 'bg-green-100 text-green-700';
+        if (st === 'delivered')      return 'bg-green-100 text-green-700';
         if (st === 'out for delivery') return 'bg-blue-100 text-blue-700';
-        if (st === 'confirmed') return 'bg-purple-100 text-purple-700';
-        if (st === 'cancelled') return 'bg-red-100 text-red-700';
+        if (st === 'confirmed')      return 'bg-purple-100 text-purple-700';
+        if (st === 'cancelled')      return 'bg-red-100 text-red-700';
         return 'bg-orange-100 text-orange-700';
     };
 
     if (loading && activeTab !== 'products') return (
         <div className='p-4 bg-orange-50 min-h-screen flex items-center justify-center'>
-            <div className='text-center'><p className='text-4xl mb-3'>⏳</p><p className='font-black text-slate-600'>Loading orders...</p></div>
+            <div className='text-center'>
+                <p className='text-4xl mb-3 animate-bounce'>⏳</p>
+                <p className='font-black text-slate-600'>Loading orders...</p>
+            </div>
         </div>
     );
 
     return (
         <div className='p-4 bg-orange-50 min-h-screen max-w-4xl mx-auto'>
 
-            {/* Header */}
+            {/* ── HEADER ── */}
             <div className='flex items-center justify-between mb-6'>
                 <div>
                     <h1 className='text-2xl font-black text-slate-900'>STORE PANEL</h1>
@@ -305,7 +324,7 @@ const SellerDashboard = () => {
                 </div>
             </div>
 
-            {/* Tabs */}
+            {/* ── TABS ── */}
             <div className='flex gap-2 mb-6 bg-white rounded-2xl p-1 shadow-sm border border-slate-100'>
                 {[
                     { key: 'packing',  label: '📦 Packing',  active: 'bg-orange-500' },
@@ -320,14 +339,13 @@ const SellerDashboard = () => {
                 ))}
             </div>
 
-            {/* ── PACKING TAB ── */}
+            {/* ══════════ PACKING TAB ══════════ */}
             {activeTab === 'packing' && (
                 <div className='grid gap-4'>
                     {packingOrders.length === 0 ? (
                         <div className='bg-white rounded-3xl p-12 text-center border-2 border-dashed border-orange-200'>
                             <p className='text-4xl mb-3'>🎉</p>
-                            <p className='font-black text-slate-700'>All orders are packed and with riders! 📦</p>
-                            <p className='text-sm text-slate-400 mt-1'>No pending orders right now.</p>
+                            <p className='font-black text-slate-700'>All orders packed and with riders! 📦</p>
                             <button onClick={fetchOrders} className='mt-4 bg-orange-100 text-orange-600 font-black text-sm px-5 py-2 rounded-full'>Check for new orders</button>
                         </div>
                     ) : packingOrders.map(order => (
@@ -347,22 +365,20 @@ const SellerDashboard = () => {
                             )}
                             <div className='mb-4'>
                                 {(order.cartItems || []).map((item, i) => (
-                                    <div key={i} className='flex justify-between items-center py-1'>
+                                    <div key={i} className='flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0'>
                                         <p className='font-bold text-slate-700 text-sm'>• {item.productId?.name || item.name} (×{item.quantity})</p>
-                                        {/* FIX: show item price in packing tab */}
-                                        <p className='text-xs font-black text-slate-500'>₹{getItemSellerPrice(item) * (Number(item.quantity) || 1)}</p>
+                                        <p className='text-xs font-black text-slate-600'>{fmtINR(getItemSellerPrice(item) * (Number(item.quantity) || 1))}</p>
                                     </div>
                                 ))}
                             </div>
-                            <div className='flex justify-between items-center mb-4'>
+                            <div className='flex justify-between items-center mb-4 bg-slate-50 rounded-2xl p-3'>
                                 <div>
                                     <p className='text-[10px] font-black text-slate-400 uppercase'>Order Total</p>
-                                    <p className='text-xl font-black text-slate-900'>₹{getOrderAmount(order)}</p>
+                                    <p className='text-xl font-black text-slate-900'>{fmtINR(getOrderAmount(order))}</p>
                                 </div>
                                 <div className='text-right'>
                                     <p className='text-[10px] font-black text-slate-400 uppercase'>Your Earning</p>
-                                    {/* FIX: show seller earning per order */}
-                                    <p className='text-sm font-black text-green-600'>₹{getSellerEarning(order)}</p>
+                                    <p className='text-lg font-black text-green-600'>{fmtINR(getSellerEarning(order))}</p>
                                 </div>
                             </div>
                             <button onClick={() => markAsReady(order.orderId)}
@@ -374,7 +390,7 @@ const SellerDashboard = () => {
                 </div>
             )}
 
-            {/* ── PRODUCTS TAB ── */}
+            {/* ══════════ PRODUCTS TAB ══════════ */}
             {activeTab === 'products' && (
                 <div>
                     <div className='flex gap-2 mb-4'>
@@ -392,7 +408,7 @@ const SellerDashboard = () => {
                         <div className='flex flex-col gap-3'>
                             {productsLoading ? (
                                 <div className='bg-white rounded-3xl p-10 text-center'>
-                                    <p className='text-3xl mb-2'>⏳</p>
+                                    <p className='text-3xl mb-2 animate-spin inline-block'>⏳</p>
                                     <p className='font-black text-slate-500'>Loading products...</p>
                                 </div>
                             ) : products.length === 0 ? (
@@ -406,44 +422,38 @@ const SellerDashboard = () => {
                                 </div>
                             ) : products.map(product => (
                                 <div key={product._id} className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex gap-4 items-center'>
-                                    <img
-                                        src={product.image?.[0] || ''}
-                                        alt={product.name}
-                                        className='w-16 h-16 object-contain rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0'
-                                    />
+                                    <img src={product.image?.[0] || ''} alt={product.name}
+                                        className='w-16 h-16 object-contain rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0' />
                                     <div className='flex-1 min-w-0'>
                                         <p className='font-black text-slate-800 text-sm truncate'>{product.name}</p>
                                         <div className='flex gap-3 mt-1 flex-wrap'>
-                                            {/* FIX: show seller price clearly */}
-                                            <span className='text-xs text-slate-500 font-bold'>Seller: <span className='text-emerald-600'>₹{product.sellerPrice || product.price || 0}</span></span>
+                                            <span className='text-xs text-slate-500 font-bold'>
+                                                Seller: <span className='text-emerald-600'>{fmtINR(product.sellerPrice || product.price || 0)}</span>
+                                            </span>
                                             {product.snapitMargin > 0 && (
-                                                <span className='text-xs text-yellow-500 font-bold'>Margin: ₹{product.snapitMargin}</span>
+                                                <span className='text-xs text-yellow-500 font-bold'>Margin: {fmtINR(product.snapitMargin)}</span>
                                             )}
                                             <span className='text-xs text-blue-600 font-bold'>
-                                                Customer pays: ₹{(Number(product.sellerPrice || product.price || 0) + Number(product.snapitMargin || 0))}
+                                                Customer: {fmtINR(Number(product.sellerPrice || product.price || 0) + Number(product.snapitMargin || 0))}
                                             </span>
                                             <span className={`text-xs font-bold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-500' : 'text-red-500'}`}>
                                                 {product.stock > 0 ? `${product.stock} in stock` : '❌ Out of stock'}
                                             </span>
                                         </div>
                                         <div className='flex items-center gap-2 mt-2'>
-                                            <input
-                                                type='number'
-                                                placeholder='New stock'
+                                            <input type='number' placeholder='New stock'
                                                 value={editingStock[product._id] ?? ''}
                                                 onChange={e => setEditingStock(prev => ({ ...prev, [product._id]: e.target.value }))}
                                                 className='w-24 text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400'
                                             />
-                                            <button
-                                                onClick={() => handleUpdateStock(product._id)}
+                                            <button onClick={() => handleUpdateStock(product._id)}
                                                 disabled={!editingStock[product._id]}
                                                 className='text-xs bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 text-white px-3 py-1.5 rounded-lg font-black'>
                                                 Update
                                             </button>
-                                            <button
-                                                onClick={() => handleDeleteProduct(product._id)}
+                                            <button onClick={() => handleDeleteProduct(product._id)}
                                                 className='text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-black hover:bg-red-100'>
-                                                <MdDelete size={14} />
+                                                <MdDelete size={14}/>
                                             </button>
                                         </div>
                                     </div>
@@ -478,17 +488,18 @@ const SellerDashboard = () => {
                                         <p className='text-sm text-slate-400 animate-pulse'>Uploading...</p>
                                     ) : (
                                         <>
-                                            <FaCloudUploadAlt size={28} className='text-blue-400' />
+                                            <FaCloudUploadAlt size={28} className='text-blue-400'/>
                                             <p className='text-xs font-bold text-slate-400 mt-1'>Tap to upload image</p>
                                         </>
                                     )}
-                                    <input id='sellerProductImage' type='file' accept='image/*' className='hidden' onChange={handleUploadImage} />
+                                    <input id='sellerProductImage' type='file' accept='image/*' className='hidden' onChange={handleUploadImage}/>
                                 </label>
                                 <div className='flex gap-2 flex-wrap mt-2'>
                                     {productForm.image.map((img, i) => (
                                         <div key={i} className='relative w-16 h-16'>
-                                            <img src={img} className='w-full h-full object-contain rounded-lg border border-slate-100' />
-                                            <button type='button' onClick={() => setProductForm(p => ({ ...p, image: p.image.filter((_, idx) => idx !== i) }))}
+                                            <img src={img} className='w-full h-full object-contain rounded-lg border border-slate-100'/>
+                                            <button type='button'
+                                                onClick={() => setProductForm(p => ({ ...p, image: p.image.filter((_, idx) => idx !== i) }))}
                                                 className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]'>
                                                 ×
                                             </button>
@@ -513,7 +524,7 @@ const SellerDashboard = () => {
                                     {productForm.category.map((c, i) => (
                                         <span key={i} className='flex items-center gap-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded-full'>
                                             {c.name}
-                                            <IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, category: p.category.filter((_, idx) => idx !== i) }))} />
+                                            <IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, category: p.category.filter((_, idx) => idx !== i) }))}/>
                                         </span>
                                     ))}
                                 </div>
@@ -535,7 +546,7 @@ const SellerDashboard = () => {
                                     {productForm.subCategory.map((s, i) => (
                                         <span key={i} className='flex items-center gap-1 bg-purple-50 text-purple-700 text-xs font-bold px-2 py-1 rounded-full'>
                                             {s.name}
-                                            <IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, subCategory: p.subCategory.filter((_, idx) => idx !== i) }))} />
+                                            <IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, subCategory: p.subCategory.filter((_, idx) => idx !== i) }))}/>
                                         </span>
                                     ))}
                                 </div>
@@ -586,7 +597,7 @@ const SellerDashboard = () => {
                                 </div>
                                 <div className='mt-3 bg-white rounded-xl p-3 flex justify-between items-center border-2 border-green-400'>
                                     <p className='text-xs font-black text-slate-500 uppercase'>Customer Pays</p>
-                                    <p className='text-2xl font-black text-green-700'>₹{sellingPrice.toFixed(2)}</p>
+                                    <p className='text-2xl font-black text-green-700'>{fmtINR(sellingPrice)}</p>
                                 </div>
                             </div>
                             <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
@@ -606,9 +617,10 @@ const SellerDashboard = () => {
                 </div>
             )}
 
-            {/* ── HISTORY TAB (FIXED prices) ── */}
+            {/* ══════════ HISTORY TAB ══════════ */}
             {activeTab === 'history' && (
                 <div className='flex flex-col gap-3'>
+                    {/* Stats Row */}
                     <div className='grid grid-cols-3 gap-2'>
                         <div className='bg-white rounded-2xl p-3 text-center shadow-sm border border-slate-100'>
                             <p className='text-xl font-black text-slate-800'>{allSorted.length}</p>
@@ -624,21 +636,47 @@ const SellerDashboard = () => {
                         </div>
                     </div>
 
-                    {/* FIX: Total sales summary */}
-                    <div className='bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-4 text-white'>
-                        <p className='text-[10px] font-black text-slate-400 uppercase mb-1'>Total Sales (All Time)</p>
-                        <p className='text-3xl font-black'>₹{allOrders.filter(isDelivered).reduce((a, o) => a + getSellerEarning(o), 0).toLocaleString()}</p>
-                        <p className='text-xs text-slate-400 mt-1'>From {deliveredCount} delivered orders</p>
+                    {/* Total Sales Hero — WITHOUT delivery charge */}
+                    <div className='bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white'>
+                        <p className='text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1'>
+                            Total Sales — All Time <span className='text-slate-500 normal-case font-medium'>(excl. delivery)</span>
+                        </p>
+                        <p className='text-4xl font-black'>{fmtINR(allTimeTotalSales)}</p>
+                        <div className='flex gap-4 mt-3 pt-3 border-t border-slate-700'>
+                            <div>
+                                <p className='text-[9px] text-slate-400 uppercase font-bold'>Orders</p>
+                                <p className='text-lg font-black'>{deliveredCount}</p>
+                            </div>
+                            <div>
+                                <p className='text-[9px] text-slate-400 uppercase font-bold'>Your Earnings</p>
+                                <p className='text-lg font-black text-emerald-400'>
+                                    {fmtINR(allOrders.filter(isDelivered).reduce((a, o) => a + getSellerEarning(o), 0))}
+                                </p>
+                            </div>
+                            <div>
+                                <p className='text-[9px] text-slate-400 uppercase font-bold'>Delivery Excl.</p>
+                                <p className='text-lg font-black text-red-400'>
+                                    -{fmtINR(allOrders.filter(isDelivered).reduce((a, o) => a + getDeliveryFee(o), 0))}
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
+                    {/* Search */}
                     <div className='relative'>
                         <input type='text' value={historySearch} onChange={e => setHistorySearch(e.target.value)}
                             placeholder='Search by order ID or product name...'
                             className='w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:border-slate-400 pl-10'
                         />
                         <span className='absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400'>🔍</span>
-                        {historySearch && <button onClick={() => setHistorySearch('')} className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg'>×</button>}
+                        {historySearch && (
+                            <button onClick={() => setHistorySearch('')}
+                                className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg'>×
+                            </button>
+                        )}
                     </div>
+
+                    {/* Filter pills */}
                     <div className='flex gap-2 flex-wrap'>
                         {[
                             { key: 'all',       label: 'All Orders' },
@@ -652,10 +690,12 @@ const SellerDashboard = () => {
                             </button>
                         ))}
                     </div>
+
                     <p className='text-[11px] text-slate-400 font-bold px-1'>
                         Showing {historyFiltered.length} of {allSorted.length} orders
                         {historySearch && ` · matching "${historySearch}"`}
                     </p>
+
                     {historyFiltered.length === 0 ? (
                         <div className='bg-white rounded-3xl p-12 text-center border-2 border-dashed border-slate-200'>
                             <p className='text-4xl mb-3'>📭</p>
@@ -663,9 +703,9 @@ const SellerDashboard = () => {
                         </div>
                     ) : historyFiltered.map(order => (
                         <div key={order._id} className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                            <div className='flex justify-between items-start mb-2'>
+                            <div className='flex justify-between items-start mb-3'>
                                 <div>
-                                    <p className='font-mono text-xs font-bold text-slate-500'>{order.orderId}</p>
+                                    <p className='font-mono text-xs font-bold text-slate-600'>{order.orderId}</p>
                                     <p className='text-[10px] text-slate-400 mt-0.5'>
                                         {new Date(order.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                     </p>
@@ -674,26 +714,46 @@ const SellerDashboard = () => {
                                     {order.delivery_status}
                                 </span>
                             </div>
-                            <div className='mb-3 bg-slate-50 rounded-xl p-3'>
-                                {(order.cartItems || []).map((item, i) => (
-                                    <div key={i} className='flex justify-between items-center py-1 border-b border-slate-100 last:border-0'>
-                                        <p className='text-xs font-bold text-slate-700'>{item.productId?.name || item.name}</p>
-                                        <div className='flex items-center gap-3'>
-                                            <span className='text-[10px] text-slate-400'>×{item.quantity}</span>
-                                            {/* FIX: use robust price getter */}
-                                            <span className='text-xs font-black text-slate-800'>
-                                                ₹{getItemSellerPrice(item) * (Number(item.quantity) || 1)}
-                                            </span>
+
+                            {/* Product Sell History — floating values */}
+                            <div className='bg-slate-50 rounded-xl p-3 mb-2'>
+                                <p className='text-[9px] font-black text-slate-400 uppercase mb-2'>📦 Products Sold</p>
+                                {(order.cartItems || []).map((item, i) => {
+                                    const sp    = getItemSellerPrice(item);
+                                    const qty   = Number(item.quantity) || 1;
+                                    const total = sp * qty;
+                                    return (
+                                        <div key={i} className='flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0'>
+                                            <div>
+                                                <p className='text-xs font-bold text-slate-700'>{item.productId?.name || item.name}</p>
+                                                <p className='text-[9px] text-slate-400'>{fmtINR(sp)} × {qty}</p>
+                                            </div>
+                                            <span className='text-xs font-black text-slate-800'>{fmtINR(total)}</span>
                                         </div>
+                                    );
+                                })}
+
+                                {/* Summary row */}
+                                <div className='mt-2 pt-2 border-t border-slate-200 space-y-1'>
+                                    <div className='flex justify-between items-center'>
+                                        <p className='text-[10px] font-black text-slate-500 uppercase'>Order Total</p>
+                                        <p className='text-sm font-black text-slate-800'>{fmtINR(getOrderAmount(order))}</p>
                                     </div>
-                                ))}
-                                <div className='flex justify-between items-center pt-2 mt-1'>
-                                    <p className='text-xs font-black text-slate-500 uppercase'>Your Earning</p>
-                                    <p className='text-sm font-black text-green-600'>₹{getSellerEarning(order)}</p>
-                                </div>
-                                <div className='flex justify-between items-center'>
-                                    <p className='text-xs font-black text-slate-500 uppercase'>Order Total</p>
-                                    <p className='text-sm font-black text-slate-800'>₹{getOrderAmount(order)}</p>
+                                    {getDeliveryFee(order) > 0 && (
+                                        <div className='flex justify-between items-center'>
+                                            <p className='text-[10px] font-black text-red-400 uppercase'>– Delivery Fee</p>
+                                            <p className='text-sm font-black text-red-400'>-{fmtINR(getDeliveryFee(order))}</p>
+                                        </div>
+                                    )}
+                                    <div className='flex justify-between items-center pt-1 border-t border-slate-100'>
+                                        <p className='text-[10px] font-black text-green-600 uppercase'>Your Earning</p>
+                                        <p className='text-sm font-black text-green-600'>{fmtINR(getSellerEarning(order))}</p>
+                                    </div>
+                                    {/* Total sales excl delivery */}
+                                    <div className='flex justify-between items-center'>
+                                        <p className='text-[10px] font-black text-blue-500 uppercase'>Sales (excl. delivery)</p>
+                                        <p className='text-sm font-black text-blue-600'>{fmtINR(getOrderAmount(order) - getDeliveryFee(order))}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -701,9 +761,10 @@ const SellerDashboard = () => {
                 </div>
             )}
 
-            {/* ── EARNINGS TAB (FIXED) ── */}
+            {/* ══════════ EARNINGS TAB ══════════ */}
             {activeTab === 'earnings' && (
                 <div className='flex flex-col gap-4'>
+                    {/* Period filter */}
                     <div className='flex gap-2 flex-wrap'>
                         {[
                             { key: 'today', label: 'Today' },
@@ -722,60 +783,102 @@ const SellerDashboard = () => {
                         <div className='bg-white rounded-3xl p-10 text-center border-2 border-dashed border-green-200'>
                             <p className='text-4xl mb-3'>💸</p>
                             <p className='font-black text-slate-700'>No delivered orders yet</p>
-                            <p className='text-sm text-slate-400 mt-1'>Earnings appear once orders are marked as Delivered.</p>
+                            <p className='text-sm text-slate-400 mt-1'>Earnings appear once orders are marked Delivered.</p>
                         </div>
                     ) : (
                         <>
-                            <div className='bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-5 text-white shadow-lg'>
-                                <p className='text-xs font-black uppercase tracking-widest text-green-200 mb-1'>Your Store Earnings</p>
-                                <p className='text-4xl font-black'>₹{totalSellerEarning.toLocaleString()}</p>
-                                <div className='flex gap-4 mt-3 border-t border-green-500 pt-3 flex-wrap'>
-                                    <div><p className='text-[10px] text-green-200 uppercase font-bold'>Gross</p><p className='text-sm font-bold'>₹{totalGross.toLocaleString()}</p></div>
-                                    {totalSnapitEarning > 0 && <div><p className='text-[10px] text-yellow-200 uppercase font-bold'>Snapit Cut</p><p className='text-sm font-bold text-yellow-300'>-₹{totalSnapitEarning.toLocaleString()}</p></div>}
-                                    <div><p className='text-[10px] text-green-200 uppercase font-bold'>Delivery</p><p className='text-sm font-bold text-red-300'>-₹{totalDelivery.toLocaleString()}</p></div>
-                                    <div><p className='text-[10px] text-green-200 uppercase font-bold'>Orders</p><p className='text-sm font-bold'>{totalOrders}</p></div>
-                                    <div><p className='text-[10px] text-green-200 uppercase font-bold'>Avg/Order</p><p className='text-sm font-bold'>₹{avgNet}</p></div>
+                            {/* Earnings Hero */}
+                            <div className='bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-5 text-white shadow-lg shadow-green-900/20'>
+                                <p className='text-[9px] font-black uppercase tracking-widest text-green-200/80 mb-1'>Your Store Earnings</p>
+                                <p className='text-4xl font-black'>{fmtINR(totalSellerEarning)}</p>
+                                <div className='flex gap-4 mt-3 border-t border-green-500/40 pt-3 flex-wrap'>
+                                    <div>
+                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Total Sales</p>
+                                        <p className='text-sm font-black'>{fmtINR(totalGross)}</p>
+                                    </div>
+                                    <div>
+                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Sales Excl. Delivery</p>
+                                        <p className='text-sm font-black text-blue-200'>{fmtINR(totalSalesExDelivery)}</p>
+                                    </div>
+                                    {totalSnapitEarning > 0 && (
+                                        <div>
+                                            <p className='text-[9px] text-yellow-200/80 uppercase font-bold'>Snapit Cut</p>
+                                            <p className='text-sm font-black text-yellow-300'>-{fmtINR(totalSnapitEarning)}</p>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Delivery Excl.</p>
+                                        <p className='text-sm font-black text-red-300'>-{fmtINR(totalDelivery)}</p>
+                                    </div>
+                                    <div>
+                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Orders</p>
+                                        <p className='text-sm font-black'>{totalOrders}</p>
+                                    </div>
+                                    <div>
+                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Avg/Order</p>
+                                        <p className='text-sm font-black'>{fmtINR(avgNet)}</p>
+                                    </div>
                                 </div>
                             </div>
 
+                            {/* Summary Cards */}
+                            <div className='grid grid-cols-2 gap-3'>
+                                <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
+                                    <p className='text-[9px] font-black text-slate-400 uppercase'>Total Sells</p>
+                                    <p className='text-2xl font-black text-slate-900 mt-1'>{totalOrders}</p>
+                                    <p className='text-[9px] text-slate-400'>delivered orders</p>
+                                </div>
+                                <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
+                                    <p className='text-[9px] font-black text-slate-400 uppercase'>Total Sales</p>
+                                    <p className='text-xl font-black text-blue-600 mt-1'>{fmtINR(totalSalesExDelivery)}</p>
+                                    <p className='text-[9px] text-slate-400'>excl. delivery charge</p>
+                                </div>
+                            </div>
+
+                            {/* Product Breakdown with floating values */}
                             {productList.length > 0 && (
                                 <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                    <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-3'>📦 Product Breakdown</h3>
+                                    <h3 className='font-black text-slate-800 text-xs uppercase tracking-wider mb-3'>📦 Product Sell History</h3>
                                     {productList.map(([name, data]) => {
-                                        const pct = totalSellerEarning > 0 ? Math.round((data.revenue / totalSellerEarning) * 100) : 0;
+                                        const pct = totalSellerEarning > 0 ? (data.revenue / totalSellerEarning) * 100 : 0;
                                         return (
-                                            <div key={name} className='flex items-center gap-3 mb-2'>
+                                            <div key={name} className='flex items-center gap-3 mb-3'>
                                                 <div className='flex-1'>
                                                     <div className='flex justify-between items-center mb-1'>
                                                         <p className='text-xs font-bold text-slate-700 truncate max-w-[160px]'>{name}</p>
                                                         <div className='flex items-center gap-2'>
-                                                            <span className='text-[10px] text-slate-400'>×{data.qty} sold</span>
-                                                            <span className='text-xs font-black text-emerald-600'>₹{data.revenue.toLocaleString()}</span>
+                                                            <span className='text-[9px] text-slate-400'>×{data.qty} sold</span>
+                                                            <span className='text-xs font-black text-emerald-600'>{fmtINR(data.revenue)}</span>
                                                         </div>
                                                     </div>
                                                     <div className='w-full bg-slate-100 rounded-full h-1.5'>
-                                                        <div className='bg-green-500 h-1.5 rounded-full' style={{ width: `${pct}%` }} />
+                                                        <div className='bg-green-500 h-1.5 rounded-full transition-all' style={{ width: `${pct.toFixed(1)}%` }}/>
                                                     </div>
+                                                    <p className='text-[9px] text-slate-400 mt-0.5'>{pct.toFixed(1)}% of earnings</p>
                                                 </div>
-                                                <span className='text-[10px] font-bold text-slate-400 w-8 text-right'>{pct}%</span>
                                             </div>
                                         );
                                     })}
                                 </div>
                             )}
 
-                            {/* Daily breakdown */}
+                            {/* Daily breakdown with floating values */}
                             <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-3'>📅 Daily Breakdown</h3>
+                                <h3 className='font-black text-slate-800 text-xs uppercase tracking-wider mb-3'>📅 Daily Breakdown</h3>
                                 {Object.entries(byDate)
                                     .sort((a, b) => new Date(b[0]) - new Date(a[0]))
                                     .map(([date, d]) => (
-                                        <div key={date} className='flex justify-between items-center py-2 border-b border-slate-50 last:border-0'>
-                                            <div>
+                                        <div key={date} className='py-3 border-b border-slate-50 last:border-0'>
+                                            <div className='flex justify-between items-center'>
                                                 <p className='text-sm font-bold text-slate-700'>{date}</p>
-                                                <p className='text-[10px] text-slate-400'>{d.count} order{d.count > 1 ? 's' : ''} · Gross ₹{d.gross}</p>
+                                                <p className='font-black text-green-600'>{fmtINR(d.sellerNet)}</p>
                                             </div>
-                                            <p className='font-black text-green-600'>₹{d.sellerNet.toLocaleString()}</p>
+                                            <div className='flex gap-4 mt-1 flex-wrap'>
+                                                <p className='text-[9px] text-slate-400'>{d.count} order{d.count > 1 ? 's' : ''}</p>
+                                                <p className='text-[9px] text-slate-500'>Gross {fmtINR(d.gross)}</p>
+                                                <p className='text-[9px] text-blue-500'>Sales (excl. delivery) {fmtINR(d.salesExDelivery)}</p>
+                                                {d.delivery > 0 && <p className='text-[9px] text-red-400'>Delivery -{fmtINR(d.delivery)}</p>}
+                                            </div>
                                         </div>
                                     ))}
                             </div>
