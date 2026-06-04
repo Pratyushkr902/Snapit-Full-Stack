@@ -376,13 +376,6 @@ const RiderDashboard = () => {
                             ))}
                         </div>
 
-                        {/* Debug warning */}
-                        {totalEarned === 0 && deliveredOrders.length > 0 && (
-                            <div className='bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3'>
-                                <p className='text-xs font-black text-amber-400'>⚠️ {deliveredOrders.length} delivered orders — delivery_fee is 0 or missing.</p>
-                                <p className='text-[10px] text-amber-400/70 mt-1'>Ask backend to save <code className='bg-amber-500/20 px-1 rounded'>delivery_fee</code> on order documents.</p>
-                            </div>
-                        )}
 
                         {/* Summary Cards */}
                         <div className='grid grid-cols-2 gap-3'>
