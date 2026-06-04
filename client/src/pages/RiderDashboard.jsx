@@ -9,7 +9,6 @@ import CollectPayment from '../components/CollectPayment';
 
 const socket = io(import.meta.env.VITE_API_URL);
 
-// ── Store name → emoji mapping ────────────────────────────────
 const STORE_EMOJI = {
     'Pali Mega Mart':                   '🛒',
     'Monginis':                         '🎂',
@@ -19,7 +18,6 @@ const STORE_EMOJI = {
 };
 const storeEmoji = (name) => STORE_EMOJI[name] || '🏪';
 
-// ── Google Maps link from store_details.location ─────────────
 const storeMapLink = (store) => {
     if (!store) return null;
     const lat = store.location?.lat;
@@ -27,6 +25,10 @@ const storeMapLink = (store) => {
     if (!lat || !lng) return null;
     return `https://www.google.com/maps?q=${lat},${lng}`;
 };
+
+// ── FIX: robust delivery fee getter ──────────────────────────
+const getDeliveryFee = (o) =>
+    Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? o.riderFee ?? o.rider_fee ?? 0);
 
 const RiderDashboard = () => {
     const [orders, setOrders]           = useState([]);
@@ -91,7 +93,7 @@ const RiderDashboard = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // ── Earnings ──────────────────────────────────────────────
+    // ── Earnings (FIXED) ──────────────────────────────────────
     const now = new Date();
     const filterByDate = (list) => list.filter(o => {
         const created = new Date(o.createdAt);
@@ -101,16 +103,16 @@ const RiderDashboard = () => {
         return true;
     });
 
-    const deliveredOrders    = orders.filter(o => o.delivery_status === 'Delivered');
-    const filteredEarnings   = filterByDate(deliveredOrders);
-    const totalEarned        = filteredEarnings.reduce((acc, o) => acc + (Number(o.delivery_fee) || 0), 0);
-    const totalDelivered     = filteredEarnings.length;
-    const avgFee             = totalDelivered > 0 ? Math.round(totalEarned / totalDelivered) : 0;
+    const deliveredOrders  = orders.filter(o => o.delivery_status === 'Delivered');
+    const filteredEarnings = filterByDate(deliveredOrders);
+    const totalEarned      = filteredEarnings.reduce((acc, o) => acc + getDeliveryFee(o), 0);
+    const totalDelivered   = filteredEarnings.length;
+    const avgFee           = totalDelivered > 0 ? Math.round(totalEarned / totalDelivered) : 0;
 
     const earningsByDate = filteredEarnings.reduce((acc, o) => {
         const date = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
         if (!acc[date]) acc[date] = { total: 0, count: 0 };
-        acc[date].total += Number(o.delivery_fee) || 0;
+        acc[date].total += getDeliveryFee(o);
         acc[date].count += 1;
         return acc;
     }, {});
@@ -195,7 +197,6 @@ const RiderDashboard = () => {
                                 return (
                                     <div key={order._id} className='bg-white shadow-sm rounded-[2.5rem] p-6 border border-slate-100 flex flex-col hover:shadow-md transition-shadow'>
 
-                                        {/* Order ID + address + call/map */}
                                         <div className='flex justify-between items-start mb-4'>
                                             <div className='flex-1'>
                                                 <span className='text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase'>
@@ -221,9 +222,7 @@ const RiderDashboard = () => {
                                             </div>
                                         </div>
 
-                                        {/* ── STORE PICKUP SECTION ── */}
                                         <div className='mb-3'>
-                                            {/* Primary store */}
                                             <div className='bg-orange-50 rounded-2xl p-3 border border-orange-100'>
                                                 <div className='flex items-center justify-between'>
                                                     <div className='flex items-center gap-2'>
@@ -240,7 +239,6 @@ const RiderDashboard = () => {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    {/* Map button — opens exact store pin */}
                                                     {mapLink && (
                                                         <a href={mapLink} target="_blank" rel="noreferrer"
                                                             className='flex flex-col items-center bg-orange-500 text-white px-3 py-2 rounded-xl text-[10px] font-black gap-0.5 hover:bg-orange-600 transition-all active:scale-95'>
@@ -251,7 +249,6 @@ const RiderDashboard = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Multi-store badge — shown when items from >1 store */}
                                             {hasMultiStores && (
                                                 <div className='mt-2 bg-purple-50 border border-purple-100 rounded-xl px-3 py-2'>
                                                     <p className='text-[10px] font-black text-purple-500 uppercase mb-1'>
@@ -268,7 +265,6 @@ const RiderDashboard = () => {
                                             )}
                                         </div>
 
-                                        {/* Items */}
                                         <div className='bg-slate-50 rounded-2xl p-3 mb-4'>
                                             <p className='text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2'>
                                                 <FaShoppingBasket /> Items
@@ -276,7 +272,6 @@ const RiderDashboard = () => {
                                             {order.cartItems?.map((item, i) => (
                                                 <div key={i} className='flex justify-between text-xs py-1 font-bold text-slate-700'>
                                                     <span className='line-clamp-1 mr-2'>
-                                                        {/* Show which store this item came from if multi-store */}
                                                         {hasMultiStores && item.seller_store_name
                                                             ? <span className='text-purple-500'>{storeEmoji(item.seller_store_name)} </span>
                                                             : null}
@@ -287,7 +282,6 @@ const RiderDashboard = () => {
                                             ))}
                                         </div>
 
-                                        {/* Amount + status */}
                                         <div className='flex justify-between items-end mb-4 mt-auto'>
                                             <div>
                                                 <p className='text-[10px] font-black text-slate-400 uppercase'>Collect</p>
@@ -305,7 +299,6 @@ const RiderDashboard = () => {
                                             </div>
                                         </div>
 
-                                        {/* Action buttons */}
                                         {order.delivery_status === 'Confirmed' && (
                                             <button onClick={() => handlePickup(order)}
                                                 className='w-full py-4 rounded-2xl font-black text-white bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2 active:scale-95'>
@@ -331,7 +324,7 @@ const RiderDashboard = () => {
                 </>
             )}
 
-            {/* ── EARNINGS TAB ── */}
+            {/* ── EARNINGS TAB (FIXED) ── */}
             {activeTab === 'earnings' && (
                 <div className='flex flex-col gap-4'>
                     <div className='flex gap-2 flex-wrap'>
@@ -347,6 +340,14 @@ const RiderDashboard = () => {
                             </button>
                         ))}
                     </div>
+
+                    {/* FIX: show debug info if earnings are 0 */}
+                    {totalEarned === 0 && deliveredOrders.length > 0 && (
+                        <div className='bg-yellow-50 border border-yellow-200 rounded-2xl p-3'>
+                            <p className='text-xs font-black text-yellow-700'>⚠️ {deliveredOrders.length} delivered orders found but delivery_fee = 0.</p>
+                            <p className='text-[10px] text-yellow-600 mt-1'>Check backend: make sure <code>delivery_fee</code> is saved on orders.</p>
+                        </div>
+                    )}
 
                     <div className='grid grid-cols-2 gap-3'>
                         <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
@@ -399,7 +400,7 @@ const RiderDashboard = () => {
                                             </p>
                                         </div>
                                         <div className='text-right'>
-                                            <p className='font-black text-green-600'>₹{order.delivery_fee || 0}</p>
+                                            <p className='font-black text-green-600'>₹{getDeliveryFee(order)}</p>
                                             <p className='text-[10px] text-slate-400'>{new Date(order.createdAt).toLocaleDateString()}</p>
                                         </div>
                                     </div>

@@ -7,6 +7,32 @@ import { FaCloudUploadAlt } from 'react-icons/fa';
 import { MdDelete } from 'react-icons/md';
 import { IoClose } from 'react-icons/io5';
 
+// ── FIX: robust field getters ─────────────────────────────────
+const getOrderAmount = (o) =>
+    Number(o.totalAmt ?? o.total_amount ?? o.amount ?? o.subTotalAmt ?? 0);
+
+const getDeliveryFee = (o) =>
+    Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? 0);
+
+// FIX: item price — tries sellerPrice first, then price, then unit_price
+const getItemSellerPrice = (item) =>
+    Number(item.sellerPrice ?? item.seller_price ?? item.price ?? item.unit_price ?? 0);
+
+const getItemSnapitMargin = (item) =>
+    Number(item.snapitMargin ?? item.snapit_margin ?? 0);
+
+const getSellerEarning = (order) =>
+    (order.cartItems || []).reduce(
+        (acc, item) => acc + getItemSellerPrice(item) * (Number(item.quantity) || 1),
+        0
+    );
+
+const getSnapitEarning = (order) =>
+    (order.cartItems || []).reduce(
+        (acc, item) => acc + getItemSnapitMargin(item) * (Number(item.quantity) || 1),
+        0
+    );
+
 const SellerDashboard = () => {
     const [allOrders, setAllOrders] = useState([]);
     const [activeTab, setActiveTab] = useState('packing');
@@ -16,11 +42,11 @@ const SellerDashboard = () => {
     const [historyFilter, setHistoryFilter] = useState('all');
 
     // ── PRODUCTS STATE ─────────────────────────────────────────
-    const [productTab, setProductTab] = useState('list'); // 'list' | 'upload'
+    const [productTab, setProductTab] = useState('list');
     const [products, setProducts] = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
     const [imageLoading, setImageLoading] = useState(false);
-    const [editingStock, setEditingStock] = useState({}); // { [productId]: newStockValue }
+    const [editingStock, setEditingStock] = useState({});
     const [productForm, setProductForm] = useState({
         name: '', description: '', image: [], category: [],
         subCategory: [], unit: '', stock: '', sellerPrice: '',
@@ -29,9 +55,8 @@ const SellerDashboard = () => {
     const [selectCategory, setSelectCategory] = useState('');
     const [selectSubCategory, setSelectSubCategory] = useState('');
 
-    const allCategory = useSelector(state => state.product.allCategory);
+    const allCategory    = useSelector(state => state.product.allCategory);
     const allSubCategory = useSelector(state => state.product.allSubCategory);
-    const user = useSelector(state => state.user);
 
     const sellingPrice = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
 
@@ -81,7 +106,6 @@ const SellerDashboard = () => {
         }
     };
 
-    // ── UPLOAD IMAGE ───────────────────────────────────────────
     const handleUploadImage = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -102,7 +126,6 @@ const SellerDashboard = () => {
         }
     };
 
-    // ── SUBMIT NEW PRODUCT ─────────────────────────────────────
     const handleProductSubmit = async (e) => {
         e.preventDefault();
         const sellerP = Number(productForm.sellerPrice) || 0;
@@ -133,7 +156,6 @@ const SellerDashboard = () => {
         }
     };
 
-    // ── UPDATE STOCK ───────────────────────────────────────────
     const handleUpdateStock = async (productId) => {
         const newStock = editingStock[productId];
         if (newStock === undefined || newStock === '') return;
@@ -152,7 +174,6 @@ const SellerDashboard = () => {
         }
     };
 
-    // ── DELETE PRODUCT ─────────────────────────────────────────
     const handleDeleteProduct = async (productId) => {
         if (!window.confirm('Delete this product?')) return;
         try {
@@ -178,6 +199,7 @@ const SellerDashboard = () => {
 
     const now = new Date();
     const isDelivered = (order) => (order.delivery_status || '').trim().toLowerCase() === 'delivered';
+
     const packingOrders = allOrders.filter(o =>
         o.seller_status !== 'Ready for Pickup' &&
         o.delivery_status !== 'Delivered' &&
@@ -198,10 +220,6 @@ const SellerDashboard = () => {
     });
 
     const filteredEarnings   = filterByDate(allOrders);
-    const getOrderAmount     = (o) => Number(o.totalAmt ?? o.total_amount ?? o.amount ?? o.subTotalAmt ?? 0);
-    const getDeliveryFee     = (o) => Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? 0);
-    const getSellerEarning   = (order) => (order.cartItems || []).reduce((acc, item) => acc + Number(item.sellerPrice ?? item.price ?? 0) * (Number(item.quantity) || 1), 0);
-    const getSnapitEarning   = (order) => (order.cartItems || []).reduce((acc, item) => acc + Number(item.snapitMargin ?? 0) * (Number(item.quantity) || 1), 0);
     const totalGross         = filteredEarnings.reduce((a, o) => a + getOrderAmount(o), 0);
     const totalDelivery      = filteredEarnings.reduce((a, o) => a + getDeliveryFee(o), 0);
     const totalSellerEarning = filteredEarnings.reduce((a, o) => a + getSellerEarning(o), 0);
@@ -209,14 +227,15 @@ const SellerDashboard = () => {
     const totalOrders        = filteredEarnings.length;
     const avgNet             = totalOrders > 0 ? Math.round(totalSellerEarning / totalOrders) : 0;
 
+    // FIX: product earnings use robust getItemSellerPrice
     const productEarnings = filteredEarnings.reduce((acc, order) => {
         (order.cartItems || []).forEach(item => {
             const name = item.productId?.name || item.name || 'Unknown Product';
-            const qty = Number(item.quantity) || 1;
-            const sellerPrice = Number(item.sellerPrice ?? item.price ?? 0);
+            const qty  = Number(item.quantity) || 1;
+            const sp   = getItemSellerPrice(item);
             if (!acc[name]) acc[name] = { qty: 0, revenue: 0 };
             acc[name].qty += qty;
-            acc[name].revenue += sellerPrice * qty;
+            acc[name].revenue += sp * qty;
         });
         return acc;
     }, {});
@@ -225,8 +244,11 @@ const SellerDashboard = () => {
     const byDate = filteredEarnings.reduce((acc, o) => {
         const d = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
         if (!acc[d]) acc[d] = { gross: 0, sellerNet: 0, snapit: 0, delivery: 0, count: 0 };
-        acc[d].gross += getOrderAmount(o); acc[d].delivery += getDeliveryFee(o);
-        acc[d].sellerNet += getSellerEarning(o); acc[d].snapit += getSnapitEarning(o); acc[d].count += 1;
+        acc[d].gross     += getOrderAmount(o);
+        acc[d].delivery  += getDeliveryFee(o);
+        acc[d].sellerNet += getSellerEarning(o);
+        acc[d].snapit    += getSnapitEarning(o);
+        acc[d].count     += 1;
         return acc;
     }, {});
 
@@ -245,6 +267,7 @@ const SellerDashboard = () => {
 
     const deliveredCount = allOrders.filter(o => isDelivered(o)).length;
     const cancelledCount = allOrders.filter(o => (o.delivery_status || '').toLowerCase() === 'cancelled').length;
+
     const statusColor = (s) => {
         const st = (s || '').toLowerCase();
         if (st === 'delivered') return 'bg-green-100 text-green-700';
@@ -282,7 +305,7 @@ const SellerDashboard = () => {
                 </div>
             </div>
 
-            {/* Tabs — now 4 tabs */}
+            {/* Tabs */}
             <div className='flex gap-2 mb-6 bg-white rounded-2xl p-1 shadow-sm border border-slate-100'>
                 {[
                     { key: 'packing',  label: '📦 Packing',  active: 'bg-orange-500' },
@@ -324,7 +347,11 @@ const SellerDashboard = () => {
                             )}
                             <div className='mb-4'>
                                 {(order.cartItems || []).map((item, i) => (
-                                    <p key={i} className='font-bold text-slate-700'>• {item.productId?.name || item.name} (×{item.quantity})</p>
+                                    <div key={i} className='flex justify-between items-center py-1'>
+                                        <p className='font-bold text-slate-700 text-sm'>• {item.productId?.name || item.name} (×{item.quantity})</p>
+                                        {/* FIX: show item price in packing tab */}
+                                        <p className='text-xs font-black text-slate-500'>₹{getItemSellerPrice(item) * (Number(item.quantity) || 1)}</p>
+                                    </div>
                                 ))}
                             </div>
                             <div className='flex justify-between items-center mb-4'>
@@ -333,8 +360,9 @@ const SellerDashboard = () => {
                                     <p className='text-xl font-black text-slate-900'>₹{getOrderAmount(order)}</p>
                                 </div>
                                 <div className='text-right'>
-                                    <p className='text-[10px] font-black text-slate-400 uppercase'>Payment</p>
-                                    <p className='text-sm font-bold text-slate-700'>{order.payment_status || 'COD'}</p>
+                                    <p className='text-[10px] font-black text-slate-400 uppercase'>Your Earning</p>
+                                    {/* FIX: show seller earning per order */}
+                                    <p className='text-sm font-black text-green-600'>₹{getSellerEarning(order)}</p>
                                 </div>
                             </div>
                             <button onClick={() => markAsReady(order.orderId)}
@@ -349,7 +377,6 @@ const SellerDashboard = () => {
             {/* ── PRODUCTS TAB ── */}
             {activeTab === 'products' && (
                 <div>
-                    {/* Sub-tabs */}
                     <div className='flex gap-2 mb-4'>
                         <button onClick={() => setProductTab('list')}
                             className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all border ${productTab === 'list' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200'}`}>
@@ -361,7 +388,6 @@ const SellerDashboard = () => {
                         </button>
                     </div>
 
-                    {/* ── PRODUCT LIST ── */}
                     {productTab === 'list' && (
                         <div className='flex flex-col gap-3'>
                             {productsLoading ? (
@@ -380,25 +406,26 @@ const SellerDashboard = () => {
                                 </div>
                             ) : products.map(product => (
                                 <div key={product._id} className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex gap-4 items-center'>
-                                    {/* Image */}
                                     <img
                                         src={product.image?.[0] || ''}
                                         alt={product.name}
                                         className='w-16 h-16 object-contain rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0'
                                     />
-                                    {/* Info */}
                                     <div className='flex-1 min-w-0'>
                                         <p className='font-black text-slate-800 text-sm truncate'>{product.name}</p>
                                         <div className='flex gap-3 mt-1 flex-wrap'>
-                                            <span className='text-xs text-emerald-600 font-bold'>₹{product.sellerPrice || product.price}</span>
+                                            {/* FIX: show seller price clearly */}
+                                            <span className='text-xs text-slate-500 font-bold'>Seller: <span className='text-emerald-600'>₹{product.sellerPrice || product.price || 0}</span></span>
                                             {product.snapitMargin > 0 && (
-                                                <span className='text-xs text-yellow-500 font-bold'>+₹{product.snapitMargin} margin</span>
+                                                <span className='text-xs text-yellow-500 font-bold'>Margin: ₹{product.snapitMargin}</span>
                                             )}
+                                            <span className='text-xs text-blue-600 font-bold'>
+                                                Customer pays: ₹{(Number(product.sellerPrice || product.price || 0) + Number(product.snapitMargin || 0))}
+                                            </span>
                                             <span className={`text-xs font-bold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-500' : 'text-red-500'}`}>
                                                 {product.stock > 0 ? `${product.stock} in stock` : '❌ Out of stock'}
                                             </span>
                                         </div>
-                                        {/* Stock editor */}
                                         <div className='flex items-center gap-2 mt-2'>
                                             <input
                                                 type='number'
@@ -425,11 +452,8 @@ const SellerDashboard = () => {
                         </div>
                     )}
 
-                    {/* ── UPLOAD FORM ── */}
                     {productTab === 'upload' && (
                         <form onSubmit={handleProductSubmit} className='flex flex-col gap-4'>
-
-                            {/* Name */}
                             <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
                                 <label className='text-xs font-black text-slate-500 uppercase'>Product Name</label>
                                 <input type='text' placeholder='e.g. Basmati Rice 5kg' required
@@ -438,8 +462,6 @@ const SellerDashboard = () => {
                                     className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400'
                                 />
                             </div>
-
-                            {/* Description */}
                             <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
                                 <label className='text-xs font-black text-slate-500 uppercase'>Description</label>
                                 <textarea rows={3} placeholder='Describe the product...' required
@@ -448,8 +470,6 @@ const SellerDashboard = () => {
                                     className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400 resize-none'
                                 />
                             </div>
-
-                            {/* Image Upload */}
                             <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
                                 <label className='text-xs font-black text-slate-500 uppercase'>Images</label>
                                 <label htmlFor='sellerProductImage'
@@ -476,8 +496,6 @@ const SellerDashboard = () => {
                                     ))}
                                 </div>
                             </div>
-
-                            {/* Category */}
                             <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
                                 <label className='text-xs font-black text-slate-500 uppercase'>Category</label>
                                 <select value={selectCategory} className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none'
@@ -500,8 +518,6 @@ const SellerDashboard = () => {
                                     ))}
                                 </div>
                             </div>
-
-                            {/* Sub Category */}
                             <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
                                 <label className='text-xs font-black text-slate-500 uppercase'>Sub Category</label>
                                 <select value={selectSubCategory} className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none'
@@ -524,8 +540,6 @@ const SellerDashboard = () => {
                                     ))}
                                 </div>
                             </div>
-
-                            {/* Unit + Stock */}
                             <div className='grid grid-cols-2 gap-3'>
                                 <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
                                     <label className='text-xs font-black text-slate-500 uppercase'>Unit</label>
@@ -544,8 +558,6 @@ const SellerDashboard = () => {
                                     />
                                 </div>
                             </div>
-
-                            {/* Pricing */}
                             <div className='bg-green-50 border border-green-200 rounded-2xl p-4'>
                                 <p className='text-xs font-black text-green-700 uppercase mb-3'>💰 Pricing</p>
                                 <div className='grid grid-cols-2 gap-3'>
@@ -577,8 +589,6 @@ const SellerDashboard = () => {
                                     <p className='text-2xl font-black text-green-700'>₹{sellingPrice.toFixed(2)}</p>
                                 </div>
                             </div>
-
-                            {/* Discount */}
                             <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
                                 <label className='text-xs font-black text-slate-500 uppercase'>Discount %</label>
                                 <input type='number' placeholder='e.g. 10'
@@ -587,7 +597,6 @@ const SellerDashboard = () => {
                                     className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400'
                                 />
                             </div>
-
                             <button type='submit'
                                 className='w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-blue-200'>
                                 🚀 UPLOAD PRODUCT
@@ -597,7 +606,7 @@ const SellerDashboard = () => {
                 </div>
             )}
 
-            {/* ── HISTORY TAB ── */}
+            {/* ── HISTORY TAB (FIXED prices) ── */}
             {activeTab === 'history' && (
                 <div className='flex flex-col gap-3'>
                     <div className='grid grid-cols-3 gap-2'>
@@ -614,6 +623,14 @@ const SellerDashboard = () => {
                             <p className='text-[10px] font-black text-slate-400 uppercase'>Cancelled</p>
                         </div>
                     </div>
+
+                    {/* FIX: Total sales summary */}
+                    <div className='bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-4 text-white'>
+                        <p className='text-[10px] font-black text-slate-400 uppercase mb-1'>Total Sales (All Time)</p>
+                        <p className='text-3xl font-black'>₹{allOrders.filter(isDelivered).reduce((a, o) => a + getSellerEarning(o), 0).toLocaleString()}</p>
+                        <p className='text-xs text-slate-400 mt-1'>From {deliveredCount} delivered orders</p>
+                    </div>
+
                     <div className='relative'>
                         <input type='text' value={historySearch} onChange={e => setHistorySearch(e.target.value)}
                             placeholder='Search by order ID or product name...'
@@ -623,14 +640,22 @@ const SellerDashboard = () => {
                         {historySearch && <button onClick={() => setHistorySearch('')} className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg'>×</button>}
                     </div>
                     <div className='flex gap-2 flex-wrap'>
-                        {[{ key: 'all', label: 'All Orders' }, { key: 'delivered', label: '✅ Delivered' }, { key: 'pending', label: '⏳ Pending' }, { key: 'cancelled', label: '❌ Cancelled' }].map(f => (
+                        {[
+                            { key: 'all',       label: 'All Orders' },
+                            { key: 'delivered', label: '✅ Delivered' },
+                            { key: 'pending',   label: '⏳ Pending' },
+                            { key: 'cancelled', label: '❌ Cancelled' },
+                        ].map(f => (
                             <button key={f.key} onClick={() => setHistoryFilter(f.key)}
                                 className={`px-3 py-1.5 rounded-full text-xs font-black transition-all border ${historyFilter === f.key ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}`}>
                                 {f.label}
                             </button>
                         ))}
                     </div>
-                    <p className='text-[11px] text-slate-400 font-bold px-1'>Showing {historyFiltered.length} of {allSorted.length} orders{historySearch && ` · matching "${historySearch}"`}</p>
+                    <p className='text-[11px] text-slate-400 font-bold px-1'>
+                        Showing {historyFiltered.length} of {allSorted.length} orders
+                        {historySearch && ` · matching "${historySearch}"`}
+                    </p>
                     {historyFiltered.length === 0 ? (
                         <div className='bg-white rounded-3xl p-12 text-center border-2 border-dashed border-slate-200'>
                             <p className='text-4xl mb-3'>📭</p>
@@ -641,37 +666,58 @@ const SellerDashboard = () => {
                             <div className='flex justify-between items-start mb-2'>
                                 <div>
                                     <p className='font-mono text-xs font-bold text-slate-500'>{order.orderId}</p>
-                                    <p className='text-[10px] text-slate-400 mt-0.5'>{new Date(order.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                    <p className='text-[10px] text-slate-400 mt-0.5'>
+                                        {new Date(order.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                    </p>
                                 </div>
-                                <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${statusColor(order.delivery_status)}`}>{order.delivery_status}</span>
+                                <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${statusColor(order.delivery_status)}`}>
+                                    {order.delivery_status}
+                                </span>
                             </div>
                             <div className='mb-3 bg-slate-50 rounded-xl p-3'>
                                 {(order.cartItems || []).map((item, i) => (
                                     <div key={i} className='flex justify-between items-center py-1 border-b border-slate-100 last:border-0'>
                                         <p className='text-xs font-bold text-slate-700'>{item.productId?.name || item.name}</p>
-                                        <div className='flex items-center gap-2'>
+                                        <div className='flex items-center gap-3'>
                                             <span className='text-[10px] text-slate-400'>×{item.quantity}</span>
-                                            <span className='text-xs font-bold text-slate-600'>₹{(item.price || 0) * (item.quantity || 1)}</span>
+                                            {/* FIX: use robust price getter */}
+                                            <span className='text-xs font-black text-slate-800'>
+                                                ₹{getItemSellerPrice(item) * (Number(item.quantity) || 1)}
+                                            </span>
                                         </div>
                                     </div>
                                 ))}
+                                <div className='flex justify-between items-center pt-2 mt-1'>
+                                    <p className='text-xs font-black text-slate-500 uppercase'>Your Earning</p>
+                                    <p className='text-sm font-black text-green-600'>₹{getSellerEarning(order)}</p>
+                                </div>
+                                <div className='flex justify-between items-center'>
+                                    <p className='text-xs font-black text-slate-500 uppercase'>Order Total</p>
+                                    <p className='text-sm font-black text-slate-800'>₹{getOrderAmount(order)}</p>
+                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* ── EARNINGS TAB ── */}
+            {/* ── EARNINGS TAB (FIXED) ── */}
             {activeTab === 'earnings' && (
                 <div className='flex flex-col gap-4'>
                     <div className='flex gap-2 flex-wrap'>
-                        {[{ key: 'today', label: 'Today' }, { key: 'week', label: 'This Week' }, { key: 'month', label: 'This Month' }, { key: 'all', label: 'All Time' }].map(f => (
+                        {[
+                            { key: 'today', label: 'Today' },
+                            { key: 'week',  label: 'This Week' },
+                            { key: 'month', label: 'This Month' },
+                            { key: 'all',   label: 'All Time' },
+                        ].map(f => (
                             <button key={f.key} onClick={() => setEarningFilter(f.key)}
                                 className={`px-4 py-2 rounded-full text-xs font-black transition-all border ${earningFilter === f.key ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-200'}`}>
                                 {f.label}
                             </button>
                         ))}
                     </div>
+
                     {filteredEarnings.length === 0 ? (
                         <div className='bg-white rounded-3xl p-10 text-center border-2 border-dashed border-green-200'>
                             <p className='text-4xl mb-3'>💸</p>
@@ -691,6 +737,7 @@ const SellerDashboard = () => {
                                     <div><p className='text-[10px] text-green-200 uppercase font-bold'>Avg/Order</p><p className='text-sm font-bold'>₹{avgNet}</p></div>
                                 </div>
                             </div>
+
                             {productList.length > 0 && (
                                 <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
                                     <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-3'>📦 Product Breakdown</h3>
@@ -716,6 +763,22 @@ const SellerDashboard = () => {
                                     })}
                                 </div>
                             )}
+
+                            {/* Daily breakdown */}
+                            <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
+                                <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-3'>📅 Daily Breakdown</h3>
+                                {Object.entries(byDate)
+                                    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+                                    .map(([date, d]) => (
+                                        <div key={date} className='flex justify-between items-center py-2 border-b border-slate-50 last:border-0'>
+                                            <div>
+                                                <p className='text-sm font-bold text-slate-700'>{date}</p>
+                                                <p className='text-[10px] text-slate-400'>{d.count} order{d.count > 1 ? 's' : ''} · Gross ₹{d.gross}</p>
+                                            </div>
+                                            <p className='font-black text-green-600'>₹{d.sellerNet.toLocaleString()}</p>
+                                        </div>
+                                    ))}
+                            </div>
                         </>
                     )}
                 </div>

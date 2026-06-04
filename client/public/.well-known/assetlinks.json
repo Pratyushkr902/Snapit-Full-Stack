@@ -2,7 +2,7 @@
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "com.snapit.grocery",
-    "sha256_cert_fingerprints": ["BD:B8:25:12:78:30:64:CC:DD:E3:F5:BF:FC:BD:E4:60:88:89:2D:9A:33:B3:98:EE:62:B5:A9:82:22:98:D9:91"]
+    "package_name": "com.snapit.app",
+    "sha256_cert_fingerprints": ["A5:69:1A:92:C1:EA:8C:9F:A4:34:16:47:7A:91:E4:93:AD:79:62:D8:4A:CC:70:F9:32:62:38:2B:2A:47:BF:8B"]
   }
 }]
