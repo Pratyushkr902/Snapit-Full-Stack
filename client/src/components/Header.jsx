@@ -54,11 +54,13 @@ const Header = ({ openCart }) => {
 
             {
                 !(isSearchPage && isMobile) && (
-                    <div className='container mx-auto flex flex-col lg:flex-row items-center px-3 py-2 lg:justify-between gap-2 lg:gap-4'>
+                    <div className='container mx-auto flex flex-col lg:flex-row items-center px-3 pt-2 pb-0 lg:py-2 lg:justify-between gap-2 lg:gap-4'>
                         
-                        <div className='flex items-center justify-between w-full lg:w-auto gap-4'>
-                            <div className='flex items-center gap-2'>
-                                <Link to={"/"} className='h-full flex justify-center items-center shrink-0'>
+                        {/* ── Top row: logo + delivery + mobile actions ── */}
+                        <div className='flex items-center justify-between w-full lg:w-auto gap-2'>
+                            <div className='flex items-center gap-2 min-w-0'>
+                                {/* Logo — fixed width so search can never overlap it */}
+                                <Link to={"/"} className='flex-shrink-0 flex justify-center items-center'>
                                     <img
                                         src={logo}
                                         alt='logo'
@@ -67,7 +69,7 @@ const Header = ({ openCart }) => {
                                     <img
                                         src={logo}
                                         alt='logo'
-                                        className='lg:hidden w-24 h-auto object-contain'
+                                        className='lg:hidden w-24 h-auto object-contain flex-shrink-0'
                                     />
                                 </Link>
 
@@ -85,27 +87,28 @@ const Header = ({ openCart }) => {
                                     </div>
                                 </div>
 
-                                {/* Mobile delivery info */}
-                                <div className='flex lg:hidden flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
-                                    <div className='flex items-center gap-1 leading-none'>
-                                        <h2 className='font-black text-slate-900 text-[13px] uppercase tracking-tighter'>
-                                            Delivery in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
+                                {/* Mobile delivery info — truncates cleanly */}
+                                <div className='flex lg:hidden flex-col justify-center border-l-2 pl-2 border-slate-100 h-10 min-w-0'>
+                                    <div className='flex items-center gap-0.5 leading-none'>
+                                        <h2 className='font-black text-slate-900 text-[12px] uppercase tracking-tighter whitespace-nowrap'>
+                                            in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
                                         </h2>
-                                        <span>⚡</span>
+                                        <span className='text-sm'>⚡</span>
                                     </div>
-                                    <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold cursor-pointer truncate max-w-[120px]'>
-                                        <span className='truncate'>📍 {primaryAddress}</span>
-                                        <GoTriangleDown size={12} />
+                                    <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold cursor-pointer min-w-0'>
+                                        <span className='truncate max-w-[80px]'>📍 {primaryAddress}</span>
+                                        <GoTriangleDown size={10} className='flex-shrink-0' />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className='flex items-center gap-5 lg:hidden'>
+                            {/* Mobile: user + cart icons — pushed to right */}
+                            <div className='flex items-center gap-4 lg:hidden flex-shrink-0'>
                                 <button className='text-neutral-600 active:scale-90 transition-transform' onClick={handleMobileUser}>
-                                    <FaRegCircleUser size={24} />
+                                    <FaRegCircleUser size={22} />
                                 </button>
                                 <button onClick={openCart} className='relative text-green-700 active:scale-90 transition-transform'>
-                                    <BsCart4 size={24} />
+                                    <BsCart4 size={22} />
                                     {totalQty > 0 && (
                                         <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white'>
                                             {totalQty}
@@ -115,13 +118,14 @@ const Header = ({ openCart }) => {
                             </div>
                         </div>
 
+                        {/* Desktop search */}
                         <div className='hidden lg:block w-full max-w-xl'>
                             <Search />
                         </div>
 
+                        {/* Desktop right actions */}
                         <div className='hidden lg:flex items-center gap-8 flex-shrink-0'>
 
-                            {/* ✅ NEW: Snapit Plus & Streak quick links (desktop) */}
                             {user?._id && (
                                 <div className='flex items-center gap-2'>
                                     <Link
@@ -185,7 +189,8 @@ const Header = ({ openCart }) => {
                 )
             }
 
-            <div className='container mx-auto px-3 lg:hidden pb-2'>
+            {/* ── Mobile search row — full width, properly separated ── */}
+            <div className='container mx-auto px-3 pb-2 lg:hidden'>
                 <Search />
             </div>
 
