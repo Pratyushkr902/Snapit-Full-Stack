@@ -112,56 +112,50 @@ const Header = ({ openCart }) => {
 
             {/* ════════════════════════════════
                 MOBILE HEADER  (below lg)
-                Two clearly separated rows:
-                Row 1 — logo | delivery | icons
-                Row 2 — search bar (hidden on /search page)
             ════════════════════════════════ */}
             <div className='lg:hidden flex flex-col'>
 
                 {/* Row 1 — always visible on mobile */}
-                {!(isSearchPage && isMobile) && (
-                    <div className='flex items-center justify-between px-3 pt-2 pb-1'>
-                        {/* Left: logo + delivery */}
-                        <div className='flex items-center gap-2 min-w-0 flex-1'>
-                            <Link to="/" className='flex-shrink-0'>
-                                <img src={logo} alt='logo' className='w-20 h-auto object-contain' />
-                            </Link>
-                            <div className='flex flex-col justify-center border-l-2 pl-2 border-slate-100 min-w-0'>
-                                <div className='flex items-center gap-0.5'>
-                                    <span className='font-black text-slate-900 text-[11px] uppercase tracking-tighter whitespace-nowrap'>
-                                        in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
-                                    </span>
-                                </div>
-                                <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0'>
-                                    <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
-                                    <GoTriangleDown size={10} className='flex-shrink-0' />
-                                </div>
+                <div className='flex items-center justify-between px-3 pt-2 pb-1'>
+                    {/* Left: logo + delivery */}
+                    <div className='flex items-center gap-2 min-w-0 flex-1'>
+                        <Link to="/" className='flex-shrink-0'>
+                            <img src={logo} alt='logo' className='w-20 h-auto object-contain' />
+                        </Link>
+                        <div className='flex flex-col justify-center border-l-2 pl-2 border-slate-100 min-w-0'>
+                            <div className='flex items-center gap-0.5'>
+                                <span className='font-black text-slate-900 text-[11px] uppercase tracking-tighter whitespace-nowrap'>
+                                    in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
+                                </span>
+                            </div>
+                            <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0'>
+                                <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
+                                <GoTriangleDown size={10} className='flex-shrink-0' />
                             </div>
                         </div>
-
-                        {/* Right: user + cart icons */}
-                        <div className='flex items-center gap-4 flex-shrink-0 ml-2'>
-                            <button className='text-neutral-600 active:scale-90 transition-transform' onClick={handleMobileUser}>
-                                <FaRegCircleUser size={22} />
-                            </button>
-                            <button onClick={openCart} className='relative text-green-700 active:scale-90 transition-transform'>
-                                <BsCart4 size={22} />
-                                {totalQty > 0 && (
-                                    <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white'>
-                                        {totalQty}
-                                    </span>
-                                )}
-                            </button>
-                        </div>
                     </div>
-                )}
 
-                {/* Row 2 — search bar, hidden on /search page */}
-                {!isSearchPage && (
-                    <div className='px-3 pb-2'>
-                        <Search />
+                    {/* Right: user + cart icons */}
+                    <div className='flex items-center gap-4 flex-shrink-0 ml-2'>
+                        <button className='text-neutral-600 active:scale-90 transition-transform' onClick={handleMobileUser}>
+                            <FaRegCircleUser size={22} />
+                        </button>
+                        <button onClick={openCart} className='relative text-green-700 active:scale-90 transition-transform'>
+                            <BsCart4 size={22} />
+                            {totalQty > 0 && (
+                                <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white'>
+                                    {totalQty}
+                                </span>
+                            )}
+                        </button>
                     </div>
-                )}
+                </div>
+
+                {/* ✅ FIX: Always show search bar on mobile — both on home and /search page */}
+                <div className='px-3 pb-2'>
+                    <Search />
+                </div>
+
             </div>
 
         </header>
