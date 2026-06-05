@@ -7,6 +7,7 @@ import AxiosToastError from '../utils/AxiosToastError'
 import Axios, { SummaryApi } from '../utils/Axios'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import { loadRazorpay } from '../utils/loadRazorpay'
 
 const SERVICEABLE_AREAS = [
   'paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos',
@@ -101,8 +102,6 @@ const CheckoutPage = () => {
     })
   }
 
-  // ✅ FIX: Helper that saves scratch cards to sessionStorage before navigating
-  // so they survive even if React Router state is lost on refresh
   const navigateToSuccess = (scratchCards) => {
     const cards = scratchCards || []
     try {
@@ -150,7 +149,7 @@ const CheckoutPage = () => {
         toast.success('Paid successfully using Snapit Wallet! 💸')
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
-        navigateToSuccess(response.data.scratch_cards)  // ✅ FIXED
+        navigateToSuccess(response.data.scratch_cards)
       }
     } catch (error) {
       AxiosToastError(error)
@@ -186,7 +185,7 @@ const CheckoutPage = () => {
         toast.success(response.data.message)
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
-        navigateToSuccess(response.data.scratch_cards)  // ✅ FIXED
+        navigateToSuccess(response.data.scratch_cards)
       }
     } catch (error) {
       AxiosToastError(error)
@@ -196,9 +195,21 @@ const CheckoutPage = () => {
   const handleOnlinePayment = async () => {
     try {
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
-      if (!RAZORPAY_KEY) return toast.error('Razorpay Key Id is missing.')
+      if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!addressList[selectAddress]) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
+
+      // ✅ FIX: Dynamically load Razorpay and wait for it
+      const gatewayToast = toast.loading('Loading payment gateway...')
+      let RazorpayClass
+      try {
+        RazorpayClass = await loadRazorpay()
+      } catch (err) {
+        toast.dismiss(gatewayToast)
+        toast.error('Payment gateway failed to load. Please refresh and try again.')
+        return
+      }
+      toast.dismiss(gatewayToast)
 
       let coords = { lat: 25.2921, lng: 84.8170 }
       try { coords = await getCoordinates() } catch (e) {}
@@ -253,7 +264,7 @@ const CheckoutPage = () => {
                 toast.success('Order Placed Successfully! 🛒')
                 if (fetchCartItem) fetchCartItem()
                 if (fetchOrder) fetchOrder()
-                navigateToSuccess(verifyRes.data.scratch_cards)  // ✅ FIXED
+                navigateToSuccess(verifyRes.data.scratch_cards)
               }
             } catch (err) {
               toast.dismiss(verificationToast)
@@ -266,7 +277,9 @@ const CheckoutPage = () => {
           },
           theme: { color: '#16a34a' }
         }
-        const rzp = new window.Razorpay(options)
+
+        // ✅ Use dynamically loaded Razorpay class instead of window.Razorpay
+        const rzp = new RazorpayClass(options)
         rzp.open()
       }
     } catch (error) {
