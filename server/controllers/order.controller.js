@@ -93,7 +93,6 @@ const resolveStore = async (lat, lng) => {
     return DEFAULT_STORE;
 };
 
-// Builds cartItems — guarantees sellerPrice, snapitMargin, price are always Numbers
 const buildTaggedCartItems = async (list_items, assignedStoreName) => {
     return Promise.all(
         list_items.map(async (el) => {
@@ -427,6 +426,9 @@ export const collectPaymentController = async (request, response) => {
 
 export async function getOrderItems(request, response) {
     try {
+        response.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        response.set('Pragma', 'no-cache');
+
         const orders = await populateOrder(
             OrderModel.find({ delivery_status: { $nin: ["Cancelled"] } }).sort({ createdAt: -1 })
         );
@@ -437,15 +439,28 @@ export async function getOrderItems(request, response) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET — SELLER ORDERS  (packing / history tabs)
+// GET — SELLER ORDERS  (packing / history / earnings tabs)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getSellerOrdersController(request, response) {
     try {
+        // ✅ Prevent HTTP-level caching so seller always gets fresh data
+        response.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        response.set('Pragma', 'no-cache');
+        response.set('Expires', '0');
+
+        // ✅ Fetch ALL orders (including Delivered) so history/earnings tabs work
+        // ✅ Sorted newest first
         const orders = await populateOrder(
-            OrderModel.find({ delivery_status: { $nin: ["Cancelled"] } }).sort({ createdAt: -1 })
+            OrderModel.find({}).sort({ createdAt: -1 })
         );
-        return response.json({ message: "Seller orders fetched.", error: false, success: true, data: orders.map(toSafeOrder) });
+
+        return response.json({
+            message: "Seller orders fetched.",
+            error:   false,
+            success: true,
+            data:    orders.map(toSafeOrder),
+        });
     } catch (error) {
         return response.status(500).json({ message: error.message, error: true, success: false });
     }
@@ -453,12 +468,13 @@ export async function getSellerOrdersController(request, response) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET — SELLER EARNINGS  (/api/order/seller-earnings)
-// Used by SummaryApi.getSellerEarnings → SellerEarnings.jsx
-// Returns ALL orders + a pre-computed summary object
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getSellerEarningsController(request, response) {
     try {
+        response.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        response.set('Pragma', 'no-cache');
+
         const orders = await populateOrder(
             OrderModel.find({}).sort({ createdAt: -1 })
         );
