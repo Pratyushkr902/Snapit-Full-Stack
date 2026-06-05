@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
@@ -26,36 +26,81 @@ const storeMapLink = (store) => {
     return `https://www.google.com/maps?q=${lat},${lng}`;
 };
 
-// ── Robust delivery fee getter ─────────────────────────────────
 const getDeliveryFee = (o) =>
     Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? o.riderFee ?? o.rider_fee ?? 0);
 
-// ── Format as floating (2 decimal) ────────────────────────────
 const fmt = (n) => Number(n).toFixed(2);
 const fmtINR = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const RiderDashboard = () => {
-    const [orders, setOrders]             = useState([]);
-    const [loading, setLoading]           = useState(true);
-    const [filter, setFilter]             = useState('Confirmed');
-    const [isTracking, setIsTracking]     = useState(false);
-    const [paymentOrder, setPaymentOrder] = useState(null);
-    const [activeTab, setActiveTab]       = useState('orders');
+    const [orders, setOrders]               = useState([]);
+    const [loading, setLoading]             = useState(true);
+    const [filter, setFilter]               = useState('Confirmed');
+    const [isTracking, setIsTracking]       = useState(false);
+    const [paymentOrder, setPaymentOrder]   = useState(null);
+    const [activeTab, setActiveTab]         = useState('orders');
     const [earningFilter, setEarningFilter] = useState('today');
+    const [lastSynced, setLastSynced]       = useState(null);
 
-    const fetchRiderOrders = async () => {
+    // ✅ OPTION 3 FIX: Fetch ALL non-delivered orders directly
+    // Rider sees orders as soon as delivery_status = 'Confirmed'
+    // regardless of what seller did — no dependency on seller_status
+    const fetchRiderOrders = useCallback(async (silent = false) => {
         try {
-            if (orders.length === 0) setLoading(true);
+            if (!silent) setLoading(true);
             const response = await Axios({ ...SummaryApi.getOrderItems });
             if (response.data.success) {
-                setOrders(Array.isArray(response.data.data) ? response.data.data : []);
+                const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
+
+                // ✅ OPTION 3: Also show orders where seller hasn't confirmed but
+                // order is old enough (>10 mins) — these will be auto-confirmed by
+                // backend cron (Option 1) but rider can see them immediately
+                const visibleOrders = allOrders.filter(o => {
+                    // Always show confirmed, out-for-delivery, delivered
+                    if (['Confirmed', 'Out for Delivery', 'Delivered'].includes(o.delivery_status)) return true;
+
+                    // ✅ Also show Pending orders older than 8 mins
+                    // so rider sees it slightly before auto-confirm fires
+                    const ageMinutes = (Date.now() - new Date(o.createdAt)) / 60000;
+                    if (o.delivery_status === 'Pending' && ageMinutes >= 3) return true;
+
+                    return false;
+                });
+
+                setOrders(visibleOrders);
+                setLastSynced(new Date());
             }
         } catch {
-            toast.error("Failed to sync with server");
+            if (!silent) toast.error("Failed to sync with server");
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchRiderOrders();
+
+        // ✅ OPTION 3: Poll every 30 seconds — rider always gets fresh orders
+        const interval = setInterval(() => fetchRiderOrders(true), 30000);
+        return () => clearInterval(interval);
+    }, [fetchRiderOrders]);
+
+    // ✅ Socket: real-time order updates
+    useEffect(() => {
+        socket.on('new_order', () => {
+            fetchRiderOrders(true);
+            toast('🛵 New order available!', { icon: '📦' });
+        });
+
+        socket.on('order_confirmed', () => {
+            fetchRiderOrders(true);
+        });
+
+        return () => {
+            socket.off('new_order');
+            socket.off('order_confirmed');
+        };
+    }, [fetchRiderOrders]);
 
     useEffect(() => {
         let watchId;
@@ -84,18 +129,12 @@ const RiderDashboard = () => {
             if (response.data.success) {
                 toast.success('Order picked up — now Out for Delivery!');
                 setIsTracking(true);
-                fetchRiderOrders();
+                fetchRiderOrders(true);
             }
         } catch {
             toast.error("Update failed");
         }
     };
-
-    useEffect(() => {
-        fetchRiderOrders();
-        const interval = setInterval(fetchRiderOrders, 30000);
-        return () => clearInterval(interval);
-    }, []);
 
     // ── Earnings ──────────────────────────────────────────────
     const now = new Date();
@@ -152,14 +191,24 @@ const RiderDashboard = () => {
                     <div>
                         <p className='text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]'>Snapit Logistics · Bihar</p>
                         <h1 className='text-lg font-black text-white leading-none'>RIDER COMMAND</h1>
+                        {/* ✅ Show last synced time */}
+                        {lastSynced && (
+                            <p className='text-[8px] text-slate-600'>
+                                Synced {lastSynced.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </p>
+                        )}
                     </div>
                     <div className='flex gap-2 items-center'>
-                        {/* Cash in Hand */}
                         <div className='bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-center'>
                             <p className='text-[8px] font-black text-slate-400 uppercase'>Cash in Hand</p>
                             <p className='text-base font-black text-amber-400'>{fmtINR(totalInHand)}</p>
                         </div>
-                        {/* GPS Toggle */}
+                        {/* Manual refresh */}
+                        <button
+                            onClick={() => fetchRiderOrders(true)}
+                            className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'>
+                            🔄
+                        </button>
                         <button
                             onClick={() => setIsTracking(!isTracking)}
                             className={`px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 transition-all ${
@@ -200,7 +249,6 @@ const RiderDashboard = () => {
                 {/* ══════════════ ORDERS TAB ══════════════ */}
                 {activeTab === 'orders' && (
                     <>
-                        {/* Status Filter Pills */}
                         <div className='flex gap-2 mb-5 overflow-x-auto pb-1 scrollbar-hide'>
                             {['All', 'Confirmed', 'Out for Delivery', 'Delivered'].map(t => (
                                 <button key={t} onClick={() => setFilter(t)}
@@ -219,17 +267,36 @@ const RiderDashboard = () => {
                                 <div className='col-span-full py-20 text-center bg-slate-900 rounded-3xl border-2 border-dashed border-slate-700'>
                                     <p className='text-5xl mb-3'>🛵</p>
                                     <p className='text-slate-400 font-black'>No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders</p>
-                                    <button onClick={fetchRiderOrders} className='mt-3 text-xs text-blue-400 font-black underline'>Refresh</button>
+                                    <p className='text-slate-600 text-xs mt-1'>Auto-refreshes every 30 seconds</p>
+                                    <button onClick={() => fetchRiderOrders(true)} className='mt-3 text-xs text-blue-400 font-black underline'>Refresh Now</button>
                                 </div>
                             ) : (
                                 filteredOrders.map((order) => {
-                                    const store         = order.store_details;
-                                    const mapLink       = storeMapLink(store);
+                                    const store          = order.store_details;
+                                    const mapLink        = storeMapLink(store);
                                     const hasMultiStores = order.involved_stores?.length > 1;
+
+                                    // ✅ Show warning badge if seller hasn't confirmed but order is old
+                                    const ageMinutes = (Date.now() - new Date(order.createdAt)) / 60000;
+                                    const isSellerDelayed = order.delivery_status === 'Pending' && ageMinutes >= 3;
 
                                     return (
                                         <div key={order._id}
-                                            className='bg-slate-900 border border-slate-800 rounded-3xl p-5 flex flex-col gap-4 hover:border-slate-600 transition-all'>
+                                            className={`bg-slate-900 border rounded-3xl p-5 flex flex-col gap-4 transition-all ${
+                                                isSellerDelayed
+                                                    ? 'border-amber-500/50 shadow-lg shadow-amber-500/10'
+                                                    : 'border-slate-800 hover:border-slate-600'
+                                            }`}>
+
+                                            {/* ✅ Seller delayed warning */}
+                                            {isSellerDelayed && (
+                                                <div className='bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center gap-2'>
+                                                    <span>⚠️</span>
+                                                    <p className='text-[10px] font-black text-amber-400'>
+                                                        Seller not responded — auto-confirming soon
+                                                    </p>
+                                                </div>
+                                            )}
 
                                             {/* Order ID + Customer */}
                                             <div className='flex justify-between items-start'>
@@ -320,18 +387,26 @@ const RiderDashboard = () => {
                                                 </div>
                                                 <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase ${
                                                     order.delivery_status === 'Confirmed'        ? 'bg-amber-500/20 text-amber-400' :
-                                                    order.delivery_status === 'Out for Delivery' ? 'bg-blue-500/20 text-blue-400' :
+                                                    order.delivery_status === 'Out for Delivery' ? 'bg-blue-500/20 text-blue-400'  :
+                                                    isSellerDelayed                              ? 'bg-orange-500/20 text-orange-400' :
                                                     'bg-emerald-500/20 text-emerald-400'
                                                 }`}>
-                                                    {order.delivery_status === 'Confirmed' ? 'Ready' : order.delivery_status}
+                                                    {isSellerDelayed ? '⏳ Awaiting Seller' : order.delivery_status === 'Confirmed' ? 'Ready' : order.delivery_status}
                                                 </span>
                                             </div>
 
                                             {/* Action Buttons */}
-                                            {order.delivery_status === 'Confirmed' && (
+                                            {(order.delivery_status === 'Confirmed') && (
                                                 <button onClick={() => handlePickup(order)}
                                                     className='w-full py-3.5 rounded-2xl font-black text-sm text-white bg-amber-500 hover:bg-amber-400 shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
                                                     <FaCheckCircle/> PICKUP FROM {store?.name?.toUpperCase() || 'STORE'}
+                                                </button>
+                                            )}
+                                            {/* ✅ Allow pickup even if seller delayed (Option 3) */}
+                                            {isSellerDelayed && (
+                                                <button onClick={() => handlePickup(order)}
+                                                    className='w-full py-3.5 rounded-2xl font-black text-sm text-white bg-orange-500 hover:bg-orange-400 shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
+                                                    <FaCheckCircle/> PICKUP ANYWAY (Seller Delayed)
                                                 </button>
                                             )}
                                             {order.delivery_status === 'Out for Delivery' && (
@@ -356,8 +431,6 @@ const RiderDashboard = () => {
                 {/* ══════════════ EARNINGS TAB ══════════════ */}
                 {activeTab === 'earnings' && (
                     <div className='flex flex-col gap-4'>
-
-                        {/* Period Filter */}
                         <div className='flex gap-2 flex-wrap'>
                             {[
                                 { key: 'today', label: 'Today' },
@@ -376,10 +449,7 @@ const RiderDashboard = () => {
                             ))}
                         </div>
 
-
-                        {/* Summary Cards */}
                         <div className='grid grid-cols-2 gap-3'>
-                            {/* Hero Card */}
                             <div className='col-span-2 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-5 shadow-xl shadow-emerald-900/40'>
                                 <p className='text-[9px] font-black text-emerald-200/80 uppercase tracking-widest mb-1'>Total Earned</p>
                                 <p className='text-4xl font-black text-white'>{fmtINR(totalEarned)}</p>
@@ -394,7 +464,6 @@ const RiderDashboard = () => {
                                     </div>
                                 </div>
                             </div>
-
                             <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                 <p className='text-[9px] font-black text-slate-500 uppercase'>Deliveries Done</p>
                                 <p className='text-3xl font-black text-white mt-1'>{totalDelivered}</p>
@@ -405,7 +474,6 @@ const RiderDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Daily Breakdown */}
                         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                             <h3 className='font-black text-white text-xs uppercase tracking-widest mb-3'>📅 Daily Breakdown</h3>
                             {Object.keys(earningsByDate).length === 0 ? (
@@ -427,7 +495,6 @@ const RiderDashboard = () => {
                             )}
                         </div>
 
-                        {/* Recent Deliveries */}
                         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                             <h3 className='font-black text-white text-xs uppercase tracking-widest mb-3'>🛵 Recent Deliveries</h3>
                             {filteredEarnings.length === 0 ? (
@@ -461,7 +528,7 @@ const RiderDashboard = () => {
                 <CollectPayment
                     order={paymentOrder}
                     onClose={() => setPaymentOrder(null)}
-                    onSuccess={() => { setPaymentOrder(null); setIsTracking(false); fetchRiderOrders(); }}
+                    onSuccess={() => { setPaymentOrder(null); setIsTracking(false); fetchRiderOrders(true); }}
                 />
             )}
         </div>

@@ -27,6 +27,9 @@ import './models/order.model.js';
 import './models/wallet.model.js';
 import './models/subscription.model.js';
 
+// ✅ AUTO-CONFIRM CRON
+import { startAutoConfirmCron } from './utils/autoConfirmOrders.js';
+
 console.log("RAZORPAY INTEGRITY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
 
 // --- ROUTE IMPORTS ---
@@ -195,23 +198,23 @@ io.on('connection', (socket) => {
 });
 
 // --- API ROUTES ---
-app.use('/api/user',       userRouter);
-app.use('/api/category',   categoryRouter);
-app.use('/api/file',       uploadRouter);
-app.use('/api/subcategory',subCategoryRouter);
-app.use('/api/product',    productRouter);
-app.use('/api/cart',       cartRouter);
-app.use('/api/address',    addressRouter);
-app.use('/api/order',      orderRouter);
-app.use('/api/store',      storeRouter); 
-app.use('/api/wallet',     walletRouter);
-app.use('/api/flash-sale', flashSaleRouter);
-app.use('/api/referral',   referralRouter);
-app.use('/api/review',     reviewRouter);
-app.use('/api/streak',     streakRouter);
+app.use('/api/user',         userRouter);
+app.use('/api/category',     categoryRouter);
+app.use('/api/file',         uploadRouter);
+app.use('/api/subcategory',  subCategoryRouter);
+app.use('/api/product',      productRouter);
+app.use('/api/cart',         cartRouter);
+app.use('/api/address',      addressRouter);
+app.use('/api/order',        orderRouter);
+app.use('/api/store',        storeRouter); 
+app.use('/api/wallet',       walletRouter);
+app.use('/api/flash-sale',   flashSaleRouter);
+app.use('/api/referral',     referralRouter);
+app.use('/api/review',       reviewRouter);
+app.use('/api/streak',       streakRouter);
 app.use('/api/subscription', subscriptionRouter);
-app.use('/api/payment',    paymentRouter);
-app.use('/api/admin',      adminRouter);
+app.use('/api/payment',      paymentRouter);
+app.use('/api/admin',        adminRouter);
 
 // --- HEALTH ROUTE ---
 app.get("/health", (req, res) => {
@@ -258,9 +261,14 @@ const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
     console.log("✅ Database System Connected Successfully");
     initSubscriptionCron();
+
+    // ✅ Start auto-confirm cron — fires every 2 mins, confirms orders stuck > 5 mins
+    startAutoConfirmCron();
+
     server.listen(PORT, '0.0.0.0', () => { 
         console.log(`🚀 Snapit Server running on port ${PORT}`);
         console.log(`⏰ Daily MRP recalculation cron scheduled at midnight IST`);
+        console.log(`⏰ Auto-confirm stuck orders cron started (5 min timeout)`);
     });
 }).catch(err => {
     console.error("❌ Database connection failed", err);
