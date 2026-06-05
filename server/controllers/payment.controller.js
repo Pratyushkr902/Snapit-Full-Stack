@@ -37,7 +37,7 @@ export const createOrder = async (req, res) => {
         const order = await razorpay.orders.create({
             amount:   paise,
             currency: 'INR',
-            receipt:  `wallet_${req.userId}_${Date.now()}`.slice(0, 40)
+            receipt:  `w_${Date.now()}`
         })
 
         console.log(`[createOrder] ✅ order created: ${order.id}`)
@@ -139,7 +139,7 @@ export const createSubscriptionOrder = async (req, res) => {
         const order = await razorpay.orders.create({
             amount:   rawAmount * 100,
             currency: 'INR',
-            receipt:  `sub_${planType}_${Date.now()}`.slice(0, 40)
+            receipt:  `sub_${planType}_${Date.now()}`
         })
 
         console.log(`[createSubscriptionOrder] ✅ order created: ${order.id}`)
