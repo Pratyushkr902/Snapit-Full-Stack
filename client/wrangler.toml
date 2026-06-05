@@ -1,0 +1,7 @@
+name = "snapit"
+compatibility_date = "2026-06-03"
+assets = { directory = "./dist" }
+
+[vars]
+VITE_API_URL = "https://snapit-backend-bn8r.onrender.com"
+VITE_RAZORPAY_KEY_ID = "rzp_live_Sm766x1DQg2bij"
