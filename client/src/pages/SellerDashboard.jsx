@@ -1,60 +1,123 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
 import { useSelector } from 'react-redux';
 import { FaCloudUploadAlt } from 'react-icons/fa';
-import { MdDelete } from 'react-icons/md';
-import { IoClose } from 'react-icons/io5';
+import { MdDelete, MdEdit } from 'react-icons/md';
+import { IoClose, IoSearchOutline, IoRefreshOutline } from 'react-icons/io5';
+import {
+    HiOutlineShoppingBag, HiOutlineCube, HiOutlineClipboardList,
+    HiOutlineCurrencyRupee, HiOutlineTrendingUp, HiOutlineChartBar,
+    HiOutlineTruck, HiOutlineCheckCircle, HiOutlineXCircle,
+    HiOutlineClock, HiOutlineDownload, HiOutlineFilter,
+} from 'react-icons/hi';
 
-// ── Robust field getters ───────────────────────────────────────
-const getOrderAmount = (o) =>
-    Number(o.totalAmt ?? o.total_amount ?? o.amount ?? o.subTotalAmt ?? 0);
-
-const getDeliveryFee = (o) =>
-    Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? 0);
-
-const getItemSellerPrice = (item) =>
-    Number(item.sellerPrice ?? item.seller_price ?? item.price ?? item.unit_price ?? 0);
-
-const getItemSnapitMargin = (item) =>
-    Number(item.snapitMargin ?? item.snapit_margin ?? 0);
-
+// ── Field getters ──────────────────────────────────────────────
+const getOrderAmount   = (o) => Number(o.totalAmt ?? o.total_amount ?? o.amount ?? o.subTotalAmt ?? 0);
+const getDeliveryFee   = (o) => Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? 0);
+const getItemSellerPrice = (item) => Number(item.sellerPrice ?? item.seller_price ?? item.price ?? item.unit_price ?? 0);
+const getItemSnapitMargin = (item) => Number(item.snapitMargin ?? item.snapit_margin ?? 0);
 const getSellerEarning = (order) =>
-    (order.cartItems || []).reduce(
-        (acc, item) => acc + getItemSellerPrice(item) * (Number(item.quantity) || 1), 0
-    );
-
+    (order.cartItems || []).reduce((acc, item) => acc + getItemSellerPrice(item) * (Number(item.quantity) || 1), 0);
 const getSnapitEarning = (order) =>
-    (order.cartItems || []).reduce(
-        (acc, item) => acc + getItemSnapitMargin(item) * (Number(item.quantity) || 1), 0
-    );
+    (order.cartItems || []).reduce((acc, item) => acc + getItemSnapitMargin(item) * (Number(item.quantity) || 1), 0);
 
-// ── Total sales = gross - delivery charge (no delivery) ───────
-const getTotalSalesExDelivery = (orders) =>
-    orders.reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
-
-// ── Floating value formatter ───────────────────────────────────
+// ── Formatters ─────────────────────────────────────────────────
 const fmtINR = (n) =>
     `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtINRShort = (n) => {
+    const num = Number(n);
+    if (num >= 100000) return `₹${(num / 100000).toFixed(1)}L`;
+    if (num >= 1000)   return `₹${(num / 1000).toFixed(1)}K`;
+    return `₹${num.toFixed(0)}`;
+};
 
-const fmt2 = (n) => Number(n).toFixed(2);
+// ── Status helpers ─────────────────────────────────────────────
+const isDelivered  = (o) => (o.delivery_status || '').trim().toLowerCase() === 'delivered';
+const isCancelled  = (o) => (o.delivery_status || '').trim().toLowerCase() === 'cancelled';
 
+const STATUS_CONFIG = {
+    delivered:        { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Delivered' },
+    'out for delivery': { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500', label: 'Out for Delivery' },
+    confirmed:        { bg: 'bg-violet-100', text: 'text-violet-700', dot: 'bg-violet-500', label: 'Confirmed' },
+    cancelled:        { bg: 'bg-red-100', text: 'text-red-600', dot: 'bg-red-500', label: 'Cancelled' },
+    pending:          { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500', label: 'Pending' },
+    packing:          { bg: 'bg-sky-100', text: 'text-sky-700', dot: 'bg-sky-500', label: 'Packing' },
+};
+
+const getStatusConfig = (s) => STATUS_CONFIG[(s || '').toLowerCase()] || STATUS_CONFIG.pending;
+
+// ── Mini components ────────────────────────────────────────────
+const StatusBadge = ({ status }) => {
+    const cfg = getStatusConfig(status);
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${cfg.bg} ${cfg.text}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+            {cfg.label}
+        </span>
+    );
+};
+
+const StatCard = ({ label, value, sub, color = 'text-slate-900', bg = 'bg-white', border = 'border-slate-100', icon }) => (
+    <div className={`${bg} rounded-2xl p-4 border ${border} flex flex-col gap-1 shadow-sm`}>
+        {icon && <div className={`text-xl mb-1 ${color}`}>{icon}</div>}
+        <p className='text-[10px] font-black text-slate-400 uppercase tracking-wider'>{label}</p>
+        <p className={`text-2xl font-black ${color}`}>{value}</p>
+        {sub && <p className='text-[10px] text-slate-400'>{sub}</p>}
+    </div>
+);
+
+const ProgressBar = ({ pct, color = 'bg-emerald-500' }) => (
+    <div className='w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden'>
+        <div className={`${color} h-1.5 rounded-full transition-all duration-700`} style={{ width: `${Math.min(100, pct)}%` }} />
+    </div>
+);
+
+// ── Export CSV ─────────────────────────────────────────────────
+const exportCSV = (orders) => {
+    const rows = [
+        ['Order ID', 'Date', 'Status', 'Items', 'Gross', 'Delivery', 'Sales (excl delivery)', 'Seller Earning', 'Snapit Cut'],
+        ...orders.map(o => [
+            o.orderId,
+            new Date(o.createdAt).toLocaleDateString('en-IN'),
+            o.delivery_status,
+            (o.cartItems || []).map(i => `${i.productId?.name || i.name} ×${i.quantity}`).join('; '),
+            getOrderAmount(o).toFixed(2),
+            getDeliveryFee(o).toFixed(2),
+            (getOrderAmount(o) - getDeliveryFee(o)).toFixed(2),
+            getSellerEarning(o).toFixed(2),
+            getSnapitEarning(o).toFixed(2),
+        ])
+    ];
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'store-orders.csv'; a.click();
+    URL.revokeObjectURL(url);
+};
+
+// ══════════════════════════════════════════════════════════════
+//  MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════
 const SellerDashboard = () => {
-    const [allOrders, setAllOrders]       = useState([]);
-    const [activeTab, setActiveTab]       = useState('packing');
+    const [allOrders, setAllOrders]         = useState([]);
+    const [activeTab, setActiveTab]         = useState('overview');
     const [earningFilter, setEarningFilter] = useState('all');
-    const [loading, setLoading]           = useState(true);
+    const [loading, setLoading]             = useState(true);
     const [historySearch, setHistorySearch] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
+    const [expandedOrder, setExpandedOrder] = useState(null);
+    const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
-    // ── Products ───────────────────────────────────────────────
-    const [productTab, setProductTab]       = useState('list');
-    const [products, setProducts]           = useState([]);
+    // Products
+    const [productTab, setProductTab]           = useState('list');
+    const [products, setProducts]               = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
-    const [imageLoading, setImageLoading]   = useState(false);
-    const [editingStock, setEditingStock]   = useState({});
-    const [productForm, setProductForm]     = useState({
+    const [imageLoading, setImageLoading]       = useState(false);
+    const [editingStock, setEditingStock]       = useState({});
+    const [productSearch, setProductSearch]     = useState('');
+    const [productForm, setProductForm]         = useState({
         name: '', description: '', image: [], category: [],
         subCategory: [], unit: '', stock: '', sellerPrice: '',
         snapitMargin: '', discount: '',
@@ -64,73 +127,47 @@ const SellerDashboard = () => {
 
     const allCategory    = useSelector(state => state.product.allCategory);
     const allSubCategory = useSelector(state => state.product.allSubCategory);
+    const sellingPrice   = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
 
-    const sellingPrice = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
-
-    // ── Fetch Orders ───────────────────────────────────────────
-    const fetchOrders = async () => {
+    // ── Fetch ─────────────────────────────────────────────────
+    const fetchOrders = async (silent = false) => {
         try {
-            setLoading(true);
-            const response = await Axios({ ...SummaryApi.getSellerOrders });
-            if (response.data.success) {
-                const data = Array.isArray(response.data.data) ? response.data.data : [];
-                setAllOrders(data);
+            if (!silent) setLoading(true);
+            const res = await Axios({ ...SummaryApi.getSellerOrders });
+            if (res.data.success) {
+                setAllOrders(Array.isArray(res.data.data) ? res.data.data : []);
+                setLastRefreshed(new Date());
             }
-        } catch {
-            toast.error('Failed to fetch orders');
-        } finally {
-            setLoading(false);
-        }
+        } catch { toast.error('Failed to fetch orders'); }
+        finally { setLoading(false); }
     };
 
-    // ── Fetch Products ─────────────────────────────────────────
     const fetchProducts = async () => {
         setProductsLoading(true);
         try {
-            const response = await Axios({ ...SummaryApi.getProduct, data: { page: 1, limit: 100 } });
-            if (response.data.success) {
-                setProducts(Array.isArray(response.data.data) ? response.data.data : []);
-            }
-        } catch {
-            toast.error('Failed to fetch products');
-        } finally {
-            setProductsLoading(false);
-        }
+            const res = await Axios({ ...SummaryApi.getProduct, data: { page: 1, limit: 100 } });
+            if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
+        } catch { toast.error('Failed to fetch products'); }
+        finally { setProductsLoading(false); }
     };
 
     const markAsReady = async (orderId) => {
         try {
-            const response = await Axios({
-                ...SummaryApi.updateSellerStatus,
-                data: { orderId, sellerStatus: 'Ready for Pickup' }
-            });
-            if (response.data.success) {
-                toast.success('Rider Notified! Order ready for pickup.');
-                fetchOrders();
-            }
-        } catch {
-            toast.error('Failed to update order');
-        }
+            const res = await Axios({ ...SummaryApi.updateSellerStatus, data: { orderId, sellerStatus: 'Ready for Pickup' } });
+            if (res.data.success) { toast.success('Rider Notified! Order ready for pickup.'); fetchOrders(true); }
+        } catch { toast.error('Failed to update order'); }
     };
 
     const handleUploadImage = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+        const file = e.target.files[0]; if (!file) return;
         setImageLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('image', file);
-            const response = await Axios({ ...SummaryApi.uploadImage, data: formData });
-            const imageUrl = response.data?.data?.url;
-            if (imageUrl) {
-                setProductForm(prev => ({ ...prev, image: [...prev.image, imageUrl] }));
-                toast.success('Image uploaded!');
-            }
-        } catch {
-            toast.error('Image upload failed');
-        } finally {
-            setImageLoading(false);
-        }
+            const fd = new FormData(); fd.append('image', file);
+            const res = await Axios({ ...SummaryApi.uploadImage, data: fd });
+            const url = res.data?.data?.url;
+            if (url) { setProductForm(p => ({ ...p, image: [...p.image, url] })); toast.success('Image uploaded!'); }
+        } catch { toast.error('Image upload failed'); }
+        finally { setImageLoading(false); }
     };
 
     const handleProductSubmit = async (e) => {
@@ -139,90 +176,69 @@ const SellerDashboard = () => {
         const margin  = Number(productForm.snapitMargin) || 0;
         const payload = {
             ...productForm,
-            category    : productForm.category.map(c => c._id),
-            subCategory : productForm.subCategory.map(s => s._id),
-            sellerPrice : sellerP,
-            snapitMargin: margin,
-            sellingPrice: sellerP + margin,
-            price       : sellerP + margin,
+            category:     productForm.category.map(c => c._id),
+            subCategory:  productForm.subCategory.map(s => s._id),
+            sellerPrice:  sellerP, snapitMargin: margin,
+            sellingPrice: sellerP + margin, price: sellerP + margin,
         };
         try {
-            const response = await Axios({ ...SummaryApi.createProduct, data: payload });
-            if (response.data.success) {
-                toast.success('Product uploaded successfully!');
-                setProductForm({
-                    name: '', description: '', image: [], category: [],
-                    subCategory: [], unit: '', stock: '', sellerPrice: '',
-                    snapitMargin: '', discount: '',
-                });
-                setProductTab('list');
-                fetchProducts();
+            const res = await Axios({ ...SummaryApi.createProduct, data: payload });
+            if (res.data.success) {
+                toast.success('Product uploaded!');
+                setProductForm({ name:'', description:'', image:[], category:[], subCategory:[], unit:'', stock:'', sellerPrice:'', snapitMargin:'', discount:'' });
+                setProductTab('list'); fetchProducts();
             }
-        } catch {
-            toast.error('Failed to upload product');
-        }
+        } catch { toast.error('Failed to upload product'); }
     };
 
     const handleUpdateStock = async (productId) => {
         const newStock = editingStock[productId];
         if (newStock === undefined || newStock === '') return;
         try {
-            const response = await Axios({
-                ...SummaryApi.updateProductDetails,
-                data: { _id: productId, stock: Number(newStock) }
-            });
-            if (response.data.success) {
+            const res = await Axios({ ...SummaryApi.updateProductDetails, data: { _id: productId, stock: Number(newStock) } });
+            if (res.data.success) {
                 toast.success('Stock updated!');
-                setEditingStock(prev => { const n = { ...prev }; delete n[productId]; return n; });
+                setEditingStock(p => { const n = { ...p }; delete n[productId]; return n; });
                 fetchProducts();
             }
-        } catch {
-            toast.error('Stock update failed');
-        }
+        } catch { toast.error('Stock update failed'); }
     };
 
     const handleDeleteProduct = async (productId) => {
         if (!window.confirm('Delete this product?')) return;
         try {
-            const response = await Axios({ ...SummaryApi.deleteProduct, data: { _id: productId } });
-            if (response.data.success) {
-                toast.success('Product deleted');
-                fetchProducts();
-            }
-        } catch {
-            toast.error('Delete failed');
-        }
+            const res = await Axios({ ...SummaryApi.deleteProduct, data: { _id: productId } });
+            if (res.data.success) { toast.success('Product deleted'); fetchProducts(); }
+        } catch { toast.error('Delete failed'); }
     };
 
     useEffect(() => {
         fetchOrders();
-        const interval = setInterval(fetchOrders, 30000);
-        return () => clearInterval(interval);
+        const iv = setInterval(() => fetchOrders(true), 30000);
+        return () => clearInterval(iv);
     }, []);
 
-    useEffect(() => {
-        if (activeTab === 'products') fetchProducts();
-    }, [activeTab]);
+    useEffect(() => { if (activeTab === 'products') fetchProducts(); }, [activeTab]);
 
-    const now        = new Date();
-    const isDelivered = (o) => (o.delivery_status || '').trim().toLowerCase() === 'delivered';
+    // ── Computed values ────────────────────────────────────────
+    const now = new Date();
 
     const packingOrders = allOrders.filter(o =>
         o.seller_status !== 'Ready for Pickup' &&
         o.delivery_status !== 'Delivered' &&
         o.delivery_status !== 'Cancelled'
     );
-    const pendingCount = allOrders.filter(o =>
-        o.delivery_status === 'Pending' && o.seller_status !== 'Ready for Pickup'
-    ).length;
-    const packingCount = allOrders.filter(o => o.seller_status === 'Packing').length;
+    const pendingCount   = allOrders.filter(o => o.delivery_status === 'Pending' && o.seller_status !== 'Ready for Pickup').length;
+    const packingCount   = allOrders.filter(o => o.seller_status === 'Packing').length;
+    const deliveredCount = allOrders.filter(isDelivered).length;
+    const cancelledCount = allOrders.filter(isCancelled).length;
 
     const filterByDate = (list) => list.filter(o => {
         if (!isDelivered(o)) return false;
-        const created = new Date(o.createdAt);
-        if (earningFilter === 'today') return created.toDateString() === now.toDateString();
-        if (earningFilter === 'week') { const w = new Date(now); w.setDate(now.getDate() - 7); return created >= w; }
-        if (earningFilter === 'month') return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+        const d = new Date(o.createdAt);
+        if (earningFilter === 'today') return d.toDateString() === now.toDateString();
+        if (earningFilter === 'week')  { const w = new Date(now); w.setDate(now.getDate()-7); return d >= w; }
+        if (earningFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         return true;
     });
 
@@ -233,659 +249,980 @@ const SellerDashboard = () => {
     const totalSnapitEarning = filteredEarnings.reduce((a, o) => a + getSnapitEarning(o), 0);
     const totalOrders        = filteredEarnings.length;
     const avgNet             = totalOrders > 0 ? totalSellerEarning / totalOrders : 0;
+    const totalSalesExDel    = filteredEarnings.reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
 
-    // ── Total Sales WITHOUT delivery charge ──────────────────
-    const totalSalesExDelivery = filteredEarnings.reduce(
-        (a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0
-    );
-    const allTimeTotalSales = allOrders
-        .filter(isDelivered)
-        .reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
+    const allTimeSales     = allOrders.filter(isDelivered).reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
+    const allTimeEarning   = allOrders.filter(isDelivered).reduce((a, o) => a + getSellerEarning(o), 0);
+    const allTimeDelivery  = allOrders.filter(isDelivered).reduce((a, o) => a + getDeliveryFee(o), 0);
+    const queueEarning     = packingOrders.reduce((a, o) => a + getSellerEarning(o), 0);
 
-    // ── Product earnings (floating) ───────────────────────────
+    // Product earnings breakdown
     const productEarnings = filteredEarnings.reduce((acc, order) => {
         (order.cartItems || []).forEach(item => {
-            const name = item.productId?.name || item.name || 'Unknown Product';
+            const name = item.productId?.name || item.name || 'Unknown';
             const qty  = Number(item.quantity) || 1;
             const sp   = getItemSellerPrice(item);
             if (!acc[name]) acc[name] = { qty: 0, revenue: 0 };
-            acc[name].qty     += qty;
-            acc[name].revenue += sp * qty;
+            acc[name].qty += qty; acc[name].revenue += sp * qty;
         });
         return acc;
     }, {});
     const productList = Object.entries(productEarnings).sort((a, b) => b[1].revenue - a[1].revenue);
 
+    // All-time product sells
+    const allTimeProductSells = allOrders.filter(isDelivered).reduce((acc, order) => {
+        (order.cartItems || []).forEach(item => {
+            const name = item.productId?.name || item.name || 'Unknown';
+            const qty  = Number(item.quantity) || 1;
+            if (!acc[name]) acc[name] = 0;
+            acc[name] += qty;
+        });
+        return acc;
+    }, {});
+    const topProducts = Object.entries(allTimeProductSells).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
     const byDate = filteredEarnings.reduce((acc, o) => {
         const d = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-        if (!acc[d]) acc[d] = { gross: 0, sellerNet: 0, snapit: 0, delivery: 0, salesExDelivery: 0, count: 0 };
-        acc[d].gross          += getOrderAmount(o);
-        acc[d].delivery       += getDeliveryFee(o);
-        acc[d].sellerNet      += getSellerEarning(o);
-        acc[d].snapit         += getSnapitEarning(o);
-        acc[d].salesExDelivery += getOrderAmount(o) - getDeliveryFee(o);
-        acc[d].count          += 1;
+        if (!acc[d]) acc[d] = { gross:0, sellerNet:0, snapit:0, delivery:0, salesExDel:0, count:0 };
+        acc[d].gross      += getOrderAmount(o);
+        acc[d].delivery   += getDeliveryFee(o);
+        acc[d].sellerNet  += getSellerEarning(o);
+        acc[d].snapit     += getSnapitEarning(o);
+        acc[d].salesExDel += getOrderAmount(o) - getDeliveryFee(o);
+        acc[d].count      += 1;
         return acc;
     }, {});
 
-    const allSorted      = [...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const historyFiltered = allSorted.filter(order => {
-        if (historyFilter === 'delivered' && !isDelivered(order)) return false;
-        if (historyFilter === 'pending' && (order.delivery_status || '').toLowerCase() !== 'pending') return false;
-        if (historyFilter === 'cancelled' && (order.delivery_status || '').toLowerCase() !== 'cancelled') return false;
+    // History
+    const allSorted = [...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const historyFiltered = allSorted.filter(o => {
+        if (historyFilter === 'delivered' && !isDelivered(o)) return false;
+        if (historyFilter === 'pending'   && (o.delivery_status||'').toLowerCase() !== 'pending') return false;
+        if (historyFilter === 'cancelled' && !isCancelled(o)) return false;
         if (historySearch.trim()) {
             const q = historySearch.trim().toLowerCase();
-            return (order.orderId || '').toLowerCase().includes(q) ||
-                (order.cartItems || []).some(item => (item.productId?.name || item.name || '').toLowerCase().includes(q));
+            return (o.orderId||'').toLowerCase().includes(q) ||
+                (o.cartItems||[]).some(i => (i.productId?.name||i.name||'').toLowerCase().includes(q));
         }
         return true;
     });
 
-    const deliveredCount = allOrders.filter(o => isDelivered(o)).length;
-    const cancelledCount = allOrders.filter(o => (o.delivery_status || '').toLowerCase() === 'cancelled').length;
+    const filteredProducts = products.filter(p =>
+        !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())
+    );
+    const outOfStockCount = products.filter(p => p.stock <= 0).length;
+    const lowStockCount   = products.filter(p => p.stock > 0 && p.stock <= 5).length;
 
-    const statusColor = (s) => {
-        const st = (s || '').toLowerCase();
-        if (st === 'delivered')      return 'bg-green-100 text-green-700';
-        if (st === 'out for delivery') return 'bg-blue-100 text-blue-700';
-        if (st === 'confirmed')      return 'bg-purple-100 text-purple-700';
-        if (st === 'cancelled')      return 'bg-red-100 text-red-700';
-        return 'bg-orange-100 text-orange-700';
-    };
-
+    // Loading
     if (loading && activeTab !== 'products') return (
-        <div className='p-4 bg-orange-50 min-h-screen flex items-center justify-center'>
+        <div className='min-h-screen bg-slate-950 flex items-center justify-center'>
             <div className='text-center'>
-                <p className='text-4xl mb-3 animate-bounce'>⏳</p>
-                <p className='font-black text-slate-600'>Loading orders...</p>
+                <div className='w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4' />
+                <p className='font-black text-slate-400 text-sm uppercase tracking-widest'>Loading store data...</p>
             </div>
         </div>
     );
 
+    const TABS = [
+        { key: 'overview', icon: <HiOutlineChartBar size={16} />, label: 'Overview' },
+        { key: 'packing',  icon: <HiOutlineCube size={16} />,     label: 'Packing' },
+        { key: 'products', icon: <HiOutlineShoppingBag size={16}/>,label: 'Products' },
+        { key: 'history',  icon: <HiOutlineClipboardList size={16}/>, label: 'History' },
+        { key: 'earnings', icon: <HiOutlineCurrencyRupee size={16}/>, label: 'Earnings' },
+    ];
+
     return (
-        <div className='p-4 bg-orange-50 min-h-screen max-w-4xl mx-auto'>
+        <div className='min-h-screen bg-slate-950 text-white'>
 
-            {/* ── HEADER ── */}
-            <div className='flex items-center justify-between mb-6'>
-                <div>
-                    <h1 className='text-2xl font-black text-slate-900'>STORE PANEL</h1>
-                    <p className='text-xs text-slate-500 font-bold uppercase tracking-widest'>Snapit — Paliganj</p>
-                </div>
-                <div className='flex gap-2 items-center'>
-                    <button onClick={fetchOrders} className='bg-white rounded-2xl px-3 py-2 shadow-sm border border-orange-100 text-lg'>🔄</button>
-                    <div className='bg-white rounded-2xl px-4 py-2 shadow-sm border border-orange-100 text-center'>
-                        <p className='text-[10px] font-black text-slate-400 uppercase'>Pending</p>
-                        <p className='text-xl font-black text-orange-500'>{pendingCount}</p>
-                    </div>
-                    <div className='bg-white rounded-2xl px-4 py-2 shadow-sm border border-orange-100 text-center'>
-                        <p className='text-[10px] font-black text-slate-400 uppercase'>Packing</p>
-                        <p className='text-xl font-black text-blue-500'>{packingCount}</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── TABS ── */}
-            <div className='flex gap-2 mb-6 bg-white rounded-2xl p-1 shadow-sm border border-slate-100'>
-                {[
-                    { key: 'packing',  label: '📦 Packing',  active: 'bg-orange-500' },
-                    { key: 'products', label: '🛍️ Products', active: 'bg-blue-600' },
-                    { key: 'history',  label: '🧾 History',  active: 'bg-slate-800' },
-                    { key: 'earnings', label: '💰 Earnings', active: 'bg-green-600' },
-                ].map(t => (
-                    <button key={t.key} onClick={() => setActiveTab(t.key)}
-                        className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${activeTab === t.key ? t.active + ' text-white shadow' : 'text-slate-500'}`}>
-                        {t.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* ══════════ PACKING TAB ══════════ */}
-            {activeTab === 'packing' && (
-                <div className='grid gap-4'>
-                    {packingOrders.length === 0 ? (
-                        <div className='bg-white rounded-3xl p-12 text-center border-2 border-dashed border-orange-200'>
-                            <p className='text-4xl mb-3'>🎉</p>
-                            <p className='font-black text-slate-700'>All orders packed and with riders! 📦</p>
-                            <button onClick={fetchOrders} className='mt-4 bg-orange-100 text-orange-600 font-black text-sm px-5 py-2 rounded-full'>Check for new orders</button>
+            {/* ── STICKY HEADER ── */}
+            <div className='sticky top-0 z-30 bg-slate-950 border-b border-slate-800'>
+                <div className='max-w-2xl mx-auto px-4 py-3'>
+                    <div className='flex items-center justify-between'>
+                        <div>
+                            <h1 className='text-lg font-black tracking-tight text-white'>STORE PANEL</h1>
+                            <p className='text-[10px] text-slate-500 font-bold uppercase tracking-widest'>Snapit — Paliganj</p>
                         </div>
-                    ) : packingOrders.map(order => (
-                        <div key={order._id} className='bg-white p-6 rounded-3xl shadow-sm border-2 border-orange-100'>
-                            <div className='flex justify-between items-center mb-2'>
-                                <span className='font-bold text-orange-600 font-mono text-sm'>{order.orderId}</span>
-                                <span className='bg-orange-100 px-3 py-1 rounded-full text-xs font-bold'>{order.seller_status || 'New'}</span>
-                            </div>
-                            {order.store_details?.name && (
-                                <div className='flex items-center gap-2 mb-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2'>
-                                    <span>🏪</span>
-                                    <div>
-                                        <p className='text-[10px] font-black text-blue-400 uppercase'>Store</p>
-                                        <p className='text-sm font-black text-blue-700'>{order.store_details.name}</p>
-                                    </div>
-                                </div>
-                            )}
-                            <div className='mb-4'>
-                                {(order.cartItems || []).map((item, i) => (
-                                    <div key={i} className='flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0'>
-                                        <p className='font-bold text-slate-700 text-sm'>• {item.productId?.name || item.name} (×{item.quantity})</p>
-                                        <p className='text-xs font-black text-slate-600'>{fmtINR(getItemSellerPrice(item) * (Number(item.quantity) || 1))}</p>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className='flex justify-between items-center mb-4 bg-slate-50 rounded-2xl p-3'>
-                                <div>
-                                    <p className='text-[10px] font-black text-slate-400 uppercase'>Order Total</p>
-                                    <p className='text-xl font-black text-slate-900'>{fmtINR(getOrderAmount(order))}</p>
-                                </div>
-                                <div className='text-right'>
-                                    <p className='text-[10px] font-black text-slate-400 uppercase'>Your Earning</p>
-                                    <p className='text-lg font-black text-green-600'>{fmtINR(getSellerEarning(order))}</p>
-                                </div>
-                            </div>
-                            <button onClick={() => markAsReady(order.orderId)}
-                                className='w-full bg-orange-500 text-white py-3 rounded-2xl font-black hover:bg-orange-600 transition-all active:scale-95'>
-                                PACKED & READY FOR RIDER
+                        <div className='flex gap-2 items-center'>
+                            <button onClick={() => fetchOrders(true)}
+                                className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all active:scale-90'>
+                                <IoRefreshOutline size={18}/>
                             </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* ══════════ PRODUCTS TAB ══════════ */}
-            {activeTab === 'products' && (
-                <div>
-                    <div className='flex gap-2 mb-4'>
-                        <button onClick={() => setProductTab('list')}
-                            className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all border ${productTab === 'list' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                            📋 My Products
-                        </button>
-                        <button onClick={() => setProductTab('upload')}
-                            className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all border ${productTab === 'upload' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                            ➕ Upload New
-                        </button>
-                    </div>
-
-                    {productTab === 'list' && (
-                        <div className='flex flex-col gap-3'>
-                            {productsLoading ? (
-                                <div className='bg-white rounded-3xl p-10 text-center'>
-                                    <p className='text-3xl mb-2 animate-spin inline-block'>⏳</p>
-                                    <p className='font-black text-slate-500'>Loading products...</p>
-                                </div>
-                            ) : products.length === 0 ? (
-                                <div className='bg-white rounded-3xl p-12 text-center border-2 border-dashed border-blue-200'>
-                                    <p className='text-4xl mb-3'>📦</p>
-                                    <p className='font-black text-slate-700'>No products yet</p>
-                                    <button onClick={() => setProductTab('upload')}
-                                        className='mt-4 bg-blue-600 text-white font-black text-sm px-5 py-2 rounded-full'>
-                                        Upload First Product
-                                    </button>
-                                </div>
-                            ) : products.map(product => (
-                                <div key={product._id} className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex gap-4 items-center'>
-                                    <img src={product.image?.[0] || ''} alt={product.name}
-                                        className='w-16 h-16 object-contain rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0' />
-                                    <div className='flex-1 min-w-0'>
-                                        <p className='font-black text-slate-800 text-sm truncate'>{product.name}</p>
-                                        <div className='flex gap-3 mt-1 flex-wrap'>
-                                            <span className='text-xs text-slate-500 font-bold'>
-                                                Seller: <span className='text-emerald-600'>{fmtINR(product.sellerPrice || product.price || 0)}</span>
-                                            </span>
-                                            {product.snapitMargin > 0 && (
-                                                <span className='text-xs text-yellow-500 font-bold'>Margin: {fmtINR(product.snapitMargin)}</span>
-                                            )}
-                                            <span className='text-xs text-blue-600 font-bold'>
-                                                Customer: {fmtINR(Number(product.sellerPrice || product.price || 0) + Number(product.snapitMargin || 0))}
-                                            </span>
-                                            <span className={`text-xs font-bold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-500' : 'text-red-500'}`}>
-                                                {product.stock > 0 ? `${product.stock} in stock` : '❌ Out of stock'}
-                                            </span>
-                                        </div>
-                                        <div className='flex items-center gap-2 mt-2'>
-                                            <input type='number' placeholder='New stock'
-                                                value={editingStock[product._id] ?? ''}
-                                                onChange={e => setEditingStock(prev => ({ ...prev, [product._id]: e.target.value }))}
-                                                className='w-24 text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400'
-                                            />
-                                            <button onClick={() => handleUpdateStock(product._id)}
-                                                disabled={!editingStock[product._id]}
-                                                className='text-xs bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 text-white px-3 py-1.5 rounded-lg font-black'>
-                                                Update
-                                            </button>
-                                            <button onClick={() => handleDeleteProduct(product._id)}
-                                                className='text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-black hover:bg-red-100'>
-                                                <MdDelete size={14}/>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {productTab === 'upload' && (
-                        <form onSubmit={handleProductSubmit} className='flex flex-col gap-4'>
-                            <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                <label className='text-xs font-black text-slate-500 uppercase'>Product Name</label>
-                                <input type='text' placeholder='e.g. Basmati Rice 5kg' required
-                                    value={productForm.name}
-                                    onChange={e => setProductForm(p => ({ ...p, name: e.target.value }))}
-                                    className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400'
-                                />
-                            </div>
-                            <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                <label className='text-xs font-black text-slate-500 uppercase'>Description</label>
-                                <textarea rows={3} placeholder='Describe the product...' required
-                                    value={productForm.description}
-                                    onChange={e => setProductForm(p => ({ ...p, description: e.target.value }))}
-                                    className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400 resize-none'
-                                />
-                            </div>
-                            <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                <label className='text-xs font-black text-slate-500 uppercase'>Images</label>
-                                <label htmlFor='sellerProductImage'
-                                    className='mt-2 flex flex-col items-center justify-center h-24 border-2 border-dashed border-blue-200 rounded-xl cursor-pointer hover:border-blue-400 transition-all'>
-                                    {imageLoading ? (
-                                        <p className='text-sm text-slate-400 animate-pulse'>Uploading...</p>
-                                    ) : (
-                                        <>
-                                            <FaCloudUploadAlt size={28} className='text-blue-400'/>
-                                            <p className='text-xs font-bold text-slate-400 mt-1'>Tap to upload image</p>
-                                        </>
-                                    )}
-                                    <input id='sellerProductImage' type='file' accept='image/*' className='hidden' onChange={handleUploadImage}/>
-                                </label>
-                                <div className='flex gap-2 flex-wrap mt-2'>
-                                    {productForm.image.map((img, i) => (
-                                        <div key={i} className='relative w-16 h-16'>
-                                            <img src={img} className='w-full h-full object-contain rounded-lg border border-slate-100'/>
-                                            <button type='button'
-                                                onClick={() => setProductForm(p => ({ ...p, image: p.image.filter((_, idx) => idx !== i) }))}
-                                                className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]'>
-                                                ×
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                <label className='text-xs font-black text-slate-500 uppercase'>Category</label>
-                                <select value={selectCategory} className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none'
-                                    onChange={e => {
-                                        const cat = allCategory.find(c => c._id === e.target.value);
-                                        if (cat && !productForm.category.some(c => c._id === cat._id)) {
-                                            setProductForm(p => ({ ...p, category: [...p.category, cat] }));
-                                        }
-                                        setSelectCategory('');
-                                    }}>
-                                    <option value=''>Select Category</option>
-                                    {(allCategory || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                                </select>
-                                <div className='flex flex-wrap gap-2 mt-2'>
-                                    {productForm.category.map((c, i) => (
-                                        <span key={i} className='flex items-center gap-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded-full'>
-                                            {c.name}
-                                            <IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, category: p.category.filter((_, idx) => idx !== i) }))}/>
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                <label className='text-xs font-black text-slate-500 uppercase'>Sub Category</label>
-                                <select value={selectSubCategory} className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none'
-                                    onChange={e => {
-                                        const sub = allSubCategory.find(s => s._id === e.target.value);
-                                        if (sub && !productForm.subCategory.some(s => s._id === sub._id)) {
-                                            setProductForm(p => ({ ...p, subCategory: [...p.subCategory, sub] }));
-                                        }
-                                        setSelectSubCategory('');
-                                    }}>
-                                    <option value=''>Select Sub Category</option>
-                                    {(allSubCategory || []).map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-                                </select>
-                                <div className='flex flex-wrap gap-2 mt-2'>
-                                    {productForm.subCategory.map((s, i) => (
-                                        <span key={i} className='flex items-center gap-1 bg-purple-50 text-purple-700 text-xs font-bold px-2 py-1 rounded-full'>
-                                            {s.name}
-                                            <IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, subCategory: p.subCategory.filter((_, idx) => idx !== i) }))}/>
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className='grid grid-cols-2 gap-3'>
-                                <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                    <label className='text-xs font-black text-slate-500 uppercase'>Unit</label>
-                                    <input type='text' placeholder='e.g. 1kg, 500ml' required
-                                        value={productForm.unit}
-                                        onChange={e => setProductForm(p => ({ ...p, unit: e.target.value }))}
-                                        className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400'
-                                    />
-                                </div>
-                                <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                    <label className='text-xs font-black text-slate-500 uppercase'>Stock</label>
-                                    <input type='number' placeholder='e.g. 50' required
-                                        value={productForm.stock}
-                                        onChange={e => setProductForm(p => ({ ...p, stock: e.target.value }))}
-                                        className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400'
-                                    />
-                                </div>
-                            </div>
-                            <div className='bg-green-50 border border-green-200 rounded-2xl p-4'>
-                                <p className='text-xs font-black text-green-700 uppercase mb-3'>💰 Pricing</p>
-                                <div className='grid grid-cols-2 gap-3'>
-                                    <div>
-                                        <label className='text-xs font-black text-slate-500 uppercase'>Seller Price</label>
-                                        <div className='relative mt-1'>
-                                            <span className='absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm'>₹</span>
-                                            <input type='number' placeholder='200' required
-                                                value={productForm.sellerPrice}
-                                                onChange={e => setProductForm(p => ({ ...p, sellerPrice: e.target.value }))}
-                                                className='w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold outline-none focus:border-green-400 bg-white'
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className='text-xs font-black text-slate-500 uppercase'>Snapit Margin</label>
-                                        <div className='relative mt-1'>
-                                            <span className='absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm'>₹</span>
-                                            <input type='number' placeholder='10'
-                                                value={productForm.snapitMargin}
-                                                onChange={e => setProductForm(p => ({ ...p, snapitMargin: e.target.value }))}
-                                                className='w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold outline-none focus:border-green-400 bg-white'
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className='mt-3 bg-white rounded-xl p-3 flex justify-between items-center border-2 border-green-400'>
-                                    <p className='text-xs font-black text-slate-500 uppercase'>Customer Pays</p>
-                                    <p className='text-2xl font-black text-green-700'>{fmtINR(sellingPrice)}</p>
-                                </div>
-                            </div>
-                            <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                <label className='text-xs font-black text-slate-500 uppercase'>Discount %</label>
-                                <input type='number' placeholder='e.g. 10'
-                                    value={productForm.discount}
-                                    onChange={e => setProductForm(p => ({ ...p, discount: e.target.value }))}
-                                    className='mt-2 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400'
-                                />
-                            </div>
-                            <button type='submit'
-                                className='w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-blue-200'>
-                                🚀 UPLOAD PRODUCT
-                            </button>
-                        </form>
-                    )}
-                </div>
-            )}
-
-            {/* ══════════ HISTORY TAB ══════════ */}
-            {activeTab === 'history' && (
-                <div className='flex flex-col gap-3'>
-                    {/* Stats Row */}
-                    <div className='grid grid-cols-3 gap-2'>
-                        <div className='bg-white rounded-2xl p-3 text-center shadow-sm border border-slate-100'>
-                            <p className='text-xl font-black text-slate-800'>{allSorted.length}</p>
-                            <p className='text-[10px] font-black text-slate-400 uppercase'>Total</p>
-                        </div>
-                        <div className='bg-white rounded-2xl p-3 text-center shadow-sm border border-green-100'>
-                            <p className='text-xl font-black text-green-600'>{deliveredCount}</p>
-                            <p className='text-[10px] font-black text-slate-400 uppercase'>Delivered</p>
-                        </div>
-                        <div className='bg-white rounded-2xl p-3 text-center shadow-sm border border-red-100'>
-                            <p className='text-xl font-black text-red-500'>{cancelledCount}</p>
-                            <p className='text-[10px] font-black text-slate-400 uppercase'>Cancelled</p>
-                        </div>
-                    </div>
-
-                    {/* Total Sales Hero — WITHOUT delivery charge */}
-                    <div className='bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white'>
-                        <p className='text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1'>
-                            Total Sales — All Time <span className='text-slate-500 normal-case font-medium'>(excl. delivery)</span>
-                        </p>
-                        <p className='text-4xl font-black'>{fmtINR(allTimeTotalSales)}</p>
-                        <div className='flex gap-4 mt-3 pt-3 border-t border-slate-700'>
-                            <div>
-                                <p className='text-[9px] text-slate-400 uppercase font-bold'>Orders</p>
-                                <p className='text-lg font-black'>{deliveredCount}</p>
-                            </div>
-                            <div>
-                                <p className='text-[9px] text-slate-400 uppercase font-bold'>Your Earnings</p>
-                                <p className='text-lg font-black text-emerald-400'>
-                                    {fmtINR(allOrders.filter(isDelivered).reduce((a, o) => a + getSellerEarning(o), 0))}
-                                </p>
-                            </div>
-                            <div>
-                                <p className='text-[9px] text-slate-400 uppercase font-bold'>Delivery Excl.</p>
-                                <p className='text-lg font-black text-red-400'>
-                                    -{fmtINR(allOrders.filter(isDelivered).reduce((a, o) => a + getDeliveryFee(o), 0))}
-                                </p>
+                            {/* Live indicator */}
+                            <div className='flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5'>
+                                <span className='w-2 h-2 bg-emerald-400 rounded-full animate-pulse' />
+                                <span className='text-[10px] font-black text-slate-300'>LIVE</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Search */}
-                    <div className='relative'>
-                        <input type='text' value={historySearch} onChange={e => setHistorySearch(e.target.value)}
-                            placeholder='Search by order ID or product name...'
-                            className='w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:border-slate-400 pl-10'
-                        />
-                        <span className='absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400'>🔍</span>
-                        {historySearch && (
-                            <button onClick={() => setHistorySearch('')}
-                                className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg'>×
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Filter pills */}
-                    <div className='flex gap-2 flex-wrap'>
+                    {/* Quick stats strip */}
+                    <div className='flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide'>
                         {[
-                            { key: 'all',       label: 'All Orders' },
-                            { key: 'delivered', label: '✅ Delivered' },
-                            { key: 'pending',   label: '⏳ Pending' },
-                            { key: 'cancelled', label: '❌ Cancelled' },
-                        ].map(f => (
-                            <button key={f.key} onClick={() => setHistoryFilter(f.key)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-black transition-all border ${historyFilter === f.key ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'}`}>
-                                {f.label}
+                            { label:'Pending',   val: pendingCount,   color:'text-amber-400',  bg:'bg-amber-500/10 border-amber-500/20' },
+                            { label:'Packing',   val: packingCount,   color:'text-sky-400',    bg:'bg-sky-500/10 border-sky-500/20' },
+                            { label:'Queue ₹',   val: fmtINRShort(queueEarning), color:'text-emerald-400', bg:'bg-emerald-500/10 border-emerald-500/20' },
+                            { label:'Delivered', val: deliveredCount,  color:'text-green-400',  bg:'bg-green-500/10 border-green-500/20' },
+                            { label:'All Earning',val: fmtINRShort(allTimeEarning), color:'text-orange-400', bg:'bg-orange-500/10 border-orange-500/20' },
+                        ].map(s => (
+                            <div key={s.label} className={`flex-shrink-0 ${s.bg} border rounded-xl px-3 py-1.5 text-center`}>
+                                <p className='text-[9px] font-black text-slate-500 uppercase'>{s.label}</p>
+                                <p className={`text-sm font-black ${s.color}`}>{s.val}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* ── TAB BAR ── */}
+            <div className='sticky top-[105px] z-20 bg-slate-950/95 backdrop-blur border-b border-slate-800'>
+                <div className='max-w-2xl mx-auto px-4'>
+                    <div className='flex gap-1 py-2 overflow-x-auto scrollbar-hide'>
+                        {TABS.map(t => (
+                            <button key={t.key} onClick={() => setActiveTab(t.key)}
+                                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                                    activeTab === t.key
+                                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
+                                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
+                                }`}>
+                                {t.icon}{t.label}
                             </button>
                         ))}
                     </div>
+                </div>
+            </div>
 
-                    <p className='text-[11px] text-slate-400 font-bold px-1'>
-                        Showing {historyFiltered.length} of {allSorted.length} orders
-                        {historySearch && ` · matching "${historySearch}"`}
-                    </p>
+            <div className='max-w-2xl mx-auto px-4 py-5'>
 
-                    {historyFiltered.length === 0 ? (
-                        <div className='bg-white rounded-3xl p-12 text-center border-2 border-dashed border-slate-200'>
-                            <p className='text-4xl mb-3'>📭</p>
-                            <p className='font-black text-slate-700'>No orders found</p>
-                        </div>
-                    ) : historyFiltered.map(order => (
-                        <div key={order._id} className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                            <div className='flex justify-between items-start mb-3'>
+                {/* ══════════ OVERVIEW TAB ══════════ */}
+                {activeTab === 'overview' && (
+                    <div className='flex flex-col gap-4'>
+
+                        {/* Hero earning card */}
+                        <div className='bg-gradient-to-br from-orange-500 to-amber-600 rounded-3xl p-6 shadow-2xl shadow-orange-500/20'>
+                            <p className='text-[10px] font-black text-orange-100/70 uppercase tracking-widest mb-1'>All-Time Store Earnings</p>
+                            <p className='text-4xl font-black text-white'>{fmtINR(allTimeEarning)}</p>
+                            <div className='grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-orange-400/30'>
                                 <div>
-                                    <p className='font-mono text-xs font-bold text-slate-600'>{order.orderId}</p>
-                                    <p className='text-[10px] text-slate-400 mt-0.5'>
-                                        {new Date(order.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                    </p>
+                                    <p className='text-[9px] font-black text-orange-200/70 uppercase'>Total Sales</p>
+                                    <p className='text-sm font-black text-white'>{fmtINR(allTimeSales)}</p>
                                 </div>
-                                <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${statusColor(order.delivery_status)}`}>
-                                    {order.delivery_status}
-                                </span>
+                                <div>
+                                    <p className='text-[9px] font-black text-orange-200/70 uppercase'>Orders</p>
+                                    <p className='text-sm font-black text-white'>{deliveredCount}</p>
+                                </div>
+                                <div>
+                                    <p className='text-[9px] font-black text-orange-200/70 uppercase'>Delivery Earned</p>
+                                    <p className='text-sm font-black text-orange-200'>-{fmtINR(allTimeDelivery)}</p>
+                                </div>
                             </div>
+                        </div>
 
-                            {/* Product Sell History — floating values */}
-                            <div className='bg-slate-50 rounded-xl p-3 mb-2'>
-                                <p className='text-[9px] font-black text-slate-400 uppercase mb-2'>📦 Products Sold</p>
-                                {(order.cartItems || []).map((item, i) => {
-                                    const sp    = getItemSellerPrice(item);
-                                    const qty   = Number(item.quantity) || 1;
-                                    const total = sp * qty;
+                        {/* 4 stat grid */}
+                        <div className='grid grid-cols-2 gap-3'>
+                            <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                <div className='flex items-center justify-between mb-3'>
+                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Products Listed</p>
+                                    <HiOutlineShoppingBag size={16} className='text-slate-600'/>
+                                </div>
+                                <p className='text-3xl font-black text-white'>{products.length}</p>
+                                {outOfStockCount > 0 && (
+                                    <p className='text-[10px] text-red-400 mt-1'>{outOfStockCount} out of stock</p>
+                                )}
+                                {lowStockCount > 0 && (
+                                    <p className='text-[10px] text-amber-400'>{lowStockCount} low stock</p>
+                                )}
+                            </div>
+                            <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                <div className='flex items-center justify-between mb-3'>
+                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Total Orders</p>
+                                    <HiOutlineClipboardList size={16} className='text-slate-600'/>
+                                </div>
+                                <p className='text-3xl font-black text-white'>{allOrders.length}</p>
+                                <p className='text-[10px] text-slate-500 mt-1'>{cancelledCount} cancelled</p>
+                            </div>
+                            <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                <div className='flex items-center justify-between mb-3'>
+                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Active Queue</p>
+                                    <HiOutlineTruck size={16} className='text-slate-600'/>
+                                </div>
+                                <p className='text-3xl font-black text-amber-400'>{packingOrders.length}</p>
+                                <p className='text-[10px] text-emerald-400 mt-1'>{fmtINR(queueEarning)} pending</p>
+                            </div>
+                            <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                <div className='flex items-center justify-between mb-3'>
+                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Avg Order Value</p>
+                                    <HiOutlineTrendingUp size={16} className='text-slate-600'/>
+                                </div>
+                                <p className='text-3xl font-black text-white'>
+                                    {fmtINRShort(deliveredCount > 0 ? allTimeSales / deliveredCount : 0)}
+                                </p>
+                                <p className='text-[10px] text-slate-500 mt-1'>per delivered order</p>
+                            </div>
+                        </div>
+
+                        {/* Top selling products */}
+                        {topProducts.length > 0 && (
+                            <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                <div className='flex items-center justify-between mb-4'>
+                                    <p className='text-xs font-black text-white uppercase tracking-wider'>Top Products (All Time)</p>
+                                    <HiOutlineChartBar size={16} className='text-slate-600'/>
+                                </div>
+                                {topProducts.map(([name, qty], i) => {
+                                    const maxQty = topProducts[0][1];
+                                    const colors = ['bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-sky-500', 'bg-violet-500'];
                                     return (
-                                        <div key={i} className='flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0'>
-                                            <div>
-                                                <p className='text-xs font-bold text-slate-700'>{item.productId?.name || item.name}</p>
-                                                <p className='text-[9px] text-slate-400'>{fmtINR(sp)} × {qty}</p>
+                                        <div key={name} className='mb-3 last:mb-0'>
+                                            <div className='flex justify-between items-center mb-1'>
+                                                <div className='flex items-center gap-2'>
+                                                    <span className='text-[10px] font-black text-slate-600 w-4'>#{i+1}</span>
+                                                    <p className='text-xs font-bold text-slate-200 truncate max-w-[180px]'>{name}</p>
+                                                </div>
+                                                <span className='text-xs font-black text-slate-400'>×{qty} sold</span>
                                             </div>
-                                            <span className='text-xs font-black text-slate-800'>{fmtINR(total)}</span>
+                                            <div className='w-full bg-slate-800 rounded-full h-1.5 overflow-hidden'>
+                                                <div className={`${colors[i]} h-1.5 rounded-full transition-all duration-700`}
+                                                    style={{ width: `${(qty / maxQty) * 100}%` }}/>
+                                            </div>
                                         </div>
                                     );
                                 })}
-
-                                {/* Summary row */}
-                                <div className='mt-2 pt-2 border-t border-slate-200 space-y-1'>
-                                    <div className='flex justify-between items-center'>
-                                        <p className='text-[10px] font-black text-slate-500 uppercase'>Order Total</p>
-                                        <p className='text-sm font-black text-slate-800'>{fmtINR(getOrderAmount(order))}</p>
-                                    </div>
-                                    {getDeliveryFee(order) > 0 && (
-                                        <div className='flex justify-between items-center'>
-                                            <p className='text-[10px] font-black text-red-400 uppercase'>– Delivery Fee</p>
-                                            <p className='text-sm font-black text-red-400'>-{fmtINR(getDeliveryFee(order))}</p>
-                                        </div>
-                                    )}
-                                    <div className='flex justify-between items-center pt-1 border-t border-slate-100'>
-                                        <p className='text-[10px] font-black text-green-600 uppercase'>Your Earning</p>
-                                        <p className='text-sm font-black text-green-600'>{fmtINR(getSellerEarning(order))}</p>
-                                    </div>
-                                    {/* Total sales excl delivery */}
-                                    <div className='flex justify-between items-center'>
-                                        <p className='text-[10px] font-black text-blue-500 uppercase'>Sales (excl. delivery)</p>
-                                        <p className='text-sm font-black text-blue-600'>{fmtINR(getOrderAmount(order) - getDeliveryFee(order))}</p>
-                                    </div>
-                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                        )}
 
-            {/* ══════════ EARNINGS TAB ══════════ */}
-            {activeTab === 'earnings' && (
-                <div className='flex flex-col gap-4'>
-                    {/* Period filter */}
-                    <div className='flex gap-2 flex-wrap'>
-                        {[
-                            { key: 'today', label: 'Today' },
-                            { key: 'week',  label: 'This Week' },
-                            { key: 'month', label: 'This Month' },
-                            { key: 'all',   label: 'All Time' },
-                        ].map(f => (
-                            <button key={f.key} onClick={() => setEarningFilter(f.key)}
-                                className={`px-4 py-2 rounded-full text-xs font-black transition-all border ${earningFilter === f.key ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                                {f.label}
-                            </button>
-                        ))}
+                        {/* Last refreshed */}
+                        <p className='text-center text-[10px] text-slate-700 font-bold'>
+                            Last refreshed: {lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </p>
                     </div>
+                )}
 
-                    {filteredEarnings.length === 0 ? (
-                        <div className='bg-white rounded-3xl p-10 text-center border-2 border-dashed border-green-200'>
-                            <p className='text-4xl mb-3'>💸</p>
-                            <p className='font-black text-slate-700'>No delivered orders yet</p>
-                            <p className='text-sm text-slate-400 mt-1'>Earnings appear once orders are marked Delivered.</p>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Earnings Hero */}
-                            <div className='bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-5 text-white shadow-lg shadow-green-900/20'>
-                                <p className='text-[9px] font-black uppercase tracking-widest text-green-200/80 mb-1'>Your Store Earnings</p>
-                                <p className='text-4xl font-black'>{fmtINR(totalSellerEarning)}</p>
-                                <div className='flex gap-4 mt-3 border-t border-green-500/40 pt-3 flex-wrap'>
-                                    <div>
-                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Total Sales</p>
-                                        <p className='text-sm font-black'>{fmtINR(totalGross)}</p>
-                                    </div>
-                                    <div>
-                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Sales Excl. Delivery</p>
-                                        <p className='text-sm font-black text-blue-200'>{fmtINR(totalSalesExDelivery)}</p>
-                                    </div>
-                                    {totalSnapitEarning > 0 && (
+                {/* ══════════ PACKING TAB ══════════ */}
+                {activeTab === 'packing' && (
+                    <div className='flex flex-col gap-4'>
+                        {packingOrders.length > 0 && (
+                            <div className='bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 flex items-center justify-between'>
+                                <div>
+                                    <p className='text-sm font-black text-white'>{packingOrders.length} Active Task{packingOrders.length > 1 ? 's' : ''}</p>
+                                    <p className='text-[10px] text-slate-500'>Pack & notify rider when ready</p>
+                                </div>
+                                <div className='text-right'>
+                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Queue Earning</p>
+                                    <p className='text-lg font-black text-emerald-400'>{fmtINR(queueEarning)}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {packingOrders.length === 0 ? (
+                            <div className='bg-slate-900 border-2 border-dashed border-slate-700 rounded-3xl p-16 text-center'>
+                                <div className='w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4'>
+                                    <HiOutlineCheckCircle size={32} className='text-emerald-400'/>
+                                </div>
+                                <p className='font-black text-white text-lg'>All packed!</p>
+                                <p className='text-slate-500 text-sm mt-1'>No pending orders right now</p>
+                                <button onClick={() => fetchOrders(true)}
+                                    className='mt-5 bg-orange-500 text-white font-black text-sm px-6 py-2.5 rounded-xl hover:bg-orange-600 transition-all'>
+                                    Check for New Orders
+                                </button>
+                            </div>
+                        ) : packingOrders.map(order => {
+                            const sellerEarning = getSellerEarning(order);
+                            const orderTotal    = getOrderAmount(order);
+                            const deliveryFee   = getDeliveryFee(order);
+                            const isPacking     = order.seller_status === 'Packing';
+                            return (
+                                <div key={order._id}
+                                    className={`bg-slate-900 rounded-3xl border-2 overflow-hidden ${
+                                        isPacking ? 'border-sky-500/40' : 'border-orange-500/30'
+                                    }`}>
+                                    {/* Order header */}
+                                    <div className={`px-5 py-3 ${isPacking ? 'bg-sky-500/10' : 'bg-orange-500/10'} flex justify-between items-center`}>
                                         <div>
-                                            <p className='text-[9px] text-yellow-200/80 uppercase font-bold'>Snapit Cut</p>
-                                            <p className='text-sm font-black text-yellow-300'>-{fmtINR(totalSnapitEarning)}</p>
+                                            <span className='font-mono text-sm font-black text-white'>{order.orderId}</span>
+                                            <p className='text-[10px] text-slate-500 mt-0.5'>
+                                                {new Date(order.createdAt).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
+                                            </p>
                                         </div>
-                                    )}
-                                    <div>
-                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Delivery Excl.</p>
-                                        <p className='text-sm font-black text-red-300'>-{fmtINR(totalDelivery)}</p>
+                                        <div className='flex items-center gap-2'>
+                                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase ${
+                                                isPacking ? 'bg-sky-500/20 text-sky-300' : 'bg-orange-500/20 text-orange-300'
+                                            }`}>
+                                                {isPacking ? '📦 Packing' : '🆕 New Order'}
+                                            </span>
+                                            {order.payment_status === 'CASH ON DELIVERY'
+                                                ? <span className='text-[10px] font-black bg-amber-500/20 text-amber-300 px-2 py-1 rounded-lg'>COD</span>
+                                                : <span className='text-[10px] font-black bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-lg'>Paid</span>
+                                            }
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Orders</p>
-                                        <p className='text-sm font-black'>{totalOrders}</p>
-                                    </div>
-                                    <div>
-                                        <p className='text-[9px] text-green-200/60 uppercase font-bold'>Avg/Order</p>
-                                        <p className='text-sm font-black'>{fmtINR(avgNet)}</p>
-                                    </div>
-                                </div>
-                            </div>
 
-                            {/* Summary Cards */}
-                            <div className='grid grid-cols-2 gap-3'>
-                                <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                    <p className='text-[9px] font-black text-slate-400 uppercase'>Total Sells</p>
-                                    <p className='text-2xl font-black text-slate-900 mt-1'>{totalOrders}</p>
-                                    <p className='text-[9px] text-slate-400'>delivered orders</p>
-                                </div>
-                                <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                    <p className='text-[9px] font-black text-slate-400 uppercase'>Total Sales</p>
-                                    <p className='text-xl font-black text-blue-600 mt-1'>{fmtINR(totalSalesExDelivery)}</p>
-                                    <p className='text-[9px] text-slate-400'>excl. delivery charge</p>
-                                </div>
-                            </div>
-
-                            {/* Product Breakdown with floating values */}
-                            {productList.length > 0 && (
-                                <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                    <h3 className='font-black text-slate-800 text-xs uppercase tracking-wider mb-3'>📦 Product Sell History</h3>
-                                    {productList.map(([name, data]) => {
-                                        const pct = totalSellerEarning > 0 ? (data.revenue / totalSellerEarning) * 100 : 0;
-                                        return (
-                                            <div key={name} className='flex items-center gap-3 mb-3'>
-                                                <div className='flex-1'>
-                                                    <div className='flex justify-between items-center mb-1'>
-                                                        <p className='text-xs font-bold text-slate-700 truncate max-w-[160px]'>{name}</p>
-                                                        <div className='flex items-center gap-2'>
-                                                            <span className='text-[9px] text-slate-400'>×{data.qty} sold</span>
-                                                            <span className='text-xs font-black text-emerald-600'>{fmtINR(data.revenue)}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className='w-full bg-slate-100 rounded-full h-1.5'>
-                                                        <div className='bg-green-500 h-1.5 rounded-full transition-all' style={{ width: `${pct.toFixed(1)}%` }}/>
-                                                    </div>
-                                                    <p className='text-[9px] text-slate-400 mt-0.5'>{pct.toFixed(1)}% of earnings</p>
+                                    <div className='p-5'>
+                                        {order.store_details?.name && (
+                                            <div className='flex items-center gap-2 mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-3 py-2'>
+                                                <span className='text-indigo-400 text-sm'>🏪</span>
+                                                <div>
+                                                    <p className='text-[9px] font-black text-indigo-400 uppercase'>Store</p>
+                                                    <p className='text-sm font-black text-indigo-300'>{order.store_details.name}</p>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                        )}
 
-                            {/* Daily breakdown with floating values */}
-                            <div className='bg-white rounded-2xl p-4 shadow-sm border border-slate-100'>
-                                <h3 className='font-black text-slate-800 text-xs uppercase tracking-wider mb-3'>📅 Daily Breakdown</h3>
-                                {Object.entries(byDate)
-                                    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
-                                    .map(([date, d]) => (
-                                        <div key={date} className='py-3 border-b border-slate-50 last:border-0'>
+                                        {/* Items list */}
+                                        <div className='bg-slate-800/50 rounded-2xl p-3 mb-4'>
+                                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3'>Items to Pack</p>
+                                            {(order.cartItems || []).map((item, i) => {
+                                                const sp    = getItemSellerPrice(item);
+                                                const qty   = Number(item.quantity) || 1;
+                                                const total = sp * qty;
+                                                return (
+                                                    <div key={i} className='flex justify-between items-center py-2.5 border-b border-slate-700/50 last:border-0'>
+                                                        <div className='flex items-center gap-2.5'>
+                                                            <div className='w-2 h-2 rounded-full bg-orange-500 flex-shrink-0' />
+                                                            <div>
+                                                                <p className='text-sm font-bold text-slate-200'>{item.productId?.name || item.name}</p>
+                                                                <p className='text-[10px] text-slate-500'>{fmtINR(sp)} × {qty}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className='flex items-center gap-2'>
+                                                            <span className='bg-slate-700 px-2 py-0.5 rounded-lg text-xs font-black text-slate-300'>×{qty}</span>
+                                                            <span className='text-sm font-black text-white'>{fmtINR(total)}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Financial summary */}
+                                        <div className='bg-slate-800/50 rounded-2xl p-4 mb-4 space-y-2'>
                                             <div className='flex justify-between items-center'>
-                                                <p className='text-sm font-bold text-slate-700'>{date}</p>
-                                                <p className='font-black text-green-600'>{fmtINR(d.sellerNet)}</p>
+                                                <p className='text-[10px] font-black text-slate-400 uppercase'>Order Total</p>
+                                                <p className='text-sm font-black text-white'>{fmtINR(orderTotal)}</p>
                                             </div>
-                                            <div className='flex gap-4 mt-1 flex-wrap'>
-                                                <p className='text-[9px] text-slate-400'>{d.count} order{d.count > 1 ? 's' : ''}</p>
-                                                <p className='text-[9px] text-slate-500'>Gross {fmtINR(d.gross)}</p>
-                                                <p className='text-[9px] text-blue-500'>Sales (excl. delivery) {fmtINR(d.salesExDelivery)}</p>
-                                                {d.delivery > 0 && <p className='text-[9px] text-red-400'>Delivery -{fmtINR(d.delivery)}</p>}
+                                            {deliveryFee > 0 && (
+                                                <div className='flex justify-between items-center'>
+                                                    <div className='flex items-center gap-1.5'>
+                                                        <HiOutlineTruck size={12} className='text-red-400'/>
+                                                        <p className='text-[10px] font-black text-red-400 uppercase'>Delivery Charge</p>
+                                                    </div>
+                                                    <p className='text-sm font-black text-red-400'>-{fmtINR(deliveryFee)}</p>
+                                                </div>
+                                            )}
+                                            {getSnapitEarning(order) > 0 && (
+                                                <div className='flex justify-between items-center'>
+                                                    <p className='text-[10px] font-black text-amber-400 uppercase'>Snapit Margin Cut</p>
+                                                    <p className='text-sm font-black text-amber-400'>-{fmtINR(getSnapitEarning(order))}</p>
+                                                </div>
+                                            )}
+                                            <div className='flex justify-between items-center pt-2 border-t border-slate-700'>
+                                                <p className='text-[10px] font-black text-emerald-400 uppercase'>Your Net Earning</p>
+                                                <p className='text-xl font-black text-emerald-400'>{fmtINR(sellerEarning)}</p>
+                                            </div>
+                                            <div className='flex justify-between items-center'>
+                                                <p className='text-[10px] font-black text-sky-400 uppercase'>Sales (excl. delivery)</p>
+                                                <p className='text-sm font-black text-sky-400'>{fmtINR(orderTotal - deliveryFee)}</p>
                                             </div>
                                         </div>
-                                    ))}
+
+                                        <button onClick={() => markAsReady(order.orderId)}
+                                            className='w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-orange-500/20'>
+                                            🛵 Packed — Ready for Rider
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* ══════════ PRODUCTS TAB ══════════ */}
+                {activeTab === 'products' && (
+                    <div>
+                        {/* Sub tabs */}
+                        <div className='flex gap-2 mb-4'>
+                            {[{key:'list', label:'📋 My Products'},{key:'upload', label:'➕ Add New'}].map(t => (
+                                <button key={t.key} onClick={() => setProductTab(t.key)}
+                                    className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${
+                                        productTab === t.key
+                                            ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
+                                            : 'bg-slate-900 text-slate-400 border border-slate-700 hover:border-slate-600'
+                                    }`}>
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {productTab === 'list' && (
+                            <div>
+                                {/* Search + stats */}
+                                <div className='flex gap-2 mb-4'>
+                                    <div className='relative flex-1'>
+                                        <IoSearchOutline size={16} className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-500'/>
+                                        <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
+                                            placeholder='Search products...'
+                                            className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Stock alerts */}
+                                {(outOfStockCount > 0 || lowStockCount > 0) && (
+                                    <div className='flex gap-2 mb-4 flex-wrap'>
+                                        {outOfStockCount > 0 && (
+                                            <div className='flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2'>
+                                                <HiOutlineXCircle size={14} className='text-red-400'/>
+                                                <p className='text-xs font-black text-red-400'>{outOfStockCount} Out of stock</p>
+                                            </div>
+                                        )}
+                                        {lowStockCount > 0 && (
+                                            <div className='flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2'>
+                                                <HiOutlineClock size={14} className='text-amber-400'/>
+                                                <p className='text-xs font-black text-amber-400'>{lowStockCount} Low stock (≤5)</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {productsLoading ? (
+                                    <div className='bg-slate-900 rounded-3xl p-12 text-center border border-slate-800'>
+                                        <div className='w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3'/>
+                                        <p className='font-black text-slate-500 text-sm'>Loading products...</p>
+                                    </div>
+                                ) : filteredProducts.length === 0 ? (
+                                    <div className='bg-slate-900 rounded-3xl p-14 text-center border-2 border-dashed border-slate-700'>
+                                        <p className='text-4xl mb-3'>📦</p>
+                                        <p className='font-black text-white'>No products yet</p>
+                                        <button onClick={() => setProductTab('upload')}
+                                            className='mt-4 bg-orange-500 text-white font-black text-sm px-5 py-2 rounded-xl'>
+                                            Add First Product
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className='flex flex-col gap-3'>
+                                        {filteredProducts.map(product => {
+                                            const customerPrice = Number(product.sellerPrice||product.price||0) + Number(product.snapitMargin||0);
+                                            const stockStatus   = product.stock <= 0 ? 'out' : product.stock <= 5 ? 'low' : 'ok';
+                                            return (
+                                                <div key={product._id}
+                                                    className={`bg-slate-900 rounded-2xl p-4 border flex gap-4 items-start ${
+                                                        stockStatus === 'out' ? 'border-red-500/30' :
+                                                        stockStatus === 'low' ? 'border-amber-500/30' : 'border-slate-800'
+                                                    }`}>
+                                                    <img src={product.image?.[0] || ''} alt={product.name}
+                                                        className='w-16 h-16 object-contain rounded-xl bg-slate-800 border border-slate-700 flex-shrink-0'/>
+                                                    <div className='flex-1 min-w-0'>
+                                                        <p className='font-black text-white text-sm truncate'>{product.name}</p>
+                                                        <p className='text-[10px] text-slate-500 mt-0.5'>{product.unit}</p>
+
+                                                        {/* Price breakdown */}
+                                                        <div className='flex gap-2 mt-2 flex-wrap'>
+                                                            <span className='text-[10px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg'>
+                                                                Seller {fmtINR(product.sellerPrice||product.price||0)}
+                                                            </span>
+                                                            {Number(product.snapitMargin) > 0 && (
+                                                                <span className='text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-lg'>
+                                                                    +Margin {fmtINR(product.snapitMargin)}
+                                                                </span>
+                                                            )}
+                                                            <span className='text-[10px] font-black bg-sky-500/15 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-lg'>
+                                                                Customer {fmtINR(customerPrice)}
+                                                            </span>
+                                                            {Number(product.discount) > 0 && (
+                                                                <span className='text-[10px] font-black bg-violet-500/15 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-lg'>
+                                                                    {product.discount}% off
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Stock badge */}
+                                                        <div className='flex items-center gap-2 mt-2.5'>
+                                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${
+                                                                stockStatus === 'out' ? 'bg-red-500/15 text-red-400 border border-red-500/20' :
+                                                                stockStatus === 'low' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' :
+                                                                'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                                                            }`}>
+                                                                {stockStatus === 'out' ? '❌ Out of stock' : `${product.stock} in stock`}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Update stock row */}
+                                                        <div className='flex items-center gap-2 mt-2.5'>
+                                                            <input type='number' placeholder='New qty'
+                                                                value={editingStock[product._id] ?? ''}
+                                                                onChange={e => setEditingStock(p => ({ ...p, [product._id]: e.target.value }))}
+                                                                className='w-20 text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-orange-500'
+                                                            />
+                                                            <button onClick={() => handleUpdateStock(product._id)}
+                                                                disabled={!editingStock[product._id]}
+                                                                className='text-xs bg-orange-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-3 py-1.5 rounded-lg font-black'>
+                                                                Update
+                                                            </button>
+                                                            <button onClick={() => handleDeleteProduct(product._id)}
+                                                                className='text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2.5 py-1.5 rounded-lg font-black hover:bg-red-500/20'>
+                                                                <MdDelete size={14}/>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                        </>
-                    )}
-                </div>
-            )}
+                        )}
+
+                        {productTab === 'upload' && (
+                            <form onSubmit={handleProductSubmit} className='flex flex-col gap-4'>
+                                {/* Name */}
+                                <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                    <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Product Name *</label>
+                                    <input type='text' placeholder='e.g. Basmati Rice 5kg' required
+                                        value={productForm.name}
+                                        onChange={e => setProductForm(p => ({ ...p, name: e.target.value }))}
+                                        className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                    <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Description *</label>
+                                    <textarea rows={3} placeholder='Describe the product...' required
+                                        value={productForm.description}
+                                        onChange={e => setProductForm(p => ({ ...p, description: e.target.value }))}
+                                        className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 resize-none placeholder-slate-600'
+                                    />
+                                </div>
+
+                                {/* Images */}
+                                <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                    <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Product Images</label>
+                                    <label htmlFor='sellerProductImage'
+                                        className='mt-2 flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-orange-500 transition-all'>
+                                        {imageLoading ? (
+                                            <p className='text-sm text-slate-500 animate-pulse'>Uploading...</p>
+                                        ) : (
+                                            <>
+                                                <FaCloudUploadAlt size={24} className='text-slate-600'/>
+                                                <p className='text-xs font-bold text-slate-600 mt-1'>Tap to upload</p>
+                                            </>
+                                        )}
+                                        <input id='sellerProductImage' type='file' accept='image/*' className='hidden' onChange={handleUploadImage}/>
+                                    </label>
+                                    {productForm.image.length > 0 && (
+                                        <div className='flex gap-2 flex-wrap mt-3'>
+                                            {productForm.image.map((img, i) => (
+                                                <div key={i} className='relative w-16 h-16'>
+                                                    <img src={img} className='w-full h-full object-contain rounded-xl bg-slate-800 border border-slate-700'/>
+                                                    <button type='button'
+                                                        onClick={() => setProductForm(p => ({ ...p, image: p.image.filter((_,idx) => idx !== i) }))}
+                                                        className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]'>×</button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Category */}
+                                <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                    <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Category</label>
+                                    <select value={selectCategory}
+                                        className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500'
+                                        onChange={e => {
+                                            const cat = allCategory.find(c => c._id === e.target.value);
+                                            if (cat && !productForm.category.some(c => c._id === cat._id))
+                                                setProductForm(p => ({ ...p, category: [...p.category, cat] }));
+                                            setSelectCategory('');
+                                        }}>
+                                        <option value=''>Select Category</option>
+                                        {(allCategory||[]).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                                    </select>
+                                    <div className='flex flex-wrap gap-2 mt-2'>
+                                        {productForm.category.map((c, i) => (
+                                            <span key={i} className='flex items-center gap-1 bg-sky-500/15 text-sky-400 border border-sky-500/20 text-xs font-bold px-2 py-1 rounded-lg'>
+                                                {c.name}<IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, category: p.category.filter((_,idx) => idx !== i) }))}/>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Sub Category */}
+                                <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                    <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Sub Category</label>
+                                    <select value={selectSubCategory}
+                                        className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500'
+                                        onChange={e => {
+                                            const sub = allSubCategory.find(s => s._id === e.target.value);
+                                            if (sub && !productForm.subCategory.some(s => s._id === sub._id))
+                                                setProductForm(p => ({ ...p, subCategory: [...p.subCategory, sub] }));
+                                            setSelectSubCategory('');
+                                        }}>
+                                        <option value=''>Select Sub Category</option>
+                                        {(allSubCategory||[]).map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                                    </select>
+                                    <div className='flex flex-wrap gap-2 mt-2'>
+                                        {productForm.subCategory.map((s, i) => (
+                                            <span key={i} className='flex items-center gap-1 bg-violet-500/15 text-violet-400 border border-violet-500/20 text-xs font-bold px-2 py-1 rounded-lg'>
+                                                {s.name}<IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, subCategory: p.subCategory.filter((_,idx) => idx !== i) }))}/>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Unit + Stock */}
+                                <div className='grid grid-cols-2 gap-3'>
+                                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                        <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Unit *</label>
+                                        <input type='text' placeholder='1kg / 500ml' required
+                                            value={productForm.unit}
+                                            onChange={e => setProductForm(p => ({ ...p, unit: e.target.value }))}
+                                            className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'
+                                        />
+                                    </div>
+                                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                        <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Stock *</label>
+                                        <input type='number' placeholder='50' required
+                                            value={productForm.stock}
+                                            onChange={e => setProductForm(p => ({ ...p, stock: e.target.value }))}
+                                            className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Pricing */}
+                                <div className='bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4'>
+                                    <p className='text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-3'>Pricing Setup</p>
+                                    <div className='grid grid-cols-2 gap-3'>
+                                        <div>
+                                            <label className='text-[10px] font-black text-slate-500 uppercase'>Seller Price *</label>
+                                            <div className='relative mt-1.5'>
+                                                <span className='absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-500 text-sm'>₹</span>
+                                                <input type='number' placeholder='200' required
+                                                    value={productForm.sellerPrice}
+                                                    onChange={e => setProductForm(p => ({ ...p, sellerPrice: e.target.value }))}
+                                                    className='w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold text-white outline-none focus:border-emerald-500 placeholder-slate-600'
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className='text-[10px] font-black text-slate-500 uppercase'>Snapit Margin</label>
+                                            <div className='relative mt-1.5'>
+                                                <span className='absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-500 text-sm'>₹</span>
+                                                <input type='number' placeholder='10'
+                                                    value={productForm.snapitMargin}
+                                                    onChange={e => setProductForm(p => ({ ...p, snapitMargin: e.target.value }))}
+                                                    className='w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold text-white outline-none focus:border-emerald-500 placeholder-slate-600'
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className='mt-3 bg-slate-800 rounded-xl p-3 flex justify-between items-center border border-emerald-500/30'>
+                                        <p className='text-[10px] font-black text-slate-400 uppercase'>Customer Pays</p>
+                                        <p className='text-2xl font-black text-emerald-400'>{fmtINR(sellingPrice)}</p>
+                                    </div>
+                                    <div className='mt-2'>
+                                        <label className='text-[10px] font-black text-slate-500 uppercase'>Discount %</label>
+                                        <input type='number' placeholder='0'
+                                            value={productForm.discount}
+                                            onChange={e => setProductForm(p => ({ ...p, discount: e.target.value }))}
+                                            className='mt-1.5 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'
+                                        />
+                                    </div>
+                                </div>
+
+                                <button type='submit'
+                                    className='w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-xl shadow-orange-500/20'>
+                                    🚀 Upload Product
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                )}
+
+                {/* ══════════ HISTORY TAB ══════════ */}
+                {activeTab === 'history' && (
+                    <div className='flex flex-col gap-4'>
+
+                        {/* Stats */}
+                        <div className='grid grid-cols-2 gap-3'>
+                            {[
+                                { label:'Total Orders',   val: allSorted.length,  color:'text-white' },
+                                { label:'Delivered',      val: deliveredCount,    color:'text-emerald-400' },
+                                { label:'Total Sales',    val: fmtINRShort(allTimeSales), color:'text-sky-400', sub:'excl. delivery' },
+                                { label:'Cancelled',      val: cancelledCount,    color:'text-red-400' },
+                            ].map(s => (
+                                <div key={s.label} className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                    <p className='text-[10px] font-black text-slate-500 uppercase'>{s.label}</p>
+                                    <p className={`text-2xl font-black mt-1 ${s.color}`}>{s.val}</p>
+                                    {s.sub && <p className='text-[10px] text-slate-600'>{s.sub}</p>}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* All-time sales hero */}
+                        <div className='bg-slate-900 border border-slate-800 rounded-2xl p-5'>
+                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1'>All-Time Sales (excl. delivery)</p>
+                            <p className='text-3xl font-black text-white'>{fmtINR(allTimeSales)}</p>
+                            <div className='flex gap-4 mt-3 pt-3 border-t border-slate-800 flex-wrap'>
+                                <div><p className='text-[9px] text-slate-500 uppercase font-bold'>Orders</p><p className='text-base font-black text-white'>{deliveredCount}</p></div>
+                                <div><p className='text-[9px] text-slate-500 uppercase font-bold'>Your Earnings</p><p className='text-base font-black text-emerald-400'>{fmtINR(allTimeEarning)}</p></div>
+                                <div><p className='text-[9px] text-slate-500 uppercase font-bold'>Delivery Excl.</p><p className='text-base font-black text-red-400'>-{fmtINR(allTimeDelivery)}</p></div>
+                            </div>
+                        </div>
+
+                        {/* Search */}
+                        <div className='relative'>
+                            <IoSearchOutline size={16} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500'/>
+                            <input value={historySearch} onChange={e => setHistorySearch(e.target.value)}
+                                placeholder='Search by order ID or product...'
+                                className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'
+                            />
+                            {historySearch && (
+                                <button onClick={() => setHistorySearch('')}
+                                    className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-black text-lg'>×</button>
+                            )}
+                        </div>
+
+                        {/* Filter pills + CSV export */}
+                        <div className='flex gap-2 flex-wrap items-center'>
+                            {[
+                                {key:'all',       label:'All'},
+                                {key:'delivered', label:'✅ Delivered'},
+                                {key:'pending',   label:'⏳ Pending'},
+                                {key:'cancelled', label:'❌ Cancelled'},
+                            ].map(f => (
+                                <button key={f.key} onClick={() => setHistoryFilter(f.key)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${
+                                        historyFilter === f.key
+                                            ? 'bg-orange-500 text-white border-orange-500'
+                                            : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+                                    }`}>
+                                    {f.label}
+                                </button>
+                            ))}
+                            <button onClick={() => exportCSV(historyFiltered)}
+                                className='ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-slate-900 text-emerald-400 border border-emerald-500/30 hover:bg-slate-800 transition-all'>
+                                <HiOutlineDownload size={14}/> Export CSV
+                            </button>
+                        </div>
+
+                        <p className='text-[11px] text-slate-600 font-bold'>
+                            {historyFiltered.length} of {allSorted.length} orders
+                            {historySearch && ` · "${historySearch}"`}
+                        </p>
+
+                        {/* Order cards */}
+                        {historyFiltered.length === 0 ? (
+                            <div className='bg-slate-900 rounded-3xl p-14 text-center border-2 border-dashed border-slate-700'>
+                                <p className='text-4xl mb-3'>📭</p>
+                                <p className='font-black text-white'>No orders found</p>
+                            </div>
+                        ) : historyFiltered.map(order => (
+                            <div key={order._id} className='bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden'>
+                                {/* Clickable header */}
+                                <div
+                                    className='flex justify-between items-center p-4 cursor-pointer hover:bg-slate-800/50 transition-all'
+                                    onClick={() => setExpandedOrder(expandedOrder === order._id ? null : order._id)}>
+                                    <div>
+                                        <p className='font-mono text-xs font-bold text-white'>{order.orderId}</p>
+                                        <p className='text-[10px] text-slate-500 mt-0.5'>
+                                            {new Date(order.createdAt).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
+                                        </p>
+                                    </div>
+                                    <div className='flex items-center gap-2'>
+                                        <StatusBadge status={order.delivery_status}/>
+                                        <span className={`text-slate-500 text-sm transition-transform ${expandedOrder === order._id ? 'rotate-180' : ''}`}>▼</span>
+                                    </div>
+                                </div>
+
+                                {/* Expanded */}
+                                {expandedOrder === order._id && (
+                                    <div className='border-t border-slate-800 p-4 bg-slate-800/30'>
+                                        <p className='text-[9px] font-black text-slate-500 uppercase mb-3'>Products Sold</p>
+                                        {(order.cartItems||[]).map((item, i) => {
+                                            const sp  = getItemSellerPrice(item);
+                                            const qty = Number(item.quantity)||1;
+                                            return (
+                                                <div key={i} className='flex justify-between items-center py-2 border-b border-slate-700/50 last:border-0'>
+                                                    <div>
+                                                        <p className='text-sm font-bold text-slate-200'>{item.productId?.name || item.name}</p>
+                                                        <p className='text-[10px] text-slate-500'>{fmtINR(sp)} × {qty}</p>
+                                                    </div>
+                                                    <p className='text-sm font-black text-white'>{fmtINR(sp * qty)}</p>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Financial summary */}
+                                        <div className='mt-3 pt-3 border-t border-slate-700 space-y-1.5'>
+                                            <div className='flex justify-between'>
+                                                <p className='text-[10px] font-black text-slate-500 uppercase'>Order Total</p>
+                                                <p className='text-sm font-black text-white'>{fmtINR(getOrderAmount(order))}</p>
+                                            </div>
+                                            {getDeliveryFee(order) > 0 && (
+                                                <div className='flex justify-between'>
+                                                    <div className='flex items-center gap-1.5'>
+                                                        <HiOutlineTruck size={11} className='text-red-400'/>
+                                                        <p className='text-[10px] font-black text-red-400 uppercase'>Delivery Charge</p>
+                                                    </div>
+                                                    <p className='text-sm font-black text-red-400'>-{fmtINR(getDeliveryFee(order))}</p>
+                                                </div>
+                                            )}
+                                            <div className='flex justify-between'>
+                                                <p className='text-[10px] font-black text-sky-400 uppercase'>Sales (excl. delivery)</p>
+                                                <p className='text-sm font-black text-sky-400'>{fmtINR(getOrderAmount(order) - getDeliveryFee(order))}</p>
+                                            </div>
+                                            <div className='flex justify-between pt-1 border-t border-slate-700'>
+                                                <p className='text-[10px] font-black text-emerald-400 uppercase'>Your Earning</p>
+                                                <p className='text-sm font-black text-emerald-400'>{fmtINR(getSellerEarning(order))}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* ══════════ EARNINGS TAB ══════════ */}
+                {activeTab === 'earnings' && (
+                    <div className='flex flex-col gap-4'>
+
+                        {/* Period filter */}
+                        <div className='flex gap-2 flex-wrap'>
+                            {[
+                                {key:'today', label:'Today'},
+                                {key:'week',  label:'This Week'},
+                                {key:'month', label:'This Month'},
+                                {key:'all',   label:'All Time'},
+                            ].map(f => (
+                                <button key={f.key} onClick={() => setEarningFilter(f.key)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all border ${
+                                        earningFilter === f.key
+                                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20'
+                                            : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+                                    }`}>
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {filteredEarnings.length === 0 ? (
+                            <div className='bg-slate-900 rounded-3xl p-12 text-center border-2 border-dashed border-slate-700'>
+                                <p className='text-4xl mb-3'>💸</p>
+                                <p className='font-black text-white'>No delivered orders yet</p>
+                                <p className='text-sm text-slate-500 mt-1'>Earnings appear once orders are delivered.</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Earnings hero */}
+                                <div className='bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-6'>
+                                    <p className='text-[9px] font-black text-emerald-400/60 uppercase tracking-widest mb-1'>Your Store Earnings</p>
+                                    <p className='text-4xl font-black text-emerald-400'>{fmtINR(totalSellerEarning)}</p>
+                                    <div className='grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-emerald-500/20'>
+                                        <div>
+                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Gross (incl. delivery)</p>
+                                            <p className='text-sm font-black text-white'>{fmtINR(totalGross)}</p>
+                                        </div>
+                                        <div>
+                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Sales (excl. delivery)</p>
+                                            <p className='text-sm font-black text-sky-400'>{fmtINR(totalSalesExDel)}</p>
+                                        </div>
+                                        <div>
+                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Delivery Charge</p>
+                                            <p className='text-sm font-black text-red-400'>-{fmtINR(totalDelivery)}</p>
+                                        </div>
+                                        {totalSnapitEarning > 0 && (
+                                            <div>
+                                                <p className='text-[9px] text-amber-400/60 uppercase font-bold'>Snapit Cut</p>
+                                                <p className='text-sm font-black text-amber-400'>-{fmtINR(totalSnapitEarning)}</p>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Orders Delivered</p>
+                                            <p className='text-sm font-black text-white'>{totalOrders}</p>
+                                        </div>
+                                        <div>
+                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Avg. Per Order</p>
+                                            <p className='text-sm font-black text-white'>{fmtINR(avgNet)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 2 summary cards */}
+                                <div className='grid grid-cols-2 gap-3'>
+                                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                        <p className='text-[9px] font-black text-slate-500 uppercase'>Total Sells</p>
+                                        <p className='text-3xl font-black text-white mt-1'>{totalOrders}</p>
+                                        <p className='text-[9px] text-slate-600'>delivered orders</p>
+                                    </div>
+                                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                        <p className='text-[9px] font-black text-slate-500 uppercase'>Total Sales</p>
+                                        <p className='text-2xl font-black text-sky-400 mt-1'>{fmtINRShort(totalSalesExDel)}</p>
+                                        <p className='text-[9px] text-slate-600'>excl. delivery charge</p>
+                                    </div>
+                                </div>
+
+                                {/* Product sell breakdown */}
+                                {productList.length > 0 && (
+                                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                        <div className='flex items-center justify-between mb-4'>
+                                            <p className='text-xs font-black text-white uppercase tracking-wider'>Product Sell History</p>
+                                            <HiOutlineChartBar size={16} className='text-slate-600'/>
+                                        </div>
+                                        {productList.map(([name, data], i) => {
+                                            const pct    = totalSellerEarning > 0 ? (data.revenue / totalSellerEarning) * 100 : 0;
+                                            const colors = ['bg-emerald-500','bg-sky-500','bg-orange-500','bg-violet-500','bg-amber-500'];
+                                            return (
+                                                <div key={name} className='mb-4 last:mb-0'>
+                                                    <div className='flex justify-between items-center'>
+                                                        <p className='text-xs font-bold text-slate-200 truncate max-w-[170px]'>{name}</p>
+                                                        <div className='flex items-center gap-2'>
+                                                            <span className='text-[10px] text-slate-500'>×{data.qty} sold</span>
+                                                            <span className='text-xs font-black text-emerald-400'>{fmtINR(data.revenue)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className='w-full bg-slate-800 rounded-full h-2 mt-1.5 overflow-hidden'>
+                                                        <div className={`${colors[i % colors.length]} h-2 rounded-full transition-all duration-700`}
+                                                            style={{ width: `${pct.toFixed(1)}%` }}/>
+                                                    </div>
+                                                    <p className='text-[9px] text-slate-600 mt-0.5'>{pct.toFixed(1)}% of earnings</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Daily breakdown */}
+                                <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                    <div className='flex items-center justify-between mb-4'>
+                                        <p className='text-xs font-black text-white uppercase tracking-wider'>Daily Breakdown</p>
+                                        <button onClick={() => exportCSV(filteredEarnings)}
+                                            className='flex items-center gap-1.5 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/15 transition-all'>
+                                            <HiOutlineDownload size={12}/> CSV
+                                        </button>
+                                    </div>
+                                    {Object.entries(byDate)
+                                        .sort((a,b) => new Date(b[0]) - new Date(a[0]))
+                                        .map(([date, d]) => (
+                                            <div key={date} className='py-3 border-b border-slate-800 last:border-0'>
+                                                <div className='flex justify-between items-center'>
+                                                    <p className='text-sm font-bold text-slate-200'>{date}</p>
+                                                    <p className='font-black text-emerald-400'>{fmtINR(d.sellerNet)}</p>
+                                                </div>
+                                                <div className='flex gap-3 mt-1 flex-wrap'>
+                                                    <p className='text-[10px] text-slate-600'>{d.count} order{d.count>1?'s':''}</p>
+                                                    <p className='text-[10px] text-slate-500'>Gross {fmtINR(d.gross)}</p>
+                                                    <p className='text-[10px] text-sky-500'>Sales {fmtINR(d.salesExDel)}</p>
+                                                    {d.delivery > 0 && <p className='text-[10px] text-red-400'>Delivery -{fmtINR(d.delivery)}</p>}
+                                                    {d.snapit > 0 && <p className='text-[10px] text-amber-400'>Snapit -{fmtINR(d.snapit)}</p>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
+            </div>
         </div>
     );
 };
