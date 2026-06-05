@@ -67,7 +67,7 @@ export const getProductController = async (request, response) => {
     try {
         let { page, limit, search } = request.body;
         if (!page)  page  = 1;
-        if (!limit) limit = 10;
+        if (!limit) limit = 100;
         const query = search ? { $text: { $search: search } } : {};
         const skip  = (page - 1) * limit;
         const [data, totalCount] = await Promise.all([
@@ -93,7 +93,7 @@ export const getProductByCategory = async (request, response) => {
 
         const product = await ProductModel.find({
             category: { $in: [new mongoose.Types.ObjectId(id)] }
-        }).select(LIST_FIELDS).limit(15).lean();
+        }).select(LIST_FIELDS).lean();
 
         return response.json({
             message: "category product list", error: false, success: true,
@@ -112,7 +112,7 @@ export const getProductsByCategories = async (request, response) => {
         const invalidId = categoryIds.find(id => !mongoose.Types.ObjectId.isValid(id));
         if (invalidId) return response.status(400).json({ message: `Invalid category ID: ${invalidId}`, error: true, success: false });
 
-        const products = await ProductModel.find({ category: { $in: categoryIds } }).select(LIST_FIELDS).limit(15 * categoryIds.length).lean();
+        const products = await ProductModel.find({ category: { $in: categoryIds } }).select(LIST_FIELDS).lean();
         const grouped = {};
         for (const categoryId of categoryIds) grouped[categoryId] = [];
         for (const prod of products) {
@@ -134,7 +134,7 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         if (!categoryId) return response.status(400).json({ message: "Provide categoryId", error: true, success: false });
         if (!mongoose.Types.ObjectId.isValid(categoryId)) return response.status(400).json({ message: "Invalid Category ID format", error: true, success: false });
         if (!page)  page  = 1;
-        if (!limit) limit = 10;
+        if (!limit) limit = 100;
 
         const skip = (page - 1) * limit;
         const hasValidSubCategory = subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId);
@@ -229,7 +229,7 @@ export const searchProduct = async (request, response) => {
     try {
         let { search, page, limit } = request.body;
         if (!page)  page  = 1;
-        if (!limit) limit = 10;
+        if (!limit) limit = 100;
         const query = search
             ? { $or: [{ name: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }] }
             : {};
