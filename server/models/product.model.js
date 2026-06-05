@@ -25,7 +25,6 @@ const productSchema = new mongoose.Schema({
         type : String,
         default : ""
     },
-    // SUPPORT FOR 5-6 MARTS: Each tracks its own stock
     store_inventory: [
         {
             store_name: { type: String, required: true }, 
@@ -33,15 +32,10 @@ const productSchema = new mongoose.Schema({
             isAvailable: { type: Boolean, default: true }
         }
     ],
-    // Total Stock (Calculated automatically via middleware)
     stock : {
         type : Number,
         default : 0 
     },
-    // ── PRICING SYSTEM ──────────────────────────────────────
-    // sellerPrice: what the seller earns (their cost)
-    // snapitMargin: profit added by Snapit on top
-    // sellingPrice / price: what customer pays (sellerPrice + snapitMargin)
     sellerPrice : {
         type : Number,
         default : null
@@ -72,9 +66,8 @@ const productSchema = new mongoose.Schema({
     },
     publish : {
         type : Boolean,
-        default : true
+        default : true  // FIX: always default to published
     },
-    // --- SNAPIT FLASH SALE SYSTEM ---
     flashSale: {
         isActive: {
             type: Boolean,
@@ -98,7 +91,6 @@ const productSchema = new mongoose.Schema({
     timestamps : true
 })
 
-// CREATE TEXT INDEX FOR SEARCH
 productSchema.index({
     name  : "text",
     description : 'text'
@@ -109,22 +101,19 @@ productSchema.index({
     }
 })
 
-// MULTI-STORE & FLASH SALE MIDDLEWARE
 productSchema.pre('save', async function() {
 
-    // ── 0. AUTO CALCULATE sellingPrice from sellerPrice + snapitMargin ──
+    // 1. AUTO CALCULATE sellingPrice from sellerPrice + snapitMargin
     if (this.sellerPrice != null) {
         const margin = Number(this.snapitMargin) || 0;
         this.sellingPrice = Number(this.sellerPrice) + margin;
-        // price is always what the customer pays
         this.price = this.sellingPrice;
     }
 
-    // 1. Calculate Total Stock from all stores combined
+    // 2. Calculate Total Stock from all stores combined
     if (Array.isArray(this.store_inventory) && this.store_inventory.length > 0) {
         this.stock = this.store_inventory.reduce((acc, curr) => acc + (Number(curr.stock) || 0), 0);
     } else {
-        // Fallback: Create default Paliganj entry if empty
         this.store_inventory = [{
             store_name: "Snapit Main Store - Paliganj",
             stock: Number(this.stock) || 0,
@@ -132,26 +121,18 @@ productSchema.pre('save', async function() {
         }];
     }
 
-    // 2. Flash Sale Logic Integration
+    // 3. Flash Sale Logic
     if (this.flashSale?.isActive) {
-        // Auto-update the main discount field if Flash Sale is on
         this.discount = this.flashSale.discountPercent;
-        
-        // Ensure we store the original price for restoration after sale
         if (!this.flashSale.originalPrice) {
             this.flashSale.originalPrice = this.price;
         }
     }
 
-    // 3. Auto-unpublish ONLY if total global stock hits 0
-    if (this.isModified('stock') || this.isModified('store_inventory')) {
-        if (this.stock <= 0) {
-            this.publish = false;
-            console.log(`[SNAPIT]: ${this.name} marked OUT OF STOCK.`);
-        } else {
-            this.publish = true; 
-        }
-    }
+    // FIX: Removed auto-unpublish on stock=0.
+    // Products should remain visible even when out of stock.
+    // The frontend can show an "Out of Stock" badge using the stock field.
+    // To manually unpublish a product, use the admin panel update endpoint.
 });
 
 const ProductModel = mongoose.model('product',productSchema)
