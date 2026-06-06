@@ -8,7 +8,7 @@ const subscriptionRouter = express.Router();
 subscriptionRouter.get('/my-subscriptions', auth, async (req, res) => {
     try {
         const subs = await SubscriptionModel.find({
-            userId: new mongoose.Types.ObjectId(req.userId),  // ✅ force ObjectId cast
+            userId: new mongoose.Types.ObjectId(req.userId),
             status: { $ne: 'Cancelled' }
         })
             .populate('items.productId', 'name image price')
@@ -22,17 +22,28 @@ subscriptionRouter.get('/my-subscriptions', auth, async (req, res) => {
 
 subscriptionRouter.post('/create', auth, async (req, res) => {
     try {
+        console.log('[SUB CREATE] userId:', req.userId)
+        console.log('[SUB CREATE] body:', JSON.stringify(req.body))
+
         const { items, frequency, delivery_address, nextDeliveryDate, payment_method } = req.body;
+
+        if (!items?.length)    return res.status(400).json({ success: false, message: 'items required' })
+        if (!frequency)        return res.status(400).json({ success: false, message: 'frequency required' })
+        if (!delivery_address) return res.status(400).json({ success: false, message: 'delivery_address required' })
+
         const sub = await SubscriptionModel.create({
-            userId: new mongoose.Types.ObjectId(req.userId),  // ✅ force ObjectId cast
+            userId: new mongoose.Types.ObjectId(req.userId),
             items,
             frequency,
             delivery_address,
             nextDeliveryDate: nextDeliveryDate || new Date(),
             payment_method: payment_method || 'COD'
         });
+
+        console.log('[SUB CREATE] saved:', sub._id)
         return res.json({ success: true, data: sub });
     } catch (err) {
+        console.error('[SUB CREATE] ERROR:', err.message)
         return res.status(500).json({ success: false, message: err.message });
     }
 });
@@ -40,7 +51,7 @@ subscriptionRouter.post('/create', auth, async (req, res) => {
 subscriptionRouter.patch('/pause/:id', auth, async (req, res) => {
     try {
         const sub = await SubscriptionModel.findOneAndUpdate(
-            { _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) },  // ✅
+            { _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) },
             { status: 'Paused' },
             { new: true }
         );
@@ -54,7 +65,7 @@ subscriptionRouter.patch('/pause/:id', auth, async (req, res) => {
 subscriptionRouter.patch('/resume/:id', auth, async (req, res) => {
     try {
         const sub = await SubscriptionModel.findOneAndUpdate(
-            { _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) },  // ✅
+            { _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) },
             { status: 'Active' },
             { new: true }
         );
@@ -68,7 +79,7 @@ subscriptionRouter.patch('/resume/:id', auth, async (req, res) => {
 subscriptionRouter.delete('/cancel/:id', auth, async (req, res) => {
     try {
         const sub = await SubscriptionModel.findOneAndUpdate(
-            { _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) },  // ✅
+            { _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) },
             { status: 'Cancelled' },
             { new: true }
         );
