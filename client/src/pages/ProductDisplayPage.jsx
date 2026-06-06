@@ -41,7 +41,7 @@ const SubscribeModal = ({ product, onClose }) => {
       try {
         const res = await Axios({ ...SummaryApi.getAddress })
         if (res.data.success) {
-          const active = res.data.data.filter(a => !a.disabled)
+          const active = res.data.data.filter(a => a.status === true)
           setAddresses(active)
           if (active.length > 0) setSelectedAddress(active[0]._id)
         }
