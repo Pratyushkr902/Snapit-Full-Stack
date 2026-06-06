@@ -80,9 +80,12 @@ export const SummaryApi = {
     addMoneyToWallet: { url: '/api/wallet/add-money', method: 'post' },
     payWithWallet: { url: '/api/wallet/pay', method: 'post' },
 
-    getUserSubscriptions: { url: '/api/subscription/get', method: 'get' },
-    updateSubscriptionStatus: { url: '/api/subscription/update-status', method: 'put' },
-    cancelSubscription: { url: '/api/subscription/cancel', method: 'delete' }
+    // ✅ FIXED: correct subscription routes matching backend
+    mySubscriptions:    { url: '/api/subscription/my-subscriptions', method: 'get' },
+    createSubscription: { url: '/api/subscription/create',           method: 'post' },
+    pauseSubscription:  { url: '/api/subscription/pause',            method: 'patch' },
+    resumeSubscription: { url: '/api/subscription/resume',           method: 'patch' },
+    cancelSubscription: { url: '/api/subscription/cancel',           method: 'delete' },
 };
 
 // =========================================================================
