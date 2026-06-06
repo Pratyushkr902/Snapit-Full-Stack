@@ -25,6 +25,15 @@ const productSchema = new mongoose.Schema({
         type : String,
         default : ""
     },
+    // ✅ variantGroup: shared slug to link size variants together
+    // e.g. all sizes of "Lays Classic" get variantGroup: "lays-classic"
+    // Leave blank if product has no variants
+    variantGroup : {
+        type : String,
+        default : "",
+        trim : true,
+        index : true  // indexed for fast sibling lookups
+    },
     store_inventory: [
         {
             store_name: { type: String, required: true }, 
@@ -66,7 +75,7 @@ const productSchema = new mongoose.Schema({
     },
     publish : {
         type : Boolean,
-        default : true  // FIX: always default to published
+        default : true
     },
     flashSale: {
         isActive: {
@@ -128,11 +137,6 @@ productSchema.pre('save', async function() {
             this.flashSale.originalPrice = this.price;
         }
     }
-
-    // FIX: Removed auto-unpublish on stock=0.
-    // Products should remain visible even when out of stock.
-    // The frontend can show an "Out of Stock" badge using the stock field.
-    // To manually unpublish a product, use the admin panel update endpoint.
 });
 
 const ProductModel = mongoose.model('product',productSchema)

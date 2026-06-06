@@ -13,7 +13,8 @@ import {
     updateProductEmails,
     recalculateMRP,
     getPricingBreakdown,
-    republishAllProducts,  // FIX: new one-time fix utility
+    republishAllProducts,
+    getVariantsByGroup,  // ← add this
 } from '../controllers/product.controller.js';
 import auth from '../middleware/auth.js'
 import { admin } from '../middleware/Admin.js'
@@ -33,8 +34,7 @@ productRouter.get('/frequently-bought',                           getFrequentlyB
 productRouter.post('/fix-emails',                          auth, admin, updateProductEmails);
 productRouter.get('/recalculate-mrp',                      auth, admin, recalculateMRP);
 productRouter.get('/pricing-breakdown',                    auth, admin, getPricingBreakdown);
-
-// FIX: Run this ONCE to re-publish all products hidden by the old auto-unpublish bug
 productRouter.post('/republish-all',                       auth, admin, republishAllProducts);
+productRouter.post('/get-variants',                               getVariantsByGroup);  // ← add this
 
 export default productRouter;
