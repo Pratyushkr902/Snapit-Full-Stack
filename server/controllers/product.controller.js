@@ -42,7 +42,7 @@ export const createProductController = async (request, response) => {
             discount,
             description,
             more_details,
-            publish: true, // FIX: always publish on creation regardless of stock
+            publish: true,
             store_inventory: [{
                 store_name: "Snapit Main Store - Paliganj",
                 stock: Number(stock) || 0,
@@ -90,7 +90,6 @@ export const getProductByCategory = async (request, response) => {
         if (!id) return response.status(400).json({ message: "provide category id", error: true, success: false });
         if (!mongoose.Types.ObjectId.isValid(id)) return response.status(400).json({ message: "Invalid Category ID", error: true, success: false });
 
-        // FIX: removed publish:true filter — show all products regardless of stock/publish status
         const product = await ProductModel.find({
             category: { $in: [new mongoose.Types.ObjectId(id)] }
         }).select(LIST_FIELDS).lean();
@@ -106,14 +105,12 @@ export const getProductByCategory = async (request, response) => {
 
 export const getProductsByCategories = async (request, response) => {
     try {
-        // FIX: accept optional `limit` per category (default 0 = no cap)
         const { categoryIds, limit: perCategoryLimit = 0 } = request.body;
         if (!Array.isArray(categoryIds) || categoryIds.length === 0)
             return response.status(400).json({ message: "Provide an array of categoryIds", error: true, success: false });
         const invalidId = categoryIds.find(id => !mongoose.Types.ObjectId.isValid(id));
         if (invalidId) return response.status(400).json({ message: `Invalid category ID: ${invalidId}`, error: true, success: false });
 
-        // FIX: no publish filter — fetch all products for the given categories
         const products = await ProductModel.find({
             category: { $in: categoryIds }
         }).select(LIST_FIELDS).lean();
@@ -126,7 +123,6 @@ export const getProductsByCategories = async (request, response) => {
             for (const catId of prod.category) {
                 const key = catId.toString();
                 if (key in grouped) {
-                    // FIX: removed hard cap of 15 — use perCategoryLimit if provided, else no cap
                     if (perCategoryLimit === 0 || grouped[key].length < perCategoryLimit) {
                         grouped[key].push(securedProd);
                     }
@@ -151,7 +147,6 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         const skip = (page - 1) * limit;
         const hasValidSubCategory = subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId);
 
-        // FIX: removed publish filter — show all products regardless of stock/publish status
         let query = { category: { $in: [new mongoose.Types.ObjectId(categoryId)] } };
         if (hasValidSubCategory) query.subCategory = { $in: [new mongoose.Types.ObjectId(subCategoryId)] };
 
@@ -160,7 +155,6 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
             ProductModel.countDocuments(query)
         ]);
 
-        // Fallback: if subcategory returned nothing, return all products in the category
         if (dataCount === 0 && hasValidSubCategory) {
             const fallbackQuery = { category: { $in: [new mongoose.Types.ObjectId(categoryId)] } };
             const results = await Promise.all([
@@ -338,8 +332,6 @@ export const getPricingBreakdown = async (req, res) => {
     }
 };
 
-// ── ADMIN UTILITY: Re-publish all products that were wrongly unpublished ──────
-// Call once via POST /api/product/republish-all to fix existing data
 export const republishAllProducts = async (req, res) => {
     try {
         const result = await ProductModel.updateMany(
@@ -353,5 +345,20 @@ export const republishAllProducts = async (req, res) => {
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// ✅ NEW: Get all variants by variantGroup
+export const getVariantsByGroup = async (req, res) => {
+    try {
+        const { variantGroup } = req.body;
+        if (!variantGroup) return res.json({ success: true, data: [] });
+        const variants = await ProductModel.find({
+            variantGroup,
+            publish: true
+        }).select('_id name unit price discount image variantGroup');
+        return res.json({ success: true, data: variants });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
     }
 };
