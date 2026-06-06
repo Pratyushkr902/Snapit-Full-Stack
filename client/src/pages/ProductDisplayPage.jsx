@@ -40,7 +40,7 @@ const SubscribeModal = ({ product, onClose }) => {
       try {
         const res = await Axios({ ...SummaryApi.getAddress })
         if (res.data.success) {
-          const active = res.data.data.filter(a => a.status === true)
+          const active = res.data.data.filter(a => a.status !== false)  // ✅ FIXED
           setAddresses(active)
           if (active.length > 0) setSelectedAddress(active[0]._id)
         }
@@ -69,7 +69,9 @@ const SubscribeModal = ({ product, onClose }) => {
         }
       })
       if (res.data.success) { toast.success('Subscription created!'); onClose() }
+      else toast.error(res.data.message || 'Failed to create subscription')
     } catch (err) {
+      console.error('SUBSCRIPTION ERROR:', err.response?.status, err.response?.data)
       toast.error(err.response?.data?.message || 'Failed to create subscription')
     } finally {
       setLoading(false)
@@ -310,7 +312,6 @@ const ProductDisplayPage = () => {
             <p className='text-gray-400 font-bold text-xs mt-1'>{data.unit}</p>
           </div>
 
-          {/* ✅ VARIANT SIZE PILLS */}
           {variants.length > 1 && (
             <div>
               <p className='text-xs font-black text-slate-500 uppercase tracking-wider mb-2'>Select Size</p>
