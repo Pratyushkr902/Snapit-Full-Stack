@@ -113,7 +113,17 @@ app.use(helmet({
             scriptSrc: [
                 "'self'", "'unsafe-inline'", "'unsafe-eval'",
                 "https://checkout.razorpay.com", "https://*.razorpay.com", 
-                "https://cdn.razorpay.com", "https://*.googleapis.com", "https://unpkg.com"
+                "https://cdn.razorpay.com", "https://*.googleapis.com", "https://unpkg.com",
+                "https://*.gstatic.com",        // ✅ Firebase service worker scripts
+                "https://www.gstatic.com",      // ✅ Firebase compat scripts
+                "https://*.firebaseapp.com",    // ✅ Firebase app scripts
+                "blob:"                         // ✅ Required for service workers
+            ],
+            workerSrc: [                        // ✅ NEW: service worker CSP
+                "'self'",
+                "blob:",
+                "https://*.gstatic.com",
+                "https://www.gstatic.com",
             ],
             imgSrc: [
                 "'self'", "data:", "blob:",
