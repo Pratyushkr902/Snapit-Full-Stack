@@ -19,10 +19,19 @@ const getOrderAmount      = (o) => Number(o.totalAmt ?? o.total_amount ?? o.amou
 const getDeliveryFee      = (o) => Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? 0);
 const getItemSellerPrice  = (item) => Number(item.sellerPrice ?? item.seller_price ?? item.price ?? item.unit_price ?? 0);
 const getItemSnapitMargin = (item) => Number(item.snapitMargin ?? item.snapit_margin ?? 0);
-const getItemDiscount     = (item) => Number(item.discount ?? 0);
-const getSellerEarning    = (order) =>
+
+// FIX 1: Check discount on item first, then fall back to populated product's discount field
+const getItemDiscount = (item) => {
+    const d = Number(item.discount ?? item.productId?.discount ?? 0);
+    return isNaN(d) ? 0 : d;
+};
+
+// Your earning = sellerPrice × qty (sum across all items)
+const getSellerEarning = (order) =>
     (order.cartItems || []).reduce((acc, item) => acc + getItemSellerPrice(item) * (Number(item.quantity) || 1), 0);
-const getSnapitEarning    = (order) =>
+
+// Snapit's cut = snapitMargin × qty (sum across all items)
+const getSnapitEarning = (order) =>
     (order.cartItems || []).reduce((acc, item) => acc + getItemSnapitMargin(item) * (Number(item.quantity) || 1), 0);
 
 // ── Formatters ────────────────────────────────────────────────
@@ -59,83 +68,9 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-// ── FIX 2: Shared earning breakdown shown inside every expanded order ──
-// Logic: Customer Paid - Delivery (to rider) - Snapit Cut (platform) = Your Earning
-const OrderEarningBreakdown = ({ order }) => {
-    const orderTotal    = getOrderAmount(order);
-    const deliveryFee   = getDeliveryFee(order);
-    const snapitCut     = getSnapitEarning(order);
-    const sellerEarning = getSellerEarning(order);
-    // Detect if a discount caused the order total to be less than sum of parts
-    const expectedTotal = sellerEarning + snapitCut + deliveryFee;
-    const discountAbsorbed = expectedTotal - orderTotal;
-    const hasDiscount = discountAbsorbed > 0.5; // 0.5 tolerance for float rounding
-
-    return (
-        <div className='mt-3 pt-3 border-t border-slate-700 space-y-2'>
-            {/* Row 1: What customer paid */}
-            <div className='flex justify-between items-start'>
-                <div>
-                    <p className='text-[10px] font-black text-slate-400 uppercase'>Customer Paid</p>
-                    <p className='text-[9px] text-slate-600'>total incl. delivery</p>
-                </div>
-                <p className='text-sm font-black text-white'>{fmtINR(orderTotal)}</p>
-            </div>
-
-            {/* Row 2: Delivery goes to rider */}
-            {deliveryFee > 0 && (
-                <div className='flex justify-between items-start'>
-                    <div className='flex items-center gap-1.5'>
-                        <HiOutlineTruck size={11} className='text-red-400'/>
-                        <div>
-                            <p className='text-[10px] font-black text-red-400 uppercase'>Delivery Charge</p>
-                            <p className='text-[9px] text-slate-600'>goes to rider</p>
-                        </div>
-                    </div>
-                    <p className='text-sm font-black text-red-400'>- {fmtINR(deliveryFee)}</p>
-                </div>
-            )}
-
-            {/* Row 3: Snapit platform cut */}
-            {snapitCut > 0 && (
-                <div className='flex justify-between items-start'>
-                    <div>
-                        <p className='text-[10px] font-black text-amber-400 uppercase'>Snapit Platform Cut</p>
-                        <p className='text-[9px] text-slate-600'>platform fee</p>
-                    </div>
-                    <p className='text-sm font-black text-amber-400'>- {fmtINR(snapitCut)}</p>
-                </div>
-            )}
-
-            {/* Row 4 (only if discount): show discount absorbed */}
-            {hasDiscount && (
-                <div className='flex justify-between items-start'>
-                    <div className='flex items-center gap-1.5'>
-                        <HiOutlineTag size={11} className='text-violet-400'/>
-                        <div>
-                            <p className='text-[10px] font-black text-violet-400 uppercase'>Discount Given</p>
-                            <p className='text-[9px] text-slate-600'>absorbed from margin</p>
-                        </div>
-                    </div>
-                    <p className='text-sm font-black text-violet-400'>- {fmtINR(discountAbsorbed)}</p>
-                </div>
-            )}
-
-            {/* Final: Your Earning highlighted */}
-            <div className='flex justify-between items-center pt-2.5 mt-1 border-t border-slate-600'>
-                <div>
-                    <p className='text-xs font-black text-emerald-400 uppercase'>💰 Your Earning</p>
-                    <p className='text-[9px] text-emerald-600'>after all deductions</p>
-                </div>
-                <p className='text-xl font-black text-emerald-400'>{fmtINR(sellerEarning)}</p>
-            </div>
-        </div>
-    );
-};
-
 const exportCSV = (orders) => {
     const rows = [
-        ['Order ID','Date','Status','Items','Gross','Delivery','Seller Earning','Snapit Cut'],
+        ['Order ID','Date','Status','Items','Gross (incl. delivery)','Delivery Fee','Snapit Cut','Your Earning'],
         ...orders.map(o => [
             o.orderId,
             new Date(o.createdAt).toLocaleDateString('en-IN'),
@@ -143,8 +78,8 @@ const exportCSV = (orders) => {
             (o.cartItems || []).map(i => `${i.productId?.name || i.name} x${i.quantity}`).join('; '),
             getOrderAmount(o).toFixed(2),
             getDeliveryFee(o).toFixed(2),
-            getSellerEarning(o).toFixed(2),
             getSnapitEarning(o).toFixed(2),
+            getSellerEarning(o).toFixed(2),
         ])
     ];
     const csv  = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
@@ -154,6 +89,7 @@ const exportCSV = (orders) => {
     a.href = url; a.download = 'store-orders.csv'; a.click();
     URL.revokeObjectURL(url);
 };
+
 // ══════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════
@@ -167,15 +103,12 @@ const SellerDashboard = () => {
     const [expandedOrder, setExpandedOrder] = useState(null);
     const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
-    // Sales tab
     const [salesFilter, setSalesFilter]               = useState('all');
     const [salesOrderSearch, setSalesOrderSearch]     = useState('');
     const [expandedSalesOrder, setExpandedSalesOrder] = useState(null);
-    // Price editing state — keyed by product _id
     const [editingProductPrice, setEditingProductPrice] = useState({});
     const [updatingPrice, setUpdatingPrice]             = useState({});
 
-    // Products tab
     const [productTab, setProductTab]           = useState('list');
     const [products, setProducts]               = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
@@ -194,7 +127,6 @@ const SellerDashboard = () => {
     const allSubCategory = useSelector(state => state.product.allSubCategory);
     const sellingPrice   = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
 
-    // ── Fetch helpers ─────────────────────────────────────────
     const fetchOrders = async (silent = false) => {
         try {
             if (!silent) setLoading(true);
@@ -277,7 +209,6 @@ const SellerDashboard = () => {
         } catch { toast.error('Delete failed'); }
     };
 
-    // ── UPDATE CUSTOMER PRICE from Sales tab ─────────────────
     const handleUpdateCustomerPrice = async (productId, productName) => {
         const priceData = editingProductPrice[productId];
         if (!priceData) return;
@@ -288,14 +219,7 @@ const SellerDashboard = () => {
         try {
             const res = await Axios({
                 ...SummaryApi.updateProductDetails,
-                data: {
-                    _id:          productId,
-                    sellerPrice:  sp,
-                    snapitMargin: margin,
-                    sellingPrice: sp + margin,
-                    price:        sp + margin,
-                    discount:     disc,
-                },
+                data: { _id: productId, sellerPrice: sp, snapitMargin: margin, sellingPrice: sp + margin, price: sp + margin, discount: disc },
             });
             if (res.data.success) {
                 toast.success(`Price updated for ${productName}!`);
@@ -344,14 +268,12 @@ const SellerDashboard = () => {
     const totalSnapitEarning = filteredEarnings.reduce((a, o) => a + getSnapitEarning(o), 0);
     const totalOrders        = filteredEarnings.length;
     const avgNet             = totalOrders > 0 ? totalSellerEarning / totalOrders : 0;
-    const totalSalesExDel    = filteredEarnings.reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
 
-    const allTimeSales    = allOrders.filter(isDelivered).reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
+    const allTimeSales    = allOrders.filter(isDelivered).reduce((a, o) => a + getOrderAmount(o), 0);
     const allTimeEarning  = allOrders.filter(isDelivered).reduce((a, o) => a + getSellerEarning(o), 0);
     const allTimeDelivery = allOrders.filter(isDelivered).reduce((a, o) => a + getDeliveryFee(o), 0);
     const queueEarning    = packingOrders.reduce((a, o) => a + getSellerEarning(o), 0);
 
-    // Sales tab
     const salesFilteredOrders = (() => {
         const base = allOrders.filter(isDelivered);
         const d = new Date(now);
@@ -361,14 +283,12 @@ const SellerDashboard = () => {
         return base;
     })();
 
-    const salesTotalGross     = salesFilteredOrders.reduce((a, o) => a + getOrderAmount(o), 0);
-    const salesTotalDelivery  = salesFilteredOrders.reduce((a, o) => a + getDeliveryFee(o), 0);
-    const salesTotalSeller    = salesFilteredOrders.reduce((a, o) => a + getSellerEarning(o), 0);
-    const salesTotalSnapit    = salesFilteredOrders.reduce((a, o) => a + getSnapitEarning(o), 0);
-    const salesTotalNetProfit = salesTotalSeller;
-    const salesTotalExDel     = salesTotalGross - salesTotalDelivery;
+    const salesTotalGross    = salesFilteredOrders.reduce((a, o) => a + getOrderAmount(o), 0);
+    const salesTotalDelivery = salesFilteredOrders.reduce((a, o) => a + getDeliveryFee(o), 0);
+    const salesTotalSeller   = salesFilteredOrders.reduce((a, o) => a + getSellerEarning(o), 0);
+    const salesTotalSnapit   = salesFilteredOrders.reduce((a, o) => a + getSnapitEarning(o), 0);
 
-    // Build product map — carry product _id for price-update API call
+    // FIX 3: Build product map — getItemDiscount now reads productId.discount as fallback
     const salesProductMap = salesFilteredOrders.reduce((acc, order) => {
         (order.cartItems || []).forEach(item => {
             const pid         = item.productId?._id || item.productId || null;
@@ -376,11 +296,14 @@ const SellerDashboard = () => {
             const qty         = Number(item.quantity) || 1;
             const sellerP     = getItemSellerPrice(item);
             const marginP     = getItemSnapitMargin(item);
-            const discountPct = getItemDiscount(item);
-            const customerP   = sellerP + marginP;
-            const afterDisc   = discountPct > 0 ? customerP * (1 - discountPct / 100) : customerP;
-            const delivP      = getDeliveryFee(order) > 0 ? getDeliveryFee(order) / ((order.cartItems||[]).length || 1) : 0;
-            if (!acc[name]) acc[name] = { pid, qty:0, sellerRevenue:0, snapitRevenue:0, sellerPrice:sellerP, snapitMargin:marginP, discount:discountPct, customerPrice:customerP, afterDiscount:afterDisc, deliveryShare:delivP };
+            const discountPct = getItemDiscount(item); // fixed
+            const mrp         = sellerP + marginP;
+            const afterDisc   = discountPct > 0 ? mrp * (1 - discountPct / 100) : mrp;
+            if (!acc[name]) acc[name] = {
+                pid, qty: 0, sellerRevenue: 0, snapitRevenue: 0,
+                sellerPrice: sellerP, snapitMargin: marginP,
+                discount: discountPct, mrp, afterDiscount: afterDisc,
+            };
             acc[name].qty           += qty;
             acc[name].sellerRevenue += sellerP * qty;
             acc[name].snapitRevenue += marginP * qty;
@@ -423,13 +346,12 @@ const SellerDashboard = () => {
 
     const byDate = filteredEarnings.reduce((acc, o) => {
         const d = new Date(o.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
-        if (!acc[d]) acc[d] = { gross:0, sellerNet:0, snapit:0, delivery:0, salesExDel:0, count:0 };
-        acc[d].gross      += getOrderAmount(o);
-        acc[d].delivery   += getDeliveryFee(o);
-        acc[d].sellerNet  += getSellerEarning(o);
-        acc[d].snapit     += getSnapitEarning(o);
-        acc[d].salesExDel += getOrderAmount(o) - getDeliveryFee(o);
-        acc[d].count      += 1;
+        if (!acc[d]) acc[d] = { gross:0, sellerNet:0, snapit:0, delivery:0, count:0 };
+        acc[d].gross     += getOrderAmount(o);
+        acc[d].delivery  += getDeliveryFee(o);
+        acc[d].sellerNet += getSellerEarning(o);
+        acc[d].snapit    += getSnapitEarning(o);
+        acc[d].count     += 1;
         return acc;
     }, {});
 
@@ -470,20 +392,75 @@ const SellerDashboard = () => {
         { key:'earnings', icon:<HiOutlineCurrencyRupee size={16}/>, label:'Earnings' },
     ];
 
+    // ── Reusable order money breakdown (used in History + Sales expanded) ──
+    const OrderMoneyBreakdown = ({ order }) => {
+        const sellerEarning = getSellerEarning(order);
+        const snapitCut     = getSnapitEarning(order);
+        const deliveryFee   = getDeliveryFee(order);
+        const orderTotal    = getOrderAmount(order);
+        // Detect if discount was absorbed: sum of MRPs > (orderTotal - deliveryFee)
+        const sumMRP = (order.cartItems || []).reduce((acc, item) => {
+            return acc + (getItemSellerPrice(item) + getItemSnapitMargin(item)) * (Number(item.quantity) || 1);
+        }, 0);
+        const discountAbsorbed = sumMRP - (orderTotal - deliveryFee);
+        const hasDiscount = discountAbsorbed > 0.5;
+        return (
+            <div className='mt-3 pt-3 border-t border-slate-700 space-y-2'>
+                <p className='text-[9px] font-black text-slate-500 uppercase tracking-widest'>Where Did The Money Go?</p>
+                <div className='flex justify-between items-start'>
+                    <div>
+                        <p className='text-[10px] text-slate-300'>Customer Paid (Total)</p>
+                        <p className='text-[9px] text-slate-600'>including delivery</p>
+                    </div>
+                    <p className='text-sm font-black text-white'>{fmtINR(orderTotal)}</p>
+                </div>
+                {deliveryFee > 0 && (
+                    <div className='flex justify-between items-start pl-3 border-l-2 border-red-500/30'>
+                        <div className='flex items-center gap-1.5'>
+                            <HiOutlineTruck size={11} className='text-red-400'/>
+                            <div>
+                                <p className='text-[10px] text-red-400'>Delivery → Rider</p>
+                                <p className='text-[9px] text-slate-600'>not your money</p>
+                            </div>
+                        </div>
+                        <p className='text-sm font-black text-red-400'>−{fmtINR(deliveryFee)}</p>
+                    </div>
+                )}
+                {hasDiscount && (
+                    <div className='flex justify-between items-start pl-3 border-l-2 border-violet-500/30'>
+                        <div className='flex items-center gap-1.5'>
+                            <HiOutlineTag size={11} className='text-violet-400'/>
+                            <div>
+                                <p className='text-[10px] text-violet-400'>Discount Given</p>
+                                <p className='text-[9px] text-slate-600'>deducted from MRP</p>
+                            </div>
+                        </div>
+                        <p className='text-sm font-black text-violet-400'>−{fmtINR(discountAbsorbed)}</p>
+                    </div>
+                )}
+                {snapitCut > 0 && (
+                    <div className='flex justify-between items-start pl-3 border-l-2 border-amber-500/30'>
+                        <div>
+                            <p className='text-[10px] text-amber-400'>Snapit Platform Cut</p>
+                            <p className='text-[9px] text-slate-600'>margin you set for platform</p>
+                        </div>
+                        <p className='text-sm font-black text-amber-400'>−{fmtINR(snapitCut)}</p>
+                    </div>
+                )}
+                <div className='flex justify-between items-center pt-2 border-t border-slate-700 bg-emerald-500/5 rounded-xl px-3 py-2.5'>
+                    <div>
+                        <p className='text-xs font-black text-emerald-400'>💰 Your Earning</p>
+                        <p className='text-[9px] text-emerald-700'>your price × qty, all items</p>
+                    </div>
+                    <p className='text-xl font-black text-emerald-400'>{fmtINR(sellerEarning)}</p>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className='min-h-screen bg-slate-950 text-white'>
-
-            {/*
-             * ╔══════════════════════════════════════════════════════╗
-             * ║  FIX 1 — SINGLE sticky block                        ║
-             * ║  Header + stats pills + tab bar are all inside ONE  ║
-             * ║  sticky container with top-0.  No second sticky      ║
-             * ║  element with a hardcoded pixel offset.             ║
-             * ╚══════════════════════════════════════════════════════╝
-             */}
             <div className='sticky top-0 z-30 bg-slate-950 border-b border-slate-800'>
-
-                {/* Store name row */}
                 <div className='max-w-2xl mx-auto px-4 pt-3 pb-2'>
                     <div className='flex items-center justify-between'>
                         <div>
@@ -501,8 +478,6 @@ const SellerDashboard = () => {
                             </div>
                         </div>
                     </div>
-
-                    {/* Stats pills */}
                     <div className='flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide'>
                         {[
                             { label:'Pending',     val: pendingCount,               color:'text-amber-400',   bg:'bg-amber-500/10 border-amber-500/20' },
@@ -518,8 +493,6 @@ const SellerDashboard = () => {
                         ))}
                     </div>
                 </div>
-
-                {/* Tab bar — same sticky block, NO separate sticky */}
                 <div className='max-w-2xl mx-auto px-4'>
                     <div className='flex gap-1 py-2 overflow-x-auto scrollbar-hide'>
                         {TABS.map(t => (
@@ -535,7 +508,6 @@ const SellerDashboard = () => {
                     </div>
                 </div>
             </div>
-            {/* END single sticky block */}
 
             <div className='max-w-2xl mx-auto px-4 py-5'>
 
@@ -545,9 +517,10 @@ const SellerDashboard = () => {
                         <div className='bg-gradient-to-br from-orange-500 to-amber-600 rounded-3xl p-6 shadow-2xl shadow-orange-500/20'>
                             <p className='text-[10px] font-black text-orange-100/70 uppercase tracking-widest mb-1'>All-Time Store Earnings</p>
                             <p className='text-4xl font-black text-white'>{fmtINR(allTimeEarning)}</p>
+                            <p className='text-[10px] text-orange-200/60 mt-0.5'>your price × qty, all delivered orders</p>
                             <div className='grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-orange-400/30'>
                                 <div>
-                                    <p className='text-[9px] font-black text-orange-200/70 uppercase'>Total Sales</p>
+                                    <p className='text-[9px] font-black text-orange-200/70 uppercase'>Gross Sales</p>
                                     <p className='text-sm font-black text-white'>{fmtINR(allTimeSales)}</p>
                                 </div>
                                 <div>
@@ -688,20 +661,28 @@ const SellerDashboard = () => {
                                         <div className='bg-slate-800/50 rounded-2xl p-3 mb-4'>
                                             <p className='text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3'>Items to Pack</p>
                                             {(order.cartItems || []).map((item, i) => {
-                                                const sp  = getItemSellerPrice(item);
-                                                const qty = Number(item.quantity) || 1;
+                                                const sp   = getItemSellerPrice(item);
+                                                const qty  = Number(item.quantity) || 1;
+                                                const disc = getItemDiscount(item);
+                                                const mrp  = sp + getItemSnapitMargin(item);
+                                                const paid = disc > 0 ? mrp * (1 - disc / 100) : mrp;
                                                 return (
                                                     <div key={i} className='flex justify-between items-center py-2.5 border-b border-slate-700/50 last:border-0'>
                                                         <div className='flex items-center gap-2.5'>
                                                             <div className='w-2 h-2 rounded-full bg-orange-500 flex-shrink-0'/>
                                                             <div>
                                                                 <p className='text-sm font-bold text-slate-200'>{item.productId?.name || item.name}</p>
-                                                                <p className='text-[10px] text-slate-500'>{fmtINR(sp)} × {qty}</p>
+                                                                <p className='text-[10px] text-slate-500'>
+                                                                    {disc > 0
+                                                                        ? <><span className='line-through text-slate-600'>{fmtINR(mrp)}</span> <span className='text-sky-400'>{fmtINR(paid)}</span> <span className='text-violet-400'>({disc}% off)</span></>
+                                                                        : <span>Customer pays {fmtINR(mrp)}</span>
+                                                                    }
+                                                                </p>
                                                             </div>
                                                         </div>
                                                         <div className='flex items-center gap-2'>
                                                             <span className='bg-slate-700 px-2 py-0.5 rounded-lg text-xs font-black text-slate-300'>×{qty}</span>
-                                                            <span className='text-sm font-black text-white'>{fmtINR(sp * qty)}</span>
+                                                            <span className='text-sm font-black text-emerald-400'>{fmtINR(sp * qty)}</span>
                                                         </div>
                                                     </div>
                                                 );
@@ -709,26 +690,29 @@ const SellerDashboard = () => {
                                         </div>
                                         <div className='bg-slate-800/50 rounded-2xl p-4 mb-4 space-y-2'>
                                             <div className='flex justify-between'>
-                                                <p className='text-[10px] font-black text-slate-400 uppercase'>Order Total</p>
+                                                <p className='text-[10px] font-black text-slate-400 uppercase'>Customer Paid (Total)</p>
                                                 <p className='text-sm font-black text-white'>{fmtINR(orderTotal)}</p>
                                             </div>
                                             {deliveryFee > 0 && (
                                                 <div className='flex justify-between'>
                                                     <div className='flex items-center gap-1.5'>
                                                         <HiOutlineTruck size={12} className='text-red-400'/>
-                                                        <p className='text-[10px] font-black text-red-400 uppercase'>Delivery Charge</p>
+                                                        <p className='text-[10px] font-black text-red-400 uppercase'>Delivery → Rider</p>
                                                     </div>
                                                     <p className='text-sm font-black text-red-400'>-{fmtINR(deliveryFee)}</p>
                                                 </div>
                                             )}
                                             {getSnapitEarning(order) > 0 && (
                                                 <div className='flex justify-between'>
-                                                    <p className='text-[10px] font-black text-amber-400 uppercase'>Snapit Margin Cut</p>
+                                                    <p className='text-[10px] font-black text-amber-400 uppercase'>Snapit Platform Cut</p>
                                                     <p className='text-sm font-black text-amber-400'>-{fmtINR(getSnapitEarning(order))}</p>
                                                 </div>
                                             )}
-                                            <div className='flex justify-between pt-2 border-t border-slate-700'>
-                                                <p className='text-[10px] font-black text-emerald-400 uppercase'>Your Net Earning</p>
+                                            <div className='flex justify-between pt-2 border-t border-slate-700 bg-emerald-500/5 rounded-xl px-2 py-2 mt-1'>
+                                                <div>
+                                                    <p className='text-[10px] font-black text-emerald-400 uppercase'>💰 Your Earning</p>
+                                                    <p className='text-[9px] text-emerald-700'>your price × qty</p>
+                                                </div>
                                                 <p className='text-xl font-black text-emerald-400'>{fmtINR(sellerEarning)}</p>
                                             </div>
                                         </div>
@@ -801,8 +785,12 @@ const SellerDashboard = () => {
                                 ) : (
                                     <div className='flex flex-col gap-3'>
                                         {filteredProducts.map(product => {
-                                            const customerPrice = Number(product.sellerPrice||product.price||0) + Number(product.snapitMargin||0);
-                                            const stockStatus   = product.stock <= 0 ? 'out' : product.stock <= 5 ? 'low' : 'ok';
+                                            const sellerP    = Number(product.sellerPrice||product.price||0);
+                                            const marginP    = Number(product.snapitMargin||0);
+                                            const mrp        = sellerP + marginP;
+                                            const discPct    = Number(product.discount||0);
+                                            const finalPrice = discPct > 0 ? mrp * (1 - discPct / 100) : mrp;
+                                            const stockStatus = product.stock <= 0 ? 'out' : product.stock <= 5 ? 'low' : 'ok';
                                             return (
                                                 <div key={product._id}
                                                     className={`bg-slate-900 rounded-2xl p-4 border flex gap-4 items-start ${
@@ -815,19 +803,26 @@ const SellerDashboard = () => {
                                                         <p className='text-[10px] text-slate-500 mt-0.5'>{product.unit}</p>
                                                         <div className='flex gap-2 mt-2 flex-wrap'>
                                                             <span className='text-[10px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg'>
-                                                                Seller {fmtINR(product.sellerPrice||product.price||0)}
+                                                                Your Price {fmtINR(sellerP)}
                                                             </span>
-                                                            {Number(product.snapitMargin) > 0 && (
+                                                            {marginP > 0 && (
                                                                 <span className='text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-lg'>
-                                                                    +Margin {fmtINR(product.snapitMargin)}
+                                                                    +Margin {fmtINR(marginP)}
                                                                 </span>
                                                             )}
-                                                            <span className='text-[10px] font-black bg-sky-500/15 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-lg'>
-                                                                Customer {fmtINR(customerPrice)}
-                                                            </span>
-                                                            {Number(product.discount) > 0 && (
-                                                                <span className='text-[10px] font-black bg-violet-500/15 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-lg'>
-                                                                    {product.discount}% off
+                                                            {/* FIX: show MRP struck through when discount is active */}
+                                                            {discPct > 0 ? (
+                                                                <>
+                                                                    <span className='text-[10px] font-black bg-slate-700 text-slate-500 px-2 py-0.5 rounded-lg line-through'>
+                                                                        MRP {fmtINR(mrp)}
+                                                                    </span>
+                                                                    <span className='text-[10px] font-black bg-sky-500/15 text-sky-300 border border-sky-400/30 px-2 py-0.5 rounded-lg'>
+                                                                        Customer Pays {fmtINR(finalPrice)} ({discPct}% off)
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                <span className='text-[10px] font-black bg-sky-500/15 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-lg'>
+                                                                    Customer Pays {fmtINR(mrp)}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -950,7 +945,7 @@ const SellerDashboard = () => {
                                     <p className='text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-3'>Pricing Setup</p>
                                     <div className='grid grid-cols-2 gap-3'>
                                         <div>
-                                            <label className='text-[10px] font-black text-slate-500 uppercase'>Seller Price *</label>
+                                            <label className='text-[10px] font-black text-slate-500 uppercase'>Your Price *</label>
                                             <div className='relative mt-1.5'>
                                                 <span className='absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-500 text-sm'>₹</span>
                                                 <input type='number' placeholder='200' required value={productForm.sellerPrice}
@@ -969,7 +964,7 @@ const SellerDashboard = () => {
                                         </div>
                                     </div>
                                     <div className='mt-3 bg-slate-800 rounded-xl p-3 flex justify-between items-center border border-emerald-500/30'>
-                                        <p className='text-[10px] font-black text-slate-400 uppercase'>Customer Pays</p>
+                                        <p className='text-[10px] font-black text-slate-400 uppercase'>MRP (Customer Pays)</p>
                                         <p className='text-2xl font-black text-emerald-400'>{fmtINR(sellingPrice)}</p>
                                     </div>
                                     <div className='mt-2'>
@@ -977,6 +972,15 @@ const SellerDashboard = () => {
                                         <input type='number' placeholder='0' value={productForm.discount}
                                             onChange={e => setProductForm(p=>({...p,discount:e.target.value}))}
                                             className='mt-1.5 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'/>
+                                        {Number(productForm.discount) > 0 && sellingPrice > 0 && (
+                                            <div className='mt-2 bg-violet-500/10 border border-violet-500/20 rounded-xl px-3 py-2 flex justify-between items-center'>
+                                                <div>
+                                                    <p className='text-[10px] font-black text-violet-400 uppercase'>Customer Pays After Discount</p>
+                                                    <p className='text-[9px] text-slate-600 line-through'>{fmtINR(sellingPrice)}</p>
+                                                </div>
+                                                <p className='text-sm font-black text-violet-300'>{fmtINR(sellingPrice * (1 - Number(productForm.discount)/100))}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <button type='submit'
@@ -991,8 +995,6 @@ const SellerDashboard = () => {
                 {/* ══════════ SALES TAB ══════════ */}
                 {activeTab === 'sales' && (
                     <div className='flex flex-col gap-5'>
-
-                        {/* Period filter */}
                         <div className='flex gap-2 flex-wrap'>
                             {[{key:'today',label:'Today'},{key:'week',label:'This Week'},{key:'month',label:'This Month'},{key:'all',label:'All Time'}].map(f => (
                                 <button key={f.key} onClick={() => setSalesFilter(f.key)}
@@ -1004,40 +1006,82 @@ const SellerDashboard = () => {
                             ))}
                         </div>
 
-                        {/* ─── SECTION 1: TOTAL SELLS ─── */}
+                        {/* SECTION 1: SUMMARY CARDS */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-orange-500 rounded-full'/>
-                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Total Sells</p>
+                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Sales Summary</p>
                             </div>
                             <div className='bg-gradient-to-br from-orange-500/10 to-amber-500/5 border border-orange-500/20 rounded-2xl p-5 mb-3'>
                                 <p className='text-[9px] font-black text-orange-400/60 uppercase tracking-widest mb-1'>Total Gross Revenue</p>
                                 <p className='text-4xl font-black text-white'>{fmtINR(salesTotalGross)}</p>
                                 <p className='text-[10px] text-slate-500 mt-1'>{salesFilteredOrders.length} delivered orders</p>
                             </div>
-                            <div className='grid grid-cols-2 gap-3'>
+                            <div className='grid grid-cols-2 gap-3 mb-4'>
                                 {[
-                                    { label:'Orders Sold',            val:salesFilteredOrders.length,  sub:'delivered',             color:'text-white' },
-                                    { label:'Sales (excl. delivery)', val:fmtINR(salesTotalExDel),     sub:'product value only',    color:'text-sky-400' },
-                                    { label:'Delivery Charges',       val:fmtINR(salesTotalDelivery),  sub:'collected from buyers', color:'text-red-400' },
-                                    { label:'Avg Order Value',        val:fmtINR(salesFilteredOrders.length > 0 ? salesTotalGross / salesFilteredOrders.length : 0), sub:'per order', color:'text-amber-400' },
+                                    { label:'Your Earning',         val:fmtINR(salesTotalSeller),   sub:'your price × qty',      color:'text-emerald-400', bg:'bg-emerald-500/10 border-emerald-500/20' },
+                                    { label:'Snapit Platform Cut',  val:fmtINR(salesTotalSnapit),   sub:'margin you set',         color:'text-amber-400',   bg:'bg-amber-500/10 border-amber-500/20' },
+                                    { label:'Delivery to Riders',   val:fmtINR(salesTotalDelivery), sub:'not your money',         color:'text-red-400',     bg:'bg-slate-900 border-slate-800' },
+                                    { label:'Avg Per Order',        val:fmtINR(salesFilteredOrders.length > 0 ? salesTotalGross / salesFilteredOrders.length : 0), sub:'per order gross', color:'text-sky-400', bg:'bg-slate-900 border-slate-800' },
                                 ].map(s => (
-                                    <div key={s.label} className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                    <div key={s.label} className={`${s.bg} border rounded-2xl p-4`}>
                                         <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider'>{s.label}</p>
                                         <p className={`text-xl font-black mt-1 ${s.color}`}>{s.val}</p>
                                         <p className='text-[9px] text-slate-600 mt-0.5'>{s.sub}</p>
                                     </div>
                                 ))}
                             </div>
+                            {/* Full money breakdown */}
+                            <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                                <p className='text-[10px] font-black text-slate-500 uppercase tracking-wider mb-3'>Where Every Rupee Went</p>
+                                <div className='space-y-2.5'>
+                                    <div className='flex justify-between items-center'>
+                                        <div className='flex items-center gap-2'>
+                                            <div className='w-2 h-2 bg-sky-400 rounded-full'/>
+                                            <div>
+                                                <p className='text-xs font-bold text-slate-300'>Customer Paid (Gross)</p>
+                                                <p className='text-[9px] text-slate-600'>products + delivery</p>
+                                            </div>
+                                        </div>
+                                        <p className='text-sm font-black text-white'>{fmtINR(salesTotalGross)}</p>
+                                    </div>
+                                    <div className='flex justify-between items-center pl-4 border-l-2 border-red-500/30'>
+                                        <div className='flex items-center gap-1.5'>
+                                            <HiOutlineTruck size={11} className='text-red-400'/>
+                                            <div>
+                                                <p className='text-xs text-red-400'>Delivery → Riders</p>
+                                                <p className='text-[9px] text-slate-600'>not your money</p>
+                                            </div>
+                                        </div>
+                                        <p className='text-sm font-black text-red-400'>−{fmtINR(salesTotalDelivery)}</p>
+                                    </div>
+                                    <div className='flex justify-between items-center pl-4 border-l-2 border-amber-500/30'>
+                                        <div>
+                                            <p className='text-xs text-amber-400'>Snapit Platform Cut</p>
+                                            <p className='text-[9px] text-slate-600'>margin you set</p>
+                                        </div>
+                                        <p className='text-sm font-black text-amber-400'>−{fmtINR(salesTotalSnapit)}</p>
+                                    </div>
+                                    <div className='flex justify-between items-center pt-2.5 border-t border-slate-700 bg-emerald-500/5 rounded-xl px-3 py-2.5'>
+                                        <div className='flex items-center gap-2'>
+                                            <div className='w-2 h-2 bg-emerald-400 rounded-full'/>
+                                            <div>
+                                                <p className='text-sm font-black text-emerald-400'>💰 Your Net Earning</p>
+                                                <p className='text-[9px] text-emerald-700'>your price × qty, all orders</p>
+                                            </div>
+                                        </div>
+                                        <p className='text-2xl font-black text-emerald-400'>{fmtINR(salesTotalSeller)}</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* ─── SECTION 2: PRODUCT PRICES AFTER DISCOUNT + UPDATE PRICE ─── */}
+                        {/* SECTION 2: PRODUCT LIST WITH DISCOUNTS (fixed) */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-sky-500 rounded-full'/>
-                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Product Prices After Discount</p>
+                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Product Prices &amp; Discounts</p>
                             </div>
-
                             {salesProductList.length === 0 ? (
                                 <div className='bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center'>
                                     <p className='text-slate-500 text-sm font-bold'>No products sold in this period</p>
@@ -1045,16 +1089,14 @@ const SellerDashboard = () => {
                             ) : (
                                 <div className='flex flex-col gap-3'>
                                     {salesProductList.map(([name, data]) => {
-                                        const pid             = data.pid;
-                                        const isEditing       = pid && !!editingProductPrice[pid];
-                                        const editData        = editingProductPrice[pid] || {};
-                                        const previewCustomer = isEditing
+                                        const pid          = data.pid;
+                                        const isEditing    = pid && !!editingProductPrice[pid];
+                                        const editData     = editingProductPrice[pid] || {};
+                                        const previewMRP   = isEditing
                                             ? (Number(editData.sellerPrice||0) + Number(editData.snapitMargin||0))
-                                            : data.customerPrice;
-                                        const previewDiscount = isEditing ? Number(editData.discount||0) : data.discount;
-                                        const previewAfterDisc = previewDiscount > 0
-                                            ? previewCustomer * (1 - previewDiscount / 100)
-                                            : previewCustomer;
+                                            : data.mrp;
+                                        const previewDisc  = isEditing ? Number(editData.discount||0) : data.discount;
+                                        const previewFinal = previewDisc > 0 ? previewMRP * (1 - previewDisc / 100) : previewMRP;
 
                                         return (
                                             <div key={name} className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
@@ -1063,62 +1105,53 @@ const SellerDashboard = () => {
                                                     <span className='text-[10px] font-black bg-slate-800 text-slate-400 px-2 py-0.5 rounded-lg'>×{data.qty} sold</span>
                                                 </div>
 
-                                                {/* Price flow: Seller + Margin = MRP */}
+                                                {/* Price flow */}
                                                 <div className='flex items-center gap-1.5 flex-wrap mb-2.5'>
                                                     <div className='bg-slate-800 rounded-xl px-3 py-2 text-center'>
-                                                        <p className='text-[8px] font-black text-slate-500 uppercase'>Seller Price</p>
+                                                        <p className='text-[8px] font-black text-slate-500 uppercase'>Your Price</p>
                                                         <p className='text-sm font-black text-emerald-400'>{fmtINR(data.sellerPrice)}</p>
                                                     </div>
                                                     <span className='text-slate-600 text-xs'>+</span>
                                                     <div className='bg-slate-800 rounded-xl px-3 py-2 text-center'>
-                                                        <p className='text-[8px] font-black text-slate-500 uppercase'>Snapit Margin</p>
+                                                        <p className='text-[8px] font-black text-slate-500 uppercase'>Margin</p>
                                                         <p className='text-sm font-black text-amber-400'>{fmtINR(data.snapitMargin)}</p>
                                                     </div>
                                                     <span className='text-slate-600 text-xs'>=</span>
                                                     <div className='bg-slate-800 rounded-xl px-3 py-2 text-center'>
                                                         <p className='text-[8px] font-black text-slate-500 uppercase'>MRP</p>
-                                                        <p className='text-sm font-black text-sky-400'>{fmtINR(data.customerPrice)}</p>
+                                                        <p className={`text-sm font-black ${data.discount > 0 ? 'text-slate-500 line-through' : 'text-sky-400'}`}>{fmtINR(data.mrp)}</p>
                                                     </div>
                                                 </div>
 
-                                                {/* Customer paid after discount — prominently shown */}
+                                                {/* FIX: Customer paid — always shows discounted price if applicable */}
                                                 <div className='flex gap-2 flex-wrap mb-3'>
                                                     {data.discount > 0 && (
                                                         <div className='flex items-center gap-1.5 bg-violet-500/10 border border-violet-500/20 rounded-xl px-3 py-1.5'>
                                                             <HiOutlineTag size={11} className='text-violet-400'/>
-                                                            <p className='text-[10px] font-black text-violet-400'>{data.discount}% off</p>
+                                                            <p className='text-[10px] font-black text-violet-400'>{data.discount}% OFF active</p>
                                                         </div>
                                                     )}
-                                                    {/* ★ CUSTOMER PAID (after discount) */}
                                                     <div className='flex items-center gap-2 bg-sky-500/15 border border-sky-400/30 rounded-xl px-3 py-1.5'>
                                                         <HiOutlineCash size={13} className='text-sky-300'/>
                                                         <div>
-                                                            <p className='text-[8px] font-black text-sky-400/70 uppercase leading-none'>Customer Paid</p>
+                                                            <p className='text-[8px] font-black text-sky-400/70 uppercase leading-none'>
+                                                                {data.discount > 0 ? 'Customer Paid (after discount)' : 'Customer Paid'}
+                                                            </p>
                                                             <p className='text-base font-black text-sky-300 leading-tight'>
-                                                                {fmtINR(data.discount > 0 ? data.afterDiscount : data.customerPrice)}
+                                                                {fmtINR(data.discount > 0 ? data.afterDiscount : data.mrp)}
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    {data.deliveryShare > 0 && (
-                                                        <div className='flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-1.5'>
-                                                            <HiOutlineTruck size={11} className='text-red-400'/>
-                                                            <p className='text-[10px] font-black text-red-400'>+{fmtINR(data.deliveryShare)} delivery</p>
-                                                        </div>
-                                                    )}
                                                 </div>
 
                                                 <div className='pt-2.5 border-t border-slate-800 flex justify-between items-center mb-3'>
-                                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Your Revenue</p>
+                                                    <div>
+                                                        <p className='text-[10px] font-black text-slate-500 uppercase'>Your Revenue (period)</p>
+                                                        <p className='text-[9px] text-slate-600'>{fmtINR(data.sellerPrice)} × {data.qty} sold</p>
+                                                    </div>
                                                     <p className='text-sm font-black text-emerald-400'>{fmtINR(data.sellerRevenue)}</p>
                                                 </div>
 
-                                                {/*
-                                                 * ╔══════════════════════════════════════════╗
-                                                 * ║  FIX 4 — UPDATE CUSTOMER PRICE inline   ║
-                                                 * ║  Edit sellerPrice + margin + discount,   ║
-                                                 * ║  see live preview, then Apply Price.     ║
-                                                 * ╚══════════════════════════════════════════╝
-                                                 */}
                                                 {!pid ? (
                                                     <p className='text-[10px] text-slate-600 italic'>Product ID unavailable — refresh orders</p>
                                                 ) : !isEditing ? (
@@ -1128,14 +1161,14 @@ const SellerDashboard = () => {
                                                             [pid]: { sellerPrice: data.sellerPrice, snapitMargin: data.snapitMargin, discount: data.discount }
                                                         }))}
                                                         className='w-full flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-black py-2 rounded-xl transition-all'>
-                                                        <MdEdit size={13}/> Edit Customer Price
+                                                        <MdEdit size={13}/> Edit Price / Discount
                                                     </button>
                                                 ) : (
                                                     <div className='bg-slate-800/60 border border-sky-500/20 rounded-xl p-3'>
-                                                        <p className='text-[9px] font-black text-sky-400 uppercase tracking-wider mb-2.5'>Update Customer Price</p>
+                                                        <p className='text-[9px] font-black text-sky-400 uppercase tracking-wider mb-2.5'>Update Price</p>
                                                         <div className='grid grid-cols-3 gap-2 mb-2'>
                                                             <div>
-                                                                <p className='text-[8px] font-black text-slate-500 uppercase mb-1'>Seller ₹</p>
+                                                                <p className='text-[8px] font-black text-slate-500 uppercase mb-1'>Your Price ₹</p>
                                                                 <input type='number' value={editData.sellerPrice}
                                                                     onChange={e => setEditingProductPrice(p => ({ ...p, [pid]: { ...p[pid], sellerPrice: e.target.value } }))}
                                                                     className='w-full text-xs bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1.5 outline-none focus:border-sky-500'/>
@@ -1153,30 +1186,20 @@ const SellerDashboard = () => {
                                                                     className='w-full text-xs bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1.5 outline-none focus:border-sky-500'/>
                                                             </div>
                                                         </div>
-
-                                                        {/* Live preview */}
                                                         <div className='bg-slate-900 rounded-lg px-3 py-2 flex items-center justify-between mb-2.5 border border-sky-500/20'>
                                                             <p className='text-[9px] font-black text-slate-500 uppercase'>Customer Will Pay</p>
                                                             <div className='flex items-center gap-2'>
-                                                                {previewDiscount > 0 && (
-                                                                    <span className='text-[10px] text-slate-500 line-through'>{fmtINR(previewCustomer)}</span>
-                                                                )}
-                                                                <p className='text-base font-black text-sky-300'>{fmtINR(previewAfterDisc)}</p>
-                                                                {previewDiscount > 0 && (
-                                                                    <span className='text-[9px] font-black bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded-md'>{previewDiscount}% off</span>
-                                                                )}
+                                                                {previewDisc > 0 && <span className='text-[10px] text-slate-500 line-through'>{fmtINR(previewMRP)}</span>}
+                                                                <p className='text-base font-black text-sky-300'>{fmtINR(previewFinal)}</p>
+                                                                {previewDisc > 0 && <span className='text-[9px] font-black bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded-md'>{previewDisc}% off</span>}
                                                             </div>
                                                         </div>
-
                                                         <div className='flex gap-2'>
-                                                            <button
-                                                                onClick={() => handleUpdateCustomerPrice(pid, name)}
-                                                                disabled={updatingPrice[pid]}
+                                                            <button onClick={() => handleUpdateCustomerPrice(pid, name)} disabled={updatingPrice[pid]}
                                                                 className='flex-1 bg-sky-500 hover:bg-sky-400 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-black py-2 rounded-xl transition-all'>
                                                                 {updatingPrice[pid] ? 'Saving...' : '✓ Apply Price'}
                                                             </button>
-                                                            <button
-                                                                onClick={() => setEditingProductPrice(p => { const n = { ...p }; delete n[pid]; return n; })}
+                                                            <button onClick={() => setEditingProductPrice(p => { const n = { ...p }; delete n[pid]; return n; })}
                                                                 className='px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-black py-2 rounded-xl transition-all'>
                                                                 Cancel
                                                             </button>
@@ -1190,67 +1213,11 @@ const SellerDashboard = () => {
                             )}
                         </div>
 
-                        {/* ─── SECTION 3: SNAPIT MARGIN & PROFIT ─── */}
-                        <div>
-                            <div className='flex items-center gap-2 mb-3'>
-                                <div className='w-1 h-4 bg-amber-500 rounded-full'/>
-                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Snapit Margin &amp; Total Profit</p>
-                            </div>
-                            <div className='bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 mb-3'>
-                                <p className='text-[9px] font-black text-amber-400/60 uppercase tracking-widest mb-1'>Snapit Total Margin</p>
-                                <p className='text-4xl font-black text-amber-400'>{fmtINR(salesTotalSnapit)}</p>
-                                <p className='text-[10px] text-slate-500 mt-1'>Platform cut from {salesFilteredOrders.length} orders</p>
-                            </div>
-                            <div className='bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-3'>
-                                <p className='text-[10px] font-black text-slate-500 uppercase tracking-wider mb-4'>Full Money Breakdown</p>
-                                <div className='space-y-3'>
-                                    {[
-                                        { dot:'bg-sky-400',     label:'Gross (incl. delivery)',  val:fmtINR(salesTotalGross),     vColor:'text-white' },
-                                        { dot:'bg-red-400',     label:'Delivery charges',         val:`-${fmtINR(salesTotalDelivery)}`, vColor:'text-red-400' },
-                                        { dot:'bg-amber-400',   label:'Snapit margin cut',        val:`-${fmtINR(salesTotalSnapit)}`,   vColor:'text-amber-400' },
-                                    ].map(r => (
-                                        <div key={r.label} className='flex justify-between items-center'>
-                                            <div className='flex items-center gap-2'>
-                                                <div className={`w-2 h-2 ${r.dot} rounded-full`}/>
-                                                <p className='text-xs font-bold text-slate-400'>{r.label}</p>
-                                            </div>
-                                            <p className={`text-sm font-black ${r.vColor}`}>{r.val}</p>
-                                        </div>
-                                    ))}
-                                    <div className='pt-3 border-t border-slate-700 flex justify-between items-center'>
-                                        <div className='flex items-center gap-2'>
-                                            <div className='w-2 h-2 bg-emerald-400 rounded-full'/>
-                                            <p className='text-xs font-black text-emerald-400 uppercase'>Your Net Profit</p>
-                                        </div>
-                                        <p className='text-2xl font-black text-emerald-400'>{fmtINR(salesTotalNetProfit)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className='grid grid-cols-2 gap-3'>
-                                <div className='bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4'>
-                                    <p className='text-[9px] font-black text-emerald-400/70 uppercase'>Your Profit</p>
-                                    <p className='text-2xl font-black text-emerald-400 mt-1'>{fmtINR(salesTotalNetProfit)}</p>
-                                    <p className='text-[9px] text-slate-500 mt-0.5'>{salesTotalGross > 0 ? ((salesTotalNetProfit/salesTotalGross)*100).toFixed(1) : 0}% of gross</p>
-                                    <div className='w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden'>
-                                        <div className='bg-emerald-500 h-1.5 rounded-full' style={{ width:`${salesTotalGross>0?Math.min(100,(salesTotalNetProfit/salesTotalGross)*100):0}%` }}/>
-                                    </div>
-                                </div>
-                                <div className='bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4'>
-                                    <p className='text-[9px] font-black text-amber-400/70 uppercase'>Snapit Cut</p>
-                                    <p className='text-2xl font-black text-amber-400 mt-1'>{fmtINR(salesTotalSnapit)}</p>
-                                    <p className='text-[9px] text-slate-500 mt-0.5'>{salesTotalGross > 0 ? ((salesTotalSnapit/salesTotalGross)*100).toFixed(1) : 0}% of gross</p>
-                                    <div className='w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden'>
-                                        <div className='bg-amber-500 h-1.5 rounded-full' style={{ width:`${salesTotalGross>0?Math.min(100,(salesTotalSnapit/salesTotalGross)*100):0}%` }}/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ─── SECTION 4: ORDER HISTORY ─── */}
+                        {/* SECTION 3: ORDER HISTORY */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-emerald-500 rounded-full'/>
-                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Order History &amp; Product Prices</p>
+                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Order History</p>
                             </div>
                             <div className='relative mb-3'>
                                 <IoSearchOutline size={16} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500'/>
@@ -1258,8 +1225,7 @@ const SellerDashboard = () => {
                                     placeholder='Search by order ID or product...'
                                     className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'/>
                                 {salesOrderSearch && (
-                                    <button onClick={() => setSalesOrderSearch('')}
-                                        className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-black text-lg'>×</button>
+                                    <button onClick={() => setSalesOrderSearch('')} className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-black text-lg'>×</button>
                                 )}
                             </div>
                             <div className='flex justify-between items-center mb-3'>
@@ -1300,60 +1266,42 @@ const SellerDashboard = () => {
                                     </div>
                                     {expandedSalesOrder === order._id && (
                                         <div className='border-t border-slate-800 p-4 bg-slate-800/30'>
-                                            <p className='text-[9px] font-black text-slate-500 uppercase mb-3'>Products &amp; Prices</p>
+                                            <p className='text-[9px] font-black text-slate-500 uppercase mb-3'>Items Sold</p>
                                             {(order.cartItems || []).map((item, i) => {
                                                 const sp     = getItemSellerPrice(item);
                                                 const margin = getItemSnapitMargin(item);
-                                                const disc   = getItemDiscount(item);
+                                                const disc   = getItemDiscount(item); // fixed
                                                 const qty    = Number(item.quantity) || 1;
-                                                const custP  = sp + margin;
-                                                const afterD = disc > 0 ? custP * (1 - disc / 100) : custP;
+                                                const mrp    = sp + margin;
+                                                const paid   = disc > 0 ? mrp * (1 - disc / 100) : mrp;
                                                 return (
                                                     <div key={i} className='mb-3 last:mb-0 pb-3 last:pb-0 border-b border-slate-700/50 last:border-0'>
-                                                        <div className='flex justify-between items-center mb-2'>
+                                                        <div className='flex justify-between items-center mb-1.5'>
                                                             <p className='text-sm font-bold text-slate-200'>{item.productId?.name || item.name}</p>
                                                             <span className='text-[10px] font-black text-slate-500'>×{qty}</span>
                                                         </div>
                                                         <div className='flex gap-2 flex-wrap'>
-                                                            <span className='text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg'>Seller {fmtINR(sp)}</span>
+                                                            <span className='text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg'>Your {fmtINR(sp)}</span>
                                                             {margin > 0 && <span className='text-[10px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-lg'>+Margin {fmtINR(margin)}</span>}
-                                                            <span className='text-[10px] font-black bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-lg'>MRP {fmtINR(custP)}</span>
-                                                            {/* ★ Customer paid after discount — clearly shown */}
-                                                            <span className='text-[10px] font-black bg-sky-500/20 text-sky-200 border border-sky-400/30 px-2 py-0.5 rounded-lg'>
-                                                                Paid {fmtINR(afterD)}{disc > 0 ? ` (${disc}% off)` : ''}
-                                                            </span>
+                                                            {disc > 0 ? (
+                                                                <>
+                                                                    <span className='text-[10px] bg-slate-700 text-slate-500 px-2 py-0.5 rounded-lg line-through'>MRP {fmtINR(mrp)}</span>
+                                                                    <span className='text-[10px] font-black bg-sky-500/20 text-sky-200 border border-sky-400/30 px-2 py-0.5 rounded-lg'>
+                                                                        Customer Paid {fmtINR(paid)} ({disc}% off)
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                <span className='text-[10px] font-black bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-lg'>Customer Paid {fmtINR(mrp)}</span>
+                                                            )}
                                                         </div>
-                                                        <p className='text-[10px] text-slate-500 mt-1.5'>
-                                                            Subtotal: <span className='text-white font-black'>{fmtINR(sp*qty)}</span> (seller) · <span className='text-amber-400 font-black'>{fmtINR(margin*qty)}</span> (snapit)
+                                                        <p className='text-[10px] text-slate-600 mt-1'>
+                                                            Your earning: <span className='text-emerald-400 font-black'>{fmtINR(sp*qty)}</span>
+                                                            {margin > 0 && <> · Snapit cut: <span className='text-amber-400 font-black'>{fmtINR(margin*qty)}</span></>}
                                                         </p>
                                                     </div>
                                                 );
                                             })}
-                                            <div className='mt-3 pt-3 border-t border-slate-700 space-y-1.5'>
-                                                <div className='flex justify-between'>
-                                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Order Total</p>
-                                                    <p className='text-sm font-black text-white'>{fmtINR(getOrderAmount(order))}</p>
-                                                </div>
-                                                {getDeliveryFee(order) > 0 && (
-                                                    <div className='flex justify-between'>
-                                                        <div className='flex items-center gap-1.5'>
-                                                            <HiOutlineTruck size={11} className='text-red-400'/>
-                                                            <p className='text-[10px] font-black text-red-400 uppercase'>Delivery Charge</p>
-                                                        </div>
-                                                        <p className='text-sm font-black text-red-400'>-{fmtINR(getDeliveryFee(order))}</p>
-                                                    </div>
-                                                )}
-                                                {getSnapitEarning(order) > 0 && (
-                                                    <div className='flex justify-between'>
-                                                        <p className='text-[10px] font-black text-amber-400 uppercase'>Snapit Margin</p>
-                                                        <p className='text-sm font-black text-amber-400'>-{fmtINR(getSnapitEarning(order))}</p>
-                                                    </div>
-                                                )}
-                                                <div className='flex justify-between pt-1.5 border-t border-slate-700'>
-                                                    <p className='text-[10px] font-black text-emerald-400 uppercase'>Your Earning</p>
-                                                    <p className='text-base font-black text-emerald-400'>{fmtINR(getSellerEarning(order))}</p>
-                                                </div>
-                                            </div>
+                                            <OrderMoneyBreakdown order={order} />
                                         </div>
                                     )}
                                 </div>
@@ -1367,10 +1315,10 @@ const SellerDashboard = () => {
                     <div className='flex flex-col gap-4'>
                         <div className='grid grid-cols-2 gap-3'>
                             {[
-                                { label:'Total Orders', val:allSorted.length,          color:'text-white' },
-                                { label:'Delivered',    val:deliveredCount,             color:'text-emerald-400' },
-                                { label:'Total Sales',  val:fmtINRShort(allTimeSales),  color:'text-sky-400', sub:'excl. delivery' },
-                                { label:'Cancelled',    val:cancelledCount,             color:'text-red-400' },
+                                { label:'Total Orders',  val:allSorted.length,           color:'text-white' },
+                                { label:'Delivered',     val:deliveredCount,              color:'text-emerald-400' },
+                                { label:'All Earnings',  val:fmtINRShort(allTimeEarning), color:'text-sky-400', sub:'your price × qty' },
+                                { label:'Cancelled',     val:cancelledCount,              color:'text-red-400' },
                             ].map(s => (
                                 <div key={s.label} className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                     <p className='text-[10px] font-black text-slate-500 uppercase'>{s.label}</p>
@@ -1419,43 +1367,35 @@ const SellerDashboard = () => {
                                 </div>
                                 {expandedOrder === order._id && (
                                     <div className='border-t border-slate-800 p-4 bg-slate-800/30'>
-                                        <p className='text-[9px] font-black text-slate-500 uppercase mb-3'>Products Sold</p>
+                                        <p className='text-[9px] font-black text-slate-500 uppercase mb-3'>Items</p>
                                         {(order.cartItems||[]).map((item, i) => {
-                                            const sp  = getItemSellerPrice(item);
-                                            const qty = Number(item.quantity)||1;
+                                            const sp     = getItemSellerPrice(item);
+                                            const margin = getItemSnapitMargin(item);
+                                            const disc   = getItemDiscount(item); // fixed
+                                            const qty    = Number(item.quantity)||1;
+                                            const mrp    = sp + margin;
+                                            const paid   = disc > 0 ? mrp * (1 - disc/100) : mrp;
                                             return (
-                                                <div key={i} className='flex justify-between items-center py-2 border-b border-slate-700/50 last:border-0'>
+                                                <div key={i} className='flex justify-between items-start py-2 border-b border-slate-700/50 last:border-0'>
                                                     <div>
                                                         <p className='text-sm font-bold text-slate-200'>{item.productId?.name || item.name}</p>
-                                                        <p className='text-[10px] text-slate-500'>{fmtINR(sp)} × {qty}</p>
+                                                        <div className='flex gap-2 mt-0.5 flex-wrap'>
+                                                            <span className='text-[10px] text-emerald-400'>Your {fmtINR(sp)}</span>
+                                                            {disc > 0
+                                                                ? <span className='text-[10px] text-sky-400'>Customer {fmtINR(paid)} ({disc}% off)</span>
+                                                                : <span className='text-[10px] text-sky-400'>Customer {fmtINR(mrp)}</span>
+                                                            }
+                                                        </div>
                                                     </div>
-                                                    <p className='text-sm font-black text-white'>{fmtINR(sp*qty)}</p>
+                                                    <div className='text-right'>
+                                                        <p className='text-xs text-slate-400'>×{qty}</p>
+                                                        <p className='text-sm font-black text-emerald-400'>{fmtINR(sp*qty)}</p>
+                                                    </div>
                                                 </div>
                                             );
                                         })}
-                                        <div className='mt-3 pt-3 border-t border-slate-700 space-y-1.5'>
-                                            <div className='flex justify-between'>
-                                                <p className='text-[10px] font-black text-slate-500 uppercase'>Order Total</p>
-                                                <p className='text-sm font-black text-white'>{fmtINR(getOrderAmount(order))}</p>
-                                            </div>
-                                            {getDeliveryFee(order) > 0 && (
-                                                <div className='flex justify-between'>
-                                                    <div className='flex items-center gap-1.5'>
-                                                        <HiOutlineTruck size={11} className='text-red-400'/>
-                                                        <p className='text-[10px] font-black text-red-400 uppercase'>Delivery Charge</p>
-                                                    </div>
-                                                    <p className='text-sm font-black text-red-400'>-{fmtINR(getDeliveryFee(order))}</p>
-                                                </div>
-                                            )}
-                                            <div className='flex justify-between'>
-                                                <p className='text-[10px] font-black text-sky-400 uppercase'>Sales (excl. delivery)</p>
-                                                <p className='text-sm font-black text-sky-400'>{fmtINR(getOrderAmount(order) - getDeliveryFee(order))}</p>
-                                            </div>
-                                            <div className='flex justify-between pt-1 border-t border-slate-700'>
-                                                <p className='text-[10px] font-black text-emerald-400 uppercase'>Your Earning</p>
-                                                <p className='text-sm font-black text-emerald-400'>{fmtINR(getSellerEarning(order))}</p>
-                                            </div>
-                                        </div>
+                                        {/* FIX: Replaced confusing "Sales (excl. delivery)" with clear breakdown */}
+                                        <OrderMoneyBreakdown order={order} />
                                     </div>
                                 )}
                             </div>
@@ -1485,13 +1425,13 @@ const SellerDashboard = () => {
                                 <div className='bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-6'>
                                     <p className='text-[9px] font-black text-emerald-400/60 uppercase tracking-widest mb-1'>Your Store Earnings</p>
                                     <p className='text-4xl font-black text-emerald-400'>{fmtINR(totalSellerEarning)}</p>
+                                    <p className='text-[9px] text-emerald-700 mt-0.5'>your price × qty, all delivered orders</p>
                                     <div className='grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-emerald-500/20'>
                                         <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Gross (incl. delivery)</p><p className='text-sm font-black text-white'>{fmtINR(totalGross)}</p></div>
-                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Sales (excl. delivery)</p><p className='text-sm font-black text-sky-400'>{fmtINR(totalSalesExDel)}</p></div>
-                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Delivery Charge</p><p className='text-sm font-black text-red-400'>-{fmtINR(totalDelivery)}</p></div>
-                                        {totalSnapitEarning > 0 && <div><p className='text-[9px] text-amber-400/60 uppercase font-bold'>Snapit Cut</p><p className='text-sm font-black text-amber-400'>-{fmtINR(totalSnapitEarning)}</p></div>}
+                                        <div><p className='text-[9px] text-red-400/70 uppercase font-bold'>Delivery → Riders</p><p className='text-sm font-black text-red-400'>−{fmtINR(totalDelivery)}</p></div>
+                                        {totalSnapitEarning > 0 && <div><p className='text-[9px] text-amber-400/60 uppercase font-bold'>Snapit Platform Cut</p><p className='text-sm font-black text-amber-400'>−{fmtINR(totalSnapitEarning)}</p></div>}
                                         <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Orders Delivered</p><p className='text-sm font-black text-white'>{totalOrders}</p></div>
-                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Avg. Per Order</p><p className='text-sm font-black text-white'>{fmtINR(avgNet)}</p></div>
+                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Avg Earning / Order</p><p className='text-sm font-black text-white'>{fmtINR(avgNet)}</p></div>
                                     </div>
                                 </div>
                                 {productList.length > 0 && (
@@ -1515,7 +1455,7 @@ const SellerDashboard = () => {
                                                     <div className='w-full bg-slate-800 rounded-full h-2 mt-1.5 overflow-hidden'>
                                                         <div className={`${colors[i%colors.length]} h-2 rounded-full transition-all duration-700`} style={{ width:`${pct.toFixed(1)}%` }}/>
                                                     </div>
-                                                    <p className='text-[9px] text-slate-600 mt-0.5'>{pct.toFixed(1)}% of earnings</p>
+                                                    <p className='text-[9px] text-slate-600 mt-0.5'>{pct.toFixed(1)}% of your earnings</p>
                                                 </div>
                                             );
                                         })}
@@ -1538,9 +1478,8 @@ const SellerDashboard = () => {
                                             <div className='flex gap-3 mt-1 flex-wrap'>
                                                 <p className='text-[10px] text-slate-600'>{d.count} order{d.count>1?'s':''}</p>
                                                 <p className='text-[10px] text-slate-500'>Gross {fmtINR(d.gross)}</p>
-                                                <p className='text-[10px] text-sky-500'>Sales {fmtINR(d.salesExDel)}</p>
-                                                {d.delivery > 0 && <p className='text-[10px] text-red-400'>Delivery -{fmtINR(d.delivery)}</p>}
-                                                {d.snapit > 0 && <p className='text-[10px] text-amber-400'>Snapit -{fmtINR(d.snapit)}</p>}
+                                                {d.delivery > 0 && <p className='text-[10px] text-red-400'>Delivery −{fmtINR(d.delivery)}</p>}
+                                                {d.snapit > 0 && <p className='text-[10px] text-amber-400'>Snapit −{fmtINR(d.snapit)}</p>}
                                             </div>
                                         </div>
                                     ))}
