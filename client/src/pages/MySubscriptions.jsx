@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import Axios from '../utils/Axios';
+import SummaryApi from '../common/SummaryApi';
 import SubscriptionCard from '../components/SubscriptionCard';
+import toast from 'react-hot-toast';
 
 export default function MySubscriptions() {
     const [subscriptions, setSubscriptions] = useState([]);
@@ -9,16 +11,24 @@ export default function MySubscriptions() {
     const fetchSubscriptions = async () => {
         setLoading(true);
         try {
-            const res = await Axios({ method: 'GET', url: '/api/subscription/my-subscriptions' });
-            if (res.data.success) setSubscriptions(res.data.data);
+            const res = await Axios({
+                method: SummaryApi.mySubscriptions.method,
+                url: SummaryApi.mySubscriptions.url
+            });
+            if (res.data.success) {
+                setSubscriptions(res.data.data);
+            }
         } catch (err) {
+            toast.error("Failed to load subscriptions");
             console.error("Failed to load subscriptions", err);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { fetchSubscriptions(); }, []);
+    useEffect(() => {
+        fetchSubscriptions();
+    }, []);
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-6">

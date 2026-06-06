@@ -169,7 +169,6 @@ const SummaryApi = {
         url: '/api/order/seller-orders',
         method: 'get'
     },
-    // ✅ NEW: Seller earnings endpoint
     getSellerEarnings: {
         url: '/api/order/seller-earnings',
         method: 'get'
@@ -287,7 +286,29 @@ const SummaryApi = {
     redeemCoins: {
         url: '/api/coins/redeem',
         method: 'post'
-    }
+    },
+
+    // ── Subscriptions ────────────────────────────────────────
+    mySubscriptions: {
+        url: '/api/subscription/my-subscriptions',
+        method: 'get'
+    },
+    createSubscription: {
+        url: '/api/subscription/create',
+        method: 'post'
+    },
+    pauseSubscription: {
+        url: '/api/subscription/pause',
+        method: 'patch'
+    },
+    resumeSubscription: {
+        url: '/api/subscription/resume',
+        method: 'patch'
+    },
+    cancelSubscription: {
+        url: '/api/subscription/cancel',
+        method: 'delete'
+    },
 }
 
 export default SummaryApi;

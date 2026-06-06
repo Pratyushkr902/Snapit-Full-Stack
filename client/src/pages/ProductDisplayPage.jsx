@@ -4,6 +4,7 @@ import SummaryApi from '../common/SummaryApi'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { FaAngleRight, FaAngleLeft, FaChevronLeft, FaShareNodes } from "react-icons/fa6";
+import { FaCalendarCheck, FaTimes } from 'react-icons/fa'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import Divider from '../components/Divider'
 import image1 from '../assets/minute_delivery.png'
@@ -15,12 +16,222 @@ import SmartSuggestions from '../components/SmartSuggestions'
 import WishlistButton from '../components/WishlistButton'
 import ProductReviews from '../components/ProductReviews'
 import toast from 'react-hot-toast'
+import { useSelector } from 'react-redux'
 
+// ─── Subscribe & Save Modal ───────────────────────────────────────────────────
+const SubscribeModal = ({ product, onClose }) => {
+  const [frequency, setFrequency] = useState('DAILY')
+  const [quantity, setQuantity] = useState(1)
+  const [addresses, setAddresses] = useState([])
+  const [selectedAddress, setSelectedAddress] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('COD')
+  const [loading, setLoading] = useState(false)
+  const [fetchingAddress, setFetchingAddress] = useState(true)
+
+  const frequencies = [
+    { value: 'DAILY',       label: 'Daily',         desc: 'Every day' },
+    { value: 'ALTERNATIVE', label: 'Alternate Days', desc: 'Every 2 days' },
+    { value: 'WEEKLY',      label: 'Weekly',         desc: 'Once a week' },
+  ]
+
+  const price = pricewithDiscount(Number(product.price || 0), Number(product.discount || 0))
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const res = await Axios({ ...SummaryApi.getAddress })
+        if (res.data.success) {
+          const active = res.data.data.filter(a => !a.disabled)
+          setAddresses(active)
+          if (active.length > 0) setSelectedAddress(active[0]._id)
+        }
+      } catch (err) {
+        toast.error('Could not load addresses')
+      } finally {
+        setFetchingAddress(false)
+      }
+    }
+    fetchAddresses()
+  }, [])
+
+  const handleSubscribe = async () => {
+    if (!selectedAddress) {
+      toast.error('Please select a delivery address')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await Axios({
+        method: SummaryApi.createSubscription.method,
+        url: SummaryApi.createSubscription.url,
+        data: {
+          items: [{ productId: product._id, quantity }],
+          frequency,
+          delivery_address: selectedAddress,
+          nextDeliveryDate: new Date().toISOString(),
+          payment_method: paymentMethod,
+        }
+      })
+
+      if (res.data.success) {
+        toast.success('🎉 Subscription created successfully!')
+        onClose()
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create subscription')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className='fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4'>
+      <div className='bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-slideUp'>
+
+        {/* Header */}
+        <div className='bg-gradient-to-r from-green-600 to-emerald-500 px-5 py-4 flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <FaCalendarCheck className='text-white text-lg' />
+            <div>
+              <p className='text-white font-black text-sm'>Subscribe & Save</p>
+              <p className='text-green-100 text-[11px] font-medium'>Never run out of {product.name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className='text-white/80 hover:text-white p-1'>
+            <FaTimes size={18} />
+          </button>
+        </div>
+
+        <div className='p-5 space-y-4 max-h-[70vh] overflow-y-auto'>
+
+          {/* Product summary */}
+          <div className='flex items-center gap-3 bg-gray-50 rounded-2xl p-3'>
+            <img src={product.image?.[0]} alt={product.name} className='w-14 h-14 object-contain rounded-xl bg-white border border-gray-100' />
+            <div className='flex-1 min-w-0'>
+              <p className='font-bold text-slate-800 text-sm truncate'>{product.name}</p>
+              <p className='text-gray-400 text-xs'>{product.unit}</p>
+              <p className='text-green-700 font-black text-sm mt-0.5'>{DisplayPriceInRupees(price)} / delivery</p>
+            </div>
+          </div>
+
+          {/* Frequency selector */}
+          <div>
+            <p className='text-xs font-black text-slate-600 uppercase tracking-wider mb-2'>Delivery Frequency</p>
+            <div className='grid grid-cols-3 gap-2'>
+              {frequencies.map(f => (
+                <button
+                  key={f.value}
+                  onClick={() => setFrequency(f.value)}
+                  className={`p-2.5 rounded-2xl border-2 text-center transition-all ${
+                    frequency === f.value
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-100 bg-white text-gray-500'
+                  }`}
+                >
+                  <p className='font-black text-xs'>{f.label}</p>
+                  <p className='text-[10px] font-medium mt-0.5 opacity-70'>{f.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quantity */}
+          <div>
+            <p className='text-xs font-black text-slate-600 uppercase tracking-wider mb-2'>Quantity per Delivery</p>
+            <div className='flex items-center gap-3'>
+              <button
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                className='w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center font-black text-gray-600 hover:border-green-400 hover:text-green-600 transition-all'
+              >−</button>
+              <span className='font-black text-slate-800 text-lg w-6 text-center'>{quantity}</span>
+              <button
+                onClick={() => setQuantity(q => q + 1)}
+                className='w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center font-black text-gray-600 hover:border-green-400 hover:text-green-600 transition-all'
+              >+</button>
+              <span className='text-xs text-gray-400 font-medium'>units per delivery</span>
+            </div>
+          </div>
+
+          {/* Address */}
+          <div>
+            <p className='text-xs font-black text-slate-600 uppercase tracking-wider mb-2'>Delivery Address</p>
+            {fetchingAddress ? (
+              <div className='h-10 bg-gray-100 animate-pulse rounded-xl' />
+            ) : addresses.length === 0 ? (
+              <p className='text-xs text-rose-500 font-semibold bg-rose-50 p-3 rounded-xl'>
+                No saved address found. Please add an address first.
+              </p>
+            ) : (
+              <select
+                value={selectedAddress}
+                onChange={e => setSelectedAddress(e.target.value)}
+                className='w-full border-2 border-gray-100 rounded-2xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:border-green-400 focus:outline-none bg-white'
+              >
+                {addresses.map(addr => (
+                  <option key={addr._id} value={addr._id}>
+                    {addr.address_line}, {addr.city} — {addr.pincode}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Payment method */}
+          <div>
+            <p className='text-xs font-black text-slate-600 uppercase tracking-wider mb-2'>Payment Method</p>
+            <div className='grid grid-cols-2 gap-2'>
+              {[{ value: 'COD', label: '💵 Cash on Delivery' }, { value: 'WALLET', label: '👛 Snapit Wallet' }].map(pm => (
+                <button
+                  key={pm.value}
+                  onClick={() => setPaymentMethod(pm.value)}
+                  className={`p-3 rounded-2xl border-2 text-xs font-black transition-all ${
+                    paymentMethod === pm.value
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-100 bg-white text-gray-500'
+                  }`}
+                >
+                  {pm.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Total summary */}
+          <div className='bg-slate-950 text-white rounded-2xl px-4 py-3 flex items-center justify-between'>
+            <div>
+              <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider'>Per Delivery Total</p>
+              <p className='text-white font-black text-lg'>{DisplayPriceInRupees(price * quantity)}</p>
+            </div>
+            <div className='text-right'>
+              <p className='text-gray-400 text-[10px] font-bold uppercase tracking-wider'>Frequency</p>
+              <p className='text-green-400 font-black text-sm capitalize'>{frequency.toLowerCase()}</p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Subscribe button */}
+        <div className='px-5 pb-6 pt-2'>
+          <button
+            onClick={handleSubscribe}
+            disabled={loading || addresses.length === 0}
+            className='w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl text-sm transition-all active:scale-95 shadow-lg shadow-green-200'
+          >
+            {loading ? 'Creating Subscription...' : '✅ Confirm Subscription'}
+          </button>
+          <p className='text-center text-[11px] text-gray-400 font-medium mt-2'>You can pause or cancel anytime from My Subscriptions</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 const ProductDisplayPage = () => {
   const params = useParams()
   const navigate = useNavigate()
   
-  // Robust Regex Extractor — safely grabs the exact 24-char hex ID anywhere at the end of the string
   const rawProduct = params?.product || params?.productId || ''
   let productId = '';
   
@@ -34,8 +245,9 @@ const ProductDisplayPage = () => {
   const [image, setImage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [imageZoom, setImageZoom] = useState(false)
-  const imageContainer = useRef()
   const [isOpen, setIsOpen] = useState(true)
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false)
+  const imageContainer = useRef()
 
   const checkShopStatus = () => {
     const now = new Date()
@@ -44,24 +256,16 @@ const ProductDisplayPage = () => {
   }
 
   const fetchProductDetails = async () => {
-    // ✅ FIX: Silent bail out during early rendering frames to eliminate terminal clutter
     if (!productId) return; 
-
     const isHex24 = /^[0-9a-fA-F]{24}$/.test(productId);
-    if (!isHex24) {
-      console.warn("⚠️ Invalid 24-char MongoDB ID layout format parsed:", productId);
-      return;
-    }
+    if (!isHex24) return;
 
     try {
       setLoading(true)
       const response = await Axios({
         url: '/api/product/get-product-details',
         method: 'post',
-        data: { 
-          productId: productId,
-          id: productId
-        }
+        data: { productId, id: productId }
       })
       const { data: responseData } = response
       if (responseData.success) setData(responseData.data)
@@ -102,6 +306,14 @@ const ProductDisplayPage = () => {
   return (
     <section key={productId} className='w-full bg-gradient-to-b from-white to-gray-50 pb-24 lg:pb-10 animate-fadeIn relative'>
       
+      {/* Subscribe Modal */}
+      {showSubscribeModal && (
+        <SubscribeModal
+          product={data}
+          onClose={() => setShowSubscribeModal(false)}
+        />
+      )}
+
       {/* ACTION STICKY HEADER */}
       <div className='sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'>
         <div className='container mx-auto px-4 py-3.5 flex items-center justify-between w-full'>
@@ -111,11 +323,9 @@ const ProductDisplayPage = () => {
           >
             <FaChevronLeft size={16} />
           </button>
-
           <h4 className='text-xs font-black tracking-wider text-slate-400 uppercase truncate max-w-[50%] select-none'>
             {data.name || 'Product Details'}
           </h4>
-
           <button 
             onClick={handleShareProductSystem}
             className='p-2.5 hover:bg-gray-50 active:scale-95 transition-all rounded-full text-gray-800 flex items-center justify-center border border-gray-100 bg-white shadow-sm'
@@ -221,8 +431,20 @@ const ProductDisplayPage = () => {
               <p className='text-rose-600 font-black text-sm uppercase tracking-widest italic'>Out of stock</p>
             </div>
           ) : (
-            <div className='h-12 sm:h-14 shadow-md shadow-green-100/30 rounded-2xl overflow-hidden'>
-              <AddToCartButton data={data} />
+            <div className='space-y-2.5'>
+              {/* Add to Cart */}
+              <div className='h-12 sm:h-14 shadow-md shadow-green-100/30 rounded-2xl overflow-hidden'>
+                <AddToCartButton data={data} />
+              </div>
+
+              {/* ✅ Subscribe & Save Button */}
+              <button
+                onClick={() => setShowSubscribeModal(true)}
+                className='w-full flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 text-emerald-700 font-black text-sm py-3.5 rounded-2xl transition-all active:scale-95'
+              >
+                <FaCalendarCheck size={15} />
+                Subscribe & Save — Get it Delivered Regularly
+              </button>
             </div>
           )}
 
@@ -230,7 +452,6 @@ const ProductDisplayPage = () => {
             <h3 className='font-black text-slate-800 text-xs sm:text-sm uppercase tracking-wider px-1'>
               Why shop from Snapit?
             </h3>
-            
             <div className='flex items-center gap-3 sm:gap-4 group cursor-pointer'>
               <div className='w-10 h-10 sm:w-11 sm:h-11 bg-blue-50 rounded-2xl flex items-center justify-center p-2 sm:p-2.5 flex-shrink-0'>
                 <img src={image1} alt='superfast' className='object-contain' />
@@ -240,7 +461,6 @@ const ProductDisplayPage = () => {
                 <p className='text-[11px] sm:text-xs text-gray-400 font-medium'>Directly from local dark stores in 10 minutes.</p>
               </div>
             </div>
-
             <div className='flex items-center gap-3 sm:gap-4 group cursor-pointer'>
               <div className='w-10 h-10 sm:w-11 sm:h-11 bg-emerald-50 rounded-2xl flex items-center justify-center p-2 sm:p-2.5 flex-shrink-0'>
                 <img src={image2} alt='offers' className='object-contain' />
@@ -250,7 +470,6 @@ const ProductDisplayPage = () => {
                 <p className='text-[11px] sm:text-xs text-gray-400 font-medium'>Unbeatable local deals with verified first-order coupons.</p>
               </div>
             </div>
-
             <div className='flex items-center gap-3 sm:gap-4 group cursor-pointer'>
               <div className='w-10 h-10 sm:w-11 sm:h-11 bg-purple-50 rounded-2xl flex items-center justify-center p-2 sm:p-2.5 flex-shrink-0'>
                 <img src={image3} alt='assortment' className='object-contain' />
