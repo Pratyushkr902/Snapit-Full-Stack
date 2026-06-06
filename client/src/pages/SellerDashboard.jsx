@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
@@ -10,22 +10,22 @@ import {
     HiOutlineShoppingBag, HiOutlineCube, HiOutlineClipboardList,
     HiOutlineCurrencyRupee, HiOutlineTrendingUp, HiOutlineChartBar,
     HiOutlineTruck, HiOutlineCheckCircle, HiOutlineXCircle,
-    HiOutlineClock, HiOutlineDownload, HiOutlineFilter,
+    HiOutlineClock, HiOutlineDownload,
     HiOutlineReceiptTax, HiOutlineTag, HiOutlineCash,
 } from 'react-icons/hi';
 
-// ── Field getters ──────────────────────────────────────────────
-const getOrderAmount     = (o) => Number(o.totalAmt ?? o.total_amount ?? o.amount ?? o.subTotalAmt ?? 0);
-const getDeliveryFee     = (o) => Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? 0);
-const getItemSellerPrice = (item) => Number(item.sellerPrice ?? item.seller_price ?? item.price ?? item.unit_price ?? 0);
+// ── Field getters ─────────────────────────────────────────────
+const getOrderAmount      = (o) => Number(o.totalAmt ?? o.total_amount ?? o.amount ?? o.subTotalAmt ?? 0);
+const getDeliveryFee      = (o) => Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? 0);
+const getItemSellerPrice  = (item) => Number(item.sellerPrice ?? item.seller_price ?? item.price ?? item.unit_price ?? 0);
 const getItemSnapitMargin = (item) => Number(item.snapitMargin ?? item.snapit_margin ?? 0);
-const getItemDiscount    = (item) => Number(item.discount ?? 0);
-const getSellerEarning   = (order) =>
+const getItemDiscount     = (item) => Number(item.discount ?? 0);
+const getSellerEarning    = (order) =>
     (order.cartItems || []).reduce((acc, item) => acc + getItemSellerPrice(item) * (Number(item.quantity) || 1), 0);
-const getSnapitEarning   = (order) =>
+const getSnapitEarning    = (order) =>
     (order.cartItems || []).reduce((acc, item) => acc + getItemSnapitMargin(item) * (Number(item.quantity) || 1), 0);
 
-// ── Formatters ─────────────────────────────────────────────────
+// ── Formatters ────────────────────────────────────────────────
 const fmtINR = (n) =>
     `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtINRShort = (n) => {
@@ -35,21 +35,20 @@ const fmtINRShort = (n) => {
     return `₹${num.toFixed(0)}`;
 };
 
-// ── Status helpers ─────────────────────────────────────────────
-const isDelivered  = (o) => (o.delivery_status || '').trim().toLowerCase() === 'delivered';
-const isCancelled  = (o) => (o.delivery_status || '').trim().toLowerCase() === 'cancelled';
+// ── Status helpers ────────────────────────────────────────────
+const isDelivered = (o) => (o.delivery_status || '').trim().toLowerCase() === 'delivered';
+const isCancelled = (o) => (o.delivery_status || '').trim().toLowerCase() === 'cancelled';
 
 const STATUS_CONFIG = {
-    delivered:            { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Delivered' },
-    'out for delivery':   { bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500',    label: 'Out for Delivery' },
-    confirmed:            { bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500',  label: 'Confirmed' },
-    cancelled:            { bg: 'bg-red-100',     text: 'text-red-600',     dot: 'bg-red-500',     label: 'Cancelled' },
-    pending:              { bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500',   label: 'Pending' },
-    packing:              { bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500',     label: 'Packing' },
+    delivered:          { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Delivered' },
+    'out for delivery': { bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500',    label: 'Out for Delivery' },
+    confirmed:          { bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500',  label: 'Confirmed' },
+    cancelled:          { bg: 'bg-red-100',     text: 'text-red-600',     dot: 'bg-red-500',     label: 'Cancelled' },
+    pending:            { bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500',   label: 'Pending' },
+    packing:            { bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500',     label: 'Packing' },
 };
 const getStatusConfig = (s) => STATUS_CONFIG[(s || '').toLowerCase()] || STATUS_CONFIG.pending;
 
-// ── Mini components ────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
     const cfg = getStatusConfig(status);
     return (
@@ -60,19 +59,9 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const StatCard = ({ label, value, sub, color = 'text-slate-900', bg = 'bg-white', border = 'border-slate-100', icon }) => (
-    <div className={`${bg} rounded-2xl p-4 border ${border} flex flex-col gap-1 shadow-sm`}>
-        {icon && <div className={`text-xl mb-1 ${color}`}>{icon}</div>}
-        <p className='text-[10px] font-black text-slate-400 uppercase tracking-wider'>{label}</p>
-        <p className={`text-2xl font-black ${color}`}>{value}</p>
-        {sub && <p className='text-[10px] text-slate-400'>{sub}</p>}
-    </div>
-);
-
-// ── Export CSV ─────────────────────────────────────────────────
 const exportCSV = (orders) => {
     const rows = [
-        ['Order ID', 'Date', 'Status', 'Items', 'Gross', 'Delivery', 'Sales (excl delivery)', 'Seller Earning', 'Snapit Cut'],
+        ['Order ID','Date','Status','Items','Gross','Delivery','Sales (excl delivery)','Seller Earning','Snapit Cut'],
         ...orders.map(o => [
             o.orderId,
             new Date(o.createdAt).toLocaleDateString('en-IN'),
@@ -85,10 +74,11 @@ const exportCSV = (orders) => {
             getSnapitEarning(o).toFixed(2),
         ])
     ];
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const csv  = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'store-orders.csv'; a.click();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'store-orders.csv'; a.click();
     URL.revokeObjectURL(url);
 };
 
@@ -105,12 +95,15 @@ const SellerDashboard = () => {
     const [expandedOrder, setExpandedOrder] = useState(null);
     const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
-    // Sales tab state
-    const [salesFilter, setSalesFilter]           = useState('all');
-    const [salesOrderSearch, setSalesOrderSearch] = useState('');
+    // Sales tab
+    const [salesFilter, setSalesFilter]               = useState('all');
+    const [salesOrderSearch, setSalesOrderSearch]     = useState('');
     const [expandedSalesOrder, setExpandedSalesOrder] = useState(null);
+    // Price editing state — keyed by product _id
+    const [editingProductPrice, setEditingProductPrice] = useState({});
+    const [updatingPrice, setUpdatingPrice]             = useState({});
 
-    // Products
+    // Products tab
     const [productTab, setProductTab]           = useState('list');
     const [products, setProducts]               = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
@@ -129,7 +122,7 @@ const SellerDashboard = () => {
     const allSubCategory = useSelector(state => state.product.allSubCategory);
     const sellingPrice   = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
 
-    // ── Fetch ─────────────────────────────────────────────────
+    // ── Fetch helpers ─────────────────────────────────────────
     const fetchOrders = async (silent = false) => {
         try {
             if (!silent) setLoading(true);
@@ -154,7 +147,7 @@ const SellerDashboard = () => {
     const markAsReady = async (orderId) => {
         try {
             const res = await Axios({ ...SummaryApi.updateSellerStatus, data: { orderId, sellerStatus: 'Ready for Pickup' } });
-            if (res.data.success) { toast.success('Rider Notified! Order ready for pickup.'); fetchOrders(true); }
+            if (res.data.success) { toast.success('Rider Notified!'); fetchOrders(true); }
         } catch { toast.error('Failed to update order'); }
     };
 
@@ -212,18 +205,48 @@ const SellerDashboard = () => {
         } catch { toast.error('Delete failed'); }
     };
 
+    // ── UPDATE CUSTOMER PRICE from Sales tab ─────────────────
+    const handleUpdateCustomerPrice = async (productId, productName) => {
+        const priceData = editingProductPrice[productId];
+        if (!priceData) return;
+        const sp     = Number(priceData.sellerPrice)  || 0;
+        const margin = Number(priceData.snapitMargin) || 0;
+        const disc   = Number(priceData.discount)     || 0;
+        setUpdatingPrice(p => ({ ...p, [productId]: true }));
+        try {
+            const res = await Axios({
+                ...SummaryApi.updateProductDetails,
+                data: {
+                    _id:          productId,
+                    sellerPrice:  sp,
+                    snapitMargin: margin,
+                    sellingPrice: sp + margin,
+                    price:        sp + margin,
+                    discount:     disc,
+                },
+            });
+            if (res.data.success) {
+                toast.success(`Price updated for ${productName}!`);
+                setEditingProductPrice(p => { const n = { ...p }; delete n[productId]; return n; });
+                fetchProducts();
+            }
+        } catch { toast.error('Price update failed'); }
+        finally { setUpdatingPrice(p => ({ ...p, [productId]: false })); }
+    };
+
     useEffect(() => {
         fetchOrders();
+        fetchProducts();
         const iv = setInterval(() => fetchOrders(true), 30000);
         return () => clearInterval(iv);
     }, []);
 
     useEffect(() => { if (activeTab === 'products') fetchProducts(); }, [activeTab]);
 
-    // ── Computed values ────────────────────────────────────────
+    // ── Computed values ───────────────────────────────────────
     const now = new Date();
 
-    const packingOrders = allOrders.filter(o =>
+    const packingOrders  = allOrders.filter(o =>
         o.seller_status !== 'Ready for Pickup' &&
         o.delivery_status !== 'Delivered' &&
         o.delivery_status !== 'Cancelled'
@@ -251,13 +274,12 @@ const SellerDashboard = () => {
     const avgNet             = totalOrders > 0 ? totalSellerEarning / totalOrders : 0;
     const totalSalesExDel    = filteredEarnings.reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
 
-    const allTimeSales     = allOrders.filter(isDelivered).reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
-    const allTimeEarning   = allOrders.filter(isDelivered).reduce((a, o) => a + getSellerEarning(o), 0);
-    const allTimeDelivery  = allOrders.filter(isDelivered).reduce((a, o) => a + getDeliveryFee(o), 0);
-    const allTimeSnapit    = allOrders.filter(isDelivered).reduce((a, o) => a + getSnapitEarning(o), 0);
-    const queueEarning     = packingOrders.reduce((a, o) => a + getSellerEarning(o), 0);
+    const allTimeSales    = allOrders.filter(isDelivered).reduce((a, o) => a + getOrderAmount(o) - getDeliveryFee(o), 0);
+    const allTimeEarning  = allOrders.filter(isDelivered).reduce((a, o) => a + getSellerEarning(o), 0);
+    const allTimeDelivery = allOrders.filter(isDelivered).reduce((a, o) => a + getDeliveryFee(o), 0);
+    const queueEarning    = packingOrders.reduce((a, o) => a + getSellerEarning(o), 0);
 
-    // ── Sales tab computations ─────────────────────────────────
+    // Sales tab
     const salesFilteredOrders = (() => {
         const base = allOrders.filter(isDelivered);
         const d = new Date(now);
@@ -267,26 +289,27 @@ const SellerDashboard = () => {
         return base;
     })();
 
-    const salesTotalGross    = salesFilteredOrders.reduce((a, o) => a + getOrderAmount(o), 0);
-    const salesTotalDelivery = salesFilteredOrders.reduce((a, o) => a + getDeliveryFee(o), 0);
-    const salesTotalSeller   = salesFilteredOrders.reduce((a, o) => a + getSellerEarning(o), 0);
-    const salesTotalSnapit   = salesFilteredOrders.reduce((a, o) => a + getSnapitEarning(o), 0);
-    const salesTotalNetProfit = salesTotalSeller; // seller's net after snapit cut
-    const salesTotalExDel    = salesTotalGross - salesTotalDelivery;
+    const salesTotalGross     = salesFilteredOrders.reduce((a, o) => a + getOrderAmount(o), 0);
+    const salesTotalDelivery  = salesFilteredOrders.reduce((a, o) => a + getDeliveryFee(o), 0);
+    const salesTotalSeller    = salesFilteredOrders.reduce((a, o) => a + getSellerEarning(o), 0);
+    const salesTotalSnapit    = salesFilteredOrders.reduce((a, o) => a + getSnapitEarning(o), 0);
+    const salesTotalNetProfit = salesTotalSeller;
+    const salesTotalExDel     = salesTotalGross - salesTotalDelivery;
 
-    // Unique products sold with price breakdown
+    // Build product map — carry product _id for price-update API call
     const salesProductMap = salesFilteredOrders.reduce((acc, order) => {
         (order.cartItems || []).forEach(item => {
-            const name       = item.productId?.name || item.name || 'Unknown';
-            const qty        = Number(item.quantity) || 1;
-            const sellerP    = getItemSellerPrice(item);
-            const marginP    = getItemSnapitMargin(item);
+            const pid         = item.productId?._id || item.productId || null;
+            const name        = item.productId?.name || item.name || 'Unknown';
+            const qty         = Number(item.quantity) || 1;
+            const sellerP     = getItemSellerPrice(item);
+            const marginP     = getItemSnapitMargin(item);
             const discountPct = getItemDiscount(item);
-            const customerP  = sellerP + marginP;
-            const afterDisc  = discountPct > 0 ? customerP * (1 - discountPct / 100) : customerP;
-            const delivP     = getDeliveryFee(order) > 0 ? getDeliveryFee(order) / ((order.cartItems||[]).length || 1) : 0;
-            if (!acc[name]) acc[name] = { qty: 0, sellerRevenue: 0, snapitRevenue: 0, sellerPrice: sellerP, snapitMargin: marginP, discount: discountPct, customerPrice: customerP, afterDiscount: afterDisc, deliveryShare: delivP };
-            acc[name].qty          += qty;
+            const customerP   = sellerP + marginP;
+            const afterDisc   = discountPct > 0 ? customerP * (1 - discountPct / 100) : customerP;
+            const delivP      = getDeliveryFee(order) > 0 ? getDeliveryFee(order) / ((order.cartItems||[]).length || 1) : 0;
+            if (!acc[name]) acc[name] = { pid, qty:0, sellerRevenue:0, snapitRevenue:0, sellerPrice:sellerP, snapitMargin:marginP, discount:discountPct, customerPrice:customerP, afterDiscount:afterDisc, deliveryShare:delivP };
+            acc[name].qty           += qty;
             acc[name].sellerRevenue += sellerP * qty;
             acc[name].snapitRevenue += marginP * qty;
         });
@@ -294,7 +317,6 @@ const SellerDashboard = () => {
     }, {});
     const salesProductList = Object.entries(salesProductMap).sort((a, b) => b[1].sellerRevenue - a[1].sellerRevenue);
 
-    // Sales order history (with search)
     const salesOrderHistory = [...salesFilteredOrders]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .filter(o => {
@@ -304,13 +326,12 @@ const SellerDashboard = () => {
                 (o.cartItems||[]).some(i => (i.productId?.name||i.name||'').toLowerCase().includes(q));
         });
 
-    // Product earnings breakdown (for earnings tab)
     const productEarnings = filteredEarnings.reduce((acc, order) => {
         (order.cartItems || []).forEach(item => {
             const name = item.productId?.name || item.name || 'Unknown';
             const qty  = Number(item.quantity) || 1;
             const sp   = getItemSellerPrice(item);
-            if (!acc[name]) acc[name] = { qty: 0, revenue: 0 };
+            if (!acc[name]) acc[name] = { qty:0, revenue:0 };
             acc[name].qty += qty; acc[name].revenue += sp * qty;
         });
         return acc;
@@ -329,7 +350,7 @@ const SellerDashboard = () => {
     const topProducts = Object.entries(allTimeProductSells).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
     const byDate = filteredEarnings.reduce((acc, o) => {
-        const d = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        const d = new Date(o.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
         if (!acc[d]) acc[d] = { gross:0, sellerNet:0, snapit:0, delivery:0, salesExDel:0, count:0 };
         acc[d].gross      += getOrderAmount(o);
         acc[d].delivery   += getDeliveryFee(o);
@@ -340,7 +361,6 @@ const SellerDashboard = () => {
         return acc;
     }, {});
 
-    // History
     const allSorted = [...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const historyFiltered = allSorted.filter(o => {
         if (historyFilter === 'delivered' && !isDelivered(o)) return false;
@@ -370,21 +390,29 @@ const SellerDashboard = () => {
     );
 
     const TABS = [
-        { key: 'overview', icon: <HiOutlineChartBar size={16} />,      label: 'Overview' },
-        { key: 'packing',  icon: <HiOutlineCube size={16} />,          label: 'Packing' },
-        { key: 'products', icon: <HiOutlineShoppingBag size={16} />,   label: 'Products' },
-        { key: 'sales',    icon: <HiOutlineReceiptTax size={16} />,     label: 'Sales' },
-        { key: 'history',  icon: <HiOutlineClipboardList size={16} />, label: 'History' },
-        { key: 'earnings', icon: <HiOutlineCurrencyRupee size={16} />, label: 'Earnings' },
+        { key:'overview', icon:<HiOutlineChartBar size={16}/>,      label:'Overview' },
+        { key:'packing',  icon:<HiOutlineCube size={16}/>,          label:'Packing' },
+        { key:'products', icon:<HiOutlineShoppingBag size={16}/>,   label:'Products' },
+        { key:'sales',    icon:<HiOutlineReceiptTax size={16}/>,    label:'Sales' },
+        { key:'history',  icon:<HiOutlineClipboardList size={16}/>, label:'History' },
+        { key:'earnings', icon:<HiOutlineCurrencyRupee size={16}/>, label:'Earnings' },
     ];
 
     return (
         <div className='min-h-screen bg-slate-950 text-white'>
 
-            {/* ── STICKY HEADER ── */}
-            
-              <div className='sticky top-16 lg:top-24 z-30 bg-slate-950 border-b border-slate-800'>
-                <div className='max-w-2xl mx-auto px-4 py-3'>
+            {/*
+             * ╔══════════════════════════════════════════════════════╗
+             * ║  FIX 1 — SINGLE sticky block                        ║
+             * ║  Header + stats pills + tab bar are all inside ONE  ║
+             * ║  sticky container with top-0.  No second sticky      ║
+             * ║  element with a hardcoded pixel offset.             ║
+             * ╚══════════════════════════════════════════════════════╝
+             */}
+            <div className='sticky top-0 z-30 bg-slate-950 border-b border-slate-800'>
+
+                {/* Store name row */}
+                <div className='max-w-2xl mx-auto px-4 pt-3 pb-2'>
                     <div className='flex items-center justify-between'>
                         <div>
                             <h1 className='text-lg font-black tracking-tight text-white'>STORE PANEL</h1>
@@ -402,13 +430,14 @@ const SellerDashboard = () => {
                         </div>
                     </div>
 
-                    <div className='flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide'>
+                    {/* Stats pills */}
+                    <div className='flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide'>
                         {[
-                            { label:'Pending',    val: pendingCount,              color:'text-amber-400',  bg:'bg-amber-500/10 border-amber-500/20' },
-                            { label:'Packing',    val: packingCount,              color:'text-sky-400',    bg:'bg-sky-500/10 border-sky-500/20' },
-                            { label:'Queue ₹',    val: fmtINRShort(queueEarning), color:'text-emerald-400', bg:'bg-emerald-500/10 border-emerald-500/20' },
-                            { label:'Delivered',  val: deliveredCount,            color:'text-green-400',  bg:'bg-green-500/10 border-green-500/20' },
-                            { label:'All Earning',val: fmtINRShort(allTimeEarning),color:'text-orange-400', bg:'bg-orange-500/10 border-orange-500/20' },
+                            { label:'Pending',     val: pendingCount,               color:'text-amber-400',   bg:'bg-amber-500/10 border-amber-500/20' },
+                            { label:'Packing',     val: packingCount,               color:'text-sky-400',     bg:'bg-sky-500/10 border-sky-500/20' },
+                            { label:'Queue ₹',     val: fmtINRShort(queueEarning),  color:'text-emerald-400', bg:'bg-emerald-500/10 border-emerald-500/20' },
+                            { label:'Delivered',   val: deliveredCount,             color:'text-green-400',   bg:'bg-green-500/10 border-green-500/20' },
+                            { label:'All Earning', val: fmtINRShort(allTimeEarning),color:'text-orange-400',  bg:'bg-orange-500/10 border-orange-500/20' },
                         ].map(s => (
                             <div key={s.label} className={`flex-shrink-0 ${s.bg} border rounded-xl px-3 py-1.5 text-center`}>
                                 <p className='text-[9px] font-black text-slate-500 uppercase'>{s.label}</p>
@@ -417,10 +446,8 @@ const SellerDashboard = () => {
                         ))}
                     </div>
                 </div>
-            </div>
 
-            {/* ── TAB BAR ── */}
-                <div className='sticky top-[168px] lg:top-[225px] z-20 bg-slate-950/95 backdrop-blur border-b border-slate-800'>
+                {/* Tab bar — same sticky block, NO separate sticky */}
                 <div className='max-w-2xl mx-auto px-4'>
                     <div className='flex gap-1 py-2 overflow-x-auto scrollbar-hide'>
                         {TABS.map(t => (
@@ -436,6 +463,7 @@ const SellerDashboard = () => {
                     </div>
                 </div>
             </div>
+            {/* END single sticky block */}
 
             <div className='max-w-2xl mx-auto px-4 py-5'>
 
@@ -455,7 +483,7 @@ const SellerDashboard = () => {
                                     <p className='text-sm font-black text-white'>{deliveredCount}</p>
                                 </div>
                                 <div>
-                                    <p className='text-[9px] font-black text-orange-200/70 uppercase'>Delivery Earned</p>
+                                    <p className='text-[9px] font-black text-orange-200/70 uppercase'>Delivery</p>
                                     <p className='text-sm font-black text-orange-200'>-{fmtINR(allTimeDelivery)}</p>
                                 </div>
                             </div>
@@ -507,7 +535,7 @@ const SellerDashboard = () => {
                                 </div>
                                 {topProducts.map(([name, qty], i) => {
                                     const maxQty = topProducts[0][1];
-                                    const colors = ['bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-sky-500', 'bg-violet-500'];
+                                    const colors = ['bg-orange-500','bg-amber-500','bg-emerald-500','bg-sky-500','bg-violet-500'];
                                     return (
                                         <div key={name} className='mb-3 last:mb-0'>
                                             <div className='flex justify-between items-center mb-1'>
@@ -519,7 +547,7 @@ const SellerDashboard = () => {
                                             </div>
                                             <div className='w-full bg-slate-800 rounded-full h-1.5 overflow-hidden'>
                                                 <div className={`${colors[i]} h-1.5 rounded-full transition-all duration-700`}
-                                                    style={{ width: `${(qty / maxQty) * 100}%` }}/>
+                                                    style={{ width:`${(qty/maxQty)*100}%` }}/>
                                             </div>
                                         </div>
                                     );
@@ -528,7 +556,7 @@ const SellerDashboard = () => {
                         )}
 
                         <p className='text-center text-[10px] text-slate-700 font-bold'>
-                            Last refreshed: {lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            Last refreshed: {lastRefreshed.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}
                         </p>
                     </div>
                 )}
@@ -548,7 +576,6 @@ const SellerDashboard = () => {
                                 </div>
                             </div>
                         )}
-
                         {packingOrders.length === 0 ? (
                             <div className='bg-slate-900 border-2 border-dashed border-slate-700 rounded-3xl p-16 text-center'>
                                 <div className='w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4'>
@@ -567,8 +594,7 @@ const SellerDashboard = () => {
                             const deliveryFee   = getDeliveryFee(order);
                             const isPacking     = order.seller_status === 'Packing';
                             return (
-                                <div key={order._id}
-                                    className={`bg-slate-900 rounded-3xl border-2 overflow-hidden ${isPacking ? 'border-sky-500/40' : 'border-orange-500/30'}`}>
+                                <div key={order._id} className={`bg-slate-900 rounded-3xl border-2 overflow-hidden ${isPacking ? 'border-sky-500/40' : 'border-orange-500/30'}`}>
                                     <div className={`px-5 py-3 ${isPacking ? 'bg-sky-500/10' : 'bg-orange-500/10'} flex justify-between items-center`}>
                                         <div>
                                             <span className='font-mono text-sm font-black text-white'>{order.orderId}</span>
@@ -587,25 +613,15 @@ const SellerDashboard = () => {
                                         </div>
                                     </div>
                                     <div className='p-5'>
-                                        {order.store_details?.name && (
-                                            <div className='flex items-center gap-2 mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-3 py-2'>
-                                                <span className='text-indigo-400 text-sm'>🏪</span>
-                                                <div>
-                                                    <p className='text-[9px] font-black text-indigo-400 uppercase'>Store</p>
-                                                    <p className='text-sm font-black text-indigo-300'>{order.store_details.name}</p>
-                                                </div>
-                                            </div>
-                                        )}
                                         <div className='bg-slate-800/50 rounded-2xl p-3 mb-4'>
                                             <p className='text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3'>Items to Pack</p>
                                             {(order.cartItems || []).map((item, i) => {
-                                                const sp    = getItemSellerPrice(item);
-                                                const qty   = Number(item.quantity) || 1;
-                                                const total = sp * qty;
+                                                const sp  = getItemSellerPrice(item);
+                                                const qty = Number(item.quantity) || 1;
                                                 return (
                                                     <div key={i} className='flex justify-between items-center py-2.5 border-b border-slate-700/50 last:border-0'>
                                                         <div className='flex items-center gap-2.5'>
-                                                            <div className='w-2 h-2 rounded-full bg-orange-500 flex-shrink-0' />
+                                                            <div className='w-2 h-2 rounded-full bg-orange-500 flex-shrink-0'/>
                                                             <div>
                                                                 <p className='text-sm font-bold text-slate-200'>{item.productId?.name || item.name}</p>
                                                                 <p className='text-[10px] text-slate-500'>{fmtINR(sp)} × {qty}</p>
@@ -613,19 +629,19 @@ const SellerDashboard = () => {
                                                         </div>
                                                         <div className='flex items-center gap-2'>
                                                             <span className='bg-slate-700 px-2 py-0.5 rounded-lg text-xs font-black text-slate-300'>×{qty}</span>
-                                                            <span className='text-sm font-black text-white'>{fmtINR(total)}</span>
+                                                            <span className='text-sm font-black text-white'>{fmtINR(sp * qty)}</span>
                                                         </div>
                                                     </div>
                                                 );
                                             })}
                                         </div>
                                         <div className='bg-slate-800/50 rounded-2xl p-4 mb-4 space-y-2'>
-                                            <div className='flex justify-between items-center'>
+                                            <div className='flex justify-between'>
                                                 <p className='text-[10px] font-black text-slate-400 uppercase'>Order Total</p>
                                                 <p className='text-sm font-black text-white'>{fmtINR(orderTotal)}</p>
                                             </div>
                                             {deliveryFee > 0 && (
-                                                <div className='flex justify-between items-center'>
+                                                <div className='flex justify-between'>
                                                     <div className='flex items-center gap-1.5'>
                                                         <HiOutlineTruck size={12} className='text-red-400'/>
                                                         <p className='text-[10px] font-black text-red-400 uppercase'>Delivery Charge</p>
@@ -634,18 +650,14 @@ const SellerDashboard = () => {
                                                 </div>
                                             )}
                                             {getSnapitEarning(order) > 0 && (
-                                                <div className='flex justify-between items-center'>
+                                                <div className='flex justify-between'>
                                                     <p className='text-[10px] font-black text-amber-400 uppercase'>Snapit Margin Cut</p>
                                                     <p className='text-sm font-black text-amber-400'>-{fmtINR(getSnapitEarning(order))}</p>
                                                 </div>
                                             )}
-                                            <div className='flex justify-between items-center pt-2 border-t border-slate-700'>
+                                            <div className='flex justify-between pt-2 border-t border-slate-700'>
                                                 <p className='text-[10px] font-black text-emerald-400 uppercase'>Your Net Earning</p>
                                                 <p className='text-xl font-black text-emerald-400'>{fmtINR(sellerEarning)}</p>
-                                            </div>
-                                            <div className='flex justify-between items-center'>
-                                                <p className='text-[10px] font-black text-sky-400 uppercase'>Sales (excl. delivery)</p>
-                                                <p className='text-sm font-black text-sky-400'>{fmtINR(orderTotal - deliveryFee)}</p>
                                             </div>
                                         </div>
                                         <button onClick={() => markAsReady(order.orderId)}
@@ -663,7 +675,7 @@ const SellerDashboard = () => {
                 {activeTab === 'products' && (
                     <div>
                         <div className='flex gap-2 mb-4'>
-                            {[{key:'list', label:'📋 My Products'},{key:'upload', label:'➕ Add New'}].map(t => (
+                            {[{key:'list',label:'📋 My Products'},{key:'upload',label:'➕ Add New'}].map(t => (
                                 <button key={t.key} onClick={() => setProductTab(t.key)}
                                     className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${
                                         productTab === t.key
@@ -677,14 +689,12 @@ const SellerDashboard = () => {
 
                         {productTab === 'list' && (
                             <div>
-                                <div className='flex gap-2 mb-4'>
-                                    <div className='relative flex-1'>
-                                        <IoSearchOutline size={16} className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-500'/>
-                                        <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
-                                            placeholder='Search products...'
-                                            className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'
-                                        />
-                                    </div>
+                                <div className='relative mb-4'>
+                                    <IoSearchOutline size={16} className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-500'/>
+                                    <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
+                                        placeholder='Search products...'
+                                        className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'
+                                    />
                                 </div>
                                 {(outOfStockCount > 0 || lowStockCount > 0) && (
                                     <div className='flex gap-2 mb-4 flex-wrap'>
@@ -724,10 +734,9 @@ const SellerDashboard = () => {
                                             return (
                                                 <div key={product._id}
                                                     className={`bg-slate-900 rounded-2xl p-4 border flex gap-4 items-start ${
-                                                        stockStatus === 'out' ? 'border-red-500/30' :
-                                                        stockStatus === 'low' ? 'border-amber-500/30' : 'border-slate-800'
+                                                        stockStatus==='out' ? 'border-red-500/30' : stockStatus==='low' ? 'border-amber-500/30' : 'border-slate-800'
                                                     }`}>
-                                                    <img src={product.image?.[0] || ''} alt={product.name}
+                                                    <img src={product.image?.[0]||''} alt={product.name}
                                                         className='w-16 h-16 object-contain rounded-xl bg-slate-800 border border-slate-700 flex-shrink-0'/>
                                                     <div className='flex-1 min-w-0'>
                                                         <p className='font-black text-white text-sm truncate'>{product.name}</p>
@@ -752,11 +761,11 @@ const SellerDashboard = () => {
                                                         </div>
                                                         <div className='flex items-center gap-2 mt-2.5'>
                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${
-                                                                stockStatus === 'out' ? 'bg-red-500/15 text-red-400 border border-red-500/20' :
-                                                                stockStatus === 'low' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' :
+                                                                stockStatus==='out' ? 'bg-red-500/15 text-red-400 border border-red-500/20' :
+                                                                stockStatus==='low' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' :
                                                                 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
                                                             }`}>
-                                                                {stockStatus === 'out' ? '❌ Out of stock' : `${product.stock} in stock`}
+                                                                {stockStatus==='out' ? '❌ Out of stock' : `${product.stock} in stock`}
                                                             </span>
                                                         </div>
                                                         <div className='flex items-center gap-2 mt-2.5'>
@@ -788,31 +797,22 @@ const SellerDashboard = () => {
                             <form onSubmit={handleProductSubmit} className='flex flex-col gap-4'>
                                 <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                     <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Product Name *</label>
-                                    <input type='text' placeholder='e.g. Basmati Rice 5kg' required
-                                        value={productForm.name}
+                                    <input type='text' placeholder='e.g. Basmati Rice 5kg' required value={productForm.name}
                                         onChange={e => setProductForm(p => ({ ...p, name: e.target.value }))}
-                                        className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'
-                                    />
+                                        className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'/>
                                 </div>
                                 <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                     <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Description *</label>
-                                    <textarea rows={3} placeholder='Describe the product...' required
-                                        value={productForm.description}
+                                    <textarea rows={3} placeholder='Describe the product...' required value={productForm.description}
                                         onChange={e => setProductForm(p => ({ ...p, description: e.target.value }))}
-                                        className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 resize-none placeholder-slate-600'
-                                    />
+                                        className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 resize-none placeholder-slate-600'/>
                                 </div>
                                 <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                     <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Product Images</label>
                                     <label htmlFor='sellerProductImage'
                                         className='mt-2 flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-orange-500 transition-all'>
-                                        {imageLoading ? (
-                                            <p className='text-sm text-slate-500 animate-pulse'>Uploading...</p>
-                                        ) : (
-                                            <>
-                                                <FaCloudUploadAlt size={24} className='text-slate-600'/>
-                                                <p className='text-xs font-bold text-slate-600 mt-1'>Tap to upload</p>
-                                            </>
+                                        {imageLoading ? <p className='text-sm text-slate-500 animate-pulse'>Uploading...</p> : (
+                                            <><FaCloudUploadAlt size={24} className='text-slate-600'/><p className='text-xs font-bold text-slate-600 mt-1'>Tap to upload</p></>
                                         )}
                                         <input id='sellerProductImage' type='file' accept='image/*' className='hidden' onChange={handleUploadImage}/>
                                     </label>
@@ -821,8 +821,7 @@ const SellerDashboard = () => {
                                             {productForm.image.map((img, i) => (
                                                 <div key={i} className='relative w-16 h-16'>
                                                     <img src={img} className='w-full h-full object-contain rounded-xl bg-slate-800 border border-slate-700'/>
-                                                    <button type='button'
-                                                        onClick={() => setProductForm(p => ({ ...p, image: p.image.filter((_,idx) => idx !== i) }))}
+                                                    <button type='button' onClick={() => setProductForm(p => ({ ...p, image: p.image.filter((_,idx) => idx !== i) }))}
                                                         className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]'>×</button>
                                                 </div>
                                             ))}
@@ -833,19 +832,14 @@ const SellerDashboard = () => {
                                     <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Category</label>
                                     <select value={selectCategory}
                                         className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500'
-                                        onChange={e => {
-                                            const cat = allCategory.find(c => c._id === e.target.value);
-                                            if (cat && !productForm.category.some(c => c._id === cat._id))
-                                                setProductForm(p => ({ ...p, category: [...p.category, cat] }));
-                                            setSelectCategory('');
-                                        }}>
+                                        onChange={e => { const cat = allCategory.find(c => c._id===e.target.value); if(cat && !productForm.category.some(c=>c._id===cat._id)) setProductForm(p=>({...p,category:[...p.category,cat]})); setSelectCategory(''); }}>
                                         <option value=''>Select Category</option>
                                         {(allCategory||[]).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                                     </select>
                                     <div className='flex flex-wrap gap-2 mt-2'>
-                                        {productForm.category.map((c, i) => (
+                                        {productForm.category.map((c,i) => (
                                             <span key={i} className='flex items-center gap-1 bg-sky-500/15 text-sky-400 border border-sky-500/20 text-xs font-bold px-2 py-1 rounded-lg'>
-                                                {c.name}<IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, category: p.category.filter((_,idx) => idx !== i) }))}/>
+                                                {c.name}<IoClose className='cursor-pointer' onClick={() => setProductForm(p=>({...p,category:p.category.filter((_,idx)=>idx!==i)}))}/>
                                             </span>
                                         ))}
                                     </div>
@@ -854,19 +848,14 @@ const SellerDashboard = () => {
                                     <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Sub Category</label>
                                     <select value={selectSubCategory}
                                         className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500'
-                                        onChange={e => {
-                                            const sub = allSubCategory.find(s => s._id === e.target.value);
-                                            if (sub && !productForm.subCategory.some(s => s._id === sub._id))
-                                                setProductForm(p => ({ ...p, subCategory: [...p.subCategory, sub] }));
-                                            setSelectSubCategory('');
-                                        }}>
+                                        onChange={e => { const sub = allSubCategory.find(s=>s._id===e.target.value); if(sub && !productForm.subCategory.some(s=>s._id===sub._id)) setProductForm(p=>({...p,subCategory:[...p.subCategory,sub]})); setSelectSubCategory(''); }}>
                                         <option value=''>Select Sub Category</option>
                                         {(allSubCategory||[]).map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
                                     </select>
                                     <div className='flex flex-wrap gap-2 mt-2'>
-                                        {productForm.subCategory.map((s, i) => (
+                                        {productForm.subCategory.map((s,i) => (
                                             <span key={i} className='flex items-center gap-1 bg-violet-500/15 text-violet-400 border border-violet-500/20 text-xs font-bold px-2 py-1 rounded-lg'>
-                                                {s.name}<IoClose className='cursor-pointer' onClick={() => setProductForm(p => ({ ...p, subCategory: p.subCategory.filter((_,idx) => idx !== i) }))}/>
+                                                {s.name}<IoClose className='cursor-pointer' onClick={() => setProductForm(p=>({...p,subCategory:p.subCategory.filter((_,idx)=>idx!==i)}))}/>
                                             </span>
                                         ))}
                                     </div>
@@ -874,19 +863,15 @@ const SellerDashboard = () => {
                                 <div className='grid grid-cols-2 gap-3'>
                                     <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                         <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Unit *</label>
-                                        <input type='text' placeholder='1kg / 500ml' required
-                                            value={productForm.unit}
-                                            onChange={e => setProductForm(p => ({ ...p, unit: e.target.value }))}
-                                            className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'
-                                        />
+                                        <input type='text' placeholder='1kg / 500ml' required value={productForm.unit}
+                                            onChange={e => setProductForm(p=>({...p,unit:e.target.value}))}
+                                            className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'/>
                                     </div>
                                     <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                         <label className='text-[10px] font-black text-slate-500 uppercase tracking-wider'>Stock *</label>
-                                        <input type='number' placeholder='50' required
-                                            value={productForm.stock}
-                                            onChange={e => setProductForm(p => ({ ...p, stock: e.target.value }))}
-                                            className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'
-                                        />
+                                        <input type='number' placeholder='50' required value={productForm.stock}
+                                            onChange={e => setProductForm(p=>({...p,stock:e.target.value}))}
+                                            className='mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'/>
                                     </div>
                                 </div>
                                 <div className='bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4'>
@@ -896,22 +881,18 @@ const SellerDashboard = () => {
                                             <label className='text-[10px] font-black text-slate-500 uppercase'>Seller Price *</label>
                                             <div className='relative mt-1.5'>
                                                 <span className='absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-500 text-sm'>₹</span>
-                                                <input type='number' placeholder='200' required
-                                                    value={productForm.sellerPrice}
-                                                    onChange={e => setProductForm(p => ({ ...p, sellerPrice: e.target.value }))}
-                                                    className='w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold text-white outline-none focus:border-emerald-500 placeholder-slate-600'
-                                                />
+                                                <input type='number' placeholder='200' required value={productForm.sellerPrice}
+                                                    onChange={e => setProductForm(p=>({...p,sellerPrice:e.target.value}))}
+                                                    className='w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold text-white outline-none focus:border-emerald-500 placeholder-slate-600'/>
                                             </div>
                                         </div>
                                         <div>
                                             <label className='text-[10px] font-black text-slate-500 uppercase'>Snapit Margin</label>
                                             <div className='relative mt-1.5'>
                                                 <span className='absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-500 text-sm'>₹</span>
-                                                <input type='number' placeholder='10'
-                                                    value={productForm.snapitMargin}
-                                                    onChange={e => setProductForm(p => ({ ...p, snapitMargin: e.target.value }))}
-                                                    className='w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold text-white outline-none focus:border-emerald-500 placeholder-slate-600'
-                                                />
+                                                <input type='number' placeholder='10' value={productForm.snapitMargin}
+                                                    onChange={e => setProductForm(p=>({...p,snapitMargin:e.target.value}))}
+                                                    className='w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold text-white outline-none focus:border-emerald-500 placeholder-slate-600'/>
                                             </div>
                                         </div>
                                     </div>
@@ -921,11 +902,9 @@ const SellerDashboard = () => {
                                     </div>
                                     <div className='mt-2'>
                                         <label className='text-[10px] font-black text-slate-500 uppercase'>Discount %</label>
-                                        <input type='number' placeholder='0'
-                                            value={productForm.discount}
-                                            onChange={e => setProductForm(p => ({ ...p, discount: e.target.value }))}
-                                            className='mt-1.5 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'
-                                        />
+                                        <input type='number' placeholder='0' value={productForm.discount}
+                                            onChange={e => setProductForm(p=>({...p,discount:e.target.value}))}
+                                            className='mt-1.5 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-orange-500 placeholder-slate-600'/>
                                     </div>
                                 </div>
                                 <button type='submit'
@@ -937,50 +916,41 @@ const SellerDashboard = () => {
                     </div>
                 )}
 
-                {/* ══════════ SALES TAB (NEW) ══════════ */}
+                {/* ══════════ SALES TAB ══════════ */}
                 {activeTab === 'sales' && (
                     <div className='flex flex-col gap-5'>
 
                         {/* Period filter */}
                         <div className='flex gap-2 flex-wrap'>
-                            {[
-                                {key:'today', label:'Today'},
-                                {key:'week',  label:'This Week'},
-                                {key:'month', label:'This Month'},
-                                {key:'all',   label:'All Time'},
-                            ].map(f => (
+                            {[{key:'today',label:'Today'},{key:'week',label:'This Week'},{key:'month',label:'This Month'},{key:'all',label:'All Time'}].map(f => (
                                 <button key={f.key} onClick={() => setSalesFilter(f.key)}
                                     className={`px-4 py-2 rounded-xl text-xs font-black transition-all border ${
                                         salesFilter === f.key
                                             ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20'
                                             : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
-                                    }`}>
-                                    {f.label}
-                                </button>
+                                    }`}>{f.label}</button>
                             ))}
                         </div>
 
-                        {/* ─── SECTION 1: TOTAL SELLS ─────────────────── */}
+                        {/* ─── SECTION 1: TOTAL SELLS ─── */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-orange-500 rounded-full'/>
-                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Section 1 — Total Sells</p>
+                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Total Sells</p>
                             </div>
-
                             <div className='bg-gradient-to-br from-orange-500/10 to-amber-500/5 border border-orange-500/20 rounded-2xl p-5 mb-3'>
                                 <p className='text-[9px] font-black text-orange-400/60 uppercase tracking-widest mb-1'>Total Gross Revenue</p>
                                 <p className='text-4xl font-black text-white'>{fmtINR(salesTotalGross)}</p>
                                 <p className='text-[10px] text-slate-500 mt-1'>{salesFilteredOrders.length} delivered orders</p>
                             </div>
-
                             <div className='grid grid-cols-2 gap-3'>
                                 {[
-                                    { label:'Total Orders Sold',    val: salesFilteredOrders.length, sub: 'delivered',                  color:'text-white',       bg:'bg-slate-900 border-slate-800' },
-                                    { label:'Sales (excl. delivery)', val: fmtINR(salesTotalExDel),  sub: 'product value only',          color:'text-sky-400',     bg:'bg-slate-900 border-slate-800' },
-                                    { label:'Delivery Charges',     val: fmtINR(salesTotalDelivery), sub: 'collected from buyers',       color:'text-red-400',     bg:'bg-slate-900 border-slate-800' },
-                                    { label:'Avg Order Value',      val: fmtINR(salesFilteredOrders.length > 0 ? salesTotalGross / salesFilteredOrders.length : 0), sub:'per order', color:'text-amber-400', bg:'bg-slate-900 border-slate-800' },
+                                    { label:'Orders Sold',            val:salesFilteredOrders.length,  sub:'delivered',             color:'text-white' },
+                                    { label:'Sales (excl. delivery)', val:fmtINR(salesTotalExDel),     sub:'product value only',    color:'text-sky-400' },
+                                    { label:'Delivery Charges',       val:fmtINR(salesTotalDelivery),  sub:'collected from buyers', color:'text-red-400' },
+                                    { label:'Avg Order Value',        val:fmtINR(salesFilteredOrders.length > 0 ? salesTotalGross / salesFilteredOrders.length : 0), sub:'per order', color:'text-amber-400' },
                                 ].map(s => (
-                                    <div key={s.label} className={`${s.bg} border rounded-2xl p-4`}>
+                                    <div key={s.label} className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                         <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider'>{s.label}</p>
                                         <p className={`text-xl font-black mt-1 ${s.color}`}>{s.val}</p>
                                         <p className='text-[9px] text-slate-600 mt-0.5'>{s.sub}</p>
@@ -989,11 +959,11 @@ const SellerDashboard = () => {
                             </div>
                         </div>
 
-                        {/* ─── SECTION 2: PRODUCT PRICES AFTER DISCOUNT + DELIVERY ─── */}
+                        {/* ─── SECTION 2: PRODUCT PRICES AFTER DISCOUNT + UPDATE PRICE ─── */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-sky-500 rounded-full'/>
-                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Section 2 — Product Prices After Discount &amp; Delivery</p>
+                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Product Prices After Discount</p>
                             </div>
 
                             {salesProductList.length === 0 ? (
@@ -1003,15 +973,26 @@ const SellerDashboard = () => {
                             ) : (
                                 <div className='flex flex-col gap-3'>
                                     {salesProductList.map(([name, data]) => {
-                                        const afterDiscWithDelivery = data.afterDiscount + data.deliveryShare;
+                                        const pid             = data.pid;
+                                        const isEditing       = pid && !!editingProductPrice[pid];
+                                        const editData        = editingProductPrice[pid] || {};
+                                        const previewCustomer = isEditing
+                                            ? (Number(editData.sellerPrice||0) + Number(editData.snapitMargin||0))
+                                            : data.customerPrice;
+                                        const previewDiscount = isEditing ? Number(editData.discount||0) : data.discount;
+                                        const previewAfterDisc = previewDiscount > 0
+                                            ? previewCustomer * (1 - previewDiscount / 100)
+                                            : previewCustomer;
+
                                         return (
                                             <div key={name} className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                                 <div className='flex justify-between items-start mb-3'>
                                                     <p className='text-sm font-black text-white truncate max-w-[60%]'>{name}</p>
                                                     <span className='text-[10px] font-black bg-slate-800 text-slate-400 px-2 py-0.5 rounded-lg'>×{data.qty} sold</span>
                                                 </div>
-                                                {/* Price flow */}
-                                                <div className='flex items-center gap-1.5 flex-wrap'>
+
+                                                {/* Price flow: Seller + Margin = MRP */}
+                                                <div className='flex items-center gap-1.5 flex-wrap mb-2.5'>
                                                     <div className='bg-slate-800 rounded-xl px-3 py-2 text-center'>
                                                         <p className='text-[8px] font-black text-slate-500 uppercase'>Seller Price</p>
                                                         <p className='text-sm font-black text-emerald-400'>{fmtINR(data.sellerPrice)}</p>
@@ -1023,34 +1004,113 @@ const SellerDashboard = () => {
                                                     </div>
                                                     <span className='text-slate-600 text-xs'>=</span>
                                                     <div className='bg-slate-800 rounded-xl px-3 py-2 text-center'>
-                                                        <p className='text-[8px] font-black text-slate-500 uppercase'>Customer Price</p>
+                                                        <p className='text-[8px] font-black text-slate-500 uppercase'>MRP</p>
                                                         <p className='text-sm font-black text-sky-400'>{fmtINR(data.customerPrice)}</p>
                                                     </div>
                                                 </div>
-                                                {/* After discount + delivery */}
-                                                <div className='flex gap-2 mt-2.5 flex-wrap'>
+
+                                                {/* Customer paid after discount — prominently shown */}
+                                                <div className='flex gap-2 flex-wrap mb-3'>
                                                     {data.discount > 0 && (
                                                         <div className='flex items-center gap-1.5 bg-violet-500/10 border border-violet-500/20 rounded-xl px-3 py-1.5'>
                                                             <HiOutlineTag size={11} className='text-violet-400'/>
-                                                            <p className='text-[10px] font-black text-violet-400'>{data.discount}% discount → {fmtINR(data.afterDiscount)}</p>
+                                                            <p className='text-[10px] font-black text-violet-400'>{data.discount}% off</p>
                                                         </div>
                                                     )}
+                                                    {/* ★ CUSTOMER PAID (after discount) */}
+                                                    <div className='flex items-center gap-2 bg-sky-500/15 border border-sky-400/30 rounded-xl px-3 py-1.5'>
+                                                        <HiOutlineCash size={13} className='text-sky-300'/>
+                                                        <div>
+                                                            <p className='text-[8px] font-black text-sky-400/70 uppercase leading-none'>Customer Paid</p>
+                                                            <p className='text-base font-black text-sky-300 leading-tight'>
+                                                                {fmtINR(data.discount > 0 ? data.afterDiscount : data.customerPrice)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                     {data.deliveryShare > 0 && (
                                                         <div className='flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-1.5'>
                                                             <HiOutlineTruck size={11} className='text-red-400'/>
-                                                            <p className='text-[10px] font-black text-red-400'>+{fmtINR(data.deliveryShare)} delivery share</p>
+                                                            <p className='text-[10px] font-black text-red-400'>+{fmtINR(data.deliveryShare)} delivery</p>
                                                         </div>
                                                     )}
-                                                    <div className='flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-1.5'>
-                                                        <HiOutlineCash size={11} className='text-emerald-400'/>
-                                                        <p className='text-[10px] font-black text-emerald-400'>Final paid: {fmtINR(afterDiscWithDelivery)}</p>
-                                                    </div>
                                                 </div>
-                                                {/* Total revenue from this product */}
-                                                <div className='mt-3 pt-3 border-t border-slate-800 flex justify-between items-center'>
-                                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Total Seller Revenue (this product)</p>
+
+                                                <div className='pt-2.5 border-t border-slate-800 flex justify-between items-center mb-3'>
+                                                    <p className='text-[10px] font-black text-slate-500 uppercase'>Your Revenue</p>
                                                     <p className='text-sm font-black text-emerald-400'>{fmtINR(data.sellerRevenue)}</p>
                                                 </div>
+
+                                                {/*
+                                                 * ╔══════════════════════════════════════════╗
+                                                 * ║  FIX 4 — UPDATE CUSTOMER PRICE inline   ║
+                                                 * ║  Edit sellerPrice + margin + discount,   ║
+                                                 * ║  see live preview, then Apply Price.     ║
+                                                 * ╚══════════════════════════════════════════╝
+                                                 */}
+                                                {!pid ? (
+                                                    <p className='text-[10px] text-slate-600 italic'>Product ID unavailable — refresh orders</p>
+                                                ) : !isEditing ? (
+                                                    <button
+                                                        onClick={() => setEditingProductPrice(p => ({
+                                                            ...p,
+                                                            [pid]: { sellerPrice: data.sellerPrice, snapitMargin: data.snapitMargin, discount: data.discount }
+                                                        }))}
+                                                        className='w-full flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-black py-2 rounded-xl transition-all'>
+                                                        <MdEdit size={13}/> Edit Customer Price
+                                                    </button>
+                                                ) : (
+                                                    <div className='bg-slate-800/60 border border-sky-500/20 rounded-xl p-3'>
+                                                        <p className='text-[9px] font-black text-sky-400 uppercase tracking-wider mb-2.5'>Update Customer Price</p>
+                                                        <div className='grid grid-cols-3 gap-2 mb-2'>
+                                                            <div>
+                                                                <p className='text-[8px] font-black text-slate-500 uppercase mb-1'>Seller ₹</p>
+                                                                <input type='number' value={editData.sellerPrice}
+                                                                    onChange={e => setEditingProductPrice(p => ({ ...p, [pid]: { ...p[pid], sellerPrice: e.target.value } }))}
+                                                                    className='w-full text-xs bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1.5 outline-none focus:border-sky-500'/>
+                                                            </div>
+                                                            <div>
+                                                                <p className='text-[8px] font-black text-slate-500 uppercase mb-1'>Margin ₹</p>
+                                                                <input type='number' value={editData.snapitMargin}
+                                                                    onChange={e => setEditingProductPrice(p => ({ ...p, [pid]: { ...p[pid], snapitMargin: e.target.value } }))}
+                                                                    className='w-full text-xs bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1.5 outline-none focus:border-sky-500'/>
+                                                            </div>
+                                                            <div>
+                                                                <p className='text-[8px] font-black text-slate-500 uppercase mb-1'>Disc %</p>
+                                                                <input type='number' value={editData.discount}
+                                                                    onChange={e => setEditingProductPrice(p => ({ ...p, [pid]: { ...p[pid], discount: e.target.value } }))}
+                                                                    className='w-full text-xs bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1.5 outline-none focus:border-sky-500'/>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Live preview */}
+                                                        <div className='bg-slate-900 rounded-lg px-3 py-2 flex items-center justify-between mb-2.5 border border-sky-500/20'>
+                                                            <p className='text-[9px] font-black text-slate-500 uppercase'>Customer Will Pay</p>
+                                                            <div className='flex items-center gap-2'>
+                                                                {previewDiscount > 0 && (
+                                                                    <span className='text-[10px] text-slate-500 line-through'>{fmtINR(previewCustomer)}</span>
+                                                                )}
+                                                                <p className='text-base font-black text-sky-300'>{fmtINR(previewAfterDisc)}</p>
+                                                                {previewDiscount > 0 && (
+                                                                    <span className='text-[9px] font-black bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded-md'>{previewDiscount}% off</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className='flex gap-2'>
+                                                            <button
+                                                                onClick={() => handleUpdateCustomerPrice(pid, name)}
+                                                                disabled={updatingPrice[pid]}
+                                                                className='flex-1 bg-sky-500 hover:bg-sky-400 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-black py-2 rounded-xl transition-all'>
+                                                                {updatingPrice[pid] ? 'Saving...' : '✓ Apply Price'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingProductPrice(p => { const n = { ...p }; delete n[pid]; return n; })}
+                                                                className='px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-black py-2 rounded-xl transition-all'>
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -1058,45 +1118,33 @@ const SellerDashboard = () => {
                             )}
                         </div>
 
-                        {/* ─── SECTION 3: SNAPIT MARGIN & TOTAL PROFIT ─── */}
+                        {/* ─── SECTION 3: SNAPIT MARGIN & PROFIT ─── */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-amber-500 rounded-full'/>
-                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Section 3 — Snapit Margin &amp; Total Profit</p>
+                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Snapit Margin &amp; Total Profit</p>
                             </div>
-
-                            {/* Snapit margin hero */}
                             <div className='bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 mb-3'>
-                                <p className='text-[9px] font-black text-amber-400/60 uppercase tracking-widest mb-1'>Snapit Total Margin Collected</p>
+                                <p className='text-[9px] font-black text-amber-400/60 uppercase tracking-widest mb-1'>Snapit Total Margin</p>
                                 <p className='text-4xl font-black text-amber-400'>{fmtINR(salesTotalSnapit)}</p>
-                                <p className='text-[10px] text-slate-500 mt-1'>Platform cut from all {salesFilteredOrders.length} delivered orders</p>
+                                <p className='text-[10px] text-slate-500 mt-1'>Platform cut from {salesFilteredOrders.length} orders</p>
                             </div>
-
-                            {/* Profit breakdown card */}
                             <div className='bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-3'>
                                 <p className='text-[10px] font-black text-slate-500 uppercase tracking-wider mb-4'>Full Money Breakdown</p>
                                 <div className='space-y-3'>
-                                    <div className='flex justify-between items-center'>
-                                        <div className='flex items-center gap-2'>
-                                            <div className='w-2 h-2 bg-sky-400 rounded-full'/>
-                                            <p className='text-xs font-bold text-slate-300'>Gross Revenue (incl. delivery)</p>
+                                    {[
+                                        { dot:'bg-sky-400',     label:'Gross (incl. delivery)',  val:fmtINR(salesTotalGross),     vColor:'text-white' },
+                                        { dot:'bg-red-400',     label:'Delivery charges',         val:`-${fmtINR(salesTotalDelivery)}`, vColor:'text-red-400' },
+                                        { dot:'bg-amber-400',   label:'Snapit margin cut',        val:`-${fmtINR(salesTotalSnapit)}`,   vColor:'text-amber-400' },
+                                    ].map(r => (
+                                        <div key={r.label} className='flex justify-between items-center'>
+                                            <div className='flex items-center gap-2'>
+                                                <div className={`w-2 h-2 ${r.dot} rounded-full`}/>
+                                                <p className='text-xs font-bold text-slate-400'>{r.label}</p>
+                                            </div>
+                                            <p className={`text-sm font-black ${r.vColor}`}>{r.val}</p>
                                         </div>
-                                        <p className='text-sm font-black text-white'>{fmtINR(salesTotalGross)}</p>
-                                    </div>
-                                    <div className='flex justify-between items-center'>
-                                        <div className='flex items-center gap-2'>
-                                            <div className='w-2 h-2 bg-red-400 rounded-full'/>
-                                            <p className='text-xs font-bold text-slate-400'>Delivery charges (deducted)</p>
-                                        </div>
-                                        <p className='text-sm font-black text-red-400'>-{fmtINR(salesTotalDelivery)}</p>
-                                    </div>
-                                    <div className='flex justify-between items-center'>
-                                        <div className='flex items-center gap-2'>
-                                            <div className='w-2 h-2 bg-amber-400 rounded-full'/>
-                                            <p className='text-xs font-bold text-slate-400'>Snapit margin cut</p>
-                                        </div>
-                                        <p className='text-sm font-black text-amber-400'>-{fmtINR(salesTotalSnapit)}</p>
-                                    </div>
+                                    ))}
                                     <div className='pt-3 border-t border-slate-700 flex justify-between items-center'>
                                         <div className='flex items-center gap-2'>
                                             <div className='w-2 h-2 bg-emerald-400 rounded-full'/>
@@ -1106,63 +1154,49 @@ const SellerDashboard = () => {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Profit vs Snapit comparison */}
                             <div className='grid grid-cols-2 gap-3'>
                                 <div className='bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4'>
                                     <p className='text-[9px] font-black text-emerald-400/70 uppercase'>Your Profit</p>
                                     <p className='text-2xl font-black text-emerald-400 mt-1'>{fmtINR(salesTotalNetProfit)}</p>
-                                    <p className='text-[9px] text-slate-500 mt-0.5'>
-                                        {salesTotalGross > 0 ? ((salesTotalNetProfit / salesTotalGross) * 100).toFixed(1) : 0}% of gross
-                                    </p>
-                                    {/* Progress bar */}
+                                    <p className='text-[9px] text-slate-500 mt-0.5'>{salesTotalGross > 0 ? ((salesTotalNetProfit/salesTotalGross)*100).toFixed(1) : 0}% of gross</p>
                                     <div className='w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden'>
-                                        <div className='bg-emerald-500 h-1.5 rounded-full transition-all duration-700'
-                                            style={{ width: `${salesTotalGross > 0 ? Math.min(100,(salesTotalNetProfit / salesTotalGross) * 100) : 0}%` }}/>
+                                        <div className='bg-emerald-500 h-1.5 rounded-full' style={{ width:`${salesTotalGross>0?Math.min(100,(salesTotalNetProfit/salesTotalGross)*100):0}%` }}/>
                                     </div>
                                 </div>
                                 <div className='bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4'>
                                     <p className='text-[9px] font-black text-amber-400/70 uppercase'>Snapit Cut</p>
                                     <p className='text-2xl font-black text-amber-400 mt-1'>{fmtINR(salesTotalSnapit)}</p>
-                                    <p className='text-[9px] text-slate-500 mt-0.5'>
-                                        {salesTotalGross > 0 ? ((salesTotalSnapit / salesTotalGross) * 100).toFixed(1) : 0}% of gross
-                                    </p>
+                                    <p className='text-[9px] text-slate-500 mt-0.5'>{salesTotalGross > 0 ? ((salesTotalSnapit/salesTotalGross)*100).toFixed(1) : 0}% of gross</p>
                                     <div className='w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden'>
-                                        <div className='bg-amber-500 h-1.5 rounded-full transition-all duration-700'
-                                            style={{ width: `${salesTotalGross > 0 ? Math.min(100,(salesTotalSnapit / salesTotalGross) * 100) : 0}%` }}/>
+                                        <div className='bg-amber-500 h-1.5 rounded-full' style={{ width:`${salesTotalGross>0?Math.min(100,(salesTotalSnapit/salesTotalGross)*100):0}%` }}/>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* ─── SECTION 4: ORDER HISTORY WITH PRODUCT PRICES ─── */}
+                        {/* ─── SECTION 4: ORDER HISTORY ─── */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-emerald-500 rounded-full'/>
-                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Section 4 — Order History &amp; Product Prices</p>
+                                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Order History &amp; Product Prices</p>
                             </div>
-
-                            {/* Search */}
                             <div className='relative mb-3'>
                                 <IoSearchOutline size={16} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500'/>
                                 <input value={salesOrderSearch} onChange={e => setSalesOrderSearch(e.target.value)}
                                     placeholder='Search by order ID or product...'
-                                    className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'
-                                />
+                                    className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'/>
                                 {salesOrderSearch && (
                                     <button onClick={() => setSalesOrderSearch('')}
                                         className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-black text-lg'>×</button>
                                 )}
                             </div>
-
                             <div className='flex justify-between items-center mb-3'>
                                 <p className='text-[11px] text-slate-600 font-bold'>{salesOrderHistory.length} orders</p>
                                 <button onClick={() => exportCSV(salesOrderHistory)}
-                                    className='flex items-center gap-1.5 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/15 transition-all'>
+                                    className='flex items-center gap-1.5 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg'>
                                     <HiOutlineDownload size={12}/> Export CSV
                                 </button>
                             </div>
-
                             {salesOrderHistory.length === 0 ? (
                                 <div className='bg-slate-900 rounded-3xl p-14 text-center border-2 border-dashed border-slate-700'>
                                     <p className='text-4xl mb-3'>📭</p>
@@ -1170,9 +1204,7 @@ const SellerDashboard = () => {
                                 </div>
                             ) : salesOrderHistory.map(order => (
                                 <div key={order._id} className='bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-3 last:mb-0'>
-                                    {/* Clickable header */}
-                                    <div
-                                        className='flex justify-between items-center p-4 cursor-pointer hover:bg-slate-800/50 transition-all'
+                                    <div className='flex justify-between items-center p-4 cursor-pointer hover:bg-slate-800/50 transition-all'
                                         onClick={() => setExpandedSalesOrder(expandedSalesOrder === order._id ? null : order._id)}>
                                         <div>
                                             <div className='flex items-center gap-2'>
@@ -1194,18 +1226,16 @@ const SellerDashboard = () => {
                                             <span className={`text-slate-500 text-sm transition-transform inline-block ${expandedSalesOrder === order._id ? 'rotate-180' : ''}`}>▼</span>
                                         </div>
                                     </div>
-
-                                    {/* Expanded: product prices */}
                                     {expandedSalesOrder === order._id && (
                                         <div className='border-t border-slate-800 p-4 bg-slate-800/30'>
                                             <p className='text-[9px] font-black text-slate-500 uppercase mb-3'>Products &amp; Prices</p>
                                             {(order.cartItems || []).map((item, i) => {
-                                                const sp       = getItemSellerPrice(item);
-                                                const margin   = getItemSnapitMargin(item);
-                                                const disc     = getItemDiscount(item);
-                                                const qty      = Number(item.quantity) || 1;
-                                                const custP    = sp + margin;
-                                                const afterD   = disc > 0 ? custP * (1 - disc / 100) : custP;
+                                                const sp     = getItemSellerPrice(item);
+                                                const margin = getItemSnapitMargin(item);
+                                                const disc   = getItemDiscount(item);
+                                                const qty    = Number(item.quantity) || 1;
+                                                const custP  = sp + margin;
+                                                const afterD = disc > 0 ? custP * (1 - disc / 100) : custP;
                                                 return (
                                                     <div key={i} className='mb-3 last:mb-0 pb-3 last:pb-0 border-b border-slate-700/50 last:border-0'>
                                                         <div className='flex justify-between items-center mb-2'>
@@ -1213,31 +1243,20 @@ const SellerDashboard = () => {
                                                             <span className='text-[10px] font-black text-slate-500'>×{qty}</span>
                                                         </div>
                                                         <div className='flex gap-2 flex-wrap'>
-                                                            <span className='text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg'>
-                                                                Seller {fmtINR(sp)}
+                                                            <span className='text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg'>Seller {fmtINR(sp)}</span>
+                                                            {margin > 0 && <span className='text-[10px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-lg'>+Margin {fmtINR(margin)}</span>}
+                                                            <span className='text-[10px] font-black bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-lg'>MRP {fmtINR(custP)}</span>
+                                                            {/* ★ Customer paid after discount — clearly shown */}
+                                                            <span className='text-[10px] font-black bg-sky-500/20 text-sky-200 border border-sky-400/30 px-2 py-0.5 rounded-lg'>
+                                                                Paid {fmtINR(afterD)}{disc > 0 ? ` (${disc}% off)` : ''}
                                                             </span>
-                                                            {margin > 0 && (
-                                                                <span className='text-[10px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-lg'>
-                                                                    +Margin {fmtINR(margin)}
-                                                                </span>
-                                                            )}
-                                                            <span className='text-[10px] font-black bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-lg'>
-                                                                MRP {fmtINR(custP)}
-                                                            </span>
-                                                            {disc > 0 && (
-                                                                <span className='text-[10px] font-black bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-lg'>
-                                                                    {disc}% off → {fmtINR(afterD)}
-                                                                </span>
-                                                            )}
                                                         </div>
                                                         <p className='text-[10px] text-slate-500 mt-1.5'>
-                                                            Subtotal: <span className='text-white font-black'>{fmtINR(sp * qty)}</span> (seller) · <span className='text-amber-400 font-black'>{fmtINR(margin * qty)}</span> (snapit)
+                                                            Subtotal: <span className='text-white font-black'>{fmtINR(sp*qty)}</span> (seller) · <span className='text-amber-400 font-black'>{fmtINR(margin*qty)}</span> (snapit)
                                                         </p>
                                                     </div>
                                                 );
                                             })}
-
-                                            {/* Order financials */}
                                             <div className='mt-3 pt-3 border-t border-slate-700 space-y-1.5'>
                                                 <div className='flex justify-between'>
                                                     <p className='text-[10px] font-black text-slate-500 uppercase'>Order Total</p>
@@ -1268,7 +1287,6 @@ const SellerDashboard = () => {
                                 </div>
                             ))}
                         </div>
-
                     </div>
                 )}
 
@@ -1277,10 +1295,10 @@ const SellerDashboard = () => {
                     <div className='flex flex-col gap-4'>
                         <div className='grid grid-cols-2 gap-3'>
                             {[
-                                { label:'Total Orders',  val: allSorted.length,          color:'text-white' },
-                                { label:'Delivered',     val: deliveredCount,             color:'text-emerald-400' },
-                                { label:'Total Sales',   val: fmtINRShort(allTimeSales),  color:'text-sky-400', sub:'excl. delivery' },
-                                { label:'Cancelled',     val: cancelledCount,             color:'text-red-400' },
+                                { label:'Total Orders', val:allSorted.length,          color:'text-white' },
+                                { label:'Delivered',    val:deliveredCount,             color:'text-emerald-400' },
+                                { label:'Total Sales',  val:fmtINRShort(allTimeSales),  color:'text-sky-400', sub:'excl. delivery' },
+                                { label:'Cancelled',    val:cancelledCount,             color:'text-red-400' },
                             ].map(s => (
                                 <div key={s.label} className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                     <p className='text-[10px] font-black text-slate-500 uppercase'>{s.label}</p>
@@ -1289,51 +1307,26 @@ const SellerDashboard = () => {
                                 </div>
                             ))}
                         </div>
-                        <div className='bg-slate-900 border border-slate-800 rounded-2xl p-5'>
-                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1'>All-Time Sales (excl. delivery)</p>
-                            <p className='text-3xl font-black text-white'>{fmtINR(allTimeSales)}</p>
-                            <div className='flex gap-4 mt-3 pt-3 border-t border-slate-800 flex-wrap'>
-                                <div><p className='text-[9px] text-slate-500 uppercase font-bold'>Orders</p><p className='text-base font-black text-white'>{deliveredCount}</p></div>
-                                <div><p className='text-[9px] text-slate-500 uppercase font-bold'>Your Earnings</p><p className='text-base font-black text-emerald-400'>{fmtINR(allTimeEarning)}</p></div>
-                                <div><p className='text-[9px] text-slate-500 uppercase font-bold'>Delivery Excl.</p><p className='text-base font-black text-red-400'>-{fmtINR(allTimeDelivery)}</p></div>
-                            </div>
-                        </div>
                         <div className='relative'>
                             <IoSearchOutline size={16} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500'/>
                             <input value={historySearch} onChange={e => setHistorySearch(e.target.value)}
                                 placeholder='Search by order ID or product...'
-                                className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'
-                            />
-                            {historySearch && (
-                                <button onClick={() => setHistorySearch('')}
-                                    className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-black text-lg'>×</button>
-                            )}
+                                className='w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-200 focus:outline-none focus:border-orange-500 placeholder-slate-600'/>
+                            {historySearch && <button onClick={() => setHistorySearch('')} className='absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-black text-lg'>×</button>}
                         </div>
                         <div className='flex gap-2 flex-wrap items-center'>
-                            {[
-                                {key:'all',       label:'All'},
-                                {key:'delivered', label:'✅ Delivered'},
-                                {key:'pending',   label:'⏳ Pending'},
-                                {key:'cancelled', label:'❌ Cancelled'},
-                            ].map(f => (
+                            {[{key:'all',label:'All'},{key:'delivered',label:'✅ Delivered'},{key:'pending',label:'⏳ Pending'},{key:'cancelled',label:'❌ Cancelled'}].map(f => (
                                 <button key={f.key} onClick={() => setHistoryFilter(f.key)}
                                     className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${
-                                        historyFilter === f.key
-                                            ? 'bg-orange-500 text-white border-orange-500'
-                                            : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
-                                    }`}>
-                                    {f.label}
-                                </button>
+                                        historyFilter === f.key ? 'bg-orange-500 text-white border-orange-500' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+                                    }`}>{f.label}</button>
                             ))}
                             <button onClick={() => exportCSV(historyFiltered)}
                                 className='ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-slate-900 text-emerald-400 border border-emerald-500/30 hover:bg-slate-800 transition-all'>
                                 <HiOutlineDownload size={14}/> Export CSV
                             </button>
                         </div>
-                        <p className='text-[11px] text-slate-600 font-bold'>
-                            {historyFiltered.length} of {allSorted.length} orders
-                            {historySearch && ` · "${historySearch}"`}
-                        </p>
+                        <p className='text-[11px] text-slate-600 font-bold'>{historyFiltered.length} of {allSorted.length} orders{historySearch && ` · "${historySearch}"`}</p>
                         {historyFiltered.length === 0 ? (
                             <div className='bg-slate-900 rounded-3xl p-14 text-center border-2 border-dashed border-slate-700'>
                                 <p className='text-4xl mb-3'>📭</p>
@@ -1341,14 +1334,11 @@ const SellerDashboard = () => {
                             </div>
                         ) : historyFiltered.map(order => (
                             <div key={order._id} className='bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden'>
-                                <div
-                                    className='flex justify-between items-center p-4 cursor-pointer hover:bg-slate-800/50 transition-all'
+                                <div className='flex justify-between items-center p-4 cursor-pointer hover:bg-slate-800/50 transition-all'
                                     onClick={() => setExpandedOrder(expandedOrder === order._id ? null : order._id)}>
                                     <div>
                                         <p className='font-mono text-xs font-bold text-white'>{order.orderId}</p>
-                                        <p className='text-[10px] text-slate-500 mt-0.5'>
-                                            {new Date(order.createdAt).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
-                                        </p>
+                                        <p className='text-[10px] text-slate-500 mt-0.5'>{new Date(order.createdAt).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</p>
                                     </div>
                                     <div className='flex items-center gap-2'>
                                         <StatusBadge status={order.delivery_status}/>
@@ -1367,7 +1357,7 @@ const SellerDashboard = () => {
                                                         <p className='text-sm font-bold text-slate-200'>{item.productId?.name || item.name}</p>
                                                         <p className='text-[10px] text-slate-500'>{fmtINR(sp)} × {qty}</p>
                                                     </div>
-                                                    <p className='text-sm font-black text-white'>{fmtINR(sp * qty)}</p>
+                                                    <p className='text-sm font-black text-white'>{fmtINR(sp*qty)}</p>
                                                 </div>
                                             );
                                         })}
@@ -1405,20 +1395,11 @@ const SellerDashboard = () => {
                 {activeTab === 'earnings' && (
                     <div className='flex flex-col gap-4'>
                         <div className='flex gap-2 flex-wrap'>
-                            {[
-                                {key:'today', label:'Today'},
-                                {key:'week',  label:'This Week'},
-                                {key:'month', label:'This Month'},
-                                {key:'all',   label:'All Time'},
-                            ].map(f => (
+                            {[{key:'today',label:'Today'},{key:'week',label:'This Week'},{key:'month',label:'This Month'},{key:'all',label:'All Time'}].map(f => (
                                 <button key={f.key} onClick={() => setEarningFilter(f.key)}
                                     className={`px-4 py-2 rounded-xl text-xs font-black transition-all border ${
-                                        earningFilter === f.key
-                                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20'
-                                            : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
-                                    }`}>
-                                    {f.label}
-                                </button>
+                                        earningFilter === f.key ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+                                    }`}>{f.label}</button>
                             ))}
                         </div>
                         {filteredEarnings.length === 0 ? (
@@ -1433,44 +1414,12 @@ const SellerDashboard = () => {
                                     <p className='text-[9px] font-black text-emerald-400/60 uppercase tracking-widest mb-1'>Your Store Earnings</p>
                                     <p className='text-4xl font-black text-emerald-400'>{fmtINR(totalSellerEarning)}</p>
                                     <div className='grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-emerald-500/20'>
-                                        <div>
-                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Gross (incl. delivery)</p>
-                                            <p className='text-sm font-black text-white'>{fmtINR(totalGross)}</p>
-                                        </div>
-                                        <div>
-                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Sales (excl. delivery)</p>
-                                            <p className='text-sm font-black text-sky-400'>{fmtINR(totalSalesExDel)}</p>
-                                        </div>
-                                        <div>
-                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Delivery Charge</p>
-                                            <p className='text-sm font-black text-red-400'>-{fmtINR(totalDelivery)}</p>
-                                        </div>
-                                        {totalSnapitEarning > 0 && (
-                                            <div>
-                                                <p className='text-[9px] text-amber-400/60 uppercase font-bold'>Snapit Cut</p>
-                                                <p className='text-sm font-black text-amber-400'>-{fmtINR(totalSnapitEarning)}</p>
-                                            </div>
-                                        )}
-                                        <div>
-                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Orders Delivered</p>
-                                            <p className='text-sm font-black text-white'>{totalOrders}</p>
-                                        </div>
-                                        <div>
-                                            <p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Avg. Per Order</p>
-                                            <p className='text-sm font-black text-white'>{fmtINR(avgNet)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className='grid grid-cols-2 gap-3'>
-                                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
-                                        <p className='text-[9px] font-black text-slate-500 uppercase'>Total Sells</p>
-                                        <p className='text-3xl font-black text-white mt-1'>{totalOrders}</p>
-                                        <p className='text-[9px] text-slate-600'>delivered orders</p>
-                                    </div>
-                                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
-                                        <p className='text-[9px] font-black text-slate-500 uppercase'>Total Sales</p>
-                                        <p className='text-2xl font-black text-sky-400 mt-1'>{fmtINRShort(totalSalesExDel)}</p>
-                                        <p className='text-[9px] text-slate-600'>excl. delivery charge</p>
+                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Gross (incl. delivery)</p><p className='text-sm font-black text-white'>{fmtINR(totalGross)}</p></div>
+                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Sales (excl. delivery)</p><p className='text-sm font-black text-sky-400'>{fmtINR(totalSalesExDel)}</p></div>
+                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Delivery Charge</p><p className='text-sm font-black text-red-400'>-{fmtINR(totalDelivery)}</p></div>
+                                        {totalSnapitEarning > 0 && <div><p className='text-[9px] text-amber-400/60 uppercase font-bold'>Snapit Cut</p><p className='text-sm font-black text-amber-400'>-{fmtINR(totalSnapitEarning)}</p></div>}
+                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Orders Delivered</p><p className='text-sm font-black text-white'>{totalOrders}</p></div>
+                                        <div><p className='text-[9px] text-emerald-400/50 uppercase font-bold'>Avg. Per Order</p><p className='text-sm font-black text-white'>{fmtINR(avgNet)}</p></div>
                                     </div>
                                 </div>
                                 {productList.length > 0 && (
@@ -1492,8 +1441,7 @@ const SellerDashboard = () => {
                                                         </div>
                                                     </div>
                                                     <div className='w-full bg-slate-800 rounded-full h-2 mt-1.5 overflow-hidden'>
-                                                        <div className={`${colors[i % colors.length]} h-2 rounded-full transition-all duration-700`}
-                                                            style={{ width: `${pct.toFixed(1)}%` }}/>
+                                                        <div className={`${colors[i%colors.length]} h-2 rounded-full transition-all duration-700`} style={{ width:`${pct.toFixed(1)}%` }}/>
                                                     </div>
                                                     <p className='text-[9px] text-slate-600 mt-0.5'>{pct.toFixed(1)}% of earnings</p>
                                                 </div>
@@ -1505,27 +1453,25 @@ const SellerDashboard = () => {
                                     <div className='flex items-center justify-between mb-4'>
                                         <p className='text-xs font-black text-white uppercase tracking-wider'>Daily Breakdown</p>
                                         <button onClick={() => exportCSV(filteredEarnings)}
-                                            className='flex items-center gap-1.5 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/15 transition-all'>
+                                            className='flex items-center gap-1.5 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg'>
                                             <HiOutlineDownload size={12}/> CSV
                                         </button>
                                     </div>
-                                    {Object.entries(byDate)
-                                        .sort((a,b) => new Date(b[0]) - new Date(a[0]))
-                                        .map(([date, d]) => (
-                                            <div key={date} className='py-3 border-b border-slate-800 last:border-0'>
-                                                <div className='flex justify-between items-center'>
-                                                    <p className='text-sm font-bold text-slate-200'>{date}</p>
-                                                    <p className='font-black text-emerald-400'>{fmtINR(d.sellerNet)}</p>
-                                                </div>
-                                                <div className='flex gap-3 mt-1 flex-wrap'>
-                                                    <p className='text-[10px] text-slate-600'>{d.count} order{d.count>1?'s':''}</p>
-                                                    <p className='text-[10px] text-slate-500'>Gross {fmtINR(d.gross)}</p>
-                                                    <p className='text-[10px] text-sky-500'>Sales {fmtINR(d.salesExDel)}</p>
-                                                    {d.delivery > 0 && <p className='text-[10px] text-red-400'>Delivery -{fmtINR(d.delivery)}</p>}
-                                                    {d.snapit > 0 && <p className='text-[10px] text-amber-400'>Snapit -{fmtINR(d.snapit)}</p>}
-                                                </div>
+                                    {Object.entries(byDate).sort((a,b) => new Date(b[0]) - new Date(a[0])).map(([date, d]) => (
+                                        <div key={date} className='py-3 border-b border-slate-800 last:border-0'>
+                                            <div className='flex justify-between items-center'>
+                                                <p className='text-sm font-bold text-slate-200'>{date}</p>
+                                                <p className='font-black text-emerald-400'>{fmtINR(d.sellerNet)}</p>
                                             </div>
-                                        ))}
+                                            <div className='flex gap-3 mt-1 flex-wrap'>
+                                                <p className='text-[10px] text-slate-600'>{d.count} order{d.count>1?'s':''}</p>
+                                                <p className='text-[10px] text-slate-500'>Gross {fmtINR(d.gross)}</p>
+                                                <p className='text-[10px] text-sky-500'>Sales {fmtINR(d.salesExDel)}</p>
+                                                {d.delivery > 0 && <p className='text-[10px] text-red-400'>Delivery -{fmtINR(d.delivery)}</p>}
+                                                {d.snapit > 0 && <p className='text-[10px] text-amber-400'>Snapit -{fmtINR(d.snapit)}</p>}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </>
                         )}
