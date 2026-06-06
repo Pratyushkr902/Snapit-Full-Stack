@@ -59,17 +59,90 @@ const StatusBadge = ({ status }) => {
     );
 };
 
+// ── FIX 2: Shared earning breakdown shown inside every expanded order ──
+// Logic: Customer Paid - Delivery (to rider) - Snapit Cut (platform) = Your Earning
+const OrderEarningBreakdown = ({ order }) => {
+    const orderTotal    = getOrderAmount(order);
+    const deliveryFee   = getDeliveryFee(order);
+    const snapitCut     = getSnapitEarning(order);
+    const sellerEarning = getSellerEarning(order);
+    // Detect if a discount caused the order total to be less than sum of parts
+    const expectedTotal = sellerEarning + snapitCut + deliveryFee;
+    const discountAbsorbed = expectedTotal - orderTotal;
+    const hasDiscount = discountAbsorbed > 0.5; // 0.5 tolerance for float rounding
+
+    return (
+        <div className='mt-3 pt-3 border-t border-slate-700 space-y-2'>
+            {/* Row 1: What customer paid */}
+            <div className='flex justify-between items-start'>
+                <div>
+                    <p className='text-[10px] font-black text-slate-400 uppercase'>Customer Paid</p>
+                    <p className='text-[9px] text-slate-600'>total incl. delivery</p>
+                </div>
+                <p className='text-sm font-black text-white'>{fmtINR(orderTotal)}</p>
+            </div>
+
+            {/* Row 2: Delivery goes to rider */}
+            {deliveryFee > 0 && (
+                <div className='flex justify-between items-start'>
+                    <div className='flex items-center gap-1.5'>
+                        <HiOutlineTruck size={11} className='text-red-400'/>
+                        <div>
+                            <p className='text-[10px] font-black text-red-400 uppercase'>Delivery Charge</p>
+                            <p className='text-[9px] text-slate-600'>goes to rider</p>
+                        </div>
+                    </div>
+                    <p className='text-sm font-black text-red-400'>- {fmtINR(deliveryFee)}</p>
+                </div>
+            )}
+
+            {/* Row 3: Snapit platform cut */}
+            {snapitCut > 0 && (
+                <div className='flex justify-between items-start'>
+                    <div>
+                        <p className='text-[10px] font-black text-amber-400 uppercase'>Snapit Platform Cut</p>
+                        <p className='text-[9px] text-slate-600'>platform fee</p>
+                    </div>
+                    <p className='text-sm font-black text-amber-400'>- {fmtINR(snapitCut)}</p>
+                </div>
+            )}
+
+            {/* Row 4 (only if discount): show discount absorbed */}
+            {hasDiscount && (
+                <div className='flex justify-between items-start'>
+                    <div className='flex items-center gap-1.5'>
+                        <HiOutlineTag size={11} className='text-violet-400'/>
+                        <div>
+                            <p className='text-[10px] font-black text-violet-400 uppercase'>Discount Given</p>
+                            <p className='text-[9px] text-slate-600'>absorbed from margin</p>
+                        </div>
+                    </div>
+                    <p className='text-sm font-black text-violet-400'>- {fmtINR(discountAbsorbed)}</p>
+                </div>
+            )}
+
+            {/* Final: Your Earning highlighted */}
+            <div className='flex justify-between items-center pt-2.5 mt-1 border-t border-slate-600'>
+                <div>
+                    <p className='text-xs font-black text-emerald-400 uppercase'>💰 Your Earning</p>
+                    <p className='text-[9px] text-emerald-600'>after all deductions</p>
+                </div>
+                <p className='text-xl font-black text-emerald-400'>{fmtINR(sellerEarning)}</p>
+            </div>
+        </div>
+    );
+};
+
 const exportCSV = (orders) => {
     const rows = [
-        ['Order ID','Date','Status','Items','Gross','Delivery','Sales (excl delivery)','Seller Earning','Snapit Cut'],
+        ['Order ID','Date','Status','Items','Gross','Delivery','Seller Earning','Snapit Cut'],
         ...orders.map(o => [
             o.orderId,
             new Date(o.createdAt).toLocaleDateString('en-IN'),
             o.delivery_status,
-            (o.cartItems || []).map(i => `${i.productId?.name || i.name} ×${i.quantity}`).join('; '),
+            (o.cartItems || []).map(i => `${i.productId?.name || i.name} x${i.quantity}`).join('; '),
             getOrderAmount(o).toFixed(2),
             getDeliveryFee(o).toFixed(2),
-            (getOrderAmount(o) - getDeliveryFee(o)).toFixed(2),
             getSellerEarning(o).toFixed(2),
             getSnapitEarning(o).toFixed(2),
         ])
@@ -81,7 +154,6 @@ const exportCSV = (orders) => {
     a.href = url; a.download = 'store-orders.csv'; a.click();
     URL.revokeObjectURL(url);
 };
-
 // ══════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════
