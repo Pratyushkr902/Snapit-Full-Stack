@@ -26,6 +26,7 @@ import './models/store.model.js';
 import './models/order.model.js';
 import './models/wallet.model.js';
 import './models/subscription.model.js';
+import './models/notification.model.js';
 
 // ✅ AUTO-CONFIRM CRON
 import { startAutoConfirmCron } from './utils/autoConfirmOrders.js';
@@ -50,6 +51,7 @@ import paymentRouter from './route/payment.route.js';
 import adminRouter from './route/admin.route.js';
 import streakRouter from './route/streak.route.js';
 import subscriptionRouter from './route/subscription.route.js';
+import notificationRouter from './route/notification.route.js';
 
 import './utils/subscriptionCron.js';
 const app = express();
@@ -215,6 +217,7 @@ app.use('/api/streak',       streakRouter);
 app.use('/api/subscription', subscriptionRouter);
 app.use('/api/payment',      paymentRouter);
 app.use('/api/admin',        adminRouter);
+app.use('/api/notification', notificationRouter);
 
 // --- HEALTH ROUTE ---
 app.get("/health", (req, res) => {
