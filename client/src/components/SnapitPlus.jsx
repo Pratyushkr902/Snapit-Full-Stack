@@ -72,7 +72,6 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
           }
         },
         redirect: false,
-        callback_url: 'https://snapit.pages.dev/dashboard/myorders',
         theme: { color: "#1B5E20" }
       };
 
