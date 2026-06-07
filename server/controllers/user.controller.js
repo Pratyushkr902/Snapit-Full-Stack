@@ -515,7 +515,9 @@ export async function refreshToken(request, response) {
 export async function userDetails(request, response) {
     try {
         const userId = request.userId
-        const user = await UserModel.findById(userId).select('-password -refresh_token')
+        const user = await UserModel.findById(userId).select('-password -refresh_token').lean()
+        if (user.isSnapitPlusMember === undefined) user.isSnapitPlusMember = false
+        if (user.snapitPlusExpiresAt === undefined) user.snapitPlusExpiresAt = null
 
         return response.json({
             message: 'user details',
