@@ -40,7 +40,7 @@ const calcDeliveryFee = (subTotalAmt, user) => {
         user?.isSnapitPlusMember &&
         user?.snapitPlusExpiresAt &&
         new Date() < new Date(user.snapitPlusExpiresAt) &&
-        Number(subTotalAmt) >= 99
+        Number(subTotalAmt) >= 149
     ) return 0;
     return 12;
 };
