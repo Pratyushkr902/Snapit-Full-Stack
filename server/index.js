@@ -28,7 +28,6 @@ import './models/wallet.model.js';
 import './models/subscription.model.js';
 import './models/notification.model.js';
 
-// ✅ AUTO-CONFIRM CRON
 import { startAutoConfirmCron } from './utils/autoConfirmOrders.js';
 
 console.log("RAZORPAY INTEGRITY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED");
@@ -54,12 +53,16 @@ import subscriptionRouter from './route/subscription.route.js';
 import notificationRouter from './route/notification.route.js';
 
 import './utils/subscriptionCron.js';
-const app = express();
+import OrderModel from './models/order.model.js';
 
+const app = express();
 app.set('trust proxy', 1); 
 
 const server = http.createServer(app); 
-const latestPositions = new Map(); 
+
+// In-memory cache: latest GPS fix per orderId
+// Map<orderId, { latitude, longitude, timestamp }>
+const latestPositions = new Map();
 
 // --- CORS RULES ---
 const allowedOrigins = [
@@ -93,7 +96,7 @@ app.use(cors({
         ) {
             callback(null, true);
         } else {
-            console.warn(`[CORS Blocked] Unauthorized request attempt from: ${origin}`);
+            console.warn(`[CORS Blocked] Unauthorized request from: ${origin}`);
             callback(new Error('Cross-Origin Request rejected by Snapit Engine policies.'));
         }
     },
@@ -102,7 +105,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"]
 }));
 
-// --- HELMET CONFIGURATIONS ---
+// --- HELMET ---
 app.use(helmet({
     crossOriginResourcePolicy: false,
     crossOriginEmbedderPolicy: false, 
@@ -114,27 +117,20 @@ app.use(helmet({
                 "'self'", "'unsafe-inline'", "'unsafe-eval'",
                 "https://checkout.razorpay.com", "https://*.razorpay.com", 
                 "https://cdn.razorpay.com", "https://*.googleapis.com", "https://unpkg.com",
-                "https://*.gstatic.com",        // ✅ Firebase service worker scripts
-                "https://www.gstatic.com",      // ✅ Firebase compat scripts
-                "https://*.firebaseapp.com",    // ✅ Firebase app scripts
-                "blob:"                         // ✅ Required for service workers
-            ],
-            workerSrc: [                        // ✅ NEW: service worker CSP
-                "'self'",
-                "blob:",
                 "https://*.gstatic.com",
                 "https://www.gstatic.com",
+                "https://*.firebaseapp.com",
+                "blob:"
             ],
+            workerSrc: ["'self'", "blob:", "https://*.gstatic.com", "https://www.gstatic.com"],
             imgSrc: [
                 "'self'", "data:", "blob:",
                 "https://*.openstreetmap.org", "https://res.cloudinary.com", 
                 "https://*.cloudinary.com", "https://*.googleapis.com", 
-                "https://*.gstatic.com", "https://api.qrserver.com"
+                "https://*.gstatic.com", "https://api.qrserver.com",
+                "https://cdn-icons-png.flaticon.com",  // ✅ Leaflet marker icons
             ],
-            frameSrc: [
-                "'self'", "https://api.razorpay.com", 
-                "https://*.razorpay.com", "https://checkout.razorpay.com"
-            ],
+            frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com", "https://checkout.razorpay.com"],
             connectSrc: [
                 "'self'",
                 "https://api.razorpay.com", "https://*.razorpay.com",
@@ -169,7 +165,25 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- SOCKET.IO ---
+// ─────────────────────────────────────────────────────────────────────────────
+// SOCKET.IO — RIDER TRACKING
+// ─────────────────────────────────────────────────────────────────────────────
+//
+//  Event contract (must match frontend exactly):
+//
+//  RiderGPS.jsx   emits  →  "send_location"   { orderId, latitude, longitude }
+//  server         emits  →  "rider_moved"      { latitude, longitude, timestamp }
+//  RiderTracking  listens → "rider_moved"
+//
+//  ✅ BUG FIX: old code emitted "receive_location" — frontend never heard it.
+//              Changed to "rider_moved" to match RiderTracking.jsx socket.on('rider_moved')
+//
+//  Room strategy: each orderId = one Socket.IO room.
+//  Both the rider device and the customer browser join the same room.
+//  Rider emits send_location → server re-broadcasts as rider_moved to the whole room.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: { 
@@ -184,32 +198,65 @@ const io = new Server(server, {
 });
 
 io.on('connection', (socket) => {
-    console.log(`Tracking Connected: ${socket.id}`);
+    console.log(`[Socket] Connected: ${socket.id}`);
     
+    // ── Both rider & customer join this room on mount ──────────────────────
     socket.on('join_order', (orderId) => {
-        if (orderId) {
-            socket.join(orderId);
-            if (latestPositions.has(orderId)) {
-                socket.emit('receive_location', latestPositions.get(orderId));
-            }
+        if (!orderId) return;
+        socket.join(orderId);
+        console.log(`[Socket] ${socket.id} joined room: ${orderId}`);
+
+        // Instantly hydrate new joins with last known position
+        // (customer opens tracking page after rider is already moving)
+        if (latestPositions.has(orderId)) {
+            socket.emit('rider_moved', latestPositions.get(orderId));
         }
     });
-    
+
+    // ── Rider device sends GPS position ───────────────────────────────────
     socket.on('send_location', (data) => {
         const { orderId, latitude, longitude } = data;
-        if (orderId && latitude && longitude) {
-            const movementData = { latitude, longitude, timestamp: Date.now() };
-            latestPositions.set(orderId, movementData);
-            io.to(orderId).emit('receive_location', movementData);
-        }
+        if (!orderId || !latitude || !longitude) return;
+
+        const payload = { latitude, longitude, timestamp: Date.now() };
+
+        // Cache in-memory so late-joining customers get position immediately
+        latestPositions.set(orderId, payload);
+
+        // ✅ FIX: emit "rider_moved" (was "receive_location" — wrong event name)
+        io.to(orderId).emit('rider_moved', payload);
+
+        // Persist to DB (fire-and-forget — don't block the socket)
+        // Survives server restarts; also seeds the map on first page load
+        OrderModel.findOneAndUpdate(
+            { orderId },
+            { $set: {
+                'riderLocation.latitude':  latitude,
+                'riderLocation.longitude': longitude,
+                'riderLocation.updatedAt': new Date(),
+            }},
+            { new: false }
+        ).catch(err => console.error('[Socket] DB persist failed:', err.message));
+
+        console.log(`[Socket] rider_moved → room:${orderId} | lat:${latitude.toFixed(5)} lon:${longitude.toFixed(5)}`);
     });
-    
+
+    // ── Clean up room on component unmount ────────────────────────────────
+    // ✅ FIX: this handler was entirely missing in the original code
+    socket.on('leave_order', (orderId) => {
+        if (!orderId) return;
+        socket.leave(orderId);
+        console.log(`[Socket] ${socket.id} left room: ${orderId}`);
+    });
+
     socket.on('disconnect', () => {
-        console.log(`Client ${socket.id} disconnected`);
+        console.log(`[Socket] Disconnected: ${socket.id}`);
     });
 });
 
-// --- API ROUTES ---
+// ─────────────────────────────────────────────────────────────────────────────
+// API ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
 app.use('/api/user',         userRouter);
 app.use('/api/category',     categoryRouter);
 app.use('/api/file',         uploadRouter);
@@ -229,12 +276,15 @@ app.use('/api/payment',      paymentRouter);
 app.use('/api/admin',        adminRouter);
 app.use('/api/notification', notificationRouter);
 
-// --- HEALTH ROUTE ---
+// ─────────────────────────────────────────────────────────────────────────────
+// HEALTH CHECK
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
     res.json({ 
         message: "Snapit Server is Live!",
         timestamp: new Date().toISOString(),
-        razorpay_status: process.env.RAZORPAY_KEY_ID ? "Configured" : "Missing Keys"
+        razorpay_status: process.env.RAZORPAY_KEY_ID ? "Configured" : "Missing Keys",
+        active_tracking_rooms: latestPositions.size,   // bonus: see how many live deliveries
     });
 });
 
@@ -242,15 +292,19 @@ app.get('/{*splat}', (req, res) => {
     res.status(404).json({ message: "Route not found.", success: false });
 });
 
-// --- KEEP ALIVE ---
+// ─────────────────────────────────────────────────────────────────────────────
+// KEEP ALIVE (prevents Render free tier from sleeping)
+// ─────────────────────────────────────────────────────────────────────────────
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-backend-bn8r.onrender.com';
 setInterval(() => {
     fetch(`${SELF_URL}/health`).catch(() => {});
-}, 14 * 60 * 1000); 
+}, 14 * 60 * 1000);
 
-// --- DAILY MRP RECALCULATION CRON ---
+// ─────────────────────────────────────────────────────────────────────────────
+// DAILY MRP RECALCULATION CRON
+// ─────────────────────────────────────────────────────────────────────────────
 cron.schedule('0 0 * * *', async () => {
-    console.log('[CRON] ⏰ Running daily MRP recalculation...');
+    console.log('[CRON] Running daily MRP recalculation...');
     try {
         const products = await ProductModel.find({ sellerPrice: { $ne: null } });
         let updated = 0;
@@ -263,25 +317,25 @@ cron.schedule('0 0 * * *', async () => {
                 updated++;
             }
         }
-        console.log(`[CRON] ✅ MRP recalculated for ${updated} products`);
+        console.log(`[CRON] MRP recalculated for ${updated} products`);
     } catch (err) {
-        console.error('[CRON] ❌ MRP recalculation failed:', err.message);
+        console.error('[CRON] MRP recalculation failed:', err.message);
     }
 }, { timezone: "Asia/Kolkata" });
 
-// --- ENGINE BOOT ---
+// ─────────────────────────────────────────────────────────────────────────────
+// ENGINE BOOT
+// ─────────────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
-    console.log("✅ Database System Connected Successfully");
+    console.log("✅ Database Connected");
     initSubscriptionCron();
-
-    // ✅ Start auto-confirm cron — fires every 2 mins, confirms orders stuck > 5 mins
     startAutoConfirmCron();
 
     server.listen(PORT, '0.0.0.0', () => { 
-        console.log(`🚀 Snapit Server running on port ${PORT}`);
-        console.log(`⏰ Daily MRP recalculation cron scheduled at midnight IST`);
-        console.log(`⏰ Auto-confirm stuck orders cron started (5 min timeout)`);
+        console.log(`🚀 Snapit running on port ${PORT}`);
+        console.log(`⏰ MRP cron: daily midnight IST`);
+        console.log(`⏰ Auto-confirm cron: every 2 min`);
     });
 }).catch(err => {
     console.error("❌ Database connection failed", err);

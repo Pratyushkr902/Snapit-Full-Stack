@@ -114,14 +114,12 @@ const buildTaggedCartItems = async (list_items, assignedStoreName) => {
     );
 };
 
-// Shared populate used by every dashboard GET
 const populateOrder = (query) =>
     query
         .populate("userId",            "name email mobile")
         .populate("delivery_address")
         .populate("cartItems.productId", "name image price sellerPrice snapitMargin");
 
-// Coerces all money fields to Number after populate
 const toSafeOrder = (o) => {
     const obj = o.toObject ? o.toObject() : { ...o };
     obj.delivery_fee = Number(obj.delivery_fee ?? 0);
@@ -421,6 +419,81 @@ export const collectPaymentController = async (request, response) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RIDER TRACKING
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /api/order/rider-location/:orderId
+//
+// Returns rider_name, rider_contact, delivery_status, and last known GPS fix.
+// Called by RiderTracking.jsx on mount — seeds the map with the persisted
+// position so it doesn't default to a hardcoded pin after a page refresh.
+//
+// ✅ FIX: old getRiderLocationController used req.body on a GET — invalid.
+//         Switched to req.params and added rider_name/rider_contact to response.
+export const getRiderLocationController = async (request, response) => {
+    try {
+        const { orderId } = request.params; // ✅ FIX: was req.body (invalid for GET)
+
+        const order = await OrderModel
+            .findOne({ orderId })
+            .select("orderId rider_name rider_contact riderLocation delivery_status");
+
+        if (!order) return response.status(404).json({ message: "Order not found.", error: true, success: false });
+
+        return response.json({
+            message: "Location fetched.",
+            error:   false,
+            success: true,
+            data: {
+                orderId:         order.orderId,
+                rider_name:      order.rider_name,
+                rider_contact:   order.rider_contact,
+                delivery_status: order.delivery_status,
+                riderLocation:   order.riderLocation, // { latitude, longitude, updatedAt }
+            },
+        });
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false });
+    }
+};
+
+// POST /api/order/rider-location/:orderId
+//
+// Saves a GPS fix to MongoDB. Called fire-and-forget from the socket handler
+// in server.js on every send_location event. Survives server restarts —
+// a customer opening the tracking page hours into a delivery gets the real
+// last position instead of the hardcoded default.
+//
+// ✅ NEW: this handler was entirely missing from the original controller.
+export const updateRiderLocationController = async (request, response) => {
+    try {
+        const { orderId } = request.params;
+        const { latitude, longitude } = request.body;
+
+        if (!latitude || !longitude)
+            return response.status(400).json({ message: "latitude and longitude are required.", error: true, success: false });
+
+        const order = await OrderModel.findOneAndUpdate(
+            { orderId },
+            {
+                $set: {
+                    "riderLocation.latitude":  Number(latitude),
+                    "riderLocation.longitude": Number(longitude),
+                    "riderLocation.updatedAt": new Date(),
+                },
+            },
+            { new: true, select: "orderId riderLocation" }
+        );
+
+        if (!order) return response.status(404).json({ message: "Order not found.", error: true, success: false });
+
+        return response.json({ message: "Location saved.", error: false, success: true, data: order.riderLocation });
+    } catch (error) {
+        return response.status(500).json({ message: error.message, error: true, success: false });
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET — RIDER DASHBOARD
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -439,18 +512,15 @@ export async function getOrderItems(request, response) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET — SELLER ORDERS  (packing / history / earnings tabs)
+// GET — SELLER ORDERS
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getSellerOrdersController(request, response) {
     try {
-        // ✅ Prevent HTTP-level caching so seller always gets fresh data
         response.set('Cache-Control', 'no-store, no-cache, must-revalidate');
         response.set('Pragma', 'no-cache');
         response.set('Expires', '0');
 
-        // ✅ Fetch ALL orders (including Delivered) so history/earnings tabs work
-        // ✅ Sorted newest first
         const orders = await populateOrder(
             OrderModel.find({}).sort({ createdAt: -1 })
         );
@@ -467,7 +537,7 @@ export async function getSellerOrdersController(request, response) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET — SELLER EARNINGS  (/api/order/seller-earnings)
+// GET — SELLER EARNINGS
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getSellerEarningsController(request, response) {
@@ -482,14 +552,10 @@ export async function getSellerEarningsController(request, response) {
         const safeOrders = orders.map(toSafeOrder);
         const delivered  = safeOrders.filter((o) => (o.delivery_status || "").toLowerCase() === "delivered");
 
-        const totalSellerEarning = delivered.reduce(
-            (acc, o) => acc + o.cartItems.reduce((s, item) => s + item.sellerPrice * item.quantity, 0), 0
-        );
-        const totalSnapitMargin = delivered.reduce(
-            (acc, o) => acc + o.cartItems.reduce((s, item) => s + item.snapitMargin * item.quantity, 0), 0
-        );
+        const totalSellerEarning    = delivered.reduce((acc, o) => acc + o.cartItems.reduce((s, item) => s + item.sellerPrice  * item.quantity, 0), 0);
+        const totalSnapitMargin     = delivered.reduce((acc, o) => acc + o.cartItems.reduce((s, item) => s + item.snapitMargin * item.quantity, 0), 0);
         const totalDeliveryFees     = delivered.reduce((acc, o) => acc + o.delivery_fee, 0);
-        const totalGross            = delivered.reduce((acc, o) => acc + o.totalAmt, 0);
+        const totalGross            = delivered.reduce((acc, o) => acc + o.totalAmt,     0);
         const totalSells            = delivered.length;
         const totalSalesExDelivery  = totalGross - totalDeliveryFees;
 
@@ -526,23 +592,12 @@ export async function getOrderDetailsController(request, response) {
     }
 }
 
-export const getRiderLocationController = async (request, response) => {
-    try {
-        const { orderId } = request.body;
-        const order = await OrderModel.findOne({ orderId }).select("riderLocation delivery_status");
-        if (!order) return response.status(404).json({ message: "Order not found.", error: true, success: false });
-        return response.json({ message: "Location fetched.", error: false, success: true, data: order.riderLocation });
-    } catch (error) {
-        return response.status(500).json({ message: error.message, error: true, success: false });
-    }
-};
-
 export const getDailySalesReport = async (req, res) => {
     try {
         const today    = new Date(); today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
         const orders   = await OrderModel.find({ createdAt: { $gte: today, $lt: tomorrow }, delivery_status: { $ne: "Cancelled" } });
-        const totalRevenue  = orders.reduce((acc, o) => acc + Number(o.totalAmt    || 0), 0);
+        const totalRevenue  = orders.reduce((acc, o) => acc + Number(o.totalAmt     || 0), 0);
         const totalDelivery = orders.reduce((acc, o) => acc + Number(o.delivery_fee || 0), 0);
         return res.json({
             message: "Daily report", error: false, success: true,
