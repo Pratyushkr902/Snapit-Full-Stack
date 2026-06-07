@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
-import { socket } from '../utils/socket';
+import { io } from 'socket.io-client';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
@@ -67,6 +67,7 @@ const RiderTracking = () => {
     const [distance, setDistance] = useState(null);
     const [currentStatus, setCurrentStatus] = useState('Locating Rider…');
     const [arrived, setArrived] = useState(false);
+    const socketRef = useRef(null);
     const [riderData, setRiderData] = useState({
         name: 'Pratyush Sharma',
         contact: '9472026580',
@@ -111,13 +112,18 @@ const RiderTracking = () => {
         if (!orderId) return;
         fetchOrderDetails();
 
-        const joinRoom = () => {
-            console.log('Joining order room:', orderId);
-            socket.emit('join_order', orderId);
-        };
+        const socket = io(
+            import.meta.env.VITE_API_URL || 'https://snapit-backend-bn8r.onrender.com',
+            {
+                path: '/socket.io/',
+                transports: ['websocket', 'polling'],
+                withCredentials: true,
+            }
+        );
+        socketRef.current = socket;
 
-        if (socket.connected) joinRoom();
-        else socket.on('connect', joinRoom);
+        socket.emit('join_order', orderId);
+        socket.on('connect', () => socket.emit('join_order', orderId));
 
         const handleMovement = (data) => {
             if (!data.latitude || !data.longitude) return;
@@ -150,9 +156,8 @@ const RiderTracking = () => {
         socket.on('rider_moved', handleMovement);
 
         return () => {
-            socket.off('rider_moved', handleMovement);
-            socket.off('connect', joinRoom);
             socket.emit('leave_order', orderId);
+            socket.disconnect();
         };
     }, [orderId]);
 
