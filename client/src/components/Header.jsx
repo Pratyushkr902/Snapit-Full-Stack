@@ -35,6 +35,7 @@ const Header = ({ openCart }) => {
     }
 
     return (
+        <>
         <header className='sticky top-0 z-40 bg-white shadow-sm'>
 
             {/* ════════════════════════════════
@@ -159,6 +160,16 @@ const Header = ({ openCart }) => {
             </div>
 
         </header>
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-100 shadow-lg">
+            <div className="flex items-center justify-around px-2 py-2">
+                <Link to="/" className="flex flex-col items-center gap-0.5"><span className="text-xl">🏠</span><span className="text-[10px] font-bold text-slate-500">Home</span></Link>
+                <Link to="/search" className="flex flex-col items-center gap-0.5"><span className="text-xl">🔍</span><span className="text-[10px] font-bold text-slate-500">Search</span></Link>
+                <Link to="/wallet" className="flex flex-col items-center gap-0.5"><span className="text-xl">💰</span><span className="text-[10px] font-bold text-slate-500">Wallet</span></Link>
+                <Link to="/dashboard/myorders" className="flex flex-col items-center gap-0.5"><span className="text-xl">📦</span><span className="text-[10px] font-bold text-slate-500">Orders</span></Link>
+                <Link to="/user" className="flex flex-col items-center gap-0.5"><span className="text-xl">👤</span><span className="text-[10px] font-bold text-slate-500">Account</span></Link>
+            </div>
+        </nav>
+        </>
     )
 }
 
