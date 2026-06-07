@@ -72,7 +72,9 @@ function App() {
   const fetchOrder = useCallback(async () => {
     if (!user?._id) return
     try {
-      const response = await Axios({ ...SummaryApi.getOrderItems })
+      // ✅ FIXED: was SummaryApi.getOrderItems (rider endpoint — returns ALL users' orders)
+      //           now SummaryApi.getOrderDetails (customer endpoint — filters by logged-in userId)
+      const response = await Axios({ ...SummaryApi.getOrderDetails })
       if (response?.data?.success) {
         dispatch(setOrder(response.data.data))
       }
@@ -148,12 +150,9 @@ function App() {
     <RemoteConfigProvider>
       <GlobalProvider>
         <div className="App">
-
-          {/* ✅ FIX: Hide OfferStrip and Header on dashboard/rider pages */}
           {!isDashboard && <OfferStrip />}
           {!isDashboard && <Header openCart={() => setShowCart(true)} />}
           
-          {/* ✅ FIX: Remove min-height constraint on dashboard so it fills screen freely */}
           <main className={isDashboard ? '' : 'min-h-[78vh]'}>
             <Outlet />
           </main>
