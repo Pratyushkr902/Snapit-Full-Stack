@@ -29,7 +29,8 @@ const CheckoutPage = () => {
   const [couponApplied, setCouponApplied] = useState(false)
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false)
 
-  const deliveryFee = totalPrice >= 399 ? 0 : 12
+  const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
+  const deliveryFee = totalPrice >= 399 ? 0 : (isSnapitPlus && totalPrice >= 149) ? 0 : 12
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
   const handleApplyPromoCoupon = async () => {

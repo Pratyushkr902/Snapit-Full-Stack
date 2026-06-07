@@ -16,6 +16,8 @@ const PricewithDiscount = (price, discount) => {
 const CartMobilePage = () => {
     const { notDiscountTotalPrice, totalPrice, totalQty } = useGlobalContext()
     const cartItem = useSelector(state => state.cartItem.cart)
+    const user = useSelector(state => state.user)
+    const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
     const navigate = useNavigate()
 
     const deliveryFee = totalPrice >= 399 ? 0 : 12;
@@ -114,7 +116,7 @@ const CartMobilePage = () => {
                                 {deliveryFee > 0 && (
                                     <div className='bg-orange-50 p-2 rounded-lg border border-orange-100'>
                                         <p className='text-[10px] text-orange-600 text-center font-bold uppercase tracking-tight'>
-                                            Add {DisplayPriceInRupees(399 - totalPrice)} more for FREE DELIVERY
+                                            Add {DisplayPriceInRupees((isSnapitPlus ? 149 : 399) - totalPrice)} more for FREE DELIVERY
                                         </p>
                                     </div>
                                 )}
