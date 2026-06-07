@@ -163,7 +163,7 @@ const SummaryApi = {
     },
     getOrderDetails: {
         url: '/api/order/order-list',
-        method: 'post'
+        method: 'get'  // ✅ FIXED: was 'post', backend route is GET
     },
     getSellerOrders: {
         url: '/api/order/seller-orders',
