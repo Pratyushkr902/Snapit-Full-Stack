@@ -13,7 +13,7 @@ const SubscriptionCard = ({ subscription, onUpdate }) => {
     const quantity = item?.quantity;
 
     // ✅ Calculate price from product price × quantity
-    const totalPrice = product?.price && quantity ? product.price * quantity : 0;
+    const totalPrice = product?.price ? product.price * quantity : (item?.price || 0);
 
     const handleStatusToggle = async () => {
         setIsLoading(true);
