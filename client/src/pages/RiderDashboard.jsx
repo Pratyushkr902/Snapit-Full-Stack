@@ -26,8 +26,11 @@ const storeMapLink = (store) => {
     return `https://www.google.com/maps?q=${lat},${lng}`;
 };
 
-const getDeliveryFee = (o) =>
-    Number(o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? o.riderFee ?? o.rider_fee ?? 0);
+// ✅ FIXED: robust fee extraction with NaN guard
+const getDeliveryFee = (o) => {
+    const fee = o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? o.riderFee ?? o.rider_fee ?? 0;
+    return isNaN(Number(fee)) ? 0 : Number(fee);
+};
 
 const fmt = (n) => Number(n).toFixed(2);
 const fmtINR = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -39,12 +42,9 @@ const RiderDashboard = () => {
     const [isTracking, setIsTracking]       = useState(false);
     const [paymentOrder, setPaymentOrder]   = useState(null);
     const [activeTab, setActiveTab]         = useState('orders');
-    const [earningFilter, setEarningFilter] = useState('today');
+    const [earningFilter, setEarningFilter] = useState('all'); // ✅ FIXED: was 'today' — showed ₹0 for past deliveries
     const [lastSynced, setLastSynced]       = useState(null);
 
-    // ✅ OPTION 3 FIX: Fetch ALL non-delivered orders directly
-    // Rider sees orders as soon as delivery_status = 'Confirmed'
-    // regardless of what seller did — no dependency on seller_status
     const fetchRiderOrders = useCallback(async (silent = false) => {
         try {
             if (!silent) setLoading(true);
@@ -52,18 +52,10 @@ const RiderDashboard = () => {
             if (response.data.success) {
                 const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
 
-                // ✅ OPTION 3: Also show orders where seller hasn't confirmed but
-                // order is old enough (>10 mins) — these will be auto-confirmed by
-                // backend cron (Option 1) but rider can see them immediately
                 const visibleOrders = allOrders.filter(o => {
-                    // Always show confirmed, out-for-delivery, delivered
                     if (['Confirmed', 'Out for Delivery', 'Delivered'].includes(o.delivery_status)) return true;
-
-                    // ✅ Also show Pending orders older than 8 mins
-                    // so rider sees it slightly before auto-confirm fires
                     const ageMinutes = (Date.now() - new Date(o.createdAt)) / 60000;
                     if (o.delivery_status === 'Pending' && ageMinutes >= 3) return true;
-
                     return false;
                 });
 
@@ -79,23 +71,18 @@ const RiderDashboard = () => {
 
     useEffect(() => {
         fetchRiderOrders();
-
-        // ✅ OPTION 3: Poll every 30 seconds — rider always gets fresh orders
         const interval = setInterval(() => fetchRiderOrders(true), 30000);
         return () => clearInterval(interval);
     }, [fetchRiderOrders]);
 
-    // ✅ Socket: real-time order updates
     useEffect(() => {
         socket.on('new_order', () => {
             fetchRiderOrders(true);
             toast('🛵 New order available!', { icon: '📦' });
         });
-
         socket.on('order_confirmed', () => {
             fetchRiderOrders(true);
         });
-
         return () => {
             socket.off('new_order');
             socket.off('order_confirmed');
@@ -143,7 +130,7 @@ const RiderDashboard = () => {
         if (earningFilter === 'today') return created.toDateString() === now.toDateString();
         if (earningFilter === 'week')  { const w = new Date(now); w.setDate(now.getDate()-7); return created >= w; }
         if (earningFilter === 'month') return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-        return true;
+        return true; // 'all'
     });
 
     const deliveredOrders  = orders.filter(o => o.delivery_status === 'Delivered');
@@ -191,7 +178,6 @@ const RiderDashboard = () => {
                     <div>
                         <p className='text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]'>Snapit Logistics · Bihar</p>
                         <h1 className='text-lg font-black text-white leading-none'>RIDER COMMAND</h1>
-                        {/* ✅ Show last synced time */}
                         {lastSynced && (
                             <p className='text-[8px] text-slate-600'>
                                 Synced {lastSynced.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -203,7 +189,6 @@ const RiderDashboard = () => {
                             <p className='text-[8px] font-black text-slate-400 uppercase'>Cash in Hand</p>
                             <p className='text-base font-black text-amber-400'>{fmtINR(totalInHand)}</p>
                         </div>
-                        {/* Manual refresh */}
                         <button
                             onClick={() => fetchRiderOrders(true)}
                             className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'>
@@ -275,9 +260,7 @@ const RiderDashboard = () => {
                                     const store          = order.store_details;
                                     const mapLink        = storeMapLink(store);
                                     const hasMultiStores = order.involved_stores?.length > 1;
-
-                                    // ✅ Show warning badge if seller hasn't confirmed but order is old
-                                    const ageMinutes = (Date.now() - new Date(order.createdAt)) / 60000;
+                                    const ageMinutes     = (Date.now() - new Date(order.createdAt)) / 60000;
                                     const isSellerDelayed = order.delivery_status === 'Pending' && ageMinutes >= 3;
 
                                     return (
@@ -288,7 +271,6 @@ const RiderDashboard = () => {
                                                     : 'border-slate-800 hover:border-slate-600'
                                             }`}>
 
-                                            {/* ✅ Seller delayed warning */}
                                             {isSellerDelayed && (
                                                 <div className='bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center gap-2'>
                                                     <span>⚠️</span>
@@ -298,7 +280,6 @@ const RiderDashboard = () => {
                                                 </div>
                                             )}
 
-                                            {/* Order ID + Customer */}
                                             <div className='flex justify-between items-start'>
                                                 <div className='flex-1'>
                                                     <span className='text-[9px] font-black bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full uppercase tracking-wider'>
@@ -324,7 +305,6 @@ const RiderDashboard = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Store Info */}
                                             <div className='bg-slate-800/60 rounded-2xl p-3 border border-slate-700/50'>
                                                 <div className='flex items-center justify-between'>
                                                     <div className='flex items-center gap-2.5'>
@@ -358,7 +338,6 @@ const RiderDashboard = () => {
                                                 )}
                                             </div>
 
-                                            {/* Items */}
                                             <div className='bg-slate-800/40 rounded-2xl p-3'>
                                                 <p className='text-[9px] font-black text-slate-500 uppercase flex items-center gap-1 mb-2'>
                                                     <FaShoppingBasket size={9}/> Items
@@ -376,7 +355,6 @@ const RiderDashboard = () => {
                                                 ))}
                                             </div>
 
-                                            {/* Amount + Status */}
                                             <div className='flex justify-between items-end'>
                                                 <div>
                                                     <p className='text-[9px] font-black text-slate-500 uppercase'>Collect</p>
@@ -395,14 +373,12 @@ const RiderDashboard = () => {
                                                 </span>
                                             </div>
 
-                                            {/* Action Buttons */}
                                             {(order.delivery_status === 'Confirmed') && (
                                                 <button onClick={() => handlePickup(order)}
                                                     className='w-full py-3.5 rounded-2xl font-black text-sm text-white bg-amber-500 hover:bg-amber-400 shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
                                                     <FaCheckCircle/> PICKUP FROM {store?.name?.toUpperCase() || 'STORE'}
                                                 </button>
                                             )}
-                                            {/* ✅ Allow pickup even if seller delayed (Option 3) */}
                                             {isSellerDelayed && (
                                                 <button onClick={() => handlePickup(order)}
                                                     className='w-full py-3.5 rounded-2xl font-black text-sm text-white bg-orange-500 hover:bg-orange-400 shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
