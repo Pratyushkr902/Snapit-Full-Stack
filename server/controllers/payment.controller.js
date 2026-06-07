@@ -1,6 +1,7 @@
 import Razorpay from 'razorpay'
 import crypto from 'crypto'
 import UserModel from '../models/user.model.js'
+import SubscriptionModel from '../models/subscription.model.js'
 
 // ── Razorpay instance with full validation ─────────────────────────────────
 const getRazorpayInstance = () => {
@@ -44,7 +45,6 @@ export const createOrder = async (req, res) => {
         return res.json({ success: true, order })
 
     } catch (err) {
-        // Razorpay SDK throws objects, not Error instances — handle both
         const msg = err?.message || err?.error?.description || JSON.stringify(err)
         console.error('[createOrder] ❌', msg)
         return res.status(500).json({ success: false, message: msg })
@@ -63,7 +63,6 @@ export const verifyPayment = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Missing payment verification fields' })
         }
 
-        // Verify HMAC signature
         const secret = (process.env.RAZORPAY_SECRET_KEY || '').trim()
         const expected = crypto
             .createHmac('sha256', secret)
@@ -164,6 +163,7 @@ export const verifySubscription = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Missing payment verification fields' })
         }
 
+        // ── Verify Razorpay signature ──────────────────────────────────────
         const secret = (process.env.RAZORPAY_SECRET_KEY || '').trim()
         const expected = crypto
             .createHmac('sha256', secret)
@@ -175,6 +175,7 @@ export const verifySubscription = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid subscription payment signature' })
         }
 
+        // ── Calculate expiry ───────────────────────────────────────────────
         const expiresAt = new Date()
         if (planType === 'yearly') {
             expiresAt.setFullYear(expiresAt.getFullYear() + 1)
@@ -182,9 +183,35 @@ export const verifySubscription = async (req, res) => {
             expiresAt.setMonth(expiresAt.getMonth() + 1)
         }
 
+        const planAmount = planType === 'yearly' ? 899 : 99
+
+        // ── 1. Update user membership flag ────────────────────────────────
         await UserModel.findByIdAndUpdate(userId, {
             isSnapitPlusMember:  true,
             snapitPlusExpiresAt: expiresAt
+        })
+
+        // ── 2. ✅ FIXED: Create SubscriptionModel record so MySubscriptions
+        //        page shows the Snapit Plus membership ─────────────────────
+        const nextDeliveryDate = new Date()
+        nextDeliveryDate.setDate(nextDeliveryDate.getDate() + 30)
+
+        await SubscriptionModel.create({
+            userId,
+            items: [{
+                name:     `Snapit Plus — ${planType === 'yearly' ? 'Yearly (12 months)' : 'Monthly (30 days)'}`,
+                quantity: 1,
+                price:    planAmount,
+            }],
+            frequency:      planType === 'yearly' ? 'yearly' : 'monthly',
+            nextDeliveryDate,
+            payment_method: 'Online',
+            status:         'Active',
+            isSnapitPlus:   true,
+            planType,
+            expiresAt,
+            paymentId:      razorpay_payment_id,
+            orderId:        razorpay_order_id,
         })
 
         console.log(`[verifySubscription] ✅ Snapit Plus activated for userId=${userId} until ${expiresAt}`)
