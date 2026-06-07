@@ -193,6 +193,7 @@ const Wallet = () => {
         name:        'Snapit',
         description: 'Wallet Recharge',
         order_id:    order.id,
+        redirect: false,
         theme:       { color: '#16a34a' },
 
         handler: async (response) => {
@@ -298,6 +299,7 @@ const Wallet = () => {
         name:        'Snapit Plus',
         description: `${selectedPlan === 'yearly' ? 'Yearly' : 'Monthly'} Subscription`,
         order_id:    order.id,
+        redirect: false,
         theme:       { color: '#eab308' },
 
         handler: async (response) => {
