@@ -1,10 +1,10 @@
 import AddressModel from "../models/address.model.js";
-import UserModel from "../models/user.model.js"; 
+import UserModel from "../models/user.model.js";
 
-export const addAddressController = async(request,response)=>{
+export const addAddressController = async(request, response) => {
     try {
         const userId = request.userId // middleware
-        const { address_line , city, state, pincode, country,mobile } = request.body
+        const { address_line, city, state, pincode, country, mobile, lat, lng } = request.body
 
         const createAddress = new AddressModel({
             address_line,
@@ -13,11 +13,13 @@ export const addAddressController = async(request,response)=>{
             country,
             pincode,
             mobile,
-            userId : userId 
+            lat : lat || null,
+            lng : lng || null,
+            userId : userId
         })
         const saveAddress = await createAddress.save()
 
-        const addUserAddressId = await UserModel.findByIdAndUpdate(userId,{
+        const addUserAddressId = await UserModel.findByIdAndUpdate(userId, {
             $push : {
                 address_details : saveAddress._id
             }
@@ -39,11 +41,11 @@ export const addAddressController = async(request,response)=>{
     }
 }
 
-export const getAddressController = async(request,response)=>{
+export const getAddressController = async(request, response) => {
     try {
         const userId = request.userId // middleware auth
 
-        const data = await AddressModel.find({ userId : userId }).sort({ createdAt : -1})
+        const data = await AddressModel.find({ userId : userId }).sort({ createdAt : -1 })
 
         return response.json({
             data : data,
@@ -53,25 +55,27 @@ export const getAddressController = async(request,response)=>{
         })
     } catch (error) {
         return response.status(500).json({
-            message : error.message || error ,
+            message : error.message || error,
             error : true,
             success : false
         })
     }
 }
 
-export const updateAddressController = async(request,response)=>{
+export const updateAddressController = async(request, response) => {
     try {
-        const userId = request.userId // middleware auth 
-        const { _id, address_line,city,state,country,pincode, mobile } = request.body 
+        const userId = request.userId // middleware auth
+        const { _id, address_line, city, state, country, pincode, mobile, lat, lng } = request.body
 
-        const updateAddress = await AddressModel.updateOne({ _id : _id, userId : userId },{
+        const updateAddress = await AddressModel.updateOne({ _id : _id, userId : userId }, {
             address_line,
             city,
             state,
             country,
             mobile,
-            pincode
+            pincode,
+            lat : lat || null,
+            lng : lng || null,
         })
 
         return response.json({
@@ -89,13 +93,13 @@ export const updateAddressController = async(request,response)=>{
     }
 }
 
-export const deleteAddresscontroller = async(request,response)=>{
+export const deleteAddresscontroller = async(request, response) => {
     // IDOR protection - verify ownership before delete
     try {
-        const userId = request.userId // auth middleware    
-        const { _id } = request.body 
+        const userId = request.userId // auth middleware
+        const { _id } = request.body
 
-        const disableAddress = await AddressModel.updateOne({ _id : _id, userId},{
+        const disableAddress = await AddressModel.updateOne({ _id : _id, userId }, {
             status : false
         })
 
