@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import { socket } from '../utils/socket'
+import { io } from 'socket.io-client'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
@@ -34,18 +34,16 @@ const storeIcon = new L.DivIcon({
 })
 
 const STATUS_STEPS = [
-  { key: 'Pending', label: 'Order Placed', icon: '📋' },
-  { key: 'Confirmed', label: 'Confirmed', icon: '✅' },
-  { key: 'Packing', label: 'Packing', icon: '📦' },
-  { key: 'Out for Delivery', label: 'On the Way', icon: '🏍️' },
-  { key: 'Delivered', label: 'Delivered', icon: '🎉' },
+  { key: 'Pending',          label: 'Order Placed', icon: '📋' },
+  { key: 'Confirmed',        label: 'Confirmed',    icon: '✅' },
+  { key: 'Packing',          label: 'Packing',      icon: '📦' },
+  { key: 'Out for Delivery', label: 'On the Way',   icon: '🏍️' },
+  { key: 'Delivered',        label: 'Delivered',    icon: '🎉' },
 ]
 
-// 👇 Your shop's fixed coordinates
 const SHOP_LAT = 25.2921
 const SHOP_LNG = 84.8170
 
-// Haversine formula — straight line distance in km
 function getDistanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371
   const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -58,7 +56,6 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-// 3 min/km + 5 min prep time
 function getEstimatedMinutes(lat1, lng1, lat2, lng2) {
   const distance = getDistanceKm(lat1, lng1, lat2, lng2)
   return Math.round(distance * 3 + 5)
@@ -76,11 +73,12 @@ const TrackingPage = () => {
   const { orderId } = useParams()
   const navigate = useNavigate()
 
-  const [order, setOrder] = useState(null)
+  const [order, setOrder]     = useState(null)
   const [loading, setLoading] = useState(true)
   const [riderPos, setRiderPos] = useState(null)
-  const [eta, setEta] = useState(null)           // in minutes (number)
-  const [etaSource, setEtaSource] = useState('') // 'rider' | 'store'
+  const [eta, setEta]           = useState(null)
+  const [etaSource, setEtaSource] = useState('')
+  const socketRef = useRef(null)
 
   const storeLocation = [SHOP_LAT, SHOP_LNG]
 
@@ -101,14 +99,10 @@ const TrackingPage = () => {
     }
   }
 
-  // ── Initial ETA (shop → customer) once order loads ───────────
+  // ── Initial ETA once order loads ─────────────────────────────
   useEffect(() => {
     if (!order) return
-    if (order.delivery_status === 'Delivered') {
-      setEta(null)
-      return
-    }
-    // Only calculate if we have customer coordinates saved on the order
+    if (order.delivery_status === 'Delivered') { setEta(null); return }
     if (order?.deliveryLocation?.lat && order?.deliveryLocation?.lng) {
       const mins = getEstimatedMinutes(
         SHOP_LAT, SHOP_LNG,
@@ -120,36 +114,52 @@ const TrackingPage = () => {
     }
   }, [order])
 
-  // ── Socket: live rider position → recalculate ETA ────────────
+  // ── Socket: live rider position ──────────────────────────────
   useEffect(() => {
     if (!orderId) return
+
+    // ✅ Create socket INSIDE useEffect — same pattern as RiderGPS.jsx
+    const socket = io(
+      import.meta.env.VITE_API_URL || 'https://snapit-backend-bn8r.onrender.com',
+      {
+        path: '/socket.io/',
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
+      }
+    )
+    socketRef.current = socket
+
+    // Join the order room immediately on connect
     socket.emit('join_order', orderId)
+    socket.on('connect', () => {
+      socket.emit('join_order', orderId)
+    })
 
-    const handleRiderMovement = (data) => {
-      if (data?.latitude && data?.longitude) {
-        setRiderPos([data.latitude, data.longitude])
+    // ✅ FIX: was 'receive_location' — server emits 'rider_moved'
+    socket.on('rider_moved', (data) => {
+      if (!data?.latitude || !data?.longitude) return
+      setRiderPos([data.latitude, data.longitude])
 
-        // Recalculate ETA from rider's live position → customer
-        if (order?.deliveryLocation?.lat && order?.deliveryLocation?.lng) {
+      // Recalculate ETA from rider's live position
+      setOrder(prev => {
+        if (prev?.deliveryLocation?.lat && prev?.deliveryLocation?.lng) {
           const mins = getEstimatedMinutes(
             data.latitude, data.longitude,
-            order.deliveryLocation.lat,
-            order.deliveryLocation.lng
+            prev.deliveryLocation.lat,
+            prev.deliveryLocation.lng
           )
           setEta(mins)
           setEtaSource('rider')
         }
-      }
-    }
-
-    socket.on('receive_location', handleRiderMovement)
-    socket.on('connect', () => socket.emit('join_order', orderId))
+        return prev
+      })
+    })
 
     return () => {
-      socket.off('receive_location', handleRiderMovement)
-      socket.off('connect')
+      socket.emit('leave_order', orderId)
+      socket.disconnect()
     }
-  }, [orderId, order])
+  }, [orderId])
 
   // ── Poll order status every 15s ───────────────────────────────
   useEffect(() => {
@@ -224,7 +234,7 @@ const TrackingPage = () => {
         </div>
       </div>
 
-      {/* ETA Banner — real distance-based */}
+      {/* ETA Banner */}
       {order.delivery_status !== 'Delivered' && (
         <div className='bg-green-600 text-white px-4 py-3 flex items-center justify-between'>
           <div>
@@ -330,7 +340,7 @@ const TrackingPage = () => {
             <p className='font-black text-slate-800'>{order.rider_name || 'Snapit Rider'}</p>
             <p className='text-xs text-slate-400'>Delivery Partner</p>
           </div>
-          <a
+<a
             href={`tel:${order.rider_contact || '9472026580'}`}
             className='bg-green-600 text-white p-3 rounded-full shadow-md active:scale-95 transition-all'
           >
