@@ -20,17 +20,14 @@ const getDeliveryFee      = (o) => Number(o.delivery_fee ?? o.deliveryFee ?? o.d
 const getItemSellerPrice  = (item) => Number(item.sellerPrice ?? item.seller_price ?? item.price ?? item.unit_price ?? 0);
 const getItemSnapitMargin = (item) => Number(item.snapitMargin ?? item.snapit_margin ?? 0);
 
-// FIX 1: Check discount on item first, then fall back to populated product's discount field
 const getItemDiscount = (item) => {
     const d = Number(item.discount ?? item.productId?.discount ?? 0);
     return isNaN(d) ? 0 : d;
 };
 
-// Your earning = sellerPrice × qty (sum across all items)
 const getSellerEarning = (order) =>
     (order.cartItems || []).reduce((acc, item) => acc + getItemSellerPrice(item) * (Number(item.quantity) || 1), 0);
 
-// Snapit's cut = snapitMargin × qty (sum across all items)
 const getSnapitEarning = (order) =>
     (order.cartItems || []).reduce((acc, item) => acc + getItemSnapitMargin(item) * (Number(item.quantity) || 1), 0);
 
@@ -125,8 +122,12 @@ const SellerDashboard = () => {
 
     const allCategory    = useSelector(state => state.product.allCategory);
     const allSubCategory = useSelector(state => state.product.allSubCategory);
-    const sellingPrice   = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
+    const user           = useSelector(state => state.user);
+    const storeName      = user?.store_name || '';
 
+    const sellingPrice = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
+
+    // ── Data fetchers ─────────────────────────────────────────
     const fetchOrders = async (silent = false) => {
         try {
             if (!silent) setLoading(true);
@@ -139,20 +140,18 @@ const SellerDashboard = () => {
         finally { setLoading(false); }
     };
 
-    const user = useSelector(state => state.user);
-const storeName = user?.store_name || "";
-
-const fetchProducts = async () => {
-    setProductsLoading(true);
-    try {
-        const res = await Axios({
-            ...SummaryApi.getSellerProducts,
-            data: { page: 1, limit: 100, store_name: storeName }
-        });
-        if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
-    } catch { toast.error('Failed to fetch products'); }
-    finally { setProductsLoading(false); }
-};
+    const fetchProducts = async () => {
+        if (!storeName) return;          // ← wait until Redux has hydrated
+        setProductsLoading(true);
+        try {
+            const res = await Axios({
+                ...SummaryApi.getSellerProducts,
+                data: { page: 1, limit: 100, store_name: storeName }
+            });
+            if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
+        } catch { toast.error('Failed to fetch products'); }
+        finally { setProductsLoading(false); }
+    };
 
     const markAsReady = async (orderId) => {
         try {
@@ -236,14 +235,20 @@ const fetchProducts = async () => {
         finally { setUpdatingPrice(p => ({ ...p, [productId]: false })); }
     };
 
+    // ── Effects ───────────────────────────────────────────────
+    // Re-runs when storeName becomes available (Redux hydration)
     useEffect(() => {
+        if (!storeName) return;
         fetchOrders();
         fetchProducts();
         const iv = setInterval(() => fetchOrders(true), 30000);
         return () => clearInterval(iv);
-    }, []);
+    }, [storeName]);
 
-    useEffect(() => { if (activeTab === 'products') fetchProducts(); }, [activeTab]);
+    // Re-fetch products when switching to products tab
+    useEffect(() => {
+        if (activeTab === 'products' && storeName) fetchProducts();
+    }, [activeTab, storeName]);
 
     // ── Computed values ───────────────────────────────────────
     const now = new Date();
@@ -294,7 +299,6 @@ const fetchProducts = async () => {
     const salesTotalSeller   = salesFilteredOrders.reduce((a, o) => a + getSellerEarning(o), 0);
     const salesTotalSnapit   = salesFilteredOrders.reduce((a, o) => a + getSnapitEarning(o), 0);
 
-    // FIX 3: Build product map — getItemDiscount now reads productId.discount as fallback
     const salesProductMap = salesFilteredOrders.reduce((acc, order) => {
         (order.cartItems || []).forEach(item => {
             const pid         = item.productId?._id || item.productId || null;
@@ -302,7 +306,7 @@ const fetchProducts = async () => {
             const qty         = Number(item.quantity) || 1;
             const sellerP     = getItemSellerPrice(item);
             const marginP     = getItemSnapitMargin(item);
-            const discountPct = getItemDiscount(item); // fixed
+            const discountPct = getItemDiscount(item);
             const mrp         = sellerP + marginP;
             const afterDisc   = discountPct > 0 ? mrp * (1 - discountPct / 100) : mrp;
             if (!acc[name]) acc[name] = {
@@ -398,13 +402,12 @@ const fetchProducts = async () => {
         { key:'earnings', icon:<HiOutlineCurrencyRupee size={16}/>, label:'Earnings' },
     ];
 
-    // ── Reusable order money breakdown (used in History + Sales expanded) ──
+    // ── Reusable order money breakdown ────────────────────────
     const OrderMoneyBreakdown = ({ order }) => {
         const sellerEarning = getSellerEarning(order);
         const snapitCut     = getSnapitEarning(order);
         const deliveryFee   = getDeliveryFee(order);
         const orderTotal    = getOrderAmount(order);
-        // Detect if discount was absorbed: sum of MRPs > (orderTotal - deliveryFee)
         const sumMRP = (order.cartItems || []).reduce((acc, item) => {
             return acc + (getItemSellerPrice(item) + getItemSnapitMargin(item)) * (Number(item.quantity) || 1);
         }, 0);
@@ -816,7 +819,6 @@ const fetchProducts = async () => {
                                                                     +Margin {fmtINR(marginP)}
                                                                 </span>
                                                             )}
-                                                            {/* FIX: show MRP struck through when discount is active */}
                                                             {discPct > 0 ? (
                                                                 <>
                                                                     <span className='text-[10px] font-black bg-slate-700 text-slate-500 px-2 py-0.5 rounded-lg line-through'>
@@ -1012,7 +1014,7 @@ const fetchProducts = async () => {
                             ))}
                         </div>
 
-                        {/* SECTION 1: SUMMARY CARDS */}
+                        {/* SUMMARY CARDS */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-orange-500 rounded-full'/>
@@ -1037,7 +1039,6 @@ const fetchProducts = async () => {
                                     </div>
                                 ))}
                             </div>
-                            {/* Full money breakdown */}
                             <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
                                 <p className='text-[10px] font-black text-slate-500 uppercase tracking-wider mb-3'>Where Every Rupee Went</p>
                                 <div className='space-y-2.5'>
@@ -1082,7 +1083,7 @@ const fetchProducts = async () => {
                             </div>
                         </div>
 
-                        {/* SECTION 2: PRODUCT LIST WITH DISCOUNTS (fixed) */}
+                        {/* PRODUCT LIST WITH DISCOUNTS */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-sky-500 rounded-full'/>
@@ -1110,8 +1111,6 @@ const fetchProducts = async () => {
                                                     <p className='text-sm font-black text-white truncate max-w-[60%]'>{name}</p>
                                                     <span className='text-[10px] font-black bg-slate-800 text-slate-400 px-2 py-0.5 rounded-lg'>×{data.qty} sold</span>
                                                 </div>
-
-                                                {/* Price flow */}
                                                 <div className='flex items-center gap-1.5 flex-wrap mb-2.5'>
                                                     <div className='bg-slate-800 rounded-xl px-3 py-2 text-center'>
                                                         <p className='text-[8px] font-black text-slate-500 uppercase'>Your Price</p>
@@ -1128,8 +1127,6 @@ const fetchProducts = async () => {
                                                         <p className={`text-sm font-black ${data.discount > 0 ? 'text-slate-500 line-through' : 'text-sky-400'}`}>{fmtINR(data.mrp)}</p>
                                                     </div>
                                                 </div>
-
-                                                {/* FIX: Customer paid — always shows discounted price if applicable */}
                                                 <div className='flex gap-2 flex-wrap mb-3'>
                                                     {data.discount > 0 && (
                                                         <div className='flex items-center gap-1.5 bg-violet-500/10 border border-violet-500/20 rounded-xl px-3 py-1.5'>
@@ -1149,7 +1146,6 @@ const fetchProducts = async () => {
                                                         </div>
                                                     </div>
                                                 </div>
-
                                                 <div className='pt-2.5 border-t border-slate-800 flex justify-between items-center mb-3'>
                                                     <div>
                                                         <p className='text-[10px] font-black text-slate-500 uppercase'>Your Revenue (period)</p>
@@ -1157,7 +1153,6 @@ const fetchProducts = async () => {
                                                     </div>
                                                     <p className='text-sm font-black text-emerald-400'>{fmtINR(data.sellerRevenue)}</p>
                                                 </div>
-
                                                 {!pid ? (
                                                     <p className='text-[10px] text-slate-600 italic'>Product ID unavailable — refresh orders</p>
                                                 ) : !isEditing ? (
@@ -1219,7 +1214,7 @@ const fetchProducts = async () => {
                             )}
                         </div>
 
-                        {/* SECTION 3: ORDER HISTORY */}
+                        {/* ORDER HISTORY */}
                         <div>
                             <div className='flex items-center gap-2 mb-3'>
                                 <div className='w-1 h-4 bg-emerald-500 rounded-full'/>
@@ -1276,7 +1271,7 @@ const fetchProducts = async () => {
                                             {(order.cartItems || []).map((item, i) => {
                                                 const sp     = getItemSellerPrice(item);
                                                 const margin = getItemSnapitMargin(item);
-                                                const disc   = getItemDiscount(item); // fixed
+                                                const disc   = getItemDiscount(item);
                                                 const qty    = Number(item.quantity) || 1;
                                                 const mrp    = sp + margin;
                                                 const paid   = disc > 0 ? mrp * (1 - disc / 100) : mrp;
@@ -1377,7 +1372,7 @@ const fetchProducts = async () => {
                                         {(order.cartItems||[]).map((item, i) => {
                                             const sp     = getItemSellerPrice(item);
                                             const margin = getItemSnapitMargin(item);
-                                            const disc   = getItemDiscount(item); // fixed
+                                            const disc   = getItemDiscount(item);
                                             const qty    = Number(item.quantity)||1;
                                             const mrp    = sp + margin;
                                             const paid   = disc > 0 ? mrp * (1 - disc/100) : mrp;
@@ -1400,7 +1395,6 @@ const fetchProducts = async () => {
                                                 </div>
                                             );
                                         })}
-                                        {/* FIX: Replaced confusing "Sales (excl. delivery)" with clear breakdown */}
                                         <OrderMoneyBreakdown order={order} />
                                     </div>
                                 )}
