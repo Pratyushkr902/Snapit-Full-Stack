@@ -122,9 +122,8 @@ const SellerDashboard = () => {
 
     const allCategory    = useSelector(state => state.product.allCategory);
     const allSubCategory = useSelector(state => state.product.allSubCategory);
-    const user           = useSelector(state => state.user);
-    const storeName      = user?.store_name || '';
-
+   const user      = useSelector(state => state.user.user ?? state.user);
+const storeName = user?.store_name || user?.storeName || user?.shop_name || user?.name || '';
     const sellingPrice = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
 
     // ── Data fetchers ─────────────────────────────────────────
