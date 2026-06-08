@@ -193,6 +193,10 @@ const SummaryApi = {
         url: '/api/store/nearest',
         method: 'post'
     },
+    getAllStores: {
+        url: '/api/store/all',
+        method: 'get'
+    },
     updateStoreInventory: {
         url: '/api/product/update-store-stock',
         method: 'put'
