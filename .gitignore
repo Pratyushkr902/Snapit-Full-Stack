@@ -28,3 +28,4 @@ client/ios/App/build/
 client/ios/App/Pods/
 client/ios/.build/
 client/ios/App/build/
+.env

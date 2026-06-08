@@ -13,13 +13,15 @@ import {
     updateProductEmails,
     recalculateMRP,
     getPricingBreakdown,
+    republishAllProducts,
+    getVariantsByGroup,
+    getSellerProductsController,
 } from '../controllers/product.controller.js';
 import auth from '../middleware/auth.js'
 import { admin } from '../middleware/Admin.js'
 
 const productRouter = express.Router();
 
-// ── Existing routes ──────────────────────────────────────────
 productRouter.post('/create',                              auth, admin, createProductController);
 productRouter.post('/get',                                        getProductController);
 productRouter.post('/get-product-by-category',                    getProductByCategory);
@@ -31,11 +33,10 @@ productRouter.delete('/delete-product',                    auth, admin, deletePr
 productRouter.post('/search-product',                             searchProduct);
 productRouter.get('/frequently-bought',                           getFrequentlyBought);
 productRouter.post('/fix-emails',                          auth, admin, updateProductEmails);
-
-// ── NEW: Pricing & MRP routes ────────────────────────────────
-// Manually trigger MRP recalculation for all products
-productRouter.get('/recalculate-mrp',   auth, admin, recalculateMRP);
-// Get full pricing breakdown (admin panel)
-productRouter.get('/pricing-breakdown', auth, admin, getPricingBreakdown);
+productRouter.get('/recalculate-mrp',                      auth, admin, recalculateMRP);
+productRouter.get('/pricing-breakdown',                    auth, admin, getPricingBreakdown);
+productRouter.post('/republish-all',                       auth, admin, republishAllProducts);
+productRouter.post('/get-variants',                               getVariantsByGroup);
+productRouter.post('/get-seller-products',                 auth,        getSellerProductsController);
 
 export default productRouter;

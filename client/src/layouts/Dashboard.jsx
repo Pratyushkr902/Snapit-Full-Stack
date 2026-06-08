@@ -13,6 +13,14 @@ const Dashboard = () => {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // ✅ FIX: These routes need full-screen layout — no sidebar, no container padding
+  const isFullScreen = location.pathname.includes('seller-dashboard') || 
+                       location.pathname.includes('rider-panel')
+
+  if (isFullScreen) {
+    return <Outlet />
+  }
+
   return (
     <section className='bg-white'>
       <div className='container mx-auto p-3 grid lg:grid-cols-[250px,1fr]'>

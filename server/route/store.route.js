@@ -48,4 +48,14 @@ storeRouter.post("/nearest", async (req, res) => {
     }
 });
 
+// 3. Get all stores (for seller dashboard store picker)
+storeRouter.get("/all", auth, async (req, res) => {
+    try {
+        const stores = await StoreModel.find({}, '_id name address');
+        res.json({ success: true, data: stores });
+    } catch (error) {
+        res.status(500).json({ message: error.message, error: true });
+    }
+});
+
 export default storeRouter;

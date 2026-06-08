@@ -17,11 +17,10 @@ const AddAddress = ({ close }) => {
   const { fetchAddress } = useGlobalContext()
   const [locationChecking, setLocationChecking] = useState(false)
   const [locationStatus, setLocationStatus] = useState(null) // 'ok' | 'out'
-  const [detectedLocation, setDetectedLocation] = useState(null)
+  const [detectedLocation, setDetectedLocation] = useState(null) // { lat, lng, ...zoneInfo }
 
   const pincode = watch('pincode')
 
-  // Auto-detect location and check serviceability
   const handleDetectLocation = async () => {
     setLocationChecking(true)
     setLocationStatus(null)
@@ -33,7 +32,6 @@ const AddAddress = ({ close }) => {
       if (result.serviceable) {
         setLocationStatus('ok')
         toast.success(`✅ We deliver to ${result.zone}!`)
-        // Auto-fill city
         setValue('city', result.zone)
         setValue('state', 'Bihar')
         setValue('country', 'India')
@@ -48,11 +46,9 @@ const AddAddress = ({ close }) => {
   }
 
   const onSubmit = async (data) => {
-    // Check pincode serviceability
     if (data.pincode && !SERVICEABLE_PINCODES.includes(data.pincode)) {
-      // Also check if location was detected and out of zone
       if (locationStatus === 'out') {
-        toast.error('Sorry, we don\'t deliver to this location yet.')
+        toast.error("Sorry, we don't deliver to this location yet.")
         return
       }
     }
@@ -61,22 +57,20 @@ const AddAddress = ({ close }) => {
       const response = await Axios({
         ...SummaryApi.createAddress,
         data: {
-          address_line: data.addressline,
-          city: data.city,
-          state: data.state,
-          country: data.country,
-          pincode: data.pincode,
-          mobile: data.mobile
+          address_line : data.addressline,
+          city         : data.city,
+          state        : data.state,
+          country      : data.country,
+          pincode      : data.pincode,
+          mobile       : data.mobile,
+          lat          : detectedLocation?.lat || null,
+          lng          : detectedLocation?.lng || null,
         }
       })
       const { data: responseData } = response
       if (responseData.success) {
         toast.success(responseData.message)
-        if (close) {
-          close()
-          reset()
-          fetchAddress()
-        }
+        if (close) { close(); reset(); fetchAddress() }
       }
     } catch (error) {
       AxiosToastError(error)
@@ -106,6 +100,13 @@ const AddAddress = ({ close }) => {
             <IoLocationSharp size={18} />
             {locationChecking ? 'Detecting...' : 'Use My Current Location'}
           </button>
+
+          {/* GPS coords confirmation */}
+          {detectedLocation?.lat && locationStatus === 'ok' && (
+            <p className='text-xs text-green-600 text-center -mt-2 mb-2'>
+              📍 GPS pinned: {detectedLocation.lat.toFixed(5)}, {detectedLocation.lng.toFixed(5)}
+            </p>
+          )}
 
           {/* Serviceability status */}
           {locationStatus === 'ok' && detectedLocation && (

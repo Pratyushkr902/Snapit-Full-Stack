@@ -2,9 +2,7 @@ import axios from "axios";
 
 // ✅ CRITICAL FIXED DOMAIN TARGET: 
 const API_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com";
-// =========================================================================
-// 1. CENTRALIZED API ROUTE DICTIONARY WITH WALLET & SUBSCRIPTION MAPPINGS
-// =========================================================================
+
 export const baseURL = API_URL;
 
 export const SummaryApi = {
@@ -53,8 +51,17 @@ export const SummaryApi = {
     
     CashOnDeliveryOrder: { url: "/api/order/cash-on-delivery", method: 'post' },
     payment_url: { url: "/api/order/checkout", method: 'post' },
+    payment_verification: { url: "/api/order/verify-payment", method: 'post' },
+
+    // ✅ FIXED: getOrderDetails now exists and uses GET (was missing entirely — caused
+    //           CheckoutPage to fall back to getOrderItems which returns ALL users' orders)
+    getOrderDetails: { url: '/api/order/order-list', method: 'get' },
+
+    // Rider-only endpoint (returns all orders, no userId filter — do NOT use for My Orders)
     getOrderItems: { url: '/api/order/order-items', method: 'get' },
+
     getSellerOrders: { url: '/api/order/seller-orders', method: 'get' },
+    getSellerEarnings: { url: '/api/order/seller-earnings', method: 'get' },
     getRiderLocation: { url: '/api/order/get-rider-location', method: 'post' },
     updateOrderStatus: { url: '/api/order/update-status', method: 'put' },
     updateSellerStatus: { url: '/api/order/update-seller-status', method: 'post' },
@@ -80,13 +87,15 @@ export const SummaryApi = {
     addMoneyToWallet: { url: '/api/wallet/add-money', method: 'post' },
     payWithWallet: { url: '/api/wallet/pay', method: 'post' },
 
-    getUserSubscriptions: { url: '/api/subscription/get', method: 'get' },
-    updateSubscriptionStatus: { url: '/api/subscription/update-status', method: 'put' },
-    cancelSubscription: { url: '/api/subscription/cancel', method: 'delete' }
+    mySubscriptions:    { url: '/api/subscription/my-subscriptions', method: 'get' },
+    createSubscription: { url: '/api/subscription/create',           method: 'post' },
+    pauseSubscription:  { url: '/api/subscription/pause',            method: 'patch' },
+    resumeSubscription: { url: '/api/subscription/resume',           method: 'patch' },
+    cancelSubscription: { url: '/api/subscription/cancel',           method: 'delete' },
 };
 
 // =========================================================================
-// 2. GLOBAL INSTANCE CONFIGURATION & CROSS-PLATFORM INTERCEPTORS
+// GLOBAL INSTANCE CONFIGURATION & CROSS-PLATFORM INTERCEPTORS
 // =========================================================================
 const Axios = axios.create({
     baseURL: API_URL,
@@ -129,7 +138,7 @@ Axios.interceptors.request.use(
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
 
-        // ✅ FIX: Remove Content-Type for FormData so browser sets multipart/form-data automatically
+        // Remove Content-Type for FormData so browser sets multipart/form-data automatically
         if (config.data instanceof FormData) {
             delete config.headers['Content-Type'];
         }

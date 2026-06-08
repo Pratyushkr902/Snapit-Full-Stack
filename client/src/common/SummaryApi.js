@@ -93,6 +93,10 @@ const SummaryApi = {
         url : '/api/product/get',
         method : 'post'
     },
+    getSellerProducts: {
+        url: '/api/product/get-seller-products',
+        method: 'post'
+    },
     getProductByCategory : {
         url : '/api/product/get-product-by-category',
         method : 'post'
@@ -163,13 +167,12 @@ const SummaryApi = {
     },
     getOrderDetails: {
         url: '/api/order/order-list',
-        method: 'post'
+        method: 'get'
     },
     getSellerOrders: {
         url: '/api/order/seller-orders',
         method: 'get'
     },
-    // ✅ NEW: Seller earnings endpoint
     getSellerEarnings: {
         url: '/api/order/seller-earnings',
         method: 'get'
@@ -189,6 +192,10 @@ const SummaryApi = {
     getNearestStore: {
         url: '/api/store/nearest',
         method: 'post'
+    },
+    getAllStores: {
+        url: '/api/store/all',
+        method: 'get'
     },
     updateStoreInventory: {
         url: '/api/product/update-store-stock',
@@ -287,7 +294,29 @@ const SummaryApi = {
     redeemCoins: {
         url: '/api/coins/redeem',
         method: 'post'
-    }
+    },
+
+    // ── Subscriptions ────────────────────────────────────────
+    mySubscriptions: {
+        url: '/api/subscription/my-subscriptions',
+        method: 'get'
+    },
+    createSubscription: {
+        url: '/api/subscription/create',
+        method: 'post'
+    },
+    pauseSubscription: {
+        url: '/api/subscription/pause',
+        method: 'patch'
+    },
+    resumeSubscription: {
+        url: '/api/subscription/resume',
+        method: 'patch'
+    },
+    cancelSubscription: {
+        url: '/api/subscription/cancel',
+        method: 'delete'
+    },
 }
 
 export default SummaryApi;

@@ -64,7 +64,7 @@ const UserMenuMobile = () => {
 
       {/* SELLER ACCESS */}
       {(user?.role === "SELLER" || user?.role === "ADMIN") && (
-        <Link to={"/dashboard/store-orders"} className='px-3 py-2.5 rounded-lg bg-orange-50 hover:bg-orange-100 font-bold text-orange-700 border-l-4 border-orange-600'>
+        <Link to={"/dashboard/seller-dashboard"} className='px-3 py-2.5 rounded-lg bg-orange-50 hover:bg-orange-100 font-bold text-orange-700 border-l-4 border-orange-600'>
           Store Orders (Pack Items)
         </Link>
       )}

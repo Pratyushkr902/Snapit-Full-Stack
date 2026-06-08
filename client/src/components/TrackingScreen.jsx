@@ -1,13 +1,10 @@
 import { io } from "socket.io-client";
-import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import { useEffect, useState, useRef } from "react";
 
-const socket = io(import.meta.env.VITE_API_URL);
+const SHOP_LAT = 25.2921;
+const SHOP_LNG = 84.8170;
 
-// 👇 Your shop's coordinates (update these)
-const SHOP_LAT = 25.4775;
-const SHOP_LNG = 84.7344;
-
-// Haversine distance formula
 function getEstimatedMinutes(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -18,36 +15,48 @@ function getEstimatedMinutes(lat1, lng1, lat2, lng2) {
     Math.cos((lat2 * Math.PI) / 180) *
     Math.sin(dLng / 2) ** 2;
   const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(distance * 3 + 5); // 3 min/km + 5 min prep
+  return Math.round(distance * 3 + 5);
 }
 
 const TrackingScreen = ({ orderId, order }) => {
   const [riderLocation, setRiderLocation] = useState(null);
   const [eta, setEta] = useState(null);
+  const socketRef = useRef(null);
 
   useEffect(() => {
-    // Calculate initial ETA from shop → customer before rider moves
-    if (order?.deliveryLocation) {
+    if (!orderId) return;
+
+    // Initial ETA from shop → customer
+    if (order?.deliveryLocation?.lat && order?.deliveryLocation?.lng) {
       const mins = getEstimatedMinutes(
-        SHOP_LAT,
-        SHOP_LNG,
+        SHOP_LAT, SHOP_LNG,
         order.deliveryLocation.lat,
         order.deliveryLocation.lng
       );
       setEta(mins);
     }
 
+    // ✅ Socket created INSIDE useEffect
+    const socket = io(
+      import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com",
+      {
+        path: "/socket.io/",
+        transports: ["websocket", "polling"],
+        withCredentials: true,
+      }
+    );
+    socketRef.current = socket;
+
     socket.emit("join_order", orderId);
+    socket.on("connect", () => socket.emit("join_order", orderId));
 
     socket.on("rider_moved", (data) => {
-      console.log("Rider is moving:", data);
+      if (!data?.latitude || !data?.longitude) return;
       setRiderLocation({ lat: data.latitude, lng: data.longitude });
 
-      // Recalculate ETA from rider's live position → customer
-      if (order?.deliveryLocation) {
+      if (order?.deliveryLocation?.lat && order?.deliveryLocation?.lng) {
         const mins = getEstimatedMinutes(
-          data.latitude,
-          data.longitude,
+          data.latitude, data.longitude,
           order.deliveryLocation.lat,
           order.deliveryLocation.lng
         );
@@ -56,13 +65,13 @@ const TrackingScreen = ({ orderId, order }) => {
     });
 
     return () => {
-      socket.off("rider_moved");
+      socket.emit("leave_order", orderId);
+      socket.disconnect();
     };
   }, [orderId, order]);
 
   return (
     <div>
-      {/* ETA Banner */}
       {eta && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4 flex items-center gap-3">
           <span className="text-2xl">🛵</span>
@@ -78,11 +87,9 @@ const TrackingScreen = ({ orderId, order }) => {
           </div>
         </div>
       )}
-
-      {/* Map */}
       <PaliganjMapTracker riderPos={riderLocation} />
-
-      {/* ... rest of your status steps */}
     </div>
   );
 };
+
+export default TrackingScreen;

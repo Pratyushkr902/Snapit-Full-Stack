@@ -18,7 +18,9 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
         stock: data?.stock,
         price: data?.price,
         discount: data?.discount,
+        snapitMargin: data?.snapitMargin ?? '',   // ✅ NEW
         description: data?.description,
+        variantGroup: data?.variantGroup || '',
     })
     const [imageLoading, setImageLoading] = useState(false)
 
@@ -33,7 +35,9 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
             stock: data?.stock,
             price: data?.price,
             discount: data?.discount,
+            snapitMargin: data?.snapitMargin ?? '',   // ✅ NEW
             description: data?.description,
+            variantGroup: data?.variantGroup || '',
         })
     }, [data])
 
@@ -48,15 +52,11 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
     const handleUploadImage = async (e) => {
         const file = e.target.files[0]
         if (!file) return
-
         setImageLoading(true)
         try {
             const response = await uploadImage(file)
             const { data: responseData } = response
-            
-            // FIXED: Ensure we are extracting the correct URL from your Cloudinary response
             const imageUrl = responseData?.data?.url || responseData?.url;
-
             if(imageUrl){
                 setProductData((prev) => ({
                     ...prev,
@@ -82,14 +82,11 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         try {
-            // FIXED: Ensure we are using the correct API endpoint and sending the full productData
             const response = await Axios({
                 ...SummaryApi.updateProductDetails, 
                 data: productData
             })
-
             const { data: responseData } = response
-
             if (responseData.success) {
                 toast.success(responseData.message)
                 if (fetchProductData) fetchProductData()
@@ -102,11 +99,16 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
         }
     }
 
-    // FIXED: Image error handler to stop 404 lag in the modal
     const handleImgError = (e) => {
         e.target.onerror = null;
         e.target.src = "https://res.cloudinary.com/daso5ntlt/image/upload/v1773599668/Aashirvaad_Superior_MP_Whole_Wheat_Atta_z8tqsf.jpg";
     }
+
+    // Derived: selling price and margin % for display
+    const sellingPrice = (productData.price || 0) - (productData.discount || 0)
+    const autoMarginPct = sellingPrice > 0 && productData.snapitMargin
+        ? ((productData.snapitMargin / sellingPrice) * 100).toFixed(1)
+        : null
 
     return (
         <section 
@@ -129,6 +131,7 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                 </div>
 
                 <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
+                    {/* Images */}
                     <div className='grid gap-1'>
                         <p className='font-medium'>Product Images</p>
                         <div className='flex flex-wrap gap-3'>
@@ -161,6 +164,7 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                         </div>
                     </div>
 
+                    {/* Name */}
                     <div className='grid gap-1'>
                         <label htmlFor='name' className='font-medium'>Name</label>
                         <input
@@ -173,6 +177,7 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                         />
                     </div>
 
+                    {/* Unit + Stock */}
                     <div className='grid grid-cols-2 gap-4'>
                         <div className='grid gap-1'>
                             <label htmlFor='unit' className='font-medium'>Unit</label>
@@ -197,6 +202,7 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                         </div>
                     </div>
 
+                    {/* Price + Discount */}
                     <div className='grid grid-cols-2 gap-4'>
                         <div className='grid gap-1'>
                             <label htmlFor='price' className='font-medium'>Price (MRP)</label>
@@ -222,6 +228,33 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                         </div>
                     </div>
 
+                    {/* ✅ NEW: Snapit Margin */}
+                    <div className='grid gap-1'>
+                        <div className='flex items-center justify-between'>
+                            <label htmlFor='snapitMargin' className='font-medium'>
+                                Snapit Margin (₹)
+                            </label>
+                            {autoMarginPct && (
+                                <span className='text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full'>
+                                    {autoMarginPct}% of selling price (₹{sellingPrice})
+                                </span>
+                            )}
+                        </div>
+                        <input
+                            id='snapitMargin'
+                            name='snapitMargin'
+                            type='number'
+                            value={productData.snapitMargin}
+                            onChange={handleOnChange}
+                            placeholder='e.g. 5'
+                            className='bg-blue-50 p-2 border outline-none rounded'
+                        />
+                        <p className='text-[11px] text-gray-400'>
+                            Platform margin earned per sale. Selling price = MRP − Discount = ₹{sellingPrice || '—'}.
+                        </p>
+                    </div>
+
+                    {/* Description */}
                     <div className='grid gap-1'>
                         <label htmlFor='description' className='font-medium'>Description</label>
                         <textarea
@@ -232,6 +265,24 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                             onChange={handleOnChange}
                             className='bg-blue-50 p-2 border outline-none rounded resize-none'
                         />
+                    </div>
+
+                    {/* Variant Group */}
+                    <div className='grid gap-1'>
+                        <label htmlFor='variantGroup' className='font-medium'>
+                            Variant Group <span className='text-gray-400 font-normal text-xs'>(optional)</span>
+                        </label>
+                        <input
+                            id='variantGroup'
+                            name='variantGroup'
+                            value={productData.variantGroup}
+                            onChange={handleOnChange}
+                            placeholder='e.g. lays-classic  or  amul-butter'
+                            className='bg-blue-50 p-2 border outline-none rounded'
+                        />
+                        <p className='text-[11px] text-gray-400'>
+                            Give the same group name to all size variants of this product so they appear as size pills on the product page.
+                        </p>
                     </div>
                     
                     <button 

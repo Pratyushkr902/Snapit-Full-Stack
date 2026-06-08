@@ -82,12 +82,9 @@ const GlobalProvider = ({ children }) => {
         setNotDiscountTotalPrice(notDiscountPrice)
     }, [cartItem])
 
-    // Manual logout function (DO NOT run this in useEffect)
     const handleLogoutOut = () => {
         localStorage.clear()
         dispatch(handleAddItemCart([]))
-        // Optional: redirect to login
-        // window.location.href = "/login"
     }
 
     const fetchAddress = async () => {
@@ -104,7 +101,9 @@ const GlobalProvider = ({ children }) => {
 
     const fetchOrder = async () => {
         try {
-            const response = await Axios({ ...SummaryApi.getOrderItems })
+            // ✅ FIXED: was SummaryApi.getOrderItems (rider endpoint — returns ALL orders)
+            //           now SummaryApi.getOrderDetails (customer endpoint — filters by userId)
+            const response = await Axios({ ...SummaryApi.getOrderDetails })
             const { data: responseData } = response
             if (responseData.success) {
                 dispatch(setOrder(responseData.data))
@@ -114,15 +113,13 @@ const GlobalProvider = ({ children }) => {
         }
     }
 
-    // --- CRITICAL FIX ---
     useEffect(() => {
-        // Only run data fetching if the user actually exists (is logged in)
         if (user?._id) {
             fetchCartItem()
             fetchAddress()
             fetchOrder()
         }
-    }, [user?._id]) // dependencies ensure this only runs on login/auth change
+    }, [user?._id])
 
     return (
         <GlobalContext.Provider value={{

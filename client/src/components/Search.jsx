@@ -12,9 +12,11 @@ const POPULAR = ['Milk', 'Bread', 'Rice', 'Dal', 'Sugar', 'Paneer', 'Eggs', 'Att
 const Search = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [isSearchPage, setIsSearchPage] = useState(false)
   const [isMobile] = useMobile()
   const params = useLocation()
+
+  // ✅ FIX: derive isSearchPage directly from location — no useState needed
+  const isSearchPage = location.pathname === "/search"
 
   const searchText = new URLSearchParams(params.search).get('q') || ''
 
@@ -25,10 +27,7 @@ const Search = () => {
   const debounceRef = useRef(null)
   const wrapperRef = useRef(null)
 
-  useEffect(() => {
-    setIsSearchPage(location.pathname === "/search")
-  }, [location])
-
+  // ✅ Sync input with URL param when navigating
   useEffect(() => {
     const q = new URLSearchParams(params.search).get('q') || ''
     setInputValue(q)
@@ -48,12 +47,11 @@ const Search = () => {
   const fetchSuggestions = async (query) => {
     if (!query || query.length < 2) {
       setSuggestions([])
-      setShowSuggestions(true) // show popular searches instead
+      setShowSuggestions(true)
       return
     }
     try {
       setLoading(true)
-      // ✅ FIXED: spread replaced with explicit url/method to ensure data is sent correctly
       const response = await Axios({
         url: SummaryApi.searchProduct.url,
         method: SummaryApi.searchProduct.method,
@@ -64,11 +62,10 @@ const Search = () => {
           .slice(0, 6)
           .map(p => ({
             name: p.name,
-            // ✅ FIXED: handle both array and string image formats
             image: Array.isArray(p.image) ? p.image[0] : p.image,
             _id: p._id
           }))
-          .filter(p => p.name) // ✅ filter out any products with no name
+          .filter(p => p.name)
         setSuggestions(names)
         setShowSuggestions(true)
       }
@@ -90,7 +87,7 @@ const Search = () => {
       fetchSuggestions(value)
     }, 300)
 
-    navigate(`/search?q=${value}`)
+    navigate(`/search?q=${encodeURIComponent(value)}`)
   }
 
   const handleSuggestionClick = (name) => {
@@ -106,24 +103,39 @@ const Search = () => {
     navigate('/search?q=')
   }
 
+  // ✅ FIX: clicking the placeholder navigates to /search
+  const handlePlaceholderClick = () => {
+    navigate('/search')
+  }
+
   return (
     <div ref={wrapperRef} className='relative w-full'>
       <div className='w-full min-w-[300px] lg:min-w-[420px] h-11 lg:h-12 rounded-xl border overflow-hidden flex items-center text-neutral-500 bg-slate-50 group focus-within:border-green-400 focus-within:bg-white transition-all'>
+
+        {/* Left icon */}
         <div>
           {isMobile && isSearchPage ? (
             <Link to="/" className='flex justify-center items-center h-full p-2 m-1 group-focus-within:text-green-500 bg-white rounded-full shadow-md'>
               <FaArrowLeft size={18} />
             </Link>
           ) : (
-            <button className='flex justify-center items-center h-full p-3 group-focus-within:text-green-500'>
+            <button
+              className='flex justify-center items-center h-full p-3 group-focus-within:text-green-500'
+              onClick={!isSearchPage ? handlePlaceholderClick : undefined}
+            >
               <IoSearch size={20} />
             </button>
           )}
         </div>
 
+        {/* Input / Placeholder */}
         <div className='w-full h-full flex items-center'>
           {!isSearchPage ? (
-            <div onClick={() => navigate("/search")} className='w-full h-full flex items-center cursor-pointer'>
+            // ✅ FIX: entire area is clickable to go to /search
+            <div
+              onClick={handlePlaceholderClick}
+              className='w-full h-full flex items-center cursor-pointer'
+            >
               <TypeAnimation
                 sequence={[
                   'Search "milk"', 1000,
@@ -143,6 +155,7 @@ const Search = () => {
               />
             </div>
           ) : (
+            // ✅ Real input shown on /search page
             <input
               type='text'
               placeholder='Search for atta, dal and more...'
@@ -152,15 +165,16 @@ const Search = () => {
               onChange={handleOnChange}
               onFocus={() => {
                 if (inputValue.length >= 2) {
-                  fetchSuggestions(inputValue) // ✅ re-fetch on focus if input has value
+                  fetchSuggestions(inputValue)
                 } else {
-                  setShowSuggestions(true) // show popular on empty focus
+                  setShowSuggestions(true)
                 }
               }}
             />
           )}
         </div>
 
+        {/* Clear button */}
         {isSearchPage && inputValue && (
           <button onClick={handleClear} className='p-2 mr-1 text-slate-400 hover:text-slate-600'>
             <IoClose size={18} />
@@ -168,10 +182,10 @@ const Search = () => {
         )}
       </div>
 
+      {/* Suggestions dropdown */}
       {isSearchPage && showSuggestions && (
         <div className='absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden'>
 
-          {/* Loading state */}
           {loading && (
             <div className='px-4 py-3 text-xs text-slate-400 font-medium flex items-center gap-2'>
               <div className='w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full animate-spin'></div>
@@ -179,14 +193,13 @@ const Search = () => {
             </div>
           )}
 
-          {/* Suggestions list */}
           {!loading && suggestions.length > 0 && (
             <div>
               <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 pt-3 pb-1'>Products</p>
               {suggestions.map((item, i) => (
                 <button
                   key={item._id || i}
-                  onMouseDown={(e) => e.preventDefault()} // ✅ prevent input blur before click fires
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSuggestionClick(item.name)}
                   className='w-full flex items-center gap-3 px-4 py-2.5 hover:bg-green-50 transition-all text-left'
                 >
@@ -205,7 +218,6 @@ const Search = () => {
             </div>
           )}
 
-          {/* Popular searches — shown when no input or no results */}
           {!loading && suggestions.length === 0 && (
             <div className='p-4'>
               <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3'>Popular Searches</p>
@@ -213,7 +225,7 @@ const Search = () => {
                 {POPULAR.map(item => (
                   <button
                     key={item}
-                    onMouseDown={(e) => e.preventDefault()} // ✅ prevent blur before click
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleSuggestionClick(item)}
                     className='text-xs font-bold bg-slate-100 hover:bg-green-100 hover:text-green-700 text-slate-600 px-3 py-1.5 rounded-full transition-all'
                   >

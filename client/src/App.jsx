@@ -21,7 +21,6 @@ import RemoteConfigProvider from './provider/RemoteConfigProvider'
 import useNotifications from './hooks/useNotifications'
 import socket from './utils/socket.js';
 
-// FIX: Single source of truth for token key names.
 import { ACCESS_TOKEN_KEY } from './constants/storageKeys';
 
 import './App.css'
@@ -49,15 +48,12 @@ function App() {
     }
   }, [currentNormalizedRoute, isCheckoutOrCartPage])
 
-  // FIX: fetchUser runs once on mount only — not on every route change.
-  // Re-fetching user on every navigation hammered the API unnecessarily.
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       setIsAuthResolving(false)
       return
     }
-    
     try {
       const userData = await fetchUserDetails()
       if (userData?.success) {
@@ -69,7 +65,6 @@ function App() {
     } catch (error) {
       console.log("Session Check: No active user found.")
     } finally {
-      // FIX: always resolves — no stuck spinner.
       setIsAuthResolving(false)
     }
   }, [dispatch])
@@ -77,7 +72,9 @@ function App() {
   const fetchOrder = useCallback(async () => {
     if (!user?._id) return
     try {
-      const response = await Axios({ ...SummaryApi.getOrderItems })
+      // ✅ FIXED: was SummaryApi.getOrderItems (rider endpoint — returns ALL users' orders)
+      //           now SummaryApi.getOrderDetails (customer endpoint — filters by logged-in userId)
+      const response = await Axios({ ...SummaryApi.getOrderDetails })
       if (response?.data?.success) {
         dispatch(setOrder(response.data.data))
       }
@@ -117,7 +114,6 @@ function App() {
     }
   }, [dispatch])
 
-  // FIX: Removed `currentNormalizedRoute` from deps — fetchUser only runs once on mount.
   useEffect(() => {
     fetchUser()
   }, [fetchUser])
@@ -136,7 +132,6 @@ function App() {
   useEffect(() => {
     socket.on('connect', () => console.log("🚀 Socket Connected:", socket.id));
     socket.on('connect_error', (err) => console.log("📡 Socket error:", err.message));
-    
     return () => {
       socket.off('connect');
       socket.off('connect_error');
@@ -155,10 +150,10 @@ function App() {
     <RemoteConfigProvider>
       <GlobalProvider>
         <div className="App">
-          <OfferStrip />
-          <Header openCart={() => setShowCart(true)} />
+          {!isDashboard && <OfferStrip />}
+          {!isDashboard && <Header openCart={() => setShowCart(true)} />}
           
-          <main className='min-h-[78vh]'>
+          <main className={isDashboard ? '' : 'min-h-[78vh]'}>
             <Outlet />
           </main>
           
@@ -181,5 +176,4 @@ function App() {
   )
 }
 
-export default App; 
- 
+export default App;

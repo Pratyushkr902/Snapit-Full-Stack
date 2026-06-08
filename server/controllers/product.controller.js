@@ -24,10 +24,8 @@ export const createProductController = async (request, response) => {
             return response.status(400).json({ message: "Enter required fields", error: true, success: false });
         }
 
-        // Calculate selling price: sellerPrice + snapitMargin
-        // If sellerPrice is provided use it, otherwise fall back to price field
-        const resolvedSellerPrice = Number(sellerPrice ?? price ?? 0);
-        const resolvedMargin      = Number(snapitMargin ?? 0);
+        const resolvedSellerPrice  = Number(sellerPrice ?? price ?? 0);
+        const resolvedMargin       = Number(snapitMargin ?? 0);
         const resolvedSellingPrice = resolvedSellerPrice + resolvedMargin;
 
         const product = new ProductModel({
@@ -40,10 +38,11 @@ export const createProductController = async (request, response) => {
             sellerPrice:  resolvedSellerPrice,
             snapitMargin: resolvedMargin,
             sellingPrice: resolvedSellingPrice,
-            price:        resolvedSellingPrice,  // customer always pays sellingPrice
+            price:        resolvedSellingPrice,
             discount,
             description,
             more_details,
+            publish: true,
             store_inventory: [{
                 store_name: "Snapit Main Store - Paliganj",
                 stock: Number(stock) || 0,
@@ -67,7 +66,7 @@ export const getProductController = async (request, response) => {
     try {
         let { page, limit, search } = request.body;
         if (!page)  page  = 1;
-        if (!limit) limit = 10;
+        if (!limit) limit = 100;
         const query = search ? { $text: { $search: search } } : {};
         const skip  = (page - 1) * limit;
         const [data, totalCount] = await Promise.all([
@@ -93,7 +92,7 @@ export const getProductByCategory = async (request, response) => {
 
         const product = await ProductModel.find({
             category: { $in: [new mongoose.Types.ObjectId(id)] }
-        }).select(LIST_FIELDS).limit(15).lean();
+        }).select(LIST_FIELDS).lean();
 
         return response.json({
             message: "category product list", error: false, success: true,
@@ -106,22 +105,31 @@ export const getProductByCategory = async (request, response) => {
 
 export const getProductsByCategories = async (request, response) => {
     try {
-        const { categoryIds } = request.body;
+        const { categoryIds, limit: perCategoryLimit = 0 } = request.body;
         if (!Array.isArray(categoryIds) || categoryIds.length === 0)
             return response.status(400).json({ message: "Provide an array of categoryIds", error: true, success: false });
         const invalidId = categoryIds.find(id => !mongoose.Types.ObjectId.isValid(id));
         if (invalidId) return response.status(400).json({ message: `Invalid category ID: ${invalidId}`, error: true, success: false });
 
-        const products = await ProductModel.find({ category: { $in: categoryIds } }).select(LIST_FIELDS).limit(15 * categoryIds.length).lean();
+        const products = await ProductModel.find({
+            category: { $in: categoryIds }
+        }).select(LIST_FIELDS).lean();
+
         const grouped = {};
         for (const categoryId of categoryIds) grouped[categoryId] = [];
+
         for (const prod of products) {
             const securedProd = { ...prod, image: secureImages(prod.image) };
             for (const catId of prod.category) {
                 const key = catId.toString();
-                if (grouped[key] && grouped[key].length < 15) grouped[key].push(securedProd);
+                if (key in grouped) {
+                    if (perCategoryLimit === 0 || grouped[key].length < perCategoryLimit) {
+                        grouped[key].push(securedProd);
+                    }
+                }
             }
         }
+
         return response.json({ message: "Products grouped by category", data: grouped, error: false, success: true });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -134,7 +142,7 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         if (!categoryId) return response.status(400).json({ message: "Provide categoryId", error: true, success: false });
         if (!mongoose.Types.ObjectId.isValid(categoryId)) return response.status(400).json({ message: "Invalid Category ID format", error: true, success: false });
         if (!page)  page  = 1;
-        if (!limit) limit = 10;
+        if (!limit) limit = 100;
 
         const skip = (page - 1) * limit;
         const hasValidSubCategory = subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId);
@@ -190,7 +198,6 @@ export const updateProductDetails = async (request, response) => {
             return response.status(400).json({ message: "provide valid product _id", error: true, success: false });
         if (updateFields.image) updateFields.image = secureImages(updateFields.image);
 
-        // Recalculate sellingPrice if pricing fields are being updated
         if (updateFields.sellerPrice != null || updateFields.snapitMargin != null) {
             const existing = await ProductModel.findById(_id).lean();
             const sellerPrice  = Number(updateFields.sellerPrice  ?? existing?.sellerPrice  ?? 0);
@@ -229,7 +236,7 @@ export const searchProduct = async (request, response) => {
     try {
         let { search, page, limit } = request.body;
         if (!page)  page  = 1;
-        if (!limit) limit = 10;
+        if (!limit) limit = 100;
         const query = search
             ? { $or: [{ name: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }] }
             : {};
@@ -279,7 +286,6 @@ export const updateProductEmails = async (req, res) => {
     }
 };
 
-// ── NEW: Recalculate MRP for all products (called by cron or admin manually) ──
 export const recalculateMRP = async (req, res) => {
     try {
         const products = await ProductModel.find({ sellerPrice: { $ne: null } });
@@ -303,7 +309,6 @@ export const recalculateMRP = async (req, res) => {
     }
 };
 
-// ── NEW: Get full pricing breakdown for admin panel ──
 export const getPricingBreakdown = async (req, res) => {
     try {
         const products = await ProductModel.find({ sellerPrice: { $ne: null } })
@@ -317,12 +322,70 @@ export const getPricingBreakdown = async (req, res) => {
             success: true,
             data: products,
             summary: {
-                totalProducts:           products.length,
+                totalProducts:            products.length,
                 totalSnapitMarginPerSale: totalSnapitMargin,
                 totalSellerPayoutPerSale: totalSellerPayout,
             }
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const republishAllProducts = async (req, res) => {
+    try {
+        const result = await ProductModel.updateMany(
+            { publish: false },
+            { $set: { publish: true } }
+        );
+        return res.json({
+            success: true,
+            message: `Re-published ${result.modifiedCount} products that were hidden.`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const getVariantsByGroup = async (req, res) => {
+    try {
+        const { variantGroup } = req.body;
+        if (!variantGroup) return res.json({ success: true, data: [] });
+        const variants = await ProductModel.find({
+            variantGroup,
+            publish: true
+        }).select('_id name unit price discount image variantGroup');
+        return res.json({ success: true, data: variants });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+export const getSellerProductsController = async (request, response) => {
+    try {
+        let { page, limit, search, store_name } = request.body;
+        if (!store_name) return response.status(400).json({ message: "store_name is required", error: true, success: false });
+        if (!page)  page  = 1;
+        if (!limit) limit = 100;
+        const skip = (page - 1) * limit;
+        const baseQuery = { "store_inventory.store_name": store_name };
+        if (search) {
+            baseQuery.$or = [
+                { name:        { $regex: search, $options: "i" } },
+                { description: { $regex: search, $options: "i" } }
+            ];
+        }
+        const [data, totalCount] = await Promise.all([
+            ProductModel.find(baseQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
+            ProductModel.countDocuments(baseQuery)
+        ]);
+        return response.json({
+            message: "Seller product data", error: false, success: true,
+            totalCount, totalNoPage: Math.ceil(totalCount / limit),
+            data: data.map(prod => ({ ...prod._doc, image: secureImages(prod.image) }))
+        });
+    } catch (error) {
+        return response.status(500).json({ message: error.message || error, error: true, success: false });
     }
 };

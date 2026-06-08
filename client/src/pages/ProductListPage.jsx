@@ -53,7 +53,7 @@ const ProductListPage = () => {
             categoryId,
             subCategoryId,
             page: 1,
-            limit: 60,
+            limit: 500,
           }
         })
       } else {
@@ -64,7 +64,7 @@ const ProductListPage = () => {
           data: {
             id: categoryId,
             page: 1,
-            limit: 60,
+            limit: 500,
           }
         })
       }

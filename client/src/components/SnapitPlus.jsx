@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { setUserDetails } from "../store/userSlice";
 import Axios from "../utils/Axios";
 import { toast } from "react-hot-toast";
 
@@ -16,6 +18,7 @@ const BENEFITS = [
 export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
   const [plan, setPlan] = useState("monthly");
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
   const [isMember, setIsMember] = useState(isAlreadyMember);
 
   const ordersPerMonth = 12;
@@ -58,12 +61,17 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
             if (verifyRes.data.success) {
               toast.success("Welcome to Snapit Plus Club! 🎉");
               setIsMember(true);
+              try {
+                const userRes = await Axios({ url: "/api/user/user-details", method: "get" });
+                if (userRes.data.success) dispatch(setUserDetails(userRes.data.data));
+              } catch(e) {}
               if (onSuccess) onSuccess();
             }
           } catch (verifyErr) {
             toast.error("Payment verification failed. Contact support.");
           }
         },
+        redirect: false,
         theme: { color: "#1B5E20" }
       };
 
