@@ -14,7 +14,8 @@ import {
     recalculateMRP,
     getPricingBreakdown,
     republishAllProducts,
-    getVariantsByGroup,  // ← add this
+    getVariantsByGroup,
+    getSellerProductsController,
 } from '../controllers/product.controller.js';
 import auth from '../middleware/auth.js'
 import { admin } from '../middleware/Admin.js'
@@ -35,6 +36,7 @@ productRouter.post('/fix-emails',                          auth, admin, updatePr
 productRouter.get('/recalculate-mrp',                      auth, admin, recalculateMRP);
 productRouter.get('/pricing-breakdown',                    auth, admin, getPricingBreakdown);
 productRouter.post('/republish-all',                       auth, admin, republishAllProducts);
-productRouter.post('/get-variants',                               getVariantsByGroup);  // ← add this
+productRouter.post('/get-variants',                               getVariantsByGroup);
+productRouter.post('/get-seller-products',                 auth,        getSellerProductsController);
 
 export default productRouter;

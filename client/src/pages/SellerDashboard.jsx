@@ -139,14 +139,20 @@ const SellerDashboard = () => {
         finally { setLoading(false); }
     };
 
-    const fetchProducts = async () => {
-        setProductsLoading(true);
-        try {
-            const res = await Axios({ ...SummaryApi.getProduct, data: { page: 1, limit: 100 } });
-            if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
-        } catch { toast.error('Failed to fetch products'); }
-        finally { setProductsLoading(false); }
-    };
+    const user = useSelector(state => state.user);
+const storeName = user?.store_name || "";
+
+const fetchProducts = async () => {
+    setProductsLoading(true);
+    try {
+        const res = await Axios({
+            ...SummaryApi.getSellerProducts,
+            data: { page: 1, limit: 100, store_name: storeName }
+        });
+        if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
+    } catch { toast.error('Failed to fetch products'); }
+    finally { setProductsLoading(false); }
+};
 
     const markAsReady = async (orderId) => {
         try {

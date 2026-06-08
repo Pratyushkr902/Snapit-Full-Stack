@@ -3,7 +3,7 @@ import { createSlice } from "@reduxjs/toolkit"
 const emptyUser = {
     _id: "", name: "", email: "", avatar: "", mobile: "",
     verify_email: "", last_login_date: "", status: "",
-    address_details: [], shopping_cart: [], orderHistory: [], role: ""
+    address_details: [], shopping_cart: [], orderHistory: [], role: "", store_name: ""
 }
 
 // ✅ Read saved user instantly on app start — no timing gap
@@ -34,6 +34,7 @@ const userSlice = createSlice({
             state.shopping_cart    = action.payload?.shopping_cart
             state.orderHistory     = action.payload?.orderHistory
             state.role             = action.payload?.role
+            state.store_name       = action.payload?.store_name
 
             // ✅ Save to localStorage every time user updates
             localStorage.setItem('user', JSON.stringify(action.payload))
@@ -67,6 +68,7 @@ const userSlice = createSlice({
             state.shopping_cart   = []
             state.orderHistory    = []
             state.role            = ""
+            state.store_name      = ""
         }
     }
 })

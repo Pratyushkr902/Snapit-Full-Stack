@@ -348,7 +348,6 @@ export const republishAllProducts = async (req, res) => {
     }
 };
 
-// ✅ NEW: Get all variants by variantGroup
 export const getVariantsByGroup = async (req, res) => {
     try {
         const { variantGroup } = req.body;
@@ -360,5 +359,33 @@ export const getVariantsByGroup = async (req, res) => {
         return res.json({ success: true, data: variants });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+export const getSellerProductsController = async (request, response) => {
+    try {
+        let { page, limit, search, store_name } = request.body;
+        if (!store_name) return response.status(400).json({ message: "store_name is required", error: true, success: false });
+        if (!page)  page  = 1;
+        if (!limit) limit = 100;
+        const skip = (page - 1) * limit;
+        const baseQuery = { "store_inventory.store_name": store_name };
+        if (search) {
+            baseQuery.$or = [
+                { name:        { $regex: search, $options: "i" } },
+                { description: { $regex: search, $options: "i" } }
+            ];
+        }
+        const [data, totalCount] = await Promise.all([
+            ProductModel.find(baseQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
+            ProductModel.countDocuments(baseQuery)
+        ]);
+        return response.json({
+            message: "Seller product data", error: false, success: true,
+            totalCount, totalNoPage: Math.ceil(totalCount / limit),
+            data: data.map(prod => ({ ...prod._doc, image: secureImages(prod.image) }))
+        });
+    } catch (error) {
+        return response.status(500).json({ message: error.message || error, error: true, success: false });
     }
 };

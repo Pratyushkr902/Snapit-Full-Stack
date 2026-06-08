@@ -93,6 +93,10 @@ const SummaryApi = {
         url : '/api/product/get',
         method : 'post'
     },
+    getSellerProducts: {
+        url: '/api/product/get-seller-products',
+        method: 'post'
+    },
     getProductByCategory : {
         url : '/api/product/get-product-by-category',
         method : 'post'
@@ -163,7 +167,7 @@ const SummaryApi = {
     },
     getOrderDetails: {
         url: '/api/order/order-list',
-        method: 'get'  // ✅ FIXED: was 'post', backend route is GET
+        method: 'get'
     },
     getSellerOrders: {
         url: '/api/order/seller-orders',

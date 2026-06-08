@@ -1,8 +1,14 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.snapit.app",
-    "sha256_cert_fingerprints": ["A5:69:1A:92:C1:EA:8C:9F:A4:34:16:47:7A:91:E4:93:AD:79:62:D8:4A:CC:70:F9:32:62:38:2B:2A:47:BF:8B"]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.snapit.app",
+      "sha256_cert_fingerprints": [
+        "30:A5:0F:20:32:6E:C2:31:EF:E9:2B:84:29:DC:7D:2D:A1:AC:EA:5E:76:0F:AF:FE:6D:46:12:A9:8B:71:BC:B8"
+      ]
+    }
   }
-}]
+]

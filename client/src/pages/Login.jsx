@@ -90,11 +90,14 @@ const Login = () => {
 
                     {/* Logo */}
                     <div className="flex items-center gap-3 mb-7">
-                        {/* ✅ Snapit logo replaces the green cart icon */}
                         <img
                             src={snapitLogo}
                             alt="Snapit logo"
                             className="w-11 h-11 object-contain flex-shrink-0"
+                            fetchpriority="high"
+                            decoding="sync"
+                            width={44}
+                            height={44}
                         />
                         <div>
                             <h1 className="text-xl font-semibold text-gray-900 leading-tight">Snapit</h1>
