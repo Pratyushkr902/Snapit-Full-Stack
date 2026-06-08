@@ -140,17 +140,16 @@ console.log('user object:', user);
     };
 
     const fetchProducts = async () => {
-        if (!storeName) return;          // ← wait until Redux has hydrated
-        setProductsLoading(true);
-        try {
-            const res = await Axios({
-                ...SummaryApi.getSellerProducts,
-                data: { page: 1, limit: 100, store_name: storeName }
-            });
-            if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
-        } catch { toast.error('Failed to fetch products'); }
-        finally { setProductsLoading(false); }
-    };
+    setProductsLoading(true);
+    try {
+        const res = await Axios({
+            ...SummaryApi.getSellerProducts,
+            data: { page: 1, limit: 100 }
+        });
+        if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
+    } catch { toast.error('Failed to fetch products'); }
+    finally { setProductsLoading(false); }
+};
 
     const markAsReady = async (orderId) => {
         try {
