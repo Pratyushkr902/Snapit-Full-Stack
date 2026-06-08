@@ -125,7 +125,7 @@ const SellerDashboard = () => {
    const user      = useSelector(state => state.user.user ?? state.user);
 const storeName = user?.store_name || user?.storeName || user?.shop_name || user?.name || '';
     const sellingPrice = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
-
+console.log('user object:', user); 
     // ── Data fetchers ─────────────────────────────────────────
     const fetchOrders = async (silent = false) => {
         try {
