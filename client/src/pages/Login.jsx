@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { FaRegEyeSlash, FaRegEye } from "react-icons/fa6"
-import { FaGoogle, FaFacebook, FaBolt } from "react-icons/fa"
+import { FaBolt } from "react-icons/fa"
 import { MdEmail, MdLock } from "react-icons/md"
 import toast from 'react-hot-toast'
 import Axios from '../utils/Axios'
@@ -11,6 +11,7 @@ import { useDispatch } from 'react-redux'
 import { setUserDetails } from '../store/userSlice'
 import fetchUserDetails from '../utils/fetchUserDetails'
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../constants/storageKeys'
+import snapitLogo from '/logo.png'
 
 const Login = () => {
     const [data, setData] = useState({ email: "", password: "" })
@@ -91,7 +92,7 @@ const Login = () => {
                     <div className="flex items-center gap-3 mb-7">
                         {/* ✅ Snapit logo replaces the green cart icon */}
                         <img
-                            src="/logo.png"
+                            src={snapitLogo}
                             alt="Snapit logo"
                             className="w-11 h-11 object-contain flex-shrink-0"
                         />
@@ -178,25 +179,6 @@ const Login = () => {
                             {loading ? 'Signing in...' : 'Sign in'}
                         </button>
                     </form>
-
-                    {/* Divider */}
-                    <div className="flex items-center gap-3 my-5">
-                        <hr className="flex-1 border-t border-gray-100" />
-                        <span className="text-xs text-gray-400">or continue with</span>
-                        <hr className="flex-1 border-t border-gray-100" />
-                    </div>
-
-                    {/* Social */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <button className="flex items-center justify-center gap-2 h-11 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-all">
-                            <FaGoogle className="text-base text-[#4285F4]" />
-                            Google
-                        </button>
-                        <button className="flex items-center justify-center gap-2 h-11 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-all">
-                            <FaFacebook className="text-base text-[#1877F2]" />
-                            Facebook
-                        </button>
-                    </div>
 
                     {/* Register */}
                     <p className="text-center text-sm text-gray-500 mt-6">
