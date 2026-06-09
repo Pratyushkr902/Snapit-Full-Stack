@@ -7,16 +7,27 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Georgia, serif; background: #fdfaf4; color: #1a1a1a; line-height: 1.8; }
-  header { background: #F0D296; padding: 40px 0; text-align: center; border-bottom: 2px solid #e8c070; }
-  header h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -1px; }
+
+  header { background: #F0D296; padding: 32px 16px; text-align: center; border-bottom: 2px solid #e8c070; }
+  header h1 { font-size: 2rem; font-weight: 700; }
   header p { font-size: 0.95rem; color: #555; margin-top: 6px; }
-  .container { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
-  h2 { font-size: 1.2rem; font-weight: 700; margin: 36px 0 10px; color: #1a1a1a; border-left: 4px solid #F0D296; padding-left: 12px; }
+
+  .container { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  h2 { font-size: 1.1rem; font-weight: 700; margin: 32px 0 10px; color: #1a1a1a; border-left: 4px solid #F0D296; padding-left: 12px; }
   p { font-size: 1rem; margin-bottom: 14px; color: #333; }
   ul { margin: 0 0 14px 20px; color: #333; }
-  ul li { margin-bottom: 6px; }
-  a { color: #b07d10; }
+  ul li { margin-bottom: 6px; font-size: 1rem; }
+  a { color: #b07d10; word-break: break-all; }
   .last-updated { font-size: 0.85rem; color: #888; margin-top: 48px; border-top: 1px solid #e0d8c8; padding-top: 16px; }
+
+  @media (max-width: 480px) {
+    header h1 { font-size: 1.5rem; }
+    header p { font-size: 0.88rem; }
+    .container { padding: 28px 16px 60px; }
+    h2 { font-size: 1rem; margin: 24px 0 8px; }
+    p, ul li { font-size: 0.95rem; line-height: 1.7; }
+  }
 </style>
 </head>
 <body>
