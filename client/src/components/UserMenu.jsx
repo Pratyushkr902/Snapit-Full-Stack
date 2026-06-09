@@ -119,8 +119,22 @@ const UserMenu = ({close}) => {
 
             <Divider/>
 
+<<<<<<< HEAD
             <a href="https://snapit.pages.dev/privacy-policy.html" target="_blank" rel="noreferrer" className="px-2 hover:bg-gray-100 py-1 flex items-center gap-1.5 text-gray-600" onClick={handleClose}>🔒 Privacy Policy</a>
             <button onClick={handleLogout} className="text-left px-2 hover:bg-orange-200 py-1">Log Out</button>
+=======
+            <a
+              href="https://snapit.pages.dev/privacy-policy.html"
+              target="_blank"
+              rel="noreferrer"
+              className='px-2 hover:bg-gray-100 py-1 flex items-center gap-1.5 text-gray-600'
+              onClick={handleClose}
+            >
+              🔒 Privacy Policy
+            </a>
+
+            <button onClick={handleLogout} className='text-left px-2 hover:bg-orange-200 py-1'>Log Out</button>
+>>>>>>> 250979c8 (fix: privacy policy link inside UserMenu grid)
 
         </div>
     </div>

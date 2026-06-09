@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
@@ -122,12 +122,24 @@ const SellerDashboard = () => {
 
     const allCategory    = useSelector(state => state.product.allCategory);
     const allSubCategory = useSelector(state => state.product.allSubCategory);
-   const user      = useSelector(state => state.user.user ?? state.user);
-const storeName = user?.store_name || user?.storeName || user?.shop_name || user?.name || '';
+
+    // ── FIX 1: Select only stable primitives from Redux to avoid
+    //           infinite re-renders caused by new object references ──
+    const userId    = useSelector(state => state.user.user?._id ?? state.user?._id);
+    const userName  = useSelector(state => state.user.user?.name ?? state.user?.name ?? '');
+    const storeName = useSelector(state =>
+        state.user.user?.store_name  ?? state.user.user?.storeName  ??
+        state.user.user?.shop_name   ?? state.user.user?.name       ??
+        state.user?.store_name       ?? state.user?.storeName       ??
+        state.user?.shop_name        ?? state.user?.name            ?? ''
+    );
+
     const sellingPrice = Number(productForm.sellerPrice || 0) + Number(productForm.snapitMargin || 0);
-console.log('user object:', user); 
-    // ── Data fetchers ─────────────────────────────────────────
-    const fetchOrders = async (silent = false) => {
+
+    // ── Data fetchers wrapped in useCallback so they're stable refs ──
+    // ── FIX 2: useCallback prevents new function references each render,
+    //           which would otherwise re-trigger effects endlessly ────
+    const fetchOrders = useCallback(async (silent = false) => {
         try {
             if (!silent) setLoading(true);
             const res = await Axios({ ...SummaryApi.getSellerOrders });
@@ -137,19 +149,19 @@ console.log('user object:', user);
             }
         } catch { toast.error('Failed to fetch orders'); }
         finally { setLoading(false); }
-    };
+    }, []); // no deps — Axios and SummaryApi are module-level constants
 
-    const fetchProducts = async () => {
-    setProductsLoading(true);
-    try {
-        const res = await Axios({
-            ...SummaryApi.getSellerProducts,
-            data: { page: 1, limit: 100 }
-        });
-        if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
-    } catch { toast.error('Failed to fetch products'); }
-    finally { setProductsLoading(false); }
-};
+    const fetchProducts = useCallback(async () => {
+        setProductsLoading(true);
+        try {
+            const res = await Axios({
+                ...SummaryApi.getSellerProducts,
+                data: { page: 1, limit: 100 }
+            });
+            if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
+        } catch { toast.error('Failed to fetch products'); }
+        finally { setProductsLoading(false); }
+    }, []); // no deps — same reason
 
     const markAsReady = async (orderId) => {
         try {
@@ -234,19 +246,21 @@ console.log('user object:', user);
     };
 
     // ── Effects ───────────────────────────────────────────────
-    // Re-runs when storeName becomes available (Redux hydration)
+    // FIX 3: Depend on userId (stable string), NOT the user object.
+    //         fetchOrders / fetchProducts are stable via useCallback.
+    //         This effect now only runs when the user actually changes.
     useEffect(() => {
-        if (!storeName) return;
+        if (!userId) return;
         fetchOrders();
         fetchProducts();
         const iv = setInterval(() => fetchOrders(true), 30000);
         return () => clearInterval(iv);
-    }, [storeName]);
+    }, [userId, fetchOrders, fetchProducts]);
 
-    // Re-fetch products when switching to products tab
+    // FIX 4: Same fix — depend on activeTab + userId (primitives only)
     useEffect(() => {
-        if (activeTab === 'products' && storeName) fetchProducts();
-    }, [activeTab, storeName]);
+        if (activeTab === 'products' && userId) fetchProducts();
+    }, [activeTab, userId, fetchProducts]);
 
     // ── Computed values ───────────────────────────────────────
     const now = new Date();

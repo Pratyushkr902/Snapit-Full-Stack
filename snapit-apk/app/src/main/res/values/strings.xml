@@ -16,12 +16,6 @@
 -->
 <resources>
   
-    <string-array name="additional_trusted_origins">
-    
-      <item>https://https://snapit-client.vercel.app</item>
-    
-    </string-array>
-  
 
   <!--
     The "fullscreen" and "fullscreen-sticky" TWA manifest values correspond to "immersive" and "sticky-immersive"
@@ -40,17 +34,9 @@
         \"relation\": [\"delegate_permission/common.handle_all_urls\"],
         \"target\": {
             \"namespace\": \"web\",
-            \"site\": \"https://snapit-client.vercel.app\"
+            \"site\": \"https://snapit.pages.dev\"
         }
     }]
-    
-      ,[{
-          \"relation\": [\"delegate_permission/common.handle_all_urls\"],
-          \"target\": {
-              \"namespace\": \"web\",
-              \"site\": \"https://https://snapit-client.vercel.app\"
-          }
-      }]        
     
   </string>  
 </resources>

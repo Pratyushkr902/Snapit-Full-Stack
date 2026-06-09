@@ -20,8 +20,8 @@
     "path": "/Users/pratyushkumar/Snapit-Full-Stack/client/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "1.2",
-  "appVersionCode": 4,
+  "appVersionName": "1.4",
+  "appVersionCode": 6,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://snapit.pages.dev/manifest.json",
@@ -40,12 +40,16 @@
   "fullScopeUrl": "https://snapit.pages.dev/",
   "minSdkVersion": 21,
   "orientation": "portrait",
-  "fingerprints": [],
+  "fingerprints": [
+    {
+      "value": "A5:69:1A:92:C1:EA:8C:9F:A4:34:16:47:7A:91:E4:93:AD:79:62:D8:4A:CC:70:F9:32:62:38:2B:2A:47:BF:8B"
+    }
+  ],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
   "protocolHandlers": [],
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1.2"
+  "appVersion": "1.4"
 }

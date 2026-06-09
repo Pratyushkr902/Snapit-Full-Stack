@@ -34,7 +34,7 @@ public class LauncherActivity
         @Override
         protected Map<String, Uri> getProtocolHandlers() {
             Map<String, Uri> registry = new HashMap<>();
-            registry.put("upi", Uri.parse("https://snapit-client.vercel.app/?upi=%s"));
+            registry.put("upi", Uri.parse("https://snapit.pages.dev/?upi=%s"));
             return registry;
         }
     

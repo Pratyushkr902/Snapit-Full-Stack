@@ -12,6 +12,11 @@ const secureImages = (images) => {
     );
 };
 
+// ── Helper: get seller's store name from the authed user ──────
+// Supports whatever field name you store it under on UserModel
+const getStoreName = (user) =>
+    user?.store_name || user?.storeName || user?.shop_name || user?.name || '';
+
 export const createProductController = async (request, response) => {
     try {
         const {
@@ -22,6 +27,12 @@ export const createProductController = async (request, response) => {
 
         if (!name || !image?.length || !category?.length || !subCategory?.length || !unit) {
             return response.status(400).json({ message: "Enter required fields", error: true, success: false });
+        }
+
+        // FIX: use the authenticated seller's store name, not a hardcoded string
+        const storeName = getStoreName(request.user);
+        if (!storeName) {
+            return response.status(400).json({ message: "Seller store name not found on account", error: true, success: false });
         }
 
         const resolvedSellerPrice  = Number(sellerPrice ?? price ?? 0);
@@ -44,8 +55,8 @@ export const createProductController = async (request, response) => {
             more_details,
             publish: true,
             store_inventory: [{
-                store_name: "Snapit Main Store - Paliganj",
-                stock: Number(stock) || 0,
+                store_name:  storeName,   // FIX: was hardcoded "Snapit Main Store - Paliganj"
+                stock:       Number(stock) || 0,
                 isAvailable: true
             }]
         });
@@ -196,6 +207,17 @@ export const updateProductDetails = async (request, response) => {
         const { _id, ...updateFields } = request.body;
         if (!_id || !mongoose.Types.ObjectId.isValid(_id))
             return response.status(400).json({ message: "provide valid product _id", error: true, success: false });
+
+        // FIX: sellers can only update their own products
+        const isAdmin = request.user?.role === 'ADMIN';
+        if (!isAdmin) {
+            const storeName = getStoreName(request.user);
+            const product = await ProductModel.findById(_id).lean();
+            if (!product) return response.status(404).json({ message: "Product not found", error: true, success: false });
+            const ownsProduct = (product.store_inventory || []).some(s => s.store_name === storeName);
+            if (!ownsProduct) return response.status(403).json({ message: "You can only update your own products", error: true, success: false });
+        }
+
         if (updateFields.image) updateFields.image = secureImages(updateFields.image);
 
         if (updateFields.sellerPrice != null || updateFields.snapitMargin != null) {
@@ -225,6 +247,17 @@ export const deleteProductDetails = async (request, response) => {
         const { _id } = request.body;
         if (!_id || !mongoose.Types.ObjectId.isValid(_id))
             return response.status(400).json({ message: "provide valid _id", error: true, success: false });
+
+        // FIX: sellers can only delete their own products
+        const isAdmin = request.user?.role === 'ADMIN';
+        if (!isAdmin) {
+            const storeName = getStoreName(request.user);
+            const product = await ProductModel.findById(_id).lean();
+            if (!product) return response.status(404).json({ message: "Product not found", error: true, success: false });
+            const ownsProduct = (product.store_inventory || []).some(s => s.store_name === storeName);
+            if (!ownsProduct) return response.status(403).json({ message: "You can only delete your own products", error: true, success: false });
+        }
+
         const deleteProduct = await ProductModel.deleteOne({ _id });
         return response.json({ message: "Delete successfully", error: false, success: true, data: deleteProduct });
     } catch (error) {
@@ -299,11 +332,7 @@ export const recalculateMRP = async (req, res) => {
                 updated++;
             }
         }
-        return res.json({
-            success: true,
-            message: `MRP recalculated for ${updated} products`,
-            updated
-        });
+        return res.json({ success: true, message: `MRP recalculated for ${updated} products`, updated });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -314,18 +343,11 @@ export const getPricingBreakdown = async (req, res) => {
         const products = await ProductModel.find({ sellerPrice: { $ne: null } })
             .select('name sellerPrice snapitMargin sellingPrice price stock publish')
             .lean();
-
         const totalSnapitMargin = products.reduce((acc, p) => acc + (Number(p.snapitMargin) || 0), 0);
         const totalSellerPayout = products.reduce((acc, p) => acc + (Number(p.sellerPrice)  || 0), 0);
-
         return res.json({
-            success: true,
-            data: products,
-            summary: {
-                totalProducts:            products.length,
-                totalSnapitMarginPerSale: totalSnapitMargin,
-                totalSellerPayoutPerSale: totalSellerPayout,
-            }
+            success: true, data: products,
+            summary: { totalProducts: products.length, totalSnapitMarginPerSale: totalSnapitMargin, totalSellerPayoutPerSale: totalSellerPayout }
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -334,15 +356,8 @@ export const getPricingBreakdown = async (req, res) => {
 
 export const republishAllProducts = async (req, res) => {
     try {
-        const result = await ProductModel.updateMany(
-            { publish: false },
-            { $set: { publish: true } }
-        );
-        return res.json({
-            success: true,
-            message: `Re-published ${result.modifiedCount} products that were hidden.`,
-            modifiedCount: result.modifiedCount
-        });
+        const result = await ProductModel.updateMany({ publish: false }, { $set: { publish: true } });
+        return res.json({ success: true, message: `Re-published ${result.modifiedCount} products that were hidden.`, modifiedCount: result.modifiedCount });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -352,10 +367,8 @@ export const getVariantsByGroup = async (req, res) => {
     try {
         const { variantGroup } = req.body;
         if (!variantGroup) return res.json({ success: true, data: [] });
-        const variants = await ProductModel.find({
-            variantGroup,
-            publish: true
-        }).select('_id name unit price discount image variantGroup');
+        const variants = await ProductModel.find({ variantGroup, publish: true })
+            .select('_id name unit price discount image variantGroup');
         return res.json({ success: true, data: variants });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -364,22 +377,31 @@ export const getVariantsByGroup = async (req, res) => {
 
 export const getSellerProductsController = async (request, response) => {
     try {
-        let { page, limit, search, store_name } = request.body;
-        if (!store_name) return response.status(400).json({ message: "store_name is required", error: true, success: false });
+        let { page, limit, search } = request.body;
         if (!page)  page  = 1;
         if (!limit) limit = 100;
         const skip = (page - 1) * limit;
-        const baseQuery = { "store_inventory.store_name": store_name };
+
+        // FIX: get store_name from the authenticated user, not req.body
+        //      (req.body store_name was never sent by the frontend)
+        const storeName = getStoreName(request.user);
+        if (!storeName) {
+            return response.status(400).json({ message: "Seller store name not found on account", error: true, success: false });
+        }
+
+        const baseQuery = { "store_inventory.store_name": storeName };
         if (search) {
             baseQuery.$or = [
                 { name:        { $regex: search, $options: "i" } },
                 { description: { $regex: search, $options: "i" } }
             ];
         }
+
         const [data, totalCount] = await Promise.all([
             ProductModel.find(baseQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
             ProductModel.countDocuments(baseQuery)
         ]);
+
         return response.json({
             message: "Seller product data", error: false, success: true,
             totalCount, totalNoPage: Math.ceil(totalCount / limit),
