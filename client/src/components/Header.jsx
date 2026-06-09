@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import logo from '../assets/snapit.png'
 import Search from './Search'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -18,6 +18,7 @@ const Header = ({ openCart }) => {
     const navigate = useNavigate()
     const user = useSelector((state) => state?.user)
     const [openUserMenu, setOpenUserMenu] = useState(false)
+    const menuRef = useRef(null)
 
     const { totalPrice, totalQty, fetchUser, fetchAddress } = useGlobalContext()
     const addressList = useSelector(state => state.addresses.addressList)
@@ -29,6 +30,17 @@ const Header = ({ openCart }) => {
             if (fetchAddress) fetchAddress()
         }
     }, [user?._id])
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setOpenUserMenu(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     const handleMobileUser = () => {
         navigate(user?._id ? "/user" : "/login")
@@ -79,13 +91,13 @@ const Header = ({ openCart }) => {
                     )}
 
                     {user?._id ? (
-                        <div className='relative'>
+                        <div className='relative' ref={menuRef}>
                             <div onClick={() => setOpenUserMenu(p => !p)} className='flex select-none items-center gap-1 cursor-pointer group'>
                                 <p className='font-bold text-slate-700 group-hover:text-green-700 transition-colors'>Account</p>
                                 {openUserMenu ? <GoTriangleUp size={22} /> : <GoTriangleDown size={22} />}
                             </div>
                             {openUserMenu && (
-                                <div className='absolute right-0 top-12 z-50'>
+                                <div className='absolute right-0 top-10 z-50'>
                                     <div className='bg-white rounded-xl p-4 min-w-52 shadow-2xl border border-slate-100'>
                                         <UserMenu close={() => setOpenUserMenu(false)} />
                                     </div>
@@ -152,7 +164,7 @@ const Header = ({ openCart }) => {
                     </div>
                 </div>
 
-                {/* ✅ FIX: Always show search bar on mobile — both on home and /search page */}
+                {/* Search bar */}
                 <div className='px-3 pb-2'>
                     <Search />
                 </div>
