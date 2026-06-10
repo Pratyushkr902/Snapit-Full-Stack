@@ -1,4 +1,4 @@
-package com.snapit.app;
+package com.snapit.grocery;
 
 
 import com.google.androidbrowserhelper.locationdelegation.LocationDelegationExtraCommandHandler;

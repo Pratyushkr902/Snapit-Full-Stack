@@ -21,7 +21,7 @@ plugins {
 }
 
 def twaManifest = [
-    applicationId: 'com.snapit.app',
+    applicationId: 'com.snapit.grocery',
     hostName: 'snapit.pages.dev', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
     name: 'Snapit', // The application name.
@@ -32,7 +32,7 @@ def twaManifest = [
     navigationColorDark: '#000000', // The color used for the dark navbar.
     navigationDividerColor: '#000000', // The navbar divider color.
     navigationDividerColorDark: '#000000', // The dark navbar divider color.
-    backgroundColor: '#FFFFFF', // The color used for the splash screen background.
+    backgroundColor: '#F0D296', // The color used for the splash screen background.
     enableNotifications: true, // Set to true to enable notification delegation.
     // Every shortcut must include the following fields:
     // - name: String that will show up in the shortcut.
@@ -52,13 +52,13 @@ def twaManifest = [
 
 android {
     compileSdkVersion 36
-    namespace "com.snapit.app"
+    namespace "com.snapit.grocery"
     defaultConfig {
-        applicationId "com.snapit.app"
+        applicationId "com.snapit.grocery"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 19
-        versionName "1.7"
+        versionCode 27
+        versionName "1.8"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

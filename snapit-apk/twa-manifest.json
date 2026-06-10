@@ -1,5 +1,5 @@
 {
-  "packageId": "com.snapit.app",
+  "packageId": "com.snapit.grocery",
   "host": "snapit.pages.dev",
   "name": "Snapit",
   "launcherName": "snapit",
@@ -10,17 +10,17 @@
   "navigationColorDark": "#000000",
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
-  "backgroundColor": "#FFFFFF",
+  "backgroundColor": "#F0D296",
   "enableNotifications": true,
   "startUrl": "/",
   "iconUrl": "https://snapit.pages.dev/snapit-icon-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "/Users/pratyushkumar/Documents/snapit/snapit-apk/android.keystore",
+    "path": "/Users/pratyushkumar/Documents/snapit/snapit-apk/android-new.keystore",
     "alias": "android"
   },
-  "appVersionName": "1.7",
-  "appVersionCode": 19,
+  "appVersionName": "1.8",
+  "appVersionCode": 27,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://snapit.pages.dev/manifest.json",
@@ -51,5 +51,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1.7"
+  "appVersion": "1.8"
 }
