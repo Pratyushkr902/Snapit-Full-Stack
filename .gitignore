@@ -1,5 +1,4 @@
 node_modules/
-dist/
 build/
 .env
 *.env
@@ -20,7 +19,6 @@ snapit.keystore
 client/android/.gradle/
 client/android/app/build/
 client/android/build/
-client/dist/
 client/android/.gradle/
 client/android/app/build/
 client/android/build/
@@ -29,3 +27,4 @@ client/ios/App/Pods/
 client/ios/.build/
 client/ios/App/build/
 .env
+!client/dist/.well-known/

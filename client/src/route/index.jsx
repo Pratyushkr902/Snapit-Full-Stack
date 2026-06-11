@@ -1,115 +1,136 @@
 import { createHashRouter } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import App from "../App";
+
+// Eager load only the most critical pages
 import Home from "../pages/Home";
-import SearchPage from "../pages/Searchpage";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
-import ForgotPassword from "../pages/ForgotPassword";
-import OtpVerification from "../pages/OtpVerification";
-import ResetPassword from "../pages/ResetPassword";
-import UserMenuMobile from "../pages/UserMenuMobile";
-import Dashboard from "../layouts/Dashboard";
-import Profile from "../pages/Profile";
-import MyOrders from "../pages/MyOrders";
-import Address from "../pages/Address";
-import CategoryPage from "../pages/CategoryPage";
-import SubCategoryPage from "../pages/SubCategoryPage";
-import UploadProduct from "../pages/UploadProduct";
-import ProductAdmin from "../pages/ProductAdmin";
-import AdminPermision from "../layouts/AdminPermision";
-import SellerPermission from "../layouts/SellerPermission";
-import ProductListPage from "../pages/ProductListPage";
-import ProductDisplayPage from "../pages/ProductDisplayPage";
-import CartMobile from "../pages/CartMobile";
-import CheckoutPage from "../pages/CheckoutPage";
-import Success from "../pages/Success";
-import Cancel from "../pages/Cancel";
-import RiderTracking from "../pages/RiderTracking";
-import RiderDashboard from "../pages/RiderDashboard";
-import StoreOrders from "../pages/StoreOrders";
-import Wallet from '../pages/Wallet';
-import AdminSummary from '../components/AdminSummary';
-import ReferAndEarn from '../pages/ReferAndEarn';
-import WishlistPage from '../pages/WishlistPage';
-import TrackingPage from '../pages/TrackingPage';
-import AllDealsPage from '../pages/AllDealsPage';
-import SnapitPlus from '../components/SnapitPlus';
-import StreakTracker from '../components/StreakTracker';
-import MySubscriptions from '../pages/MySubscriptions';
-import SellerDashboard from '../pages/SellerDashboard';
+
+// Lazy load everything else
+const SearchPage = lazy(() => import('../pages/Searchpage'))
+const ForgotPassword = lazy(() => import('../pages/ForgotPassword'))
+const OtpVerification = lazy(() => import('../pages/OtpVerification'))
+const ResetPassword = lazy(() => import('../pages/ResetPassword'))
+const UserMenuMobile = lazy(() => import('../pages/UserMenuMobile'))
+const Dashboard = lazy(() => import('../layouts/Dashboard'))
+const Profile = lazy(() => import('../pages/Profile'))
+const MyOrders = lazy(() => import('../pages/MyOrders'))
+const Address = lazy(() => import('../pages/Address'))
+const CategoryPage = lazy(() => import('../pages/CategoryPage'))
+const SubCategoryPage = lazy(() => import('../pages/SubCategoryPage'))
+const UploadProduct = lazy(() => import('../pages/UploadProduct'))
+const ProductAdmin = lazy(() => import('../pages/ProductAdmin'))
+const AdminPermision = lazy(() => import('../layouts/AdminPermision'))
+const SellerPermission = lazy(() => import('../layouts/SellerPermission'))
+const ProductListPage = lazy(() => import('../pages/ProductListPage'))
+const ProductDisplayPage = lazy(() => import('../pages/ProductDisplayPage'))
+const CartMobile = lazy(() => import('../pages/CartMobile'))
+const CheckoutPage = lazy(() => import('../pages/CheckoutPage'))
+const Success = lazy(() => import('../pages/Success'))
+const Cancel = lazy(() => import('../pages/Cancel'))
+const RiderTracking = lazy(() => import('../pages/RiderTracking'))
+const RiderDashboard = lazy(() => import('../pages/RiderDashboard'))
+const StoreOrders = lazy(() => import('../pages/StoreOrders'))
+const Wallet = lazy(() => import('../pages/Wallet'))
+const AdminSummary = lazy(() => import('../components/AdminSummary'))
+const ReferAndEarn = lazy(() => import('../pages/ReferAndEarn'))
+const WishlistPage = lazy(() => import('../pages/WishlistPage'))
+const TrackingPage = lazy(() => import('../pages/TrackingPage'))
+const AllDealsPage = lazy(() => import('../pages/AllDealsPage'))
+const SnapitPlus = lazy(() => import('../components/SnapitPlus'))
+const StreakTracker = lazy(() => import('../components/StreakTracker'))
+const MySubscriptions = lazy(() => import('../pages/MySubscriptions'))
+const SellerDashboard = lazy(() => import('../pages/SellerDashboard'))
+
+// Spinner shown while lazy chunks load
+const PageLoader = () => (
+  <div style={{
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    height: '60vh', width: '100%'
+  }}>
+    <div style={{
+      width: 36, height: 36, border: '3px solid #e5e7eb',
+      borderTop: '3px solid #16a34a', borderRadius: '50%',
+      animation: 'spin 0.7s linear infinite'
+    }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+  </div>
+)
+
+const S = ({ children }) => <Suspense fallback={<PageLoader />}>{children}</Suspense>
 
 const router = createHashRouter([
-    {
-        path : "/",
-        element : <App/>,
-        children : [
-            { path : "", element : <Home/> },
-            { path : "search", element : <SearchPage/> },
-            { path : "login", element : <Login/> },
-            { path : "register", element : <Register/> },
-            { path : "forgot-password", element : <ForgotPassword/> },
-            { path : "verification-otp", element : <OtpVerification/> },
-            { path : "reset-password", element : <ResetPassword/> },
-            { path : "user", element : <UserMenuMobile/> },
-            { path : "wallet", element : <Wallet /> },
-            { path : "refer", element : <ReferAndEarn /> },
-            { path : "wishlist", element : <WishlistPage /> },
-            { path : "deals", element : <AllDealsPage /> },
-            { path : "snapit-plus", element : <SnapitPlus /> },
-            { path : "streak", element : <StreakTracker /> },
-            { path : "subscriptions", element : <MySubscriptions /> },
-            { path : "rider-panel", element : <RiderDashboard /> },
-            {
-                path : "dashboard",
-                element : <Dashboard/>,
-                children : [
-                    { path : "profile", element : <Profile/> },
-                    {
-                        path : "admin-summary",
-                        element : <AdminPermision><AdminSummary/></AdminPermision>
-                    },
-                    { path : "myorders", element : <MyOrders/> },
-                    { path : "address", element : <Address/> },
-                    { path : "store-orders", element : <StoreOrders/> },
-                    {
-                        path : "seller-dashboard",
-                        element : <SellerPermission><SellerDashboard /></SellerPermission>
-                    },
-                    {
-                        path : "upload-product",
-                        element : <SellerPermission><UploadProduct/></SellerPermission>
-                    },
-                    { path : "order-tracking/:id", element : <RiderTracking /> },
-                    {
-                        path : "category",
-                        element : <AdminPermision><CategoryPage/></AdminPermision>
-                    },
-                    {
-                        path : "subcategory",
-                        element : <AdminPermision><SubCategoryPage/></AdminPermision>
-                    },
-                    {
-                        path : "product",
-                        element : <AdminPermision><ProductAdmin/></AdminPermision>
-                    },
-                ]
-            },
-            { path : "track/:orderId", element : <TrackingPage /> },
-            {
-                path : ":category",
-                children : [
-                    // ✅ FIX: added index route so /:category alone (no subcategory) also renders ProductListPage
-                    { index: true, element : <ProductListPage/> },
-                    { path : ":subCategory", element : <ProductListPage/> }
-                ]
-            },
-            { path : "product/:product", element : <ProductDisplayPage/> },
-            { path : "cart", element : <CartMobile/> },
-            { path : "checkout", element : <CheckoutPage/> },
-            { path : "success", element : <Success/> },
-            { path : "cancel", element : <Cancel/> },
+  {
+    path: "/",
+    element: <App />,
+    children: [
+      { path: "", element: <Home /> },
+      { path: "search", element: <S><SearchPage /></S> },
+      { path: "login", element: <Login /> },
+      { path: "register", element: <Register /> },
+      { path: "forgot-password", element: <S><ForgotPassword /></S> },
+      { path: "verification-otp", element: <S><OtpVerification /></S> },
+      { path: "reset-password", element: <S><ResetPassword /></S> },
+      { path: "user", element: <S><UserMenuMobile /></S> },
+      { path: "wallet", element: <S><Wallet /></S> },
+      { path: "refer", element: <S><ReferAndEarn /></S> },
+      { path: "wishlist", element: <S><WishlistPage /></S> },
+      { path: "deals", element: <S><AllDealsPage /></S> },
+      { path: "snapit-plus", element: <S><SnapitPlus /></S> },
+      { path: "streak", element: <S><StreakTracker /></S> },
+      { path: "subscriptions", element: <S><MySubscriptions /></S> },
+      { path: "rider-panel", element: <S><RiderDashboard /></S> },
+      {
+        path: "dashboard",
+        element: <S><Dashboard /></S>,
+        children: [
+          { path: "profile", element: <S><Profile /></S> },
+          {
+            path: "admin-summary",
+            element: <S><AdminPermision><AdminSummary /></AdminPermision></S>
+          },
+          { path: "myorders", element: <S><MyOrders /></S> },
+          { path: "address", element: <S><Address /></S> },
+          { path: "store-orders", element: <S><StoreOrders /></S> },
+          {
+            path: "seller-dashboard",
+            element: <S><SellerPermission><SellerDashboard /></SellerPermission></S>
+          },
+          {
+            path: "upload-product",
+            element: <S><SellerPermission><UploadProduct /></SellerPermission></S>
+          },
+          { path: "order-tracking/:id", element: <S><RiderTracking /></S> },
+          {
+            path: "category",
+            element: <S><AdminPermision><CategoryPage /></AdminPermision></S>
+          },
+          {
+            path: "subcategory",
+            element: <S><AdminPermision><SubCategoryPage /></AdminPermision></S>
+          },
+          {
+            path: "product",
+            element: <S><AdminPermision><ProductAdmin /></AdminPermision></S>
+          },
         ]
-    }
+      },
+      { path: "track/:orderId", element: <S><TrackingPage /></S> },
+      {
+        path: ":category",
+        children: [
+          { index: true, element: <S><ProductListPage /></S> },
+          { path: ":subCategory", element: <S><ProductListPage /></S> }
+        ]
+      },
+      { path: "product/:product", element: <S><ProductDisplayPage /></S> },
+      { path: "cart", element: <S><CartMobile /></S> },
+      { path: "checkout", element: <S><CheckoutPage /></S> },
+      { path: "success", element: <S><Success /></S> },
+      { path: "cancel", element: <S><Cancel /></S> },
+    ]
+  }
 ])
 
 export default router;

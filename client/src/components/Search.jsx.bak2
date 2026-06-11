@@ -163,15 +163,20 @@ const Search = () => {
               value={inputValue}
               className='bg-transparent w-full h-full outline-none text-sm text-slate-800'
               onChange={handleOnChange}
-               onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
                   e.preventDefault()
-                  e.target.blur()
-               setShowSuggestions(false)
-             navigate(`/search?q=${encodeURIComponent(inputValue)}`)
-               }
-             }}
-              
+                  setShowSuggestions(false)
+                  navigate(`/search?q=${encodeURIComponent(inputValue)}`)
+                }
+              }}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  setShowSuggestions(false)
+                  navigate(`/search?q=${encodeURIComponent(inputValue)}`)
+                }
+              }}
               onFocus={() => {
                 if (inputValue.length >= 2) {
                   fetchSuggestions(inputValue)

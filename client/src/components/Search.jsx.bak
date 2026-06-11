@@ -157,21 +157,12 @@ const Search = () => {
           ) : (
             // ✅ Real input shown on /search page
             <input
-              type='search' inputMode='search' enterKeyHint='search'
+              type='text'
               placeholder='Search for atta, dal and more...'
               autoFocus
               value={inputValue}
               className='bg-transparent w-full h-full outline-none text-sm text-slate-800'
               onChange={handleOnChange}
-               onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                  e.preventDefault()
-                  e.target.blur()
-               setShowSuggestions(false)
-             navigate(`/search?q=${encodeURIComponent(inputValue)}`)
-               }
-             }}
-              
               onFocus={() => {
                 if (inputValue.length >= 2) {
                   fetchSuggestions(inputValue)
