@@ -8,21 +8,24 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Each of these gets its own lazy chunk
             if (id.includes('leaflet')) return 'chunk-leaflet'
-            if (id.includes('recharts') || id.includes('d3')) return 'chunk-charts'
+            if (id.includes('recharts') || id.includes('d3-')) return 'chunk-charts'
             if (id.includes('swiper')) return 'chunk-swiper'
-            if (id.includes('@firebase')) return 'chunk-firebase'
-            if (id.includes('socket.io')) return 'chunk-socket'
+            if (id.includes('socket.io-client') || id.includes('engine.io-client')) return 'chunk-socket'
             if (id.includes('sweetalert2')) return 'chunk-sweetalert'
             if (id.includes('react-dom')) return 'chunk-react-dom'
             if (id.includes('@tanstack')) return 'chunk-tanstack'
-            // Everything else vendor
+            if (id.includes('axios')) return 'chunk-axios'
+            if (id.includes('@reduxjs') || id.includes('redux')) return 'chunk-redux'
+            if (id.includes('react-icons')) return 'chunk-icons'
+            if (id.includes('react-router') || id.includes('@remix-run')) return 'chunk-router'
+            if (id.includes('immer')) return 'chunk-immer'
+            if (id.includes('firebase')) return 'chunk-firebase'
             return 'chunk-vendor'
           }
         }
       }
     },
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 400,
   }
 })

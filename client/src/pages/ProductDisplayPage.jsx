@@ -9,7 +9,7 @@ import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import Divider from '../components/Divider'
 import image1 from '../assets/minute_delivery.png'
 import image2 from '../assets/Best_Prices_Offers.png'
-import image3 from '../assets/Wide_Assortment.png'
+import image3 from '../assets/Wide_Assortment.webp'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import AddToCartButton from '../components/AddToCartButton'
 import SmartSuggestions from '../components/SmartSuggestions'
@@ -201,7 +201,7 @@ const ProductDisplayPage = () => {
 
   const checkShopStatus = () => {
     const now = new Date()
-    setIsOpen(now.getHours() >= 8 && now.getHours() < 21)
+    setIsOpen(now.getHours() >= 8 && now.getHours() < 20)
   }
 
   const fetchVariants = async (group) => {
