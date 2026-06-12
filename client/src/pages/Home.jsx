@@ -21,7 +21,7 @@ const SUPER_APP_CATEGORIES = [
     emoji: '🛒',
     bg: 'bg-green-50',
     border: 'border-green-200',
-    path: '/',
+    path: '/grocery',
   },
   {
     id: 'food',

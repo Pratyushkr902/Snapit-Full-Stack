@@ -43,6 +43,8 @@ const StreakTracker = lazy(() => import('../components/StreakTracker'))
 const MySubscriptions = lazy(() => import('../pages/MySubscriptions'))
 const SellerDashboard = lazy(() => import('../pages/SellerDashboard'))
 const FoodHomePage = lazy(() => import('../pages/FoodHomePage'))
+const GroceryPage = lazy(() => import('../pages/GroceryPage'))
+const PharmacyPage = lazy(() => import('../pages/PharmacyPage'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -131,6 +133,8 @@ const router = createHashRouter([
       { path: "success", element: <S><Success /></S> },
       { path: "cancel", element: <S><Cancel /></S> },
       { path: "food", element: <S><FoodHomePage /></S> },
+      { path: "grocery", element: <S><GroceryPage /></S> },
+      { path: "pharmacy", element: <S><PharmacyPage /></S> },
     ]
   }
 ])
