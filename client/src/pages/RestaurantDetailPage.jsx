@@ -13,11 +13,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
-import {
-  addToCart,
-  increaseQty,
-  decreaseQty,
-} from '../store/cartProduct'
+import { handleAddItemCart, clearCart } from '../store/cartProduct'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const FALLBACK_IMG =
@@ -247,7 +243,7 @@ export default function RestaurantDetailPage() {
 
   // Cart operations – reuse existing Snapit cart dispatch shape
   const handleAdd = (item) => {
-    dispatch(addToCart({
+    dispatch(handleAddItemCart({
       productId: item._id,
       quantity: 1,
       // Carry food-specific info so the cart can display it
@@ -261,11 +257,11 @@ export default function RestaurantDetailPage() {
     toast.success(`${item.name} added to cart`, { duration: 1500 })
   }
 
-  const handleIncrease = (item) => dispatch(increaseQty({ _id: item._id }))
+  const handleIncrease = (item) => dispatch(handleAddItemCart({ _id: item._id }))
   const handleDecrease = (item) => {
     const qty = cartQtyMap[item._id] || 0
-    if (qty <= 1) dispatch(decreaseQty({ _id: item._id }))
-    else dispatch(decreaseQty({ _id: item._id }))
+    if (qty <= 1) dispatch(handleAddItemCart({ _id: item._id }))
+    else dispatch(handleAddItemCart({ _id: item._id }))
   }
 
   // Cart totals
