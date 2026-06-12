@@ -15,16 +15,16 @@
 		"captureInput": true,
 		"webContentsDebuggingEnabled": false,
 		"hardwareAccelerated": true,
-		"backgroundColor": "#F0D296",
+		"backgroundColor": "#FFFFFF",
 		"initialFocus": true
 	},
 	"plugins": {
 		"SplashScreen": {
-			"launchShowDuration": 2000,
+			"launchShowDuration": 3000,
 			"launchAutoHide": true,
-			"backgroundColor": "#F0D296",
+			"backgroundColor": "#FFFFFF",
 			"androidSplashResourceName": "splash",
-			"androidScaleType": "CENTER_INSIDE",
+			"androidScaleType": "FIT_XY",
 			"showSpinner": false,
 			"splashFullScreen": true,
 			"splashImmersive": true

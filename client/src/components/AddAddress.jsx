@@ -13,13 +13,11 @@ const SERVICEABLE_PINCODES = [
 ]
 
 const AddAddress = ({ close }) => {
-  const { register, handleSubmit, reset, setValue, watch } = useForm()
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm()
   const { fetchAddress } = useGlobalContext()
   const [locationChecking, setLocationChecking] = useState(false)
-  const [locationStatus, setLocationStatus] = useState(null) // 'ok' | 'out'
-  const [detectedLocation, setDetectedLocation] = useState(null) // { lat, lng, ...zoneInfo }
-
-  const pincode = watch('pincode')
+  const [locationStatus, setLocationStatus] = useState(null)
+  const [detectedLocation, setDetectedLocation] = useState(null)
 
   const handleDetectLocation = async () => {
     setLocationChecking(true)
@@ -28,7 +26,6 @@ const AddAddress = ({ close }) => {
       const { lat, lng } = await getUserLocation()
       const result = isInDeliveryZone(lat, lng)
       setDetectedLocation({ lat, lng, ...result })
-
       if (result.serviceable) {
         setLocationStatus('ok')
         toast.success(`✅ We deliver to ${result.zone}!`)
@@ -46,13 +43,6 @@ const AddAddress = ({ close }) => {
   }
 
   const onSubmit = async (data) => {
-    if (data.pincode && !SERVICEABLE_PINCODES.includes(data.pincode)) {
-      if (locationStatus === 'out') {
-        toast.error("Sorry, we don't deliver to this location yet.")
-        return
-      }
-    }
-
     try {
       const response = await Axios({
         ...SummaryApi.createAddress,
@@ -76,6 +66,9 @@ const AddAddress = ({ close }) => {
       AxiosToastError(error)
     }
   }
+
+  const inputClass = (hasError) =>
+    `border ${hasError ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-slate-50'} p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all w-full`
 
   return (
     <section className='bg-black fixed inset-0 z-50 bg-opacity-70 overflow-auto flex items-start justify-center p-4'>
@@ -101,14 +94,12 @@ const AddAddress = ({ close }) => {
             {locationChecking ? 'Detecting...' : 'Use My Current Location'}
           </button>
 
-          {/* GPS coords confirmation */}
           {detectedLocation?.lat && locationStatus === 'ok' && (
             <p className='text-xs text-green-600 text-center -mt-2 mb-2'>
               📍 GPS pinned: {detectedLocation.lat.toFixed(5)}, {detectedLocation.lng.toFixed(5)}
             </p>
           )}
 
-          {/* Serviceability status */}
           {locationStatus === 'ok' && detectedLocation && (
             <div className='bg-green-50 border border-green-200 rounded-xl p-3 mb-4 flex items-center gap-3'>
               <span className='text-2xl'>✅</span>
@@ -138,66 +129,107 @@ const AddAddress = ({ close }) => {
 
         {/* Form */}
         <form className='p-5 grid gap-3' onSubmit={handleSubmit(onSubmit)}>
+
+          {/* Address Line */}
           <div className='grid gap-1'>
             <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Address Line</label>
             <input
               type='text'
               placeholder='House no, Street, Landmark'
-              className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
-              {...register("addressline", { required: true })}
+              className={inputClass(errors.addressline)}
+              {...register("addressline", {
+                required: "Address is required",
+                minLength: { value: 10, message: "Address too short (min 10 characters)" },
+                validate: {
+                  notOnlyNumbers: v => !/^\d+$/.test(v.trim()) || "Please enter a valid address, not just numbers",
+                  hasLetters: v => /[a-zA-Z\u0900-\u097F]/.test(v) || "Address must contain actual location details",
+                }
+              })}
             />
+            {errors.addressline && <p className='text-xs text-red-500 mt-0.5'>⚠ {errors.addressline.message}</p>}
           </div>
 
           <div className='grid grid-cols-2 gap-3'>
+            {/* City */}
             <div className='grid gap-1'>
               <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>City / Village</label>
               <input
                 type='text'
                 placeholder='Paliganj'
-                className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
-                {...register("city", { required: true })}
+                className={inputClass(errors.city)}
+                {...register("city", {
+                  required: "City is required",
+                  pattern: { value: /^[a-zA-Z\u0900-\u097F\s]+$/, message: "City name cannot contain numbers" },
+                  minLength: { value: 2, message: "Too short" }
+                })}
               />
+              {errors.city && <p className='text-xs text-red-500 mt-0.5'>⚠ {errors.city.message}</p>}
             </div>
+
+            {/* Pincode */}
             <div className='grid gap-1'>
               <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Pincode</label>
               <input
                 type='text'
                 placeholder='801110'
-                className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
-                {...register("pincode", { required: true })}
+                maxLength={6}
+                className={inputClass(errors.pincode)}
+                {...register("pincode", {
+                  required: "Pincode is required",
+                  pattern: { value: /^\d{6}$/, message: "Must be 6 digits" },
+                  validate: v => SERVICEABLE_PINCODES.includes(v) || "Sorry, we don't deliver to this pincode yet"
+                })}
               />
+              {errors.pincode && <p className='text-xs text-red-500 mt-0.5'>⚠ {errors.pincode.message}</p>}
             </div>
           </div>
 
           <div className='grid grid-cols-2 gap-3'>
+            {/* State */}
             <div className='grid gap-1'>
               <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>State</label>
               <input
                 type='text'
                 placeholder='Bihar'
-                className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
-                {...register("state", { required: true })}
+                className={inputClass(errors.state)}
+                {...register("state", {
+                  required: "State is required",
+                  pattern: { value: /^[a-zA-Z\u0900-\u097F\s]+$/, message: "State cannot contain numbers" },
+                })}
               />
+              {errors.state && <p className='text-xs text-red-500 mt-0.5'>⚠ {errors.state.message}</p>}
             </div>
+
+            {/* Country */}
             <div className='grid gap-1'>
               <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Country</label>
               <input
                 type='text'
                 placeholder='India'
-                className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
-                {...register("country", { required: true })}
+                className={inputClass(errors.country)}
+                {...register("country", {
+                  required: "Country is required",
+                  pattern: { value: /^[a-zA-Z\u0900-\u097F\s]+$/, message: "Country cannot contain numbers" },
+                })}
               />
+              {errors.country && <p className='text-xs text-red-500 mt-0.5'>⚠ {errors.country.message}</p>}
             </div>
           </div>
 
+          {/* Mobile */}
           <div className='grid gap-1'>
             <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Mobile Number</label>
             <input
-              type='text'
+              type='tel'
               placeholder='10-digit mobile number'
-              className='border border-slate-200 bg-slate-50 p-3 rounded-xl text-sm outline-none focus:border-green-400 focus:bg-white transition-all'
-              {...register("mobile", { required: true })}
+              maxLength={10}
+              className={inputClass(errors.mobile)}
+              {...register("mobile", {
+                required: "Mobile number is required",
+                pattern: { value: /^[6-9]\d{9}$/, message: "Enter valid 10-digit Indian mobile number" },
+              })}
             />
+            {errors.mobile && <p className='text-xs text-red-500 mt-0.5'>⚠ {errors.mobile.message}</p>}
           </div>
 
           <button
