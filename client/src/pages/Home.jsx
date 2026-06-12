@@ -111,7 +111,7 @@ const Home = () => {
                   <div className='bg-slate-100 h-2.5 w-3/4 rounded animate-pulse' />
                 </div>
               ))
-            : Array.isArray(categoryData) && categoryData.map((cat) => {
+            : Array.isArray(categoryData) && categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase())).map((cat) => {
                 if (!cat) return null;
 
                 const rawImg = cat?.icon || cat?.image || cat?.imageUrl || '';
