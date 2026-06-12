@@ -46,8 +46,6 @@ const FoodHomePage = lazy(() => import('../pages/FoodHomePage'))
 const GroceryPage = lazy(() => import('../pages/GroceryPage'))
 const PharmacyPage = lazy(() => import('../pages/PharmacyPage'))
 const RestaurantDetailPage = lazy(() => import('../pages/RestaurantDetailPage'))
-const RestaurantDetailPage = lazy(() => import('../pages/RestaurantDetailPage'))
-const RestaurantDetailPage = lazy(() => import('../pages/RestaurantDetailPage'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
