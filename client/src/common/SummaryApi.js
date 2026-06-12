@@ -317,6 +317,14 @@ const SummaryApi = {
         url: '/api/subscription/cancel',
         method: 'delete'
     },
+    getAllRestaurants: {
+        url: '/api/restaurant/all',
+        method: 'get'
+    },
+    getRestaurantById: {
+        url: '/api/restaurant/:id',
+        method: 'get'
+    },
 }
 
 export default SummaryApi;
