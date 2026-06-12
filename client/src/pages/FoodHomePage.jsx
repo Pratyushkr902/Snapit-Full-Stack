@@ -207,7 +207,7 @@ const FoodHomePage = () => {
     if (restaurant._id?.startsWith("local-")) {
       toast("Coming soon! This restaurant will be available shortly.")
     } else {
-      navigate(`/food/restaurant/${restaurant._id}`, { state: { restaurant } })
+      navigate(`/restaurant/${restaurant._id}`, { state: { restaurant } })
     }
   }
 
