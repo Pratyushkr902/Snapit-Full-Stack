@@ -1,26 +1,35 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose'
 
-const subCategorySchema = new mongoose.Schema({
-    name : {
-        type : String,
-        default : ""
+/**
+ * SubCategory.model.js
+ * Referenced as 'subCategory' in Product.model.js but never defined.
+ * Each sub-category belongs to one parent Category.
+ *
+ * Example:
+ *   Category: "Pharma & Wellness"
+ *   SubCategories: "Vitamins", "Pain Relief", "Protein & Fitness", "Baby Care"
+ *
+ *   Category: "Grocery"
+ *   SubCategories: "Atta & Rice", "Snacks", "Dairy", "Beverages"
+ */
+const subCategorySchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    image: { type: String, default: '' },
+
+    // Parent category — matches the ref used in Product.model.js
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'category',
+      required: true,
+      index: true,
     },
-    image : {
-        type : String,
-        default : ""
-    },
-    category : [
-        {
-            type : mongoose.Schema.ObjectId,
-            ref : "category"
-        }
-    ]
-},{
-    timestamps : true
-})
 
-// FIXED: Registered as 'subCategory' to match your Route and Controller imports
-// This ensures that when ProductModel looks for 'subCategory', it finds this schema.
-const SubCategoryModel = mongoose.model('subCategory',subCategorySchema)
+    // Controls display order on the frontend pill strip
+    sortOrder: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+)
 
+const SubCategoryModel = mongoose.model('subCategory', subCategorySchema)
 export default SubCategoryModel
