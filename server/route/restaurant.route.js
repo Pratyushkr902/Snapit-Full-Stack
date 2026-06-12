@@ -9,7 +9,7 @@ import {
   getFoodItemsByRestaurant,
   seedDemoRestaurants,
 } from '../controllers/restaurant.controller.js'
-import Admin from '../middleware/Admin.js'
+import { admin } from '../middleware/Admin.js'
 
 const restaurantRouter = Router()
 
@@ -18,11 +18,11 @@ restaurantRouter.get('/all', getAllRestaurants)
 restaurantRouter.get('/:id', getRestaurantById)
 
 // Admin protected
-restaurantRouter.post('/create', Admin, createRestaurant)
-restaurantRouter.patch('/update/:id', Admin, updateRestaurant)
-restaurantRouter.post('/food-item/create', Admin, createFoodItem)
-restaurantRouter.patch('/food-item/update/:id', Admin, updateFoodItem)
-restaurantRouter.get('/food-items/:restaurantId', Admin, getFoodItemsByRestaurant)
+restaurantRouter.post('/create', admin, createRestaurant)
+restaurantRouter.patch('/update/:id', admin, updateRestaurant)
+restaurantRouter.post('/food-item/create', admin, createFoodItem)
+restaurantRouter.patch('/food-item/update/:id', admin, updateFoodItem)
+restaurantRouter.get('/food-items/:restaurantId', admin, getFoodItemsByRestaurant)
 
 // Dev seed route (remove in production)
 restaurantRouter.post('/dev/seed', seedDemoRestaurants)
