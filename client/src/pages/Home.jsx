@@ -5,12 +5,51 @@ import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
 import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay'
 import TodayDeals from '../components/TodayDeals'
+import FoodCategoryCard from '../components/FoodCategoryCard'
 
 // ✅ Inline SVG fallback — no network request, never fails
 const FALLBACK_IMG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='80' text-anchor='middle' fill='%239ca3af' font-size='11' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com"
+
+// Super-app category definitions
+const SUPER_APP_CATEGORIES = [
+  {
+    id: 'grocery',
+    label: 'Grocery',
+    emoji: '🛒',
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    path: '/',
+  },
+  {
+    id: 'food',
+    label: 'Food',
+    emoji: '🍔',
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    path: '/food',
+  },
+  {
+    id: 'pharmacy',
+    label: 'Pharmacy',
+    emoji: '💊',
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    path: '/pharmacy',
+    comingSoon: true,
+  },
+  {
+    id: 'electronics',
+    label: 'Electronics',
+    emoji: '📱',
+    bg: 'bg-purple-50',
+    border: 'border-purple-200',
+    path: '/electronics',
+    comingSoon: true,
+  },
+]
 
 const Home = () => {
   const loadingCategory = useSelector(state => state.product.loadingCategory)
@@ -50,8 +89,20 @@ const Home = () => {
         <HomeBanner />
       </div>
 
-      {/* 2. CATEGORY GRID */}
+      {/* 2. SUPER-APP CATEGORY CARDS */}
+      <div className='container mx-auto px-4 mb-5'>
+        <div className='grid grid-cols-4 gap-3'>
+          {SUPER_APP_CATEGORIES.map((cat) => (
+            <FoodCategoryCard key={cat.id} category={cat} />
+          ))}
+        </div>
+      </div>
+
+      {/* 3. GROCERY CATEGORY GRID */}
       <div className='container mx-auto px-4 mt-1 mb-6'>
+        <p className='text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3'>
+          Shop by Category
+        </p>
         <div className='grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-2 lg:gap-4'>
           {loadingCategory
             ? new Array(12).fill(null).map((_, i) => (
@@ -118,10 +169,10 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 3. TODAY'S DEALS */}
+      {/* 4. TODAY'S DEALS */}
       <TodayDeals />
 
-      {/* 4. PRODUCT SECTIONS */}
+      {/* 5. PRODUCT SECTIONS */}
       <div className='flex flex-col gap-1 lg:gap-8 pb-24'>
         {loadingCategory
           ? new Array(3).fill(null).map((_, i) => (

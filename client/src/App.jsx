@@ -41,7 +41,15 @@ function App() {
   const currentNormalizedRoute = (location.pathname + (location.hash || "")).toLowerCase();
 
   const isDashboard = currentNormalizedRoute.includes('dashboard') || currentNormalizedRoute.includes('rider-panel');
-  const isCheckoutOrCartPage = currentNormalizedRoute.includes('/checkout') || currentNormalizedRoute.includes('/cart');
+
+  // Hide cart slide-over on checkout, cart, and food pages
+  const isCheckoutOrCartPage = 
+    currentNormalizedRoute.includes('/checkout') || 
+    currentNormalizedRoute.includes('/cart');
+
+  const isFoodPage = 
+    currentNormalizedRoute.includes('/food') || 
+    currentNormalizedRoute.includes('/restaurant');
 
   useEffect(() => {
     if (isCheckoutOrCartPage) {
@@ -74,8 +82,6 @@ function App() {
   const fetchOrder = useCallback(async () => {
     if (!user?._id) return
     try {
-      // ✅ FIXED: was SummaryApi.getOrderItems (rider endpoint — returns ALL users' orders)
-      //           now SummaryApi.getOrderDetails (customer endpoint — filters by logged-in userId)
       const response = await Axios({ ...SummaryApi.getOrderDetails })
       if (response?.data?.success) {
         dispatch(setOrder(response.data.data))
@@ -163,11 +169,11 @@ function App() {
           
           <Toaster position="top-center" reverseOrder={false} />
 
-          {showCart && !isCheckoutOrCartPage && (
+          {showCart && !isCheckoutOrCartPage && !isFoodPage && (
             <DisplayCartItem close={() => setShowCart(false)} />
           )}
 
-          {!isCheckoutOrCartPage && !isDashboard && (
+          {!isCheckoutOrCartPage && !isDashboard && !isFoodPage && (
             <CartMobileLink />
           )}
 

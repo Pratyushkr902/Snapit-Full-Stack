@@ -42,6 +42,7 @@ const SnapitPlus = lazy(() => import('../components/SnapitPlus'))
 const StreakTracker = lazy(() => import('../components/StreakTracker'))
 const MySubscriptions = lazy(() => import('../pages/MySubscriptions'))
 const SellerDashboard = lazy(() => import('../pages/SellerDashboard'))
+const FoodHomePage = lazy(() => import('../pages/FoodHomePage'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -129,6 +130,7 @@ const router = createHashRouter([
       { path: "checkout", element: <S><CheckoutPage /></S> },
       { path: "success", element: <S><Success /></S> },
       { path: "cancel", element: <S><Cancel /></S> },
+      { path: "food", element: <S><FoodHomePage /></S> },
     ]
   }
 ])

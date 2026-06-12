@@ -27,6 +27,8 @@ import './models/order.model.js';
 import './models/wallet.model.js';
 import './models/subscription.model.js';
 import './models/notification.model.js';
+import './models/restaurant.model.js';
+import './models/foodItem.model.js';
 
 import { startAutoConfirmCron } from './utils/autoConfirmOrders.js';
 
@@ -51,6 +53,7 @@ import adminRouter from './route/admin.route.js';
 import streakRouter from './route/streak.route.js';
 import subscriptionRouter from './route/subscription.route.js';
 import notificationRouter from './route/notification.route.js';
+import restaurantRouter from './route/restaurant.route.js';
 
 import './utils/subscriptionCron.js';
 import OrderModel from './models/order.model.js';
@@ -61,7 +64,6 @@ app.set('trust proxy', 1);
 const server = http.createServer(app); 
 
 // In-memory cache: latest GPS fix per orderId
-// Map<orderId, { latitude, longitude, timestamp }>
 const latestPositions = new Map();
 
 // --- CORS RULES ---
@@ -128,7 +130,7 @@ app.use(helmet({
                 "https://*.openstreetmap.org", "https://res.cloudinary.com", 
                 "https://*.cloudinary.com", "https://*.googleapis.com", 
                 "https://*.gstatic.com", "https://api.qrserver.com",
-                "https://cdn-icons-png.flaticon.com",  // ✅ Leaflet marker icons
+                "https://cdn-icons-png.flaticon.com",
             ],
             frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com", "https://checkout.razorpay.com"],
             connectSrc: [
@@ -168,22 +170,6 @@ app.use((req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // SOCKET.IO — RIDER TRACKING
 // ─────────────────────────────────────────────────────────────────────────────
-//
-//  Event contract (must match frontend exactly):
-//
-//  RiderGPS.jsx   emits  →  "send_location"   { orderId, latitude, longitude }
-//  server         emits  →  "rider_moved"      { latitude, longitude, timestamp }
-//  RiderTracking  listens → "rider_moved"
-//
-//  ✅ BUG FIX: old code emitted "receive_location" — frontend never heard it.
-//              Changed to "rider_moved" to match RiderTracking.jsx socket.on('rider_moved')
-//
-//  Room strategy: each orderId = one Socket.IO room.
-//  Both the rider device and the customer browser join the same room.
-//  Rider emits send_location → server re-broadcasts as rider_moved to the whole room.
-//
-// ─────────────────────────────────────────────────────────────────────────────
-
 const io = new Server(server, {
     path: '/socket.io/', 
     cors: { 
@@ -200,34 +186,23 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
     console.log(`[Socket] Connected: ${socket.id}`);
     
-    // ── Both rider & customer join this room on mount ──────────────────────
     socket.on('join_order', (orderId) => {
         if (!orderId) return;
         socket.join(orderId);
         console.log(`[Socket] ${socket.id} joined room: ${orderId}`);
-
-        // Instantly hydrate new joins with last known position
-        // (customer opens tracking page after rider is already moving)
         if (latestPositions.has(orderId)) {
             socket.emit('rider_moved', latestPositions.get(orderId));
         }
     });
 
-    // ── Rider device sends GPS position ───────────────────────────────────
     socket.on('send_location', (data) => {
         const { orderId, latitude, longitude } = data;
         if (!orderId || !latitude || !longitude) return;
 
         const payload = { latitude, longitude, timestamp: Date.now() };
-
-        // Cache in-memory so late-joining customers get position immediately
         latestPositions.set(orderId, payload);
-
-        // ✅ FIX: emit "rider_moved" (was "receive_location" — wrong event name)
         io.to(orderId).emit('rider_moved', payload);
 
-        // Persist to DB (fire-and-forget — don't block the socket)
-        // Survives server restarts; also seeds the map on first page load
         OrderModel.findOneAndUpdate(
             { orderId },
             { $set: {
@@ -241,8 +216,6 @@ io.on('connection', (socket) => {
         console.log(`[Socket] rider_moved → room:${orderId} | lat:${latitude.toFixed(5)} lon:${longitude.toFixed(5)}`);
     });
 
-    // ── Clean up room on component unmount ────────────────────────────────
-    // ✅ FIX: this handler was entirely missing in the original code
     socket.on('leave_order', (orderId) => {
         if (!orderId) return;
         socket.leave(orderId);
@@ -275,6 +248,7 @@ app.use('/api/subscription', subscriptionRouter);
 app.use('/api/payment',      paymentRouter);
 app.use('/api/admin',        adminRouter);
 app.use('/api/notification', notificationRouter);
+app.use('/api/restaurant',   restaurantRouter);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HEALTH CHECK
@@ -284,7 +258,7 @@ app.get("/health", (req, res) => {
         message: "Snapit Server is Live!",
         timestamp: new Date().toISOString(),
         razorpay_status: process.env.RAZORPAY_KEY_ID ? "Configured" : "Missing Keys",
-        active_tracking_rooms: latestPositions.size,   // bonus: see how many live deliveries
+        active_tracking_rooms: latestPositions.size,
     });
 });
 
@@ -293,7 +267,7 @@ app.get('/{*splat}', (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KEEP ALIVE (prevents Render free tier from sleeping)
+// KEEP ALIVE
 // ─────────────────────────────────────────────────────────────────────────────
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://snapit-backend-bn8r.onrender.com';
 setInterval(() => {
