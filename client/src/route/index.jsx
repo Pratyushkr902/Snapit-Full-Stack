@@ -135,8 +135,6 @@ const router = createHashRouter([
       { path: "cancel", element: <S><Cancel /></S> },
       { path: "food", element: <S><FoodHomePage /></S> },
       { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
-      { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
-      { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
       { path: "grocery", element: <S><GroceryPage /></S> },
       { path: "pharmacy", element: <S><PharmacyPage /></S> },
     ]
