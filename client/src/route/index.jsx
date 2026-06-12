@@ -45,6 +45,9 @@ const SellerDashboard = lazy(() => import('../pages/SellerDashboard'))
 const FoodHomePage = lazy(() => import('../pages/FoodHomePage'))
 const GroceryPage = lazy(() => import('../pages/GroceryPage'))
 const PharmacyPage = lazy(() => import('../pages/PharmacyPage'))
+const RestaurantDetailPage = lazy(() => import('../pages/RestaurantDetailPage'))
+const RestaurantDetailPage = lazy(() => import('../pages/RestaurantDetailPage'))
+const RestaurantDetailPage = lazy(() => import('../pages/RestaurantDetailPage'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -133,6 +136,9 @@ const router = createHashRouter([
       { path: "success", element: <S><Success /></S> },
       { path: "cancel", element: <S><Cancel /></S> },
       { path: "food", element: <S><FoodHomePage /></S> },
+      { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
+      { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
+      { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
       { path: "grocery", element: <S><GroceryPage /></S> },
       { path: "pharmacy", element: <S><PharmacyPage /></S> },
     ]
