@@ -1,5 +1,6 @@
 import RestaurantModel from '../models/restaurant.model.js'
 import FoodItemModel from '../models/foodItem.model.js'
+import MenuItemModel from '../models/MenuItem.model.js'
 
 // ─── GET ALL ACTIVE RESTAURANTS ───────────────────────────────────────────────
 export async function getAllRestaurants(req, res) {
@@ -36,15 +37,15 @@ export async function getRestaurantById(req, res) {
     }
 
     // Fetch all available menu items grouped by category
-    const items = await FoodItemModel.find({
-      restaurant: id,
+    const items = await MenuItemModel.find({
+      restaurantId: id,
       isAvailable: true,
-    }).sort({ menuCategory: 1, sortOrder: 1, isBestseller: -1 })
+    }).sort({ category: 1, sortOrder: 1, isBestseller: -1 })
 
     // Group by menuCategory
     const menuMap = {}
     for (const item of items) {
-      if (!menuMap[item.menuCategory]) menuMap[item.menuCategory] = []
+      if (!menuMap[item.category]) menuMap[item.menuCategory] = []
       menuMap[item.menuCategory].push(item)
     }
 
