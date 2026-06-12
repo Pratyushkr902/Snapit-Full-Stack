@@ -22,6 +22,7 @@ import useNotifications from './hooks/useNotifications'
 import socket from './utils/socket.js';
 
 import { ACCESS_TOKEN_KEY } from './constants/storageKeys';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 import './App.css'
 
@@ -52,6 +53,7 @@ function App() {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       setIsAuthResolving(false)
+      SplashScreen.hide({ fadeOutDuration: 300 })
       return
     }
     try {
