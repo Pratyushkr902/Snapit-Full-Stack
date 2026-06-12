@@ -204,7 +204,7 @@ const FoodHomePage = () => {
     // For local hardcoded restaurants, show a coming soon toast
     // For API restaurants, navigate to detail page
     if (restaurant._id?.startsWith("local-")) {
-      navigate(`/food/restaurant/${restaurant._id}`, { state: { restaurant } })
+      toast("Coming soon! This restaurant will be available shortly.")
     } else {
       navigate(`/food/restaurant/${restaurant._id}`, { state: { restaurant } })
     }
