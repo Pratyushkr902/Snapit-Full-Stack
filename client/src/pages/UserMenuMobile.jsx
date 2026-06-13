@@ -36,7 +36,10 @@ const UserMenuMobile = () => {
         <p className='text-xs text-gray-400'>{user?.email}</p>
         {user?.role && (
           <span className='text-xs font-medium text-red-600'>
-            {user?.role === "ADMIN" ? "(Admin)" : user?.role === "RIDER" ? "(Rider)" : user?.role === "SELLER" ? "(Seller)" : ""}
+            {user?.role === "ADMIN"       ? "(Admin)"       :
+             user?.role === "RIDER"       ? "(Rider)"       :
+             user?.role === "SELLER"      ? "(Seller)"      :
+             user?.role === "RESTO_SELLER"? "(Resto Seller)": ""}
           </span>
         )}
       </div>
@@ -51,6 +54,7 @@ const UserMenuMobile = () => {
           <Link to={"/dashboard/subcategory"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Sub Category</Link>
           <Link to={"/dashboard/upload-product"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Upload Product</Link>
           <Link to={"/dashboard/product"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Product</Link>
+          <Link to={"/dashboard/resto-dashboard"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Resto Admin</Link>
           <Divider/>
         </>
       )}
@@ -66,6 +70,13 @@ const UserMenuMobile = () => {
       {(user?.role === "SELLER" || user?.role === "ADMIN") && (
         <Link to={"/dashboard/seller-dashboard"} className='px-3 py-2.5 rounded-lg bg-orange-50 hover:bg-orange-100 font-bold text-orange-700 border-l-4 border-orange-600'>
           Store Orders (Pack Items)
+        </Link>
+      )}
+
+      {/* RESTO SELLER ACCESS */}
+      {(user?.role === "RESTO_SELLER" || user?.role === "ADMIN") && (
+        <Link to={"/dashboard/resto-dashboard"} className='px-3 py-2.5 rounded-lg bg-red-50 hover:bg-red-100 font-bold text-red-700 border-l-4 border-red-600'>
+          🍽️ Resto Dashboard
         </Link>
       )}
 
