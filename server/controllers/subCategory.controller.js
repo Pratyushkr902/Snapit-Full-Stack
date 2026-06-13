@@ -1,4 +1,4 @@
-import SubCategoryModel from "../models/SubCategory.model.js";
+import SubCategoryModel from "../models/subCategory.model.js";
 import mongoose from "mongoose";
 
 export const AddSubCategoryController = async(request,response)=>{
