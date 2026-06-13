@@ -1,7 +1,7 @@
 import express from 'express'
 import auth from '../middleware/auth.js'
 import { admin } from '../middleware/Admin.js'
-import SubCategoryModel from '../models/SubCategory.model.js' // ✅ Ensure these point to your exact schema paths
+import SubCategoryModel from '../models/subCategory.model.js' // ✅ Ensure these point to your exact schema paths
 import CategoryModel from '../models/category.model.js'       // ✅ Ensure these point to your exact schema paths
 
 const router = express.Router()
