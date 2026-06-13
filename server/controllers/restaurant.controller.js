@@ -88,6 +88,7 @@ export async function updateRestaurant(req, res) {
 // ── Helper: verify RESTO_SELLER owns this restaurant ─────────────────────────
 // ADMIN role bypasses the ownership check entirely.
 async function assertOwnership(req, res, restaurantId) {
+  if (req.user?.role === 'ADMIN') return true
   if (req.user?.role === 'RESTO_SELLER') {
     const resto = await RestaurantModel.findById(restaurantId).lean()
     if (!resto) {
