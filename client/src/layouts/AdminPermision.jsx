@@ -10,15 +10,20 @@ const AdminPermision = ({ children }) => {
 
     // SELLER gets access to store-orders only
     const isSellerRoute = location.pathname.includes('/dashboard/store-orders')
-    const isSeller = role === "SELLER"
+    const isSeller = role === 'SELLER'
 
     // RIDER gets access to rider-panel only
     const isRiderRoute = location.pathname.includes('/rider-panel')
-    const isRider = role === "RIDER"
+    const isRider = role === 'RIDER'
+
+    // RESTO_SELLER gets access to resto-dashboard only
+    const isRestoSellerRoute = location.pathname.includes('/dashboard/resto-dashboard')
+    const isRestoSeller = role === 'RESTO_SELLER'
 
     const hasAccess = isAdmin(user?.role)
-        || (isSeller && isSellerRoute)
-        || (isRider && isRiderRoute)
+        || (isSeller      && isSellerRoute)
+        || (isRider       && isRiderRoute)
+        || (isRestoSeller && isRestoSellerRoute)
 
     return (
         <>

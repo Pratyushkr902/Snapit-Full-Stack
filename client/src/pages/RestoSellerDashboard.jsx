@@ -13,13 +13,12 @@ export default function RestoSellerDashboard() {
 
   const [restaurant, setRestaurant] = useState(null)
   const [menuItems, setMenuItems]   = useState([])
-  const [tab, setTab]               = useState('menu') // menu | addItem | settings
+  const [tab, setTab]               = useState('menu')
   const [itemForm, setItemForm]     = useState(EMPTY_ITEM)
   const [editingItem, setEditingItem] = useState(null)
   const [saving, setSaving]         = useState(false)
   const [loading, setLoading]       = useState(true)
 
-  // ── Load the seller's own restaurant ──────────────────────────────────────
   useEffect(() => {
     const restoId = user?.restaurantId
     if (!restoId) { setLoading(false); return }
@@ -42,7 +41,6 @@ export default function RestoSellerDashboard() {
     } catch { toast.error('Failed to load menu') }
   }
 
-  // ── Toggle restaurant open / closed ───────────────────────────────────────
   const handleToggleOpen = async () => {
     try {
       await Axios({ method: 'PATCH', url: `/api/restaurant/update/${restaurant._id}`, data: { isOpen: !restaurant.isOpen } })
@@ -51,7 +49,6 @@ export default function RestoSellerDashboard() {
     } catch { toast.error('Failed to update') }
   }
 
-  // ── Save item (add or edit) ────────────────────────────────────────────────
   const handleSaveItem = async () => {
     setSaving(true)
     try {
@@ -104,10 +101,9 @@ export default function RestoSellerDashboard() {
     setTab('addItem')
   }
 
-  const inp   = 'w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-500 placeholder-slate-500'
-  const lbl   = 'text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block'
+  const inp = 'w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-500 placeholder-slate-500'
+  const lbl = 'text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block'
 
-  // ── No restaurant assigned ─────────────────────────────────────────────────
   if (!loading && !user?.restaurantId) {
     return (
       <div className='min-h-screen bg-slate-950 flex items-center justify-center p-6'>
@@ -128,7 +124,6 @@ export default function RestoSellerDashboard() {
     )
   }
 
-  // ── Grouped menu ───────────────────────────────────────────────────────────
   const grouped = menuItems.reduce((acc, item) => {
     acc[item.category] = acc[item.category] || []
     acc[item.category].push(item)
@@ -140,21 +135,23 @@ export default function RestoSellerDashboard() {
 
       {/* Header */}
       <div className='bg-slate-900 border-b border-slate-800 px-4 py-4'>
-        <div className='flex items-center justify-between'>
-          <div>
-            <h1 className='text-lg font-black text-white'>{restaurant?.name}</h1>
-            <p className='text-xs text-slate-500'>{(restaurant?.cuisineTypes || []).join(' · ')}</p>
+        <div className='flex items-center justify-between gap-3'>
+          <div className='min-w-0'>
+            <h1 className='text-lg font-black text-white truncate'>{restaurant?.name}</h1>
+            <p className='text-xs text-slate-500 truncate'>{(restaurant?.cuisineTypes || []).join(' · ')}</p>
           </div>
+          {/* FIX 1: flex-shrink-0 so the toggle button never squishes against the title */}
           <button onClick={handleToggleOpen}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black border transition-all ${
+            className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black border transition-all ${
               restaurant?.isOpen
                 ? 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400'
                 : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-green-500/10 hover:border-green-500/30 hover:text-green-400'
             }`}>
-            <span className={`w-2 h-2 rounded-full ${restaurant?.isOpen ? 'bg-green-400' : 'bg-red-400'}`}/>
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${restaurant?.isOpen ? 'bg-green-400' : 'bg-red-400'}`}/>
             {restaurant?.isOpen ? 'OPEN' : 'CLOSED'}
           </button>
         </div>
+
         {/* Quick stats */}
         <div className='flex gap-4 mt-3'>
           <div className='text-center'>
@@ -176,14 +173,14 @@ export default function RestoSellerDashboard() {
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className='bg-slate-900 border-b border-slate-800 flex'>
+      {/* FIX 2: flex-shrink-0 on tab buttons so they never collapse */}
+      <div className='bg-slate-900 border-b border-slate-800 flex overflow-x-auto scrollbar-none'>
         {[
           { key: 'menu',    label: '📋 Menu' },
           { key: 'addItem', label: editingItem ? '✏️ Edit Item' : '➕ Add Item' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-5 py-3 text-xs font-black border-b-2 transition-all ${
+            className={`flex-shrink-0 px-5 py-3 text-xs font-black whitespace-nowrap border-b-2 transition-all ${
               tab === t.key ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-500 hover:text-slate-300'
             }`}>
             {t.label}
@@ -199,7 +196,7 @@ export default function RestoSellerDashboard() {
             <div className='flex justify-between items-center mb-4'>
               <p className='text-sm font-black text-white'>{menuItems.length} items</p>
               <button onClick={() => { setEditingItem(null); setItemForm(EMPTY_ITEM); setTab('addItem') }}
-                className='bg-orange-500 text-white text-xs font-black px-3 py-2 rounded-xl'>
+                className='flex-shrink-0 bg-orange-500 text-white text-xs font-black px-3 py-2 rounded-xl'>
                 + Add Item
               </button>
             </div>
@@ -220,60 +217,55 @@ export default function RestoSellerDashboard() {
                 <div className='flex flex-col gap-2'>
                   {items.map(item => (
                     <div key={item._id}
-                      className={`bg-slate-900 border rounded-xl p-3 flex gap-3 transition-opacity ${
+                      className={`bg-slate-900 border rounded-xl p-3 transition-opacity ${
                         item.isAvailable ? 'border-slate-800' : 'border-slate-700 opacity-50'
                       }`}>
-                      {/* Image */}
-                      <div className='w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0'>
-                        {item.image
-                          ? <img src={item.image} alt={item.name} className='w-full h-full object-cover'/>
-                          : <div className='w-full h-full flex items-center justify-center text-xl'>🍽️</div>
-                        }
-                      </div>
-                      {/* Info */}
-                      <div className='flex-1 min-w-0'>
-                        <div className='flex items-start justify-between gap-2'>
-                          <div className='min-w-0'>
-                            <div className='flex items-center gap-1.5 flex-wrap'>
-                              {/* Veg/Non-veg dot */}
-                              <span className={`w-3 h-3 border-2 rounded-sm flex-shrink-0 inline-flex items-center justify-center ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>
-                                <span className={`block w-1 h-1 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}/>
-                              </span>
-                              <p className='font-bold text-white text-sm truncate'>{item.name}</p>
-                              {item.isBestseller && <span className='text-[9px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded font-black'>BS</span>}
-                              {!item.isAvailable && <span className='text-[9px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-black'>HIDDEN</span>}
-                            </div>
-                            {/* Pricing row */}
-                            <div className='flex items-center gap-2 mt-0.5 flex-wrap'>
-                              <p className='text-sm font-black text-white'>
-                                ₹{item.discountedPrice > 0 ? item.discountedPrice : item.price}
-                              </p>
-                              {item.discountedPrice > 0 && item.discountedPrice < item.price && (
-                                <p className='text-xs text-slate-500 line-through'>₹{item.price}</p>
-                              )}
-                              {item.snapitMargin > 0 && (
-                                <span className='text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded font-black'>
-                                  +₹{item.snapitMargin} snapit
-                                </span>
-                              )}
-                            </div>
+                      {/* FIX 3: top row — image + info stacked, actions pinned below so nothing squishes */}
+                      <div className='flex gap-3'>
+                        <div className='w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0'>
+                          {item.image
+                            ? <img src={item.image} alt={item.name} className='w-full h-full object-cover'/>
+                            : <div className='w-full h-full flex items-center justify-center text-xl'>🍽️</div>
+                          }
+                        </div>
+                        <div className='flex-1 min-w-0'>
+                          <div className='flex items-center gap-1.5 flex-wrap'>
+                            <span className={`w-3 h-3 border-2 rounded-sm flex-shrink-0 inline-flex items-center justify-center ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>
+                              <span className={`block w-1 h-1 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}/>
+                            </span>
+                            <p className='font-bold text-white text-sm truncate'>{item.name}</p>
+                            {item.isBestseller && <span className='text-[9px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded font-black flex-shrink-0'>BS</span>}
+                            {!item.isAvailable && <span className='text-[9px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-black flex-shrink-0'>HIDDEN</span>}
                           </div>
-                          {/* Actions */}
-                          <div className='flex gap-1.5 flex-shrink-0'>
-                            <button onClick={() => startEdit(item)}
-                              className='bg-sky-500/20 text-sky-400 text-[10px] font-black px-2 py-1 rounded-lg'>
-                              Edit
-                            </button>
-                            <button onClick={() => handleToggleAvail(item)}
-                              className='bg-slate-800 text-slate-400 text-[10px] font-black px-2 py-1 rounded-lg'>
-                              {item.isAvailable ? 'Hide' : 'Show'}
-                            </button>
-                            <button onClick={() => handleDeleteItem(item._id)}
-                              className='bg-red-500/20 text-red-400 text-[10px] font-black px-2 py-1 rounded-lg'>
-                              Del
-                            </button>
+                          <div className='flex items-center gap-2 mt-0.5 flex-wrap'>
+                            <p className='text-sm font-black text-white'>
+                              ₹{item.discountedPrice > 0 ? item.discountedPrice : item.price}
+                            </p>
+                            {item.discountedPrice > 0 && item.discountedPrice < item.price && (
+                              <p className='text-xs text-slate-500 line-through'>₹{item.price}</p>
+                            )}
+                            {item.snapitMargin > 0 && (
+                              <span className='text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded font-black'>
+                                +₹{item.snapitMargin} snapit
+                              </span>
+                            )}
                           </div>
                         </div>
+                      </div>
+                      {/* Actions row: always on its own line — never competes with name for space */}
+                      <div className='flex gap-1.5 mt-2 justify-end'>
+                        <button onClick={() => startEdit(item)}
+                          className='bg-sky-500/20 text-sky-400 text-[10px] font-black px-2 py-1 rounded-lg'>
+                          Edit
+                        </button>
+                        <button onClick={() => handleToggleAvail(item)}
+                          className='bg-slate-800 text-slate-400 text-[10px] font-black px-2 py-1 rounded-lg'>
+                          {item.isAvailable ? 'Hide' : 'Show'}
+                        </button>
+                        <button onClick={() => handleDeleteItem(item._id)}
+                          className='bg-red-500/20 text-red-400 text-[10px] font-black px-2 py-1 rounded-lg'>
+                          Del
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -285,7 +277,7 @@ export default function RestoSellerDashboard() {
 
         {/* ── ADD / EDIT ITEM ── */}
         {tab === 'addItem' && (
-          <div className='flex flex-col gap-4 max-w-lg'>
+          <div className='flex flex-col gap-4 w-full max-w-lg'>
             <p className='font-black text-white text-base'>
               {editingItem ? '✏️ Edit Item' : '➕ Add Menu Item'}
             </p>
@@ -304,7 +296,7 @@ export default function RestoSellerDashboard() {
               </div>
             ))}
 
-            {/* Category quick-pick from existing categories */}
+            {/* Category quick-pick */}
             {Object.keys(grouped).length > 0 && (
               <div>
                 <p className={lbl}>Quick-pick category</p>
@@ -324,8 +316,8 @@ export default function RestoSellerDashboard() {
               </div>
             )}
 
-            {/* Pricing */}
-            <div className='grid grid-cols-3 gap-3'>
+            {/* FIX 4: 2-col on mobile, 3-col on sm+ — Snapit Cut spans full width on mobile */}
+            <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
               <div>
                 <label className={lbl}>MRP ₹ *</label>
                 <input type='number' value={itemForm.price}
@@ -338,7 +330,7 @@ export default function RestoSellerDashboard() {
                   onChange={e => setItemForm(p => ({ ...p, discountedPrice: e.target.value }))}
                   placeholder='199' className={inp}/>
               </div>
-              <div>
+              <div className='col-span-2 sm:col-span-1'>
                 <label className={lbl}>Snapit Cut ₹</label>
                 <input type='number' value={itemForm.snapitMargin}
                   onChange={e => setItemForm(p => ({ ...p, snapitMargin: e.target.value }))}
@@ -346,26 +338,28 @@ export default function RestoSellerDashboard() {
               </div>
             </div>
 
-            {/* Pricing breakdown preview */}
+            {/* FIX 5: price preview — 2×2 grid on mobile, single row on sm+ */}
             {itemForm.price && (
-              <div className='bg-slate-800 rounded-xl p-3 grid grid-cols-4 gap-2 text-center'>
-                <div>
-                  <p className='text-[9px] text-slate-500 uppercase font-black'>MRP</p>
-                  <p className='text-sm font-black text-white'>₹{itemForm.price}</p>
-                </div>
-                <div>
-                  <p className='text-[9px] text-slate-500 uppercase font-black'>Customer</p>
-                  <p className='text-sm font-black text-sky-400'>₹{itemForm.discountedPrice || itemForm.price}</p>
-                </div>
-                <div>
-                  <p className='text-[9px] text-amber-400/60 uppercase font-black'>Snapit</p>
-                  <p className='text-sm font-black text-amber-400'>₹{itemForm.snapitMargin || 0}</p>
-                </div>
-                <div>
-                  <p className='text-[9px] text-emerald-400/60 uppercase font-black'>You Get</p>
-                  <p className='text-sm font-black text-emerald-400'>
-                    ₹{Math.max(0, (Number(itemForm.discountedPrice) || Number(itemForm.price) || 0) - (Number(itemForm.snapitMargin) || 0))}
-                  </p>
+              <div className='bg-slate-800 rounded-xl p-3'>
+                <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 text-center'>
+                  <div>
+                    <p className='text-[9px] text-slate-500 uppercase font-black'>MRP</p>
+                    <p className='text-sm font-black text-white'>₹{itemForm.price}</p>
+                  </div>
+                  <div>
+                    <p className='text-[9px] text-slate-500 uppercase font-black'>Customer</p>
+                    <p className='text-sm font-black text-sky-400'>₹{itemForm.discountedPrice || itemForm.price}</p>
+                  </div>
+                  <div>
+                    <p className='text-[9px] text-amber-400/60 uppercase font-black'>Snapit</p>
+                    <p className='text-sm font-black text-amber-400'>₹{itemForm.snapitMargin || 0}</p>
+                  </div>
+                  <div>
+                    <p className='text-[9px] text-emerald-400/60 uppercase font-black'>You Get</p>
+                    <p className='text-sm font-black text-emerald-400'>
+                      ₹{Math.max(0, (Number(itemForm.discountedPrice) || Number(itemForm.price) || 0) - (Number(itemForm.snapitMargin) || 0))}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
