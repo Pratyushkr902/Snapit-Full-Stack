@@ -41,7 +41,10 @@ const UserMenu = ({close}) => {
           <span className='max-w-52 text-ellipsis line-clamp-1'>
             {user?.name || user?.mobile}
             <span className='ml-1 font-medium text-red-600'>
-              {role === "ADMIN" ? "(Admin)" : role === "RIDER" ? "(Rider)" : role === "SELLER" ? "(Seller)" : ""}
+              {role === "ADMIN"        ? "(Admin)"      :
+               role === "RIDER"        ? "(Rider)"      :
+               role === "SELLER"       ? "(Seller)"     :
+               role === "RESTO_SELLER" ? "(Restaurant)" : ""}
             </span>
           </span>
           <Link onClick={handleClose} to={"/dashboard/profile"} className='hover:text-primary-200'>
@@ -61,28 +64,35 @@ const UserMenu = ({close}) => {
                 <Link onClick={handleClose} to={"/dashboard/subcategory"} className='px-2 hover:bg-orange-200 py-1'>Sub Category</Link>
                 <Link onClick={handleClose} to={"/dashboard/upload-product"} className='px-2 hover:bg-orange-200 py-1'>Upload Product</Link>
                 <Link onClick={handleClose} to={"/dashboard/product"} className='px-2 hover:bg-orange-200 py-1'>Product</Link>
+                {/* Admin can also manage restaurants */}
+                <Link onClick={handleClose} to={"/dashboard/restaurant-admin"}
+                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  🍔 Restaurant Admin
+                </Link>
               </>
             )}
 
             {/* RIDER ACCESS */}
             {(role === "RIDER" || role === "ADMIN") && (
-              <Link
-                onClick={handleClose}
-                to={"/rider-panel"}
-                className='px-2 bg-blue-50 hover:bg-blue-100 py-1 font-bold text-blue-700 border-l-4 border-blue-600 mb-1'
-              >
+              <Link onClick={handleClose} to={"/rider-panel"}
+                className='px-2 bg-blue-50 hover:bg-blue-100 py-1 font-bold text-blue-700 border-l-4 border-blue-600 mb-1'>
                 Rider Panel
               </Link>
             )}
 
             {/* SELLER ACCESS */}
             {(role === "SELLER" || role === "ADMIN") && (
-              <Link
-                onClick={handleClose}
-                to={"/dashboard/seller-dashboard"}
-                className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-600 mb-1'
-              >
+              <Link onClick={handleClose} to={"/dashboard/seller-dashboard"}
+                className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-600 mb-1'>
                 🏪 Store Panel
+              </Link>
+            )}
+
+            {/* RESTO SELLER ACCESS */}
+            {role === "RESTO_SELLER" && (
+              <Link onClick={handleClose} to={"/dashboard/resto-dashboard"}
+                className='px-2 bg-red-50 hover:bg-red-100 py-1 font-bold text-red-700 border-l-4 border-red-500 mb-1'>
+                🍽️ My Restaurant
               </Link>
             )}
 
@@ -119,13 +129,9 @@ const UserMenu = ({close}) => {
 
             <Divider/>
 
-            <a
-              href="https://snapit.pages.dev/privacy-policy.html"
-              target="_blank"
-              rel="noreferrer"
+            <a href="https://snapit.pages.dev/privacy-policy.html" target="_blank" rel="noreferrer"
               className='px-2 hover:bg-gray-100 py-1 flex items-center gap-1.5 text-gray-600'
-              onClick={handleClose}
-            >
+              onClick={handleClose}>
               🔒 Privacy Policy
             </a>
 
