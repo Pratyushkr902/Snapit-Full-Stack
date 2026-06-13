@@ -3,10 +3,11 @@ import { createSlice } from "@reduxjs/toolkit"
 const emptyUser = {
     _id: "", name: "", email: "", avatar: "", mobile: "",
     verify_email: "", last_login_date: "", status: "",
-    address_details: [], shopping_cart: [], orderHistory: [], role: "", store_name: ""
+    address_details: [], shopping_cart: [], orderHistory: [],
+    role: "", store_name: "", restaurantId: null
 }
 
-// ✅ Read saved user instantly on app start — no timing gap
+// Read saved user instantly on app start — no timing gap
 const initialValue = (() => {
     try {
         const stored = localStorage.getItem('user')
@@ -35,8 +36,8 @@ const userSlice = createSlice({
             state.orderHistory     = action.payload?.orderHistory
             state.role             = action.payload?.role
             state.store_name       = action.payload?.store_name
-
-            // ✅ Save to localStorage every time user updates
+            state.restaurantId     = action.payload?.restaurantId ?? null  // ← FIXED
+            // Save to localStorage every time user updates
             localStorage.setItem('user', JSON.stringify(action.payload))
         },
         updatedAvatar: (state, action) => {
@@ -48,14 +49,12 @@ const userSlice = createSlice({
             }
         },
         logout: (state) => {
-            // ✅ Clear ALL token variants + persisted Redux state
             localStorage.removeItem('user')
             localStorage.removeItem('accesstoken')
             localStorage.removeItem('accessToken')
             localStorage.removeItem('refreshToken')
             localStorage.removeItem('refreshtoken')
-            localStorage.removeItem('persist:root')  // ✅ CRITICAL FIX
-
+            localStorage.removeItem('persist:root')
             state._id             = ""
             state.name            = ""
             state.email           = ""
@@ -69,6 +68,7 @@ const userSlice = createSlice({
             state.orderHistory    = []
             state.role            = ""
             state.store_name      = ""
+            state.restaurantId    = null  // ← FIXED
         }
     }
 })
