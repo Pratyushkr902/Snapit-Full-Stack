@@ -20,7 +20,7 @@ const __dirname = path.dirname(__filename);
 // --- PRE-REGISTER MODELS ---
 import './models/user.model.js';
 import './models/category.model.js';
-import './models/SubCategory.model.js'; 
+import './models/subCategory.model.js'; 
 import ProductModel from './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
