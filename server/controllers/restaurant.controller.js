@@ -71,6 +71,10 @@ export async function createRestaurant(req, res) {
 // ── PATCH /api/restaurant/update/:id ─────────────────────────────────────────
 export async function updateRestaurant(req, res) {
   try {
+    // FIX: assertOwnership was missing here — any RESTO_SELLER could update any restaurant.
+    // ADMIN bypasses this check (assertOwnership returns true immediately for ADMIN).
+    if (!await assertOwnership(req, res, req.params.id)) return
+
     const updated = await RestaurantModel.findByIdAndUpdate(
       req.params.id, req.body, { new: true, runValidators: true }
     )
@@ -82,6 +86,7 @@ export async function updateRestaurant(req, res) {
 }
 
 // ── Helper: verify RESTO_SELLER owns this restaurant ─────────────────────────
+// ADMIN role bypasses the ownership check entirely.
 async function assertOwnership(req, res, restaurantId) {
   if (req.user?.role === 'RESTO_SELLER') {
     const resto = await RestaurantModel.findById(restaurantId).lean()
@@ -133,7 +138,6 @@ export async function addMenuItem(req, res) {
 // ── PUT /api/restaurant/menu/:itemId ──────────────────────────────────────────
 export async function updateMenuItem(req, res) {
   try {
-    // For RESTO_SELLER, verify the item belongs to their restaurant
     if (req.user?.role === 'RESTO_SELLER') {
       const existing = await MenuItemModel.findById(req.params.itemId).lean()
       if (!existing) return res.status(404).json({ success: false, message: 'Item not found' })

@@ -7,6 +7,7 @@ import { logout } from '../store/userSlice'
 import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import Divider from '../components/Divider'
+import { ACCESS_TOKEN_KEY } from '../constants/storageKeys'
 
 const UserMenuMobile = () => {
   const user = useSelector((state) => state.user)
@@ -18,7 +19,9 @@ const UserMenuMobile = () => {
       const response = await Axios({ ...SummaryApi.logout })
       if (response.data.success) {
         dispatch(logout())
-        localStorage.clear()
+        // FIX: only clear auth tokens, not all localStorage (cart, prefs, FCM token etc.)
+        localStorage.removeItem(ACCESS_TOKEN_KEY)
+        localStorage.removeItem('refreshToken')
         toast.success(response.data.message)
         navigate("/")
       }
@@ -36,10 +39,10 @@ const UserMenuMobile = () => {
         <p className='text-xs text-gray-400'>{user?.email}</p>
         {user?.role && (
           <span className='text-xs font-medium text-red-600'>
-            {user?.role === "ADMIN"       ? "(Admin)"       :
-             user?.role === "RIDER"       ? "(Rider)"       :
-             user?.role === "SELLER"      ? "(Seller)"      :
-             user?.role === "RESTO_SELLER"? "(Resto Seller)": ""}
+            {user?.role === "ADMIN"        ? "(Admin)"        :
+             user?.role === "RIDER"        ? "(Rider)"        :
+             user?.role === "SELLER"       ? "(Seller)"       :
+             user?.role === "RESTO_SELLER" ? "(Resto Seller)" : ""}
           </span>
         )}
       </div>
@@ -54,13 +57,14 @@ const UserMenuMobile = () => {
           <Link to={"/dashboard/subcategory"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Sub Category</Link>
           <Link to={"/dashboard/upload-product"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Upload Product</Link>
           <Link to={"/dashboard/product"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Product</Link>
-          <Link to={"/dashboard/resto-dashboard"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Resto Admin</Link>
+          {/* FIX: was '/dashboard/resto-dashboard' (RESTO_SELLER page) — admin needs restaurant-admin */}
+          <Link to={"/dashboard/restaurant-admin"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Resto Admin</Link>
           <Divider/>
         </>
       )}
 
       {/* RIDER ACCESS */}
-      {(user?.role === "rider" || user?.role === "RIDER" || user?.role === "ADMIN") && (
+      {(user?.role === "RIDER" || user?.role === "ADMIN") && (
         <Link to={"/rider-panel"} className='px-3 py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600'>
           Rider Panel
         </Link>

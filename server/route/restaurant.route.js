@@ -29,9 +29,11 @@ restaurantRouter.post('/food-item/create',        admin,       createFoodItem)
 restaurantRouter.patch('/food-item/update/:id',   admin,       updateFoodItem)
 restaurantRouter.get('/food-items/:restaurantId', admin,       getFoodItemsByRestaurant)
 
-// FIX 1: /update/:id must be before /:id — otherwise Express matches /:id first
-// and this PATCH never fires correctly
-restaurantRouter.patch('/update/:id',             admin,       updateRestaurant)
+// FIX: was `admin` — only ADMIN could update a restaurant, locking out RESTO_SELLER owners.
+// Changed to `restoSeller` which allows ['RESTO_SELLER', 'ADMIN'].
+// The controller's assertOwnership() already ensures a RESTO_SELLER can only update
+// their own restaurant (checks resto.ownerId === req.user._id), so this is safe.
+restaurantRouter.patch('/update/:id',             restoSeller, updateRestaurant)
 
 // ── Menu item writes — ADMIN or RESTO_SELLER ──────────────────────────────────
 restaurantRouter.put('/menu/:itemId',             restoSeller, updateMenuItem)
