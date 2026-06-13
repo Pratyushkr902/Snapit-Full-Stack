@@ -1,6 +1,6 @@
 import React from 'react'
 import UserMenu from '../components/UserMenu'
-import UserMenuMobile from '../components/UserMenuMobile'
+import UserMenuMobile from '../pages/UserMenuMobile'
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 
