@@ -13,9 +13,11 @@ const Dashboard = () => {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // ✅ FIX: These routes need full-screen layout — no sidebar, no container padding
-  const isFullScreen = location.pathname.includes('seller-dashboard') || 
-                       location.pathname.includes('rider-panel')
+  // These routes need full-screen layout — no sidebar, no container padding
+  const isFullScreen =
+    location.pathname.includes('seller-dashboard') ||
+    location.pathname.includes('rider-panel')      ||
+    location.pathname.includes('resto-dashboard')
 
   if (isFullScreen) {
     return <Outlet />

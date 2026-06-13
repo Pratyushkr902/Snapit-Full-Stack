@@ -20,15 +20,15 @@ const __dirname = path.dirname(__filename);
 // --- PRE-REGISTER MODELS ---
 import './models/user.model.js';
 import './models/category.model.js';
-import './models/subCategory.model.js'; 
+import './models/SubCategory.model.js'; 
 import ProductModel from './models/product.model.js';
 import './models/store.model.js';
 import './models/order.model.js';
 import './models/wallet.model.js';
 import './models/subscription.model.js';
 import './models/notification.model.js';
-import './models/restaurant.model.js';
-import './models/foodItem.model.js';
+import './models/Restaurant.model.js';
+import './models/MenuItem.model.js';      // ← was foodItem.model.js
 
 import { startAutoConfirmCron } from './utils/autoConfirmOrders.js';
 
@@ -131,6 +131,7 @@ app.use(helmet({
                 "https://*.cloudinary.com", "https://*.googleapis.com", 
                 "https://*.gstatic.com", "https://api.qrserver.com",
                 "https://cdn-icons-png.flaticon.com",
+                "https://images.unsplash.com",
             ],
             frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com", "https://checkout.razorpay.com"],
             connectSrc: [

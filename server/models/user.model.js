@@ -67,11 +67,17 @@ const userSchema = new mongoose.Schema({
     },
     role : {
         type : String,
-        enum : ['ADMIN', 'USER', 'RIDER', 'rider', 'SELLER'],
+        enum : ['ADMIN', 'USER', 'RIDER', 'rider', 'SELLER', 'RESTO_SELLER'],
         default : "USER"
     },
     store_name : {
         type : String,
+        default : null
+    },
+    // Restaurant this user owns — set when role is RESTO_SELLER
+    restaurantId : {
+        type : mongoose.Schema.ObjectId,
+        ref : 'Restaurant',
         default : null
     },
     walletBalance: {
@@ -121,7 +127,6 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    // --- STREAK SYSTEM (already existed) ---
     currentStreak: {
         type: Number,
         default: 0
@@ -134,7 +139,6 @@ const userSchema = new mongoose.Schema({
         type: [Number],
         default: []
     },
-    // --- COINS & REWARDS SYSTEM (new) ---
     coins: {
         type: Number,
         default: 0

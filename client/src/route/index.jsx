@@ -8,43 +8,46 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 
 // Lazy load everything else
-const SearchPage = lazy(() => import('../pages/Searchpage'))
-const ForgotPassword = lazy(() => import('../pages/ForgotPassword'))
-const OtpVerification = lazy(() => import('../pages/OtpVerification'))
-const ResetPassword = lazy(() => import('../pages/ResetPassword'))
-const UserMenuMobile = lazy(() => import('../pages/UserMenuMobile'))
-const Dashboard = lazy(() => import('../layouts/Dashboard'))
-const Profile = lazy(() => import('../pages/Profile'))
-const MyOrders = lazy(() => import('../pages/MyOrders'))
-const Address = lazy(() => import('../pages/Address'))
-const CategoryPage = lazy(() => import('../pages/CategoryPage'))
-const SubCategoryPage = lazy(() => import('../pages/SubCategoryPage'))
-const UploadProduct = lazy(() => import('../pages/UploadProduct'))
-const ProductAdmin = lazy(() => import('../pages/ProductAdmin'))
-const AdminPermision = lazy(() => import('../layouts/AdminPermision'))
-const SellerPermission = lazy(() => import('../layouts/SellerPermission'))
-const ProductListPage = lazy(() => import('../pages/ProductListPage'))
-const ProductDisplayPage = lazy(() => import('../pages/ProductDisplayPage'))
-const CartMobile = lazy(() => import('../pages/CartMobile'))
-const CheckoutPage = lazy(() => import('../pages/CheckoutPage'))
-const Success = lazy(() => import('../pages/Success'))
-const Cancel = lazy(() => import('../pages/Cancel'))
-const RiderTracking = lazy(() => import('../pages/RiderTracking'))
-const RiderDashboard = lazy(() => import('../pages/RiderDashboard'))
-const StoreOrders = lazy(() => import('../pages/StoreOrders'))
-const Wallet = lazy(() => import('../pages/Wallet'))
-const AdminSummary = lazy(() => import('../components/AdminSummary'))
-const ReferAndEarn = lazy(() => import('../pages/ReferAndEarn'))
-const WishlistPage = lazy(() => import('../pages/WishlistPage'))
-const TrackingPage = lazy(() => import('../pages/TrackingPage'))
-const AllDealsPage = lazy(() => import('../pages/AllDealsPage'))
-const SnapitPlus = lazy(() => import('../components/SnapitPlus'))
-const StreakTracker = lazy(() => import('../components/StreakTracker'))
-const MySubscriptions = lazy(() => import('../pages/MySubscriptions'))
-const SellerDashboard = lazy(() => import('../pages/SellerDashboard'))
-const FoodHomePage = lazy(() => import('../pages/FoodHomePage'))
-const GroceryPage = lazy(() => import('../pages/GroceryPage'))
-const PharmacyPage = lazy(() => import('../pages/PharmacyPage'))
+const SearchPage             = lazy(() => import('../pages/Searchpage'))
+const ForgotPassword         = lazy(() => import('../pages/ForgotPassword'))
+const OtpVerification        = lazy(() => import('../pages/OtpVerification'))
+const ResetPassword          = lazy(() => import('../pages/ResetPassword'))
+const UserMenuMobile         = lazy(() => import('../pages/UserMenuMobile'))
+const Dashboard              = lazy(() => import('../layouts/Dashboard'))
+const Profile                = lazy(() => import('../pages/Profile'))
+const MyOrders               = lazy(() => import('../pages/MyOrders'))
+const Address                = lazy(() => import('../pages/Address'))
+const CategoryPage           = lazy(() => import('../pages/CategoryPage'))
+const SubCategoryPage        = lazy(() => import('../pages/SubCategoryPage'))
+const UploadProduct          = lazy(() => import('../pages/UploadProduct'))
+const ProductAdmin           = lazy(() => import('../pages/ProductAdmin'))
+const AdminPermision         = lazy(() => import('../layouts/AdminPermision'))
+const SellerPermission       = lazy(() => import('../layouts/SellerPermission'))
+const ProductListPage        = lazy(() => import('../pages/ProductListPage'))
+const ProductDisplayPage     = lazy(() => import('../pages/ProductDisplayPage'))
+const CartMobile             = lazy(() => import('../pages/CartMobile'))
+const CheckoutPage           = lazy(() => import('../pages/CheckoutPage'))
+const Success                = lazy(() => import('../pages/Success'))
+const Cancel                 = lazy(() => import('../pages/Cancel'))
+const RiderTracking          = lazy(() => import('../pages/RiderTracking'))
+const RiderDashboard         = lazy(() => import('../pages/RiderDashboard'))
+const StoreOrders            = lazy(() => import('../pages/StoreOrders'))
+const Wallet                 = lazy(() => import('../pages/Wallet'))
+const AdminSummary           = lazy(() => import('../components/AdminSummary'))
+const ReferAndEarn           = lazy(() => import('../pages/ReferAndEarn'))
+const WishlistPage           = lazy(() => import('../pages/WishlistPage'))
+const TrackingPage           = lazy(() => import('../pages/TrackingPage'))
+const AllDealsPage           = lazy(() => import('../pages/AllDealsPage'))
+const SnapitPlus             = lazy(() => import('../components/SnapitPlus'))
+const StreakTracker          = lazy(() => import('../components/StreakTracker'))
+const MySubscriptions        = lazy(() => import('../pages/MySubscriptions'))
+const SellerDashboard        = lazy(() => import('../pages/SellerDashboard'))
+const FoodHomePage           = lazy(() => import('../pages/FoodHomePage'))
+const RestaurantDetailPage   = lazy(() => import('../pages/RestaurantDetailPage'))
+const RestaurantAdminPage    = lazy(() => import('../pages/RestaurantAdminPage'))
+const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'))
+const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
+const PharmacyPage           = lazy(() => import('../pages/PharmacyPage'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -101,6 +104,16 @@ const router = createHashRouter([
             element: <S><SellerPermission><SellerDashboard /></SellerPermission></S>
           },
           {
+            // Full restaurant manager — ADMIN only
+            path: "restaurant-admin",
+            element: <S><AdminPermision><RestaurantAdminPage /></AdminPermision></S>
+          },
+          {
+            // Scoped menu manager — RESTO_SELLER only
+            path: "resto-dashboard",
+            element: <S><RestoSellerDashboard /></S>
+          },
+          {
             path: "upload-product",
             element: <S><SellerPermission><UploadProduct /></SellerPermission></S>
           },
@@ -133,6 +146,7 @@ const router = createHashRouter([
       { path: "success", element: <S><Success /></S> },
       { path: "cancel", element: <S><Cancel /></S> },
       { path: "food", element: <S><FoodHomePage /></S> },
+      { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
       { path: "grocery", element: <S><GroceryPage /></S> },
       { path: "pharmacy", element: <S><PharmacyPage /></S> },
     ]

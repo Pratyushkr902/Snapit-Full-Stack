@@ -1,6 +1,6 @@
 import UserModel from "../models/user.model.js"
 
-// ✅ FIXED: accepts array of roles so ADMIN can access seller/rider routes
+// Accepts array of roles — ADMIN always has access to everything
 const checkRole = (roles) => async (request, response, next) => {
   try {
     const userId = request.userId
@@ -31,6 +31,7 @@ const checkRole = (roles) => async (request, response, next) => {
   }
 }
 
-export const admin  = checkRole('ADMIN')
-export const seller = checkRole(['SELLER', 'ADMIN'])  // ✅ ADMIN can access seller routes
-export const rider  = checkRole(['RIDER', 'ADMIN'])   // ✅ ADMIN can access rider routes
+export const admin       = checkRole('ADMIN')
+export const seller      = checkRole(['SELLER', 'ADMIN'])
+export const rider       = checkRole(['RIDER', 'ADMIN'])
+export const restoSeller = checkRole(['RESTO_SELLER', 'ADMIN'])

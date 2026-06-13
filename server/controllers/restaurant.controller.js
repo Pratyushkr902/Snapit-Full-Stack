@@ -1,7 +1,7 @@
-import RestaurantModel from '../models/restaurant.model.js'
-import FoodItemModel from '../models/foodItem.model.js'
+import RestaurantModel from '../models/Restaurant.model.js'
+import MenuItemModel from '../models/MenuItem.model.js'
 
-// ─── GET ALL ACTIVE RESTAURANTS ───────────────────────────────────────────────
+// ── GET /api/restaurant/all ────────────────────────────────────────────────────
 export async function getAllRestaurants(req, res) {
   try {
     const { cuisine, search, isOpen } = req.query
@@ -11,193 +11,249 @@ export async function getAllRestaurants(req, res) {
     if (cuisine) filter.cuisineTypes = { $in: [new RegExp(cuisine, 'i')] }
     if (search) filter.name = { $regex: search, $options: 'i' }
 
-    const restaurants = await RestaurantModel.find(filter).sort({
-      rating: -1,
-      createdAt: -1,
-    })
+    const restaurants = await RestaurantModel
+      .find(filter)
+      .sort({ isOpen: -1, rating: -1, createdAt: -1 })
+      .lean()
 
-    return res.json({
-      success: true,
-      data: restaurants,
-      message: 'Restaurants fetched successfully',
-    })
+    return res.json({ success: true, data: restaurants, message: 'Restaurants fetched successfully' })
   } catch (err) {
+    console.error(err)
     return res.status(500).json({ success: false, message: err.message })
   }
 }
 
-// ─── GET SINGLE RESTAURANT WITH MENU ─────────────────────────────────────────
+// ── GET /api/restaurant/:id ────────────────────────────────────────────────────
 export async function getRestaurantById(req, res) {
   try {
-    const { id } = req.params
-    const restaurant = await RestaurantModel.findById(id)
-    if (!restaurant) {
-      return res.status(404).json({ success: false, message: 'Restaurant not found' })
-    }
+    const restaurant = await RestaurantModel.findById(req.params.id).lean()
+    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' })
 
-    // Fetch all available menu items grouped by category
-    const items = await FoodItemModel.find({
-      restaurant: id,
-      isAvailable: true,
-    }).sort({ menuCategory: 1, sortOrder: 1, isBestseller: -1 })
+    const items = await MenuItemModel
+      .find({ restaurantId: req.params.id, isAvailable: true })
+      .sort({ category: 1, sortOrder: 1, isBestseller: -1 })
+      .lean()
 
-    // Group by menuCategory
-    const menuMap = {}
+    const categoryMap = {}
     for (const item of items) {
-      if (!menuMap[item.menuCategory]) menuMap[item.menuCategory] = []
-      menuMap[item.menuCategory].push(item)
+      if (!categoryMap[item.category]) categoryMap[item.category] = []
+      categoryMap[item.category].push(item)
     }
 
-    const menu = Object.entries(menuMap).map(([category, items]) => ({
-      category,
-      items,
-    }))
+    let categories = restaurant.menuCategories?.length
+      ? restaurant.menuCategories.filter(c => categoryMap[c])
+      : Object.keys(categoryMap)
 
-    return res.json({
-      success: true,
-      data: { restaurant, menu },
-      message: 'Restaurant details fetched',
-    })
+    for (const cat of Object.keys(categoryMap)) {
+      if (!categories.includes(cat)) categories.push(cat)
+    }
+
+    const menu = categories.map(cat => ({ category: cat, items: categoryMap[cat] || [] }))
+
+    return res.json({ success: true, data: { restaurant, menu }, message: 'Restaurant details fetched' })
   } catch (err) {
+    console.error(err)
     return res.status(500).json({ success: false, message: err.message })
   }
 }
 
-// ─── CREATE RESTAURANT (Admin only) ───────────────────────────────────────────
+// ── POST /api/restaurant/create ───────────────────────────────────────────────
 export async function createRestaurant(req, res) {
   try {
-    const data = req.body
-    const restaurant = new RestaurantModel(data)
+    const restaurant = new RestaurantModel(req.body)
     await restaurant.save()
-    return res.status(201).json({
-      success: true,
-      data: restaurant,
-      message: 'Restaurant created',
-    })
+    return res.status(201).json({ success: true, data: restaurant, message: 'Restaurant created' })
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message })
+    return res.status(400).json({ success: false, message: err.message })
   }
 }
 
-// ─── UPDATE RESTAURANT ─────────────────────────────────────────────────────────
+// ── PATCH /api/restaurant/update/:id ─────────────────────────────────────────
 export async function updateRestaurant(req, res) {
   try {
-    const { id } = req.params
-    const updated = await RestaurantModel.findByIdAndUpdate(id, req.body, { new: true })
+    const updated = await RestaurantModel.findByIdAndUpdate(
+      req.params.id, req.body, { new: true, runValidators: true }
+    )
+    if (!updated) return res.status(404).json({ success: false, message: 'Restaurant not found' })
     return res.json({ success: true, data: updated, message: 'Restaurant updated' })
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message })
+    return res.status(400).json({ success: false, message: err.message })
   }
 }
 
-// ─── CREATE FOOD ITEM ─────────────────────────────────────────────────────────
-export async function createFoodItem(req, res) {
-  try {
-    const item = new FoodItemModel(req.body)
-    await item.save()
-
-    // Add menuCategory to restaurant's list if not there
-    await RestaurantModel.findByIdAndUpdate(req.body.restaurant, {
-      $addToSet: { menuCategories: req.body.menuCategory },
-    })
-
-    return res.status(201).json({
-      success: true,
-      data: item,
-      message: 'Food item created',
-    })
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message })
+// ── Helper: verify RESTO_SELLER owns this restaurant ─────────────────────────
+async function assertOwnership(req, res, restaurantId) {
+  if (req.user?.role === 'RESTO_SELLER') {
+    const resto = await RestaurantModel.findById(restaurantId).lean()
+    if (!resto) {
+      res.status(404).json({ success: false, message: 'Restaurant not found' })
+      return false
+    }
+    if (String(resto.ownerId) !== String(req.user._id)) {
+      res.status(403).json({ success: false, message: 'Not your restaurant' })
+      return false
+    }
   }
+  return true
 }
 
-// ─── UPDATE FOOD ITEM ─────────────────────────────────────────────────────────
-export async function updateFoodItem(req, res) {
+// ── GET /api/restaurant/:id/menu ──────────────────────────────────────────────
+export async function getMenuItems(req, res) {
   try {
-    const { id } = req.params
-    const updated = await FoodItemModel.findByIdAndUpdate(id, req.body, { new: true })
-    return res.json({ success: true, data: updated, message: 'Food item updated' })
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message })
-  }
-}
+    if (!await assertOwnership(req, res, req.params.id)) return
 
-// ─── GET ITEMS BY RESTAURANT (for admin / restaurant owner) ──────────────────
-export async function getFoodItemsByRestaurant(req, res) {
-  try {
-    const { restaurantId } = req.params
-    const items = await FoodItemModel.find({ restaurant: restaurantId }).sort({
-      menuCategory: 1,
-      sortOrder: 1,
-    })
+    const items = await MenuItemModel
+      .find({ restaurantId: req.params.id })
+      .sort({ category: 1, sortOrder: 1 })
+      .lean()
     return res.json({ success: true, data: items })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
   }
 }
 
-// ─── SEED DEMO DATA (dev helper) ──────────────────────────────────────────────
+// ── POST /api/restaurant/:id/menu ─────────────────────────────────────────────
+export async function addMenuItem(req, res) {
+  try {
+    if (!await assertOwnership(req, res, req.params.id)) return
+
+    const item = new MenuItemModel({ ...req.body, restaurantId: req.params.id })
+    await item.save()
+
+    await RestaurantModel.findByIdAndUpdate(req.params.id, {
+      $addToSet: { menuCategories: item.category },
+    })
+
+    return res.status(201).json({ success: true, data: item, message: 'Menu item created' })
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message })
+  }
+}
+
+// ── PUT /api/restaurant/menu/:itemId ──────────────────────────────────────────
+export async function updateMenuItem(req, res) {
+  try {
+    // For RESTO_SELLER, verify the item belongs to their restaurant
+    if (req.user?.role === 'RESTO_SELLER') {
+      const existing = await MenuItemModel.findById(req.params.itemId).lean()
+      if (!existing) return res.status(404).json({ success: false, message: 'Item not found' })
+      if (!await assertOwnership(req, res, existing.restaurantId)) return
+    }
+
+    const item = await MenuItemModel.findByIdAndUpdate(
+      req.params.itemId, req.body, { new: true, runValidators: true }
+    )
+    if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
+    return res.json({ success: true, data: item, message: 'Menu item updated' })
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message })
+  }
+}
+
+// ── DELETE /api/restaurant/menu/:itemId ───────────────────────────────────────
+export async function deleteMenuItem(req, res) {
+  try {
+    if (req.user?.role === 'RESTO_SELLER') {
+      const existing = await MenuItemModel.findById(req.params.itemId).lean()
+      if (!existing) return res.status(404).json({ success: false, message: 'Item not found' })
+      if (!await assertOwnership(req, res, existing.restaurantId)) return
+    }
+
+    const item = await MenuItemModel.findByIdAndDelete(req.params.itemId)
+    if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
+    return res.json({ success: true, message: 'Menu item deleted' })
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+// ── POST /api/restaurant/food-item/create  (old route alias) ─────────────────
+export async function createFoodItem(req, res) {
+  try {
+    const { restaurant: restaurantId, menuCategory, ...rest } = req.body
+    const item = new MenuItemModel({
+      ...rest,
+      category: rest.category || menuCategory,
+      restaurantId,
+    })
+    await item.save()
+    await RestaurantModel.findByIdAndUpdate(restaurantId, {
+      $addToSet: { menuCategories: item.category },
+    })
+    return res.status(201).json({ success: true, data: item, message: 'Food item created' })
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+// ── PATCH /api/restaurant/food-item/update/:id  (old route alias) ────────────
+export async function updateFoodItem(req, res) {
+  try {
+    const updated = await MenuItemModel.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    return res.json({ success: true, data: updated, message: 'Food item updated' })
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+// ── GET /api/restaurant/food-items/:restaurantId  (old route alias) ───────────
+export async function getFoodItemsByRestaurant(req, res) {
+  try {
+    const items = await MenuItemModel
+      .find({ restaurantId: req.params.restaurantId })
+      .sort({ category: 1, sortOrder: 1 })
+      .lean()
+    return res.json({ success: true, data: items })
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+// ── POST /api/restaurant/dev/seed ─────────────────────────────────────────────
 export async function seedDemoRestaurants(req, res) {
   try {
     const existing = await RestaurantModel.countDocuments()
     if (existing > 0) {
       return res.json({ success: true, message: 'Demo data already exists', count: existing })
     }
-
     const demos = [
       {
         name: 'Baba Dhaba',
         description: 'Authentic home-style Indian food',
         image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
         cuisineTypes: ['Indian', 'Thali', 'Dal-Rice'],
-        rating: 4.6,
-        totalRatings: 238,
-        deliveryTimeMin: 25,
-        deliveryTimeMax: 40,
-        deliveryFee: 15,
-        minOrderValue: 80,
-        isPureVeg: true,
-        tags: ['bestseller', 'pure-veg'],
+        rating: 4.6, totalRatings: 238,
+        deliveryTimeMin: 25, deliveryTimeMax: 40, deliveryFee: 15, minOrderValue: 80,
+        isPureVeg: true, tags: ['bestseller', 'pure-veg'],
         menuCategories: ['Thali', 'Roti & Rice', 'Snacks', 'Drinks'],
-        address: { area: 'Main Market', city: 'Paliganj' },
-        isOpen: true,
+        offers: ['50% OFF up to ₹100 on first order', 'Free delivery above ₹199'],
+        opensAt: '9:00 AM', address: { area: 'Main Market', city: 'Paliganj' }, isOpen: true,
       },
       {
         name: 'Momo Zone',
         description: 'Fresh momos & Chinese snacks',
         image: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=800',
         cuisineTypes: ['Chinese', 'Momos', 'Fast Food'],
-        rating: 4.4,
-        totalRatings: 156,
-        deliveryTimeMin: 20,
-        deliveryTimeMax: 35,
-        deliveryFee: 20,
-        minOrderValue: 100,
-        isPureVeg: false,
-        tags: ['new', 'trending'],
+        rating: 4.4, totalRatings: 156,
+        deliveryTimeMin: 20, deliveryTimeMax: 35, deliveryFee: 20, minOrderValue: 100,
+        isPureVeg: false, tags: ['new', 'trending'],
         menuCategories: ['Momos', 'Noodles', 'Rolls', 'Drinks'],
-        address: { area: 'Station Road', city: 'Paliganj' },
-        isOpen: true,
+        offers: ['20% OFF on orders above ₹149'],
+        opensAt: '11:00 AM', address: { area: 'Station Road', city: 'Paliganj' }, isOpen: true,
       },
       {
         name: 'Burger Adda',
         description: 'Crispy burgers & loaded fries',
         image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800',
         cuisineTypes: ['Fast Food', 'Burgers', 'Snacks'],
-        rating: 4.3,
-        totalRatings: 94,
-        deliveryTimeMin: 20,
-        deliveryTimeMax: 30,
-        deliveryFee: 25,
-        minOrderValue: 120,
-        isPureVeg: false,
-        tags: ['new'],
+        rating: 4.3, totalRatings: 94,
+        deliveryTimeMin: 20, deliveryTimeMax: 30, deliveryFee: 25, minOrderValue: 120,
+        isPureVeg: false, tags: ['new'],
         menuCategories: ['Burgers', 'Fries & Sides', 'Drinks', 'Combos'],
-        address: { area: 'College Road', city: 'Paliganj' },
-        isOpen: true,
+        offers: ['Buy 2 Burgers get Fries FREE'],
+        opensAt: '10:00 AM', address: { area: 'College Road', city: 'Paliganj' }, isOpen: true,
       },
     ]
-
     await RestaurantModel.insertMany(demos)
     return res.json({ success: true, message: 'Demo restaurants seeded', count: demos.length })
   } catch (err) {
