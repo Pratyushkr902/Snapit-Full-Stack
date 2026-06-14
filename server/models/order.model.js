@@ -100,6 +100,13 @@ const orderSchema = new mongoose.Schema(
         discount_amount: { type: Number, default: 0 },
         scratch_cards:   { type: Array,  default: [] },
 
+        // ── Food order extras ────────────────────────────────────────
+        tip:                  { type: Number,  default: 0 },
+        walletAmountUsed:     { type: Number,  default: 0 },
+        deliveryInstructions: { type: String,  default: "" },
+        scheduledTime:        { type: Date,    default: null },
+        isRestaurantOrder:    { type: Boolean, default: false },
+
         // ── Rider location (live tracking) ───────────────────────────
         riderLocation: {
             latitude:  { type: Number, default: null },
