@@ -69,10 +69,6 @@ const server = http.createServer(app)
 const latestPositions = new Map()
 
 // ─── CORS RULES ───────────────────────────────────────────────────────────────
-// SECURITY FIX: Removed "null" from allowed origins.
-//   "null" as Origin is sent by sandboxed iframes and file:// pages.
-//   Allowing it lets a malicious page in a sandboxed <iframe> make credentialed
-//   API requests — bypassing same-origin protections entirely.
 const allowedOrigins = [
     "http://localhost:5173",
     "https://localhost:5173",
@@ -93,7 +89,6 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow server-to-server requests (no origin header)
         if (!origin) return callback(null, true)
         const lowerOrigin = origin.toLowerCase().trim()
         if (
@@ -115,13 +110,6 @@ app.use(cors({
 }))
 
 // ─── HELMET / CSP ─────────────────────────────────────────────────────────────
-// SECURITY FIX: Removed 'unsafe-inline' and 'unsafe-eval' from scriptSrc.
-//   'unsafe-inline' nullifies XSS protection (allows injected <script> tags).
-//   'unsafe-eval'   allows eval() which can execute attacker-controlled strings.
-//   Razorpay and Firebase scripts are allowed via specific src values.
-//
-//   If your React build still requires inline scripts, add a nonce via your
-//   build tool (vite-plugin-csp) rather than re-enabling unsafe-inline.
 app.use(helmet({
     crossOriginResourcePolicy:  false,
     crossOriginEmbedderPolicy:  false,
@@ -131,7 +119,6 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             scriptSrc: [
                 "'self'",
-                // Specific allowed script sources — no unsafe-inline, no unsafe-eval
                 "https://checkout.razorpay.com",
                 "https://*.razorpay.com",
                 "https://cdn.razorpay.com",
@@ -184,11 +171,6 @@ app.use(helmet({
 }))
 
 // ─── RATE LIMITING ────────────────────────────────────────────────────────────
-// SECURITY FIX: express-rate-limit was installed but never applied.
-// Strict limits on auth endpoints prevent brute-force, OTP enumeration, and
-// credential stuffing.  Financial endpoints get a moderate limit.
-
-// Auth endpoints: 5 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
     windowMs:         15 * 60 * 1000,
     max:              5,
@@ -197,7 +179,6 @@ const authLimiter = rateLimit({
     message: { message: 'Too many attempts. Please try again in 15 minutes.', error: true, success: false },
 })
 
-// Account creation: 3 registrations per hour per IP (prevents bot signups)
 const registerLimiter = rateLimit({
     windowMs:         60 * 60 * 1000,
     max:              3,
@@ -206,7 +187,6 @@ const registerLimiter = rateLimit({
     message: { message: 'Too many accounts created from this IP. Please try again later.', error: true, success: false },
 })
 
-// General API: 120 req/min per IP
 const apiLimiter = rateLimit({
     windowMs:        60 * 1000,
     max:             120,
@@ -215,7 +195,6 @@ const apiLimiter = rateLimit({
     message: { message: 'Too many requests. Please slow down.', error: true, success: false },
 })
 
-// Financial/wallet: 30 req/min per IP
 const financialLimiter = rateLimit({
     windowMs:        60 * 1000,
     max:             30,
@@ -247,14 +226,6 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
     console.log(`[Socket] Connected: ${socket.id}`)
 
-    // SECURITY FIX: Validate order ownership before joining the tracking room.
-    // Previously ANY connected socket could join ANY orderId's room and receive
-    // real-time GPS coordinates for orders that don't belong to them.
-    // Now we verify the userId (passed from the client on socket connect via
-    // handshake.auth) actually owns the order before admitting them.
-    //
-    // Client-side usage:
-    //   const socket = io(API_URL, { auth: { userId: user._id } })
     socket.on('join_order', async (orderId) => {
         if (!orderId) return
 
@@ -275,7 +246,6 @@ io.on('connection', (socket) => {
             const isOwner = order.userId?.toString()   === requestingUserId
             const isRider = order.riderId?.toString()  === requestingUserId
 
-            // Also allow admins: look up the socket user's role
             let isAdmin = false
             if (!isOwner && !isRider) {
                 const user = await UserModel
@@ -294,7 +264,6 @@ io.on('connection', (socket) => {
             socket.join(orderId)
             console.log(`[Socket] ${socket.id} joined room: ${orderId}`)
 
-            // Send last known position immediately so the map seeds without waiting
             if (latestPositions.has(orderId)) {
                 socket.emit('rider_moved', latestPositions.get(orderId))
             }
@@ -338,14 +307,14 @@ io.on('connection', (socket) => {
 })
 
 // ─── RATE LIMITERS APPLIED ────────────────────────────────────────────────────
-app.use('/api/user/login',                     authLimiter)
-app.use('/api/user/register',                  registerLimiter)
-app.use('/api/user/forgot-password',           authLimiter)
+app.use('/api/user/login',                      authLimiter)
+app.use('/api/user/register',                   registerLimiter)
+app.use('/api/user/forgot-password',            authLimiter)
 app.use('/api/user/verify-forgot-password-otp', authLimiter)
-app.use('/api/user/reset-password',            authLimiter)
-app.use('/api/wallet',                         financialLimiter)
-app.use('/api/order',                          financialLimiter)
-app.use('/api/coins',                          financialLimiter)
+app.use('/api/user/reset-password',             authLimiter)
+app.use('/api/wallet',                          financialLimiter)
+app.use('/api/order',                           financialLimiter)
+app.use('/api/coins',                           financialLimiter)
 
 // General API limiter on everything else
 app.use('/api', apiLimiter)
@@ -381,13 +350,13 @@ app.get("/health", (req, res) => {
     })
 })
 
+// ─── SERVE FRONTEND ───────────────────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, '../client/dist')))
 app.get('/{*splat}', (req, res) => {
-    res.status(404).json({ message: "Route not found.", success: false })
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'))
 })
 
 // ─── KEEP-ALIVE ───────────────────────────────────────────────────────────────
-// SECURITY FIX: Use env var only — no hardcoded fallback URL committed to source.
-// Set RENDER_EXTERNAL_URL in your Render dashboard environment variables.
 const SELF_URL = process.env.RENDER_EXTERNAL_URL
 if (SELF_URL) {
     setInterval(() => {
