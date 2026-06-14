@@ -13,6 +13,12 @@ import {
   deleteMenuItem,
   seedDemoRestaurants,
 } from '../controllers/restaurant.controller.js'
+import {
+  foodOrderCOD,
+  foodOrderWallet,
+  foodOrderCreatePayment,
+  foodOrderVerifyPayment,
+} from '../controllers/foodOrder.controller.js'
 import auth from '../middleware/auth.js'
 import { admin, restoSeller } from '../middleware/Admin.js'
 
@@ -24,16 +30,18 @@ restaurantRouter.get('/all', getAllRestaurants)
 // ── Dev seed (remove in production) ──────────────────────────────────────────
 restaurantRouter.post('/dev/seed', seedDemoRestaurants)
 
+// ── Food Order (customer checkout) ───────────────────────────────────────────
+restaurantRouter.post('/food-order/cash-on-delivery', auth, foodOrderCOD)
+restaurantRouter.post('/food-order/wallet',           auth, foodOrderWallet)
+restaurantRouter.post('/food-order/create-payment',   auth, foodOrderCreatePayment)
+restaurantRouter.post('/food-order/verify-payment',   auth, foodOrderVerifyPayment)
+
 // ── Admin only — all static paths BEFORE /:id ────────────────────────────────
 restaurantRouter.post('/create',                  auth, admin, createRestaurant)
 restaurantRouter.post('/food-item/create',        auth, admin, createFoodItem)
 restaurantRouter.patch('/food-item/update/:id',   auth, admin, updateFoodItem)
 restaurantRouter.get('/food-items/:restaurantId', auth, admin, getFoodItemsByRestaurant)
 
-// FIX: was `admin` — only ADMIN could update a restaurant, locking out RESTO_SELLER owners.
-// Changed to `restoSeller` which allows ['RESTO_SELLER', 'ADMIN'].
-// The controller's assertOwnership() already ensures a RESTO_SELLER can only update
-// their own restaurant (checks resto.ownerId === req.user._id), so this is safe.
 restaurantRouter.patch('/update/:id',             auth, restoSeller, updateRestaurant)
 
 // ── Menu item writes — ADMIN or RESTO_SELLER ──────────────────────────────────

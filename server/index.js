@@ -318,3 +318,5 @@ connectDB().then(() => {
 });
 
 export default app;
+// TEMP DEBUG - remove after fix
+import express from 'express'

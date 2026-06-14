@@ -14,7 +14,7 @@ import RestaurantModel from './models/Restaurant.model.js'
 import MenuItemModel from './models/MenuItem.model.js'
 
 dotenv.config()
-await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/snapit')
+await mongoose.connect('REDACTED_MONGO_URI')
 console.log('✅ Connected to MongoDB')
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ const MENUS = {
     item('Masala Chai', 20, 0, 'Drinks', true),
   ],
 
-  'Dom Biryani': [
+"Dom's Biryani": [
     // Signature Biryani
     item('Chicken Dum Biryani (1 plate)', 240, 220, 'Signature Biryani', false, { isBestseller: true, description: 'Slow-cooked dum biryani with saffron & whole spices' }),
     item('Chicken Dum Biryani (2 plates)', 440, 400, 'Signature Biryani', false, { isBestseller: true }),

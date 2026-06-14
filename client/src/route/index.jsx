@@ -48,6 +48,7 @@ const RestaurantAdminPage    = lazy(() => import('../pages/RestaurantAdminPage')
 const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'))
 const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
 const PharmacyPage           = lazy(() => import('../pages/PharmacyPage'))
+const FoodCheckoutPage       = lazy(() => import('../pages/FoodCheckoutPage'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -104,12 +105,10 @@ const router = createHashRouter([
             element: <S><SellerPermission><SellerDashboard /></SellerPermission></S>
           },
           {
-            // Full restaurant manager — ADMIN only
             path: "restaurant-admin",
             element: <S><AdminPermision><RestaurantAdminPage /></AdminPermision></S>
           },
           {
-            // Scoped menu manager — RESTO_SELLER only
             path: "resto-dashboard",
             element: <S><RestoSellerDashboard /></S>
           },
@@ -143,6 +142,7 @@ const router = createHashRouter([
       { path: "product/:product", element: <S><ProductDisplayPage /></S> },
       { path: "cart", element: <S><CartMobile /></S> },
       { path: "checkout", element: <S><CheckoutPage /></S> },
+      { path: "food-checkout", element: <S><FoodCheckoutPage /></S> },
       { path: "success", element: <S><Success /></S> },
       { path: "cancel", element: <S><Cancel /></S> },
       { path: "food", element: <S><FoodHomePage /></S> },

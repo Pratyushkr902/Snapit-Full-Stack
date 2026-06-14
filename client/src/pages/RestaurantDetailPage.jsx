@@ -9,6 +9,7 @@ const RestaurantDetailPage = () => {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [cart, setCart] = useState({})
+  const [selectedSize, setSelectedSize] = useState({})
   const [activeCategory, setActiveCategory] = useState('')
   const [vegOnly, setVegOnly] = useState(false)
   const categoryRefs = useRef({})
@@ -27,22 +28,65 @@ const RestaurantDetailPage = () => {
     load()
   }, [id])
 
-  const addToCart = (item) => {
-    setCart(p => ({...p, [item._id]: (p[item._id]||0)+1}))
-    toast.success(`${item.name} added`, {icon:'🍽️', duration:800})
+  const getSizeGroup = (item) => {
+    return item.customizations?.find(c => c.groupName === 'Size')
   }
+
+  const getSelectedSizeOption = (item) => {
+    const sizeGroup = getSizeGroup(item)
+    if (!sizeGroup) return null
+    const sizeName = selectedSize[item._id] || sizeGroup.options[0]?.name
+    return sizeGroup.options.find(o => o.name === sizeName) || sizeGroup.options[0]
+  }
+
+  const getItemPrice = (item) => {
+    const sizeOption = getSelectedSizeOption(item)
+    const base = item.discountedPrice || item.price || 0
+    return sizeOption ? base + (sizeOption.extraPrice || 0) : base
+  }
+
+  const getCartKey = (item) => {
+    const size = selectedSize[item._id] || getSelectedSizeOption(item)?.name || ''
+    return size ? `${item._id}_${size}` : item._id
+  }
+
+  const addToCart = (item) => {
+    const key = getCartKey(item)
+    const size = selectedSize[item._id] || getSelectedSizeOption(item)?.name
+    setCart(p => ({...p, [key]: (p[key]||0)+1}))
+    toast.success(`${item.name}${size ? ` (${size})` : ''} added`, {icon:'🍽️', duration:800})
+  }
+
   const removeFromCart = (item) => {
+    const key = getCartKey(item)
     setCart(p => {
-      const n={...p}
-      if(n[item._id]<=1) delete n[item._id]
-      else n[item._id]--
+      const n = {...p}
+      if (n[key] <= 1) delete n[key]
+      else n[key]--
       return n
     })
   }
 
   const allItems = data?.menu?.flatMap(c=>c.items)||[]
   const totalItems = Object.values(cart).reduce((a,b)=>a+b,0)
-  const totalPrice = allItems.reduce((acc,item)=>acc+(cart[item._id]||0)*(item.discountedPrice||item.price||0),0)
+  const totalPrice = allItems.reduce((acc, item) => {
+    const sizeGroup = getSizeGroup(item)
+    if (sizeGroup) {
+      return acc + sizeGroup.options.reduce((s, opt) => {
+        const key = `${item._id}_${opt.name}`
+        const qty = cart[key] || 0
+        const price = (item.discountedPrice || item.price || 0) + (opt.extraPrice || 0)
+        return s + qty * price
+      }, 0)
+    }
+    const qty = cart[item._id] || 0
+    return acc + qty * (item.discountedPrice || item.price || 0)
+  }, 0)
+
+  const getQtyForItem = (item) => {
+    const key = getCartKey(item)
+    return cart[key] || 0
+  }
 
   const scrollTo = (cat) => {
     setActiveCategory(cat)
@@ -115,9 +159,12 @@ const RestaurantDetailPage = () => {
               <p className='font-black text-gray-800 text-base mb-3 border-l-4 border-orange-500 pl-3'>{section.category}</p>
               <div className='flex flex-col gap-3'>
                 {items.map(item => {
-                  const qty = cart[item._id]||0
-                  const price = item.discountedPrice||item.price||0
+                  const qty = getQtyForItem(item)
+                  const price = getItemPrice(item)
                   const hasDisc = item.discountedPrice && item.discountedPrice < item.price
+                  const sizeGroup = getSizeGroup(item)
+                  const currentSize = selectedSize[item._id] || sizeGroup?.options[0]?.name
+
                   return (
                     <div key={item._id} className='bg-white rounded-2xl p-4 flex gap-3 shadow-sm border border-gray-100'>
                       <div className='relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-gray-100'>
@@ -134,10 +181,27 @@ const RestaurantDetailPage = () => {
                               <p className='font-bold text-gray-900 text-sm truncate'>{item.name}</p>
                             </div>
                             {item.description && <p className='text-xs text-gray-400 line-clamp-2 mb-1'>{item.description}</p>}
+
+                            {sizeGroup && (
+                              <div className='flex gap-1.5 mb-1.5'>
+                                {sizeGroup.options.map(opt => {
+                                  const optPrice = (item.discountedPrice || item.price || 0) + (opt.extraPrice || 0)
+                                  const isActive = currentSize === opt.name
+                                  return (
+                                    <button key={opt.name}
+                                      onClick={() => setSelectedSize(p => ({...p, [item._id]: opt.name}))}
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all ${isActive ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-500 border-gray-300'}`}>
+                                      {opt.name} ₹{optPrice}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )}
+
                             <div className='flex items-center gap-2'>
                               <p className='font-black text-gray-900 text-sm'>₹{price}</p>
-                              {hasDisc && <p className='text-xs text-gray-400 line-through'>₹{item.price}</p>}
-                              {hasDisc && <span className='text-[10px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded'>{Math.round((1-price/item.price)*100)}% OFF</span>}
+                              {!sizeGroup && hasDisc && <p className='text-xs text-gray-400 line-through'>₹{item.price}</p>}
+                              {!sizeGroup && hasDisc && <span className='text-[10px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded'>{Math.round((1-price/item.price)*100)}% OFF</span>}
                             </div>
                           </div>
                           {qty===0 ? (
@@ -162,7 +226,16 @@ const RestaurantDetailPage = () => {
 
       {totalItems>0 && (
         <div className='fixed bottom-4 left-4 right-4 z-50'>
-          <button onClick={()=>toast('Food checkout coming soon! 🚧', {duration:2000})}
+          <button
+            onClick={() => navigate('/food-checkout', {
+              state: {
+                cart,
+                allItems,
+                restaurantId: id,
+                restaurantName: restaurant.name,
+                restaurantDeliveryFee: restaurant.deliveryFee || 0,
+              }
+            })}
             className='w-full bg-orange-500 text-white rounded-2xl px-5 py-4 flex items-center justify-between shadow-xl shadow-orange-500/30 active:scale-[0.98] transition'>
             <span className='bg-orange-600 text-white text-xs font-black px-2 py-1 rounded-lg'>{totalItems} item{totalItems>1?'s':''}</span>
             <span className='font-black text-base'>View Cart</span>
