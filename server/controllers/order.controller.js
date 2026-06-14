@@ -46,7 +46,7 @@ import mongoose         from 'mongoose'
 import crypto           from 'crypto'
 import Razorpay         from 'razorpay'
 import OrderModel       from '../models/order.model.js'
-import CartProductModel from '../models/cartProduct.model.js'
+import CartProductModel from '../models/cartproduct.model.js'
 import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 
