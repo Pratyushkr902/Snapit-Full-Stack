@@ -1,10 +1,99 @@
-import AddressModel from "../models/address.model.js";
-import UserModel from "../models/user.model.js";
+import { body, validationResult } from 'express-validator'
+import AddressModel from "../models/address.model.js"
+import UserModel    from "../models/user.model.js"
 
-export const addAddressController = async(request, response) => {
+// ─── SHARED INPUT VALIDATION ─────────────────────────────────────────────────
+//
+// SECURITY FIX: The original controller accepted all fields from req.body with
+// no type-checking, length limits, or sanitisation.  A user could pass:
+//   • Objects/arrays for string fields (prototype pollution via mongoose)
+//   • Arbitrarily long strings (DB bloat, potential DoS)
+//   • Non-numeric lat/lng (NaN stored silently)
+//   • Non-numeric pincode (invalid postal codes pass through)
+//   • Short/invalid mobile numbers
+//
+// express-validator is already installed in server/package.json.
+// These validators are exported so address.route.js can use them as middleware.
+
+export const validateCreateAddress = [
+    body('address_line')
+        .trim()
+        .notEmpty().withMessage('Address line is required.')
+        .isLength({ min: 5, max: 200 }).withMessage('Address must be 5–200 characters.'),
+
+    body('city')
+        .trim()
+        .notEmpty().withMessage('City is required.')
+        .isLength({ max: 100 }).withMessage('City name too long.')
+        .matches(/^[a-zA-Z\s\-'.]+$/).withMessage('City contains invalid characters.'),
+
+    body('state')
+        .trim()
+        .notEmpty().withMessage('State is required.')
+        .isLength({ max: 100 }).withMessage('State name too long.')
+        .matches(/^[a-zA-Z\s\-'.]+$/).withMessage('State contains invalid characters.'),
+
+    body('country')
+        .trim()
+        .notEmpty().withMessage('Country is required.')
+        .isLength({ max: 100 }).withMessage('Country name too long.')
+        .matches(/^[a-zA-Z\s\-'.]+$/).withMessage('Country contains invalid characters.'),
+
+    body('pincode')
+        .trim()
+        .notEmpty().withMessage('Pincode is required.')
+        .matches(/^\d{6}$/).withMessage('Pincode must be exactly 6 digits.'),
+
+    body('mobile')
+        .trim()
+        .notEmpty().withMessage('Mobile number is required.')
+        .matches(/^[6-9]\d{9}$/).withMessage('Mobile must be a valid 10-digit Indian number.'),
+
+    body('lat')
+        .optional({ nullable: true })
+        .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90.'),
+
+    body('lng')
+        .optional({ nullable: true })
+        .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180.'),
+]
+
+export const validateUpdateAddress = [
+    body('_id')
+        .notEmpty().withMessage('Address ID is required.')
+        .isMongoId().withMessage('Invalid address ID.'),
+
+    // Same field rules as create — reuse them
+    ...validateCreateAddress,
+]
+
+// ─── VALIDATION RESULT HANDLER (shared) ──────────────────────────────────────
+const checkValidation = (req, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: errors.array()[0].msg,
+            errors:  errors.array(),
+            error:   true,
+            success: false,
+        })
+    }
+    return null
+}
+
+// ─── CONTROLLERS ─────────────────────────────────────────────────────────────
+
+export const addAddressController = async (request, response) => {
     try {
-        const userId = request.userId // middleware
-        const { address_line, city, state, pincode, country, mobile, lat, lng } = request.body
+        const validationError = checkValidation(request, response)
+        if (validationError) return validationError
+
+        const userId = request.userId  // set by auth middleware
+
+        const {
+            address_line, city, state, pincode,
+            country, mobile, lat, lng
+        } = request.body
 
         const createAddress = new AddressModel({
             address_line,
@@ -13,107 +102,149 @@ export const addAddressController = async(request, response) => {
             country,
             pincode,
             mobile,
-            lat : lat || null,
-            lng : lng || null,
-            userId : userId
+            lat:    lat != null ? Number(lat) : null,
+            lng:    lng != null ? Number(lng) : null,
+            userId,
         })
+
         const saveAddress = await createAddress.save()
 
-        const addUserAddressId = await UserModel.findByIdAndUpdate(userId, {
-            $push : {
-                address_details : saveAddress._id
+        await UserModel.findByIdAndUpdate(userId, {
+            $push: { address_details: saveAddress._id },
+        })
+
+        return response.json({
+            message: "Address Created Successfully",
+            error:   false,
+            success: true,
+            data:    saveAddress,
+        })
+    } catch (error) {
+        console.error('[addAddressController]', error.message)
+        return response.status(500).json({
+            message: "Failed to create address.",
+            error:   true,
+            success: false,
+        })
+    }
+}
+
+export const getAddressController = async (request, response) => {
+    try {
+        const userId = request.userId  // set by auth middleware
+
+        const data = await AddressModel
+            .find({ userId })
+            .sort({ createdAt: -1 })
+
+        return response.json({
+            data,
+            message: "List of addresses",
+            error:   false,
+            success: true,
+        })
+    } catch (error) {
+        console.error('[getAddressController]', error.message)
+        return response.status(500).json({
+            message: "Failed to fetch addresses.",
+            error:   true,
+            success: false,
+        })
+    }
+}
+
+export const updateAddressController = async (request, response) => {
+    try {
+        const validationError = checkValidation(request, response)
+        if (validationError) return validationError
+
+        const userId = request.userId  // set by auth middleware
+
+        const {
+            _id, address_line, city, state,
+            country, pincode, mobile, lat, lng
+        } = request.body
+
+        // SECURITY: { _id, userId } filter ensures user can only update their own addresses (IDOR protection)
+        const updateAddress = await AddressModel.updateOne(
+            { _id, userId },
+            {
+                address_line,
+                city,
+                state,
+                country,
+                mobile,
+                pincode,
+                lat: lat != null ? Number(lat) : null,
+                lng: lng != null ? Number(lng) : null,
             }
-        })
+        )
+
+        if (updateAddress.matchedCount === 0) {
+            return response.status(404).json({
+                message: "Address not found or access denied.",
+                error:   true,
+                success: false,
+            })
+        }
 
         return response.json({
-            message : "Address Created Successfully",
-            error : false,
-            success : true,
-            data : saveAddress
+            message: "Address Updated",
+            error:   false,
+            success: true,
+            data:    updateAddress,
         })
-
     } catch (error) {
+        console.error('[updateAddressController]', error.message)
         return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
+            message: "Failed to update address.",
+            error:   true,
+            success: false,
         })
     }
 }
 
-export const getAddressController = async(request, response) => {
+export const deleteAddresscontroller = async (request, response) => {
     try {
-        const userId = request.userId // middleware auth
+        const userId = request.userId  // set by auth middleware
 
-        const data = await AddressModel.find({ userId : userId }).sort({ createdAt : -1 })
-
-        return response.json({
-            data : data,
-            message : "List of address",
-            error : false,
-            success : true
-        })
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
-    }
-}
-
-export const updateAddressController = async(request, response) => {
-    try {
-        const userId = request.userId // middleware auth
-        const { _id, address_line, city, state, country, pincode, mobile, lat, lng } = request.body
-
-        const updateAddress = await AddressModel.updateOne({ _id : _id, userId : userId }, {
-            address_line,
-            city,
-            state,
-            country,
-            mobile,
-            pincode,
-            lat : lat || null,
-            lng : lng || null,
-        })
-
-        return response.json({
-            message : "Address Updated",
-            error : false,
-            success : true,
-            data : updateAddress
-        })
-    } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
-    }
-}
-
-export const deleteAddresscontroller = async(request, response) => {
-    // IDOR protection - verify ownership before delete
-    try {
-        const userId = request.userId // auth middleware
         const { _id } = request.body
 
-        const disableAddress = await AddressModel.updateOne({ _id : _id, userId }, {
-            status : false
-        })
+        // SECURITY FIX: Validate _id is a proper MongoId before DB call
+        if (!_id || !/^[a-f\d]{24}$/i.test(_id)) {
+            return response.status(400).json({
+                message: "Invalid address ID.",
+                error:   true,
+                success: false,
+            })
+        }
+
+        // SECURITY: { _id, userId } filter ensures IDOR is impossible
+        const disableAddress = await AddressModel.updateOne(
+            { _id, userId },
+            { status: false }
+        )
+
+        if (disableAddress.matchedCount === 0) {
+            return response.status(404).json({
+                message: "Address not found or access denied.",
+                error:   true,
+                success: false,
+            })
+        }
 
         return response.json({
-            message : "Address remove",
-            error : false,
-            success : true,
-            data : disableAddress
+            message: "Address removed",
+            error:   false,
+            success: true,
+            data:    disableAddress,
         })
     } catch (error) {
+        console.error('[deleteAddresscontroller]', error.message)
         return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
+            message: "Failed to remove address.",
+            error:   true,
+            success: false,
         })
     }
 }
