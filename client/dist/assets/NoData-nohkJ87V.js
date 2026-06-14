@@ -1,1 +1,0 @@
-import{C as a}from"./chunk-vendor-Dud1btXW.js";import{i as s}from"./index-BQR2T3Cn.js";const r=()=>a.jsxs("div",{className:"flex flex-col items-center justify-center p-4 gap-2",children:[a.jsx("img",{src:s,alt:"no data",className:"w-36"}),a.jsx("p",{className:"text-neutral-500",children:"No Data"})]});export{r as N};
