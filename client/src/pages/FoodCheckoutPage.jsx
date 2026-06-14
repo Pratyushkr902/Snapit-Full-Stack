@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import AddAddress from '../components/AddAddress'
@@ -6,6 +6,7 @@ import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import toast from 'react-hot-toast'
 import { loadRazorpay } from '../utils/loadRazorpay'
+import { useGlobalContext } from '../provider/GlobalProvider'
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -54,6 +55,9 @@ const FoodCheckoutPage = () => {
   const location  = useLocation()
   const user      = useSelector(s => s.user)
   const addressList = useSelector(s => s.addresses.addressList)
+  const { fetchAddress } = useGlobalContext()
+
+  useEffect(() => { fetchAddress() }, [])
 
   const {
     cart = {},
@@ -115,7 +119,7 @@ const FoodCheckoutPage = () => {
     : 0
 
   const FREE_DELIVERY_THRESHOLD = 399
-const deliveryFee = subTotal >= FREE_DELIVERY_THRESHOLD ? 0 : restaurantDeliveryFee
+  const deliveryFee = subTotal >= FREE_DELIVERY_THRESHOLD ? 0 : restaurantDeliveryFee
   const taxes       = Math.round(subTotal * 0.05)
   const walletBal   = Number(user?.walletBalance || 0)
   const preWallet   = subTotal - discount + deliveryFee + taxes + tipAmt
