@@ -29,3 +29,4 @@ client/ios/App/build/
 .env
 !client/dist/.well-known/
 server/node_modules/
+client/dist/
