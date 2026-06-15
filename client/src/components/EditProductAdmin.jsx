@@ -16,9 +16,9 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
         subCategory: data?.subCategory ? data.subCategory.map(s => s._id || s) : [],
         unit: data?.unit,
         stock: data?.stock,
-        price: data?.price,
-        discount: data?.discount,
-        snapitMargin: data?.snapitMargin ?? '',   // ✅ NEW
+        sellerPrice: data?.sellerPrice ?? '',
+        snapitMargin: data?.snapitMargin ?? '',
+        discount: data?.discount ?? '',
         description: data?.description,
         variantGroup: data?.variantGroup || '',
     })
@@ -33,19 +33,22 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
             subCategory: data?.subCategory ? data.subCategory.map(s => s._id || s) : [],
             unit: data?.unit,
             stock: data?.stock,
-            price: data?.price,
-            discount: data?.discount,
-            snapitMargin: data?.snapitMargin ?? '',   // ✅ NEW
+            sellerPrice: data?.sellerPrice ?? '',
+            snapitMargin: data?.snapitMargin ?? '',
+            discount: data?.discount ?? '',
             description: data?.description,
             variantGroup: data?.variantGroup || '',
         })
     }, [data])
 
+    const sellingPrice = Number(productData.sellerPrice || 0) + Number(productData.snapitMargin || 0)
+
     const handleOnChange = (e) => {
         const { name, value } = e.target
+        const numericFields = ['sellerPrice', 'snapitMargin', 'discount', 'stock']
         setProductData((prev) => ({
             ...prev,
-            [name]: value
+            [name]: numericFields.includes(name) ? (value === '' ? '' : Number(value)) : value
         }))
     }
 
@@ -56,12 +59,9 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
         try {
             const response = await uploadImage(file)
             const { data: responseData } = response
-            const imageUrl = responseData?.data?.url || responseData?.url;
+            const imageUrl = responseData?.data?.url || responseData?.url
             if(imageUrl){
-                setProductData((prev) => ({
-                    ...prev,
-                    image: [...prev.image, imageUrl]
-                }))
+                setProductData((prev) => ({ ...prev, image: [...prev.image, imageUrl] }))
             }
         } catch (error) {
             AxiosToastError(error)
@@ -71,21 +71,27 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
     }
 
     const handleRemoveImage = (index) => {
-        const updatedImages = [...productData.image];
-        updatedImages.splice(index, 1);
-        setProductData((prev) => ({
-            ...prev,
-            image: updatedImages
-        }))
+        const updatedImages = [...productData.image]
+        updatedImages.splice(index, 1)
+        setProductData((prev) => ({ ...prev, image: updatedImages }))
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        const resolvedSellerPrice  = Number(productData.sellerPrice)  || 0
+        const resolvedMargin       = Number(productData.snapitMargin) || 0
+        const resolvedSellingPrice = resolvedSellerPrice + resolvedMargin
+
+        const payload = {
+            ...productData,
+            sellerPrice  : resolvedSellerPrice,
+            snapitMargin : resolvedMargin,
+            sellingPrice : resolvedSellingPrice,
+            price        : resolvedSellingPrice,
+        }
+
         try {
-            const response = await Axios({
-                ...SummaryApi.updateProductDetails, 
-                data: productData
-            })
+            const response = await Axios({ ...SummaryApi.updateProductDetails, data: payload })
             const { data: responseData } = response
             if (responseData.success) {
                 toast.success(responseData.message)
@@ -100,196 +106,99 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
     }
 
     const handleImgError = (e) => {
-        e.target.onerror = null;
-        e.target.src = "https://res.cloudinary.com/daso5ntlt/image/upload/v1773599668/Aashirvaad_Superior_MP_Whole_Wheat_Atta_z8tqsf.jpg";
+        e.target.onerror = null
+        e.target.src = "https://res.cloudinary.com/daso5ntlt/image/upload/v1773599668/Aashirvaad_Superior_MP_Whole_Wheat_Atta_z8tqsf.jpg"
     }
 
-    // Derived: selling price and margin % for display
-    const sellingPrice = (productData.price || 0) - (productData.discount || 0)
-    const autoMarginPct = sellingPrice > 0 && productData.snapitMargin
-        ? ((productData.snapitMargin / sellingPrice) * 100).toFixed(1)
-        : null
-
     return (
-        <section 
-            className='fixed top-0 right-0 bottom-0 left-0 bg-neutral-800 bg-opacity-70 z-50 flex items-center justify-center p-4'
-            onClick={close} 
-        >
-            <div 
-                className='bg-white w-full max-w-2xl p-4 rounded-md overflow-y-auto max-h-[90vh] shadow-xl'
-                onClick={(e) => e.stopPropagation()} 
-            >
+        <section className='fixed top-0 right-0 bottom-0 left-0 bg-neutral-800 bg-opacity-70 z-50 flex items-center justify-center p-4' onClick={close}>
+            <div className='bg-white w-full max-w-2xl p-4 rounded-md overflow-y-auto max-h-[90vh] shadow-xl' onClick={(e) => e.stopPropagation()}>
                 <div className='flex items-center justify-between pb-4 border-b'>
                     <h2 className='font-bold text-lg'>Edit Product</h2>
-                    <button 
-                        type="button" 
-                        onClick={close} 
-                        className='hover:text-red-600 transition-colors p-1 cursor-pointer'
-                    >
+                    <button type="button" onClick={close} className='hover:text-red-600 transition-colors p-1 cursor-pointer'>
                         <IoClose size={25} />
                     </button>
                 </div>
 
                 <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
-                    {/* Images */}
                     <div className='grid gap-1'>
                         <p className='font-medium'>Product Images</p>
                         <div className='flex flex-wrap gap-3'>
                             {productData.image.map((img, index) => (
                                 <div key={img + index} className='relative w-20 h-20 bg-blue-50 border rounded p-1 group'>
-                                    <img 
-                                        src={img} 
-                                        alt={`product-${index}`} 
-                                        onError={handleImgError}
-                                        className='w-full h-full object-scale-down' 
-                                    />
-                                    <button 
-                                        type="button"
-                                        onClick={() => handleRemoveImage(index)}
-                                        className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full cursor-pointer flex items-center justify-center p-0.5'
-                                    >
+                                    <img src={img} alt={`product-${index}`} onError={handleImgError} className='w-full h-full object-scale-down'/>
+                                    <button type="button" onClick={() => handleRemoveImage(index)} className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full cursor-pointer flex items-center justify-center p-0.5'>
                                         <IoClose size={14} />
                                     </button>
                                 </div>
                             ))}
                             <label htmlFor='upload-image' className='w-20 h-20 bg-blue-50 border border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-blue-100'>
                                 {imageLoading ? <Loading /> : <p className='text-xs text-neutral-500'>Upload</p>}
-                                <input 
-                                    type='file' 
-                                    id='upload-image' 
-                                    className='hidden' 
-                                    onChange={handleUploadImage} 
-                                />
+                                <input type='file' id='upload-image' className='hidden' onChange={handleUploadImage}/>
                             </label>
                         </div>
                     </div>
 
-                    {/* Name */}
                     <div className='grid gap-1'>
                         <label htmlFor='name' className='font-medium'>Name</label>
-                        <input
-                            id='name'
-                            name='name'
-                            value={productData.name}
-                            onChange={handleOnChange}
-                            className='bg-blue-50 p-2 border outline-none focus-within:border-primary-200 rounded'
-                            required
-                        />
+                        <input id='name' name='name' value={productData.name} onChange={handleOnChange} className='bg-blue-50 p-2 border outline-none focus-within:border-primary-200 rounded' required/>
                     </div>
 
-                    {/* Unit + Stock */}
                     <div className='grid grid-cols-2 gap-4'>
                         <div className='grid gap-1'>
                             <label htmlFor='unit' className='font-medium'>Unit</label>
-                            <input
-                                id='unit'
-                                name='unit'
-                                value={productData.unit}
-                                onChange={handleOnChange}
-                                className='bg-blue-50 p-2 border outline-none rounded'
-                            />
+                            <input id='unit' name='unit' value={productData.unit} onChange={handleOnChange} className='bg-blue-50 p-2 border outline-none rounded'/>
                         </div>
                         <div className='grid gap-1'>
                             <label htmlFor='stock' className='font-medium'>Stock</label>
-                            <input
-                                id='stock'
-                                name='stock'
-                                type='number'
-                                value={productData.stock}
-                                onChange={handleOnChange}
-                                className='bg-blue-50 p-2 border outline-none rounded'
-                            />
+                            <input id='stock' name='stock' type='number' value={productData.stock} onChange={handleOnChange} className='bg-blue-50 p-2 border outline-none rounded'/>
                         </div>
                     </div>
 
-                    {/* Price + Discount */}
-                    <div className='grid grid-cols-2 gap-4'>
+                    <div className='bg-green-50 border border-green-200 rounded-xl p-4 grid gap-3'>
+                        <p className='font-bold text-green-800 text-sm uppercase tracking-wider'>💰 Pricing</p>
                         <div className='grid gap-1'>
-                            <label htmlFor='price' className='font-medium'>Price (MRP)</label>
-                            <input
-                                id='price'
-                                name='price'
-                                type='number'
-                                value={productData.price}
-                                onChange={handleOnChange}
-                                className='bg-blue-50 p-2 border outline-none rounded'
-                            />
+                            <label htmlFor='sellerPrice' className='font-medium text-sm'>Seller Price <span className='text-xs text-slate-400 font-normal'>(what seller earns)</span></label>
+                            <div className='relative'>
+                                <span className='absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-500'>₹</span>
+                                <input id='sellerPrice' name='sellerPrice' type='number' placeholder='e.g. 200' value={productData.sellerPrice} onChange={handleOnChange} className='bg-white pl-7 p-2 w-full outline-none border focus-within:border-green-400 rounded'/>
+                            </div>
                         </div>
                         <div className='grid gap-1'>
-                            <label htmlFor='discount' className='font-medium'>Discount (₹)</label>
-                            <input
-                                id='discount'
-                                name='discount'
-                                type='number'
-                                value={productData.discount}
-                                onChange={handleOnChange}
-                                className='bg-blue-50 p-2 border outline-none rounded'
-                            />
+                            <label htmlFor='snapitMargin' className='font-medium text-sm'>Snapit Margin <span className='text-xs text-slate-400 font-normal'>(your profit added on top)</span></label>
+                            <div className='relative'>
+                                <span className='absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-500'>₹</span>
+                                <input id='snapitMargin' name='snapitMargin' type='number' placeholder='e.g. 10' value={productData.snapitMargin} onChange={handleOnChange} className='bg-white pl-7 p-2 w-full outline-none border focus-within:border-green-400 rounded'/>
+                            </div>
+                        </div>
+                        <div className='grid gap-1'>
+                            <label className='font-medium text-sm'>Customer Pays (MRP) <span className='text-xs text-slate-400 font-normal'>(auto-calculated)</span></label>
+                            <div className='bg-white border-2 border-green-400 rounded p-2 flex items-center justify-between'>
+                                <span className='text-2xl font-black text-green-700'>₹{sellingPrice.toFixed(2)}</span>
+                                <div className='text-right text-xs text-slate-500'>
+                                    <p>₹{productData.sellerPrice || 0} seller + ₹{productData.snapitMargin || 0} margin</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* ✅ NEW: Snapit Margin */}
                     <div className='grid gap-1'>
-                        <div className='flex items-center justify-between'>
-                            <label htmlFor='snapitMargin' className='font-medium'>
-                                Snapit Margin (₹)
-                            </label>
-                            {autoMarginPct && (
-                                <span className='text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full'>
-                                    {autoMarginPct}% of selling price (₹{sellingPrice})
-                                </span>
-                            )}
-                        </div>
-                        <input
-                            id='snapitMargin'
-                            name='snapitMargin'
-                            type='number'
-                            value={productData.snapitMargin}
-                            onChange={handleOnChange}
-                            placeholder='e.g. 5'
-                            className='bg-blue-50 p-2 border outline-none rounded'
-                        />
-                        <p className='text-[11px] text-gray-400'>
-                            Platform margin earned per sale. Selling price = MRP − Discount = ₹{sellingPrice || '—'}.
-                        </p>
+                        <label htmlFor='discount' className='font-medium'>Discount %</label>
+                        <input id='discount' name='discount' type='number' placeholder='Enter discount %' value={productData.discount} onChange={handleOnChange} className='bg-blue-50 p-2 border outline-none rounded'/>
                     </div>
 
-                    {/* Description */}
                     <div className='grid gap-1'>
                         <label htmlFor='description' className='font-medium'>Description</label>
-                        <textarea
-                            id='description'
-                            name='description'
-                            rows={3}
-                            value={productData.description}
-                            onChange={handleOnChange}
-                            className='bg-blue-50 p-2 border outline-none rounded resize-none'
-                        />
+                        <textarea id='description' name='description' rows={3} value={productData.description} onChange={handleOnChange} className='bg-blue-50 p-2 border outline-none rounded resize-none'/>
                     </div>
 
-                    {/* Variant Group */}
                     <div className='grid gap-1'>
-                        <label htmlFor='variantGroup' className='font-medium'>
-                            Variant Group <span className='text-gray-400 font-normal text-xs'>(optional)</span>
-                        </label>
-                        <input
-                            id='variantGroup'
-                            name='variantGroup'
-                            value={productData.variantGroup}
-                            onChange={handleOnChange}
-                            placeholder='e.g. lays-classic  or  amul-butter'
-                            className='bg-blue-50 p-2 border outline-none rounded'
-                        />
-                        <p className='text-[11px] text-gray-400'>
-                            Give the same group name to all size variants of this product so they appear as size pills on the product page.
-                        </p>
+                        <label htmlFor='variantGroup' className='font-medium'>Variant Group <span className='text-gray-400 font-normal text-xs'>(optional)</span></label>
+                        <input id='variantGroup' name='variantGroup' value={productData.variantGroup} onChange={handleOnChange} placeholder='e.g. lays-classic or amul-butter' className='bg-blue-50 p-2 border outline-none rounded'/>
+                        <p className='text-[11px] text-gray-400'>Give the same group name to all size variants of this product so they appear as size pills on the product page.</p>
                     </div>
                     
-                    <button 
-                        type="submit" 
-                        disabled={imageLoading}
-                        className={`bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded mt-2 transition-all active:scale-95 ${imageLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
+                    <button type="submit" disabled={imageLoading} className={`bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded mt-2 transition-all active:scale-95 ${imageLoading ? "opacity-50 cursor-not-allowed" : ""}`}>
                         {imageLoading ? "Uploading..." : "Update Product"}
                     </button>
                 </form>
