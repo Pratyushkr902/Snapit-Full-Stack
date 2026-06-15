@@ -16,9 +16,9 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
         subCategory: data?.subCategory ? data.subCategory.map(s => s._id || s) : [],
         unit: data?.unit,
         stock: data?.stock,
-        sellerPrice: data?.sellerPrice ?? '',
-        snapitMargin: data?.snapitMargin ?? '',
-        discount: data?.discount ?? '',
+        sellerPrice: (data?.sellerPrice !== undefined && data?.sellerPrice !== null && data?.sellerPrice !== '') ? Number(data.sellerPrice) : '',
+        snapitMargin: (data?.snapitMargin !== undefined && data?.snapitMargin !== null && data?.snapitMargin !== '') ? Number(data.snapitMargin) : '',
+        discount: (data?.discount !== undefined && data?.discount !== null && data?.discount !== '') ? Number(data.discount) : '',
         description: data?.description,
         variantGroup: data?.variantGroup || '',
     })
@@ -33,9 +33,9 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
             subCategory: data?.subCategory ? data.subCategory.map(s => s._id || s) : [],
             unit: data?.unit,
             stock: data?.stock,
-            sellerPrice: data?.sellerPrice ?? '',
-            snapitMargin: data?.snapitMargin ?? '',
-            discount: data?.discount ?? '',
+            sellerPrice: (data?.sellerPrice !== undefined && data?.sellerPrice !== null && data?.sellerPrice !== '') ? Number(data.sellerPrice) : '',
+            snapitMargin: (data?.snapitMargin !== undefined && data?.snapitMargin !== null && data?.snapitMargin !== '') ? Number(data.snapitMargin) : '',
+            discount: (data?.discount !== undefined && data?.discount !== null && data?.discount !== '') ? Number(data.discount) : '',
             description: data?.description,
             variantGroup: data?.variantGroup || '',
         })
@@ -78,8 +78,10 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        const resolvedSellerPrice  = Number(productData.sellerPrice)  || 0
-        const resolvedMargin       = Number(productData.snapitMargin) || 0
+
+        // If the field is still empty (user never typed), fall back to the original data value
+        const resolvedSellerPrice  = productData.sellerPrice !== '' ? Number(productData.sellerPrice)  : Number(data?.sellerPrice  ?? 0)
+        const resolvedMargin       = productData.snapitMargin !== '' ? Number(productData.snapitMargin) : Number(data?.snapitMargin ?? 0)
         const resolvedSellingPrice = resolvedSellerPrice + resolvedMargin
 
         const payload = {
