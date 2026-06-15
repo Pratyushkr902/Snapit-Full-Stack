@@ -22,11 +22,10 @@ const QUICK_TAGS = [
   { icon: '🪜', label: 'Climb stairs' },
 ]
 
-const PROMO_CODES = {
-  SNAP20:   { pct: 0.20, label: '20% off' },
-  NEWUSER:  { pct: 0.15, label: '15% off for new users' },
-  FREEDEL:  { pct: 0.10, label: '10% off' },
-}
+const OFFER_PRESETS = [
+  { key: 'OFF20', pct: 0.20, label: '20% off', minOrder: 300 },
+  { key: 'OFF15', pct: 0.15, label: '15% off', minOrder: 0 },
+]
 
 const VegDot = ({ isVeg }) => (
   <span
@@ -97,9 +96,15 @@ const FoodCheckoutPage = () => {
   const [customTip,     setCustomTip]       = useState('')
   const [activeTipIdx,  setActiveTipIdx]    = useState(1)
 
-  const [couponCode,    setCouponCode]      = useState('')
-  const [appliedCoupon, setAppliedCoupon]   = useState(null)
-  const [couponError,   setCouponError]     = useState('')
+  // % offer (20% / 15% buttons)
+  const [appliedOffer,  setAppliedOffer]    = useState(null)
+  const [offerError,    setOfferError]      = useState('')
+
+  // flat coupon (random ₹1–8)
+  const [couponCode,       setCouponCode]       = useState('')
+  const [couponDiscount,   setCouponDiscount]   = useState(0)
+  const [appliedCouponCode, setAppliedCouponCode] = useState('')
+  const [couponError,      setCouponError]      = useState('')
 
   const [walletApplied, setWalletApplied]   = useState(false)
 
@@ -114,18 +119,17 @@ const FoodCheckoutPage = () => {
     return acc + basePrice * (quantities[key] || 1)
   }, 0)
 
-  const discount    = appliedCoupon
-    ? Math.round(subTotal * appliedCoupon.pct)
+  const offerDiscount = appliedOffer
+    ? Math.round(subTotal * appliedOffer.pct)
     : 0
 
   const FREE_DELIVERY_THRESHOLD = 399
   const deliveryFee = subTotal >= FREE_DELIVERY_THRESHOLD ? 0 : restaurantDeliveryFee
-  const taxes       = Math.round(subTotal * 0.05)
   const walletBal   = Number(user?.walletBalance || 0)
-  const preWallet   = subTotal - discount + deliveryFee + taxes + tipAmt
+  const preWallet   = subTotal - offerDiscount - couponDiscount + deliveryFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
   const grandTotal  = Math.max(0, preWallet - walletDeduct)
-  const totalSaved  = 48 + discount + walletDeduct
+  const totalSaved  = 48 + offerDiscount + couponDiscount + walletDeduct
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const changeQty = (key, delta) => {
@@ -145,18 +149,27 @@ const FoodCheckoutPage = () => {
     setTipAmt(isNaN(n) || n < 0 ? 0 : Math.min(500, n))
   }
 
+  const handleApplyOffer = (offer) => {
+    if (offer.minOrder > 0 && subTotal < offer.minOrder) {
+      setOfferError(`Min order ₹${offer.minOrder} needed for this offer`)
+      return
+    }
+    setAppliedOffer(prev => prev?.key === offer.key ? null : offer)
+    setOfferError('')
+  }
+
   const applyCoupon = () => {
     const code = couponCode.trim().toUpperCase()
-    if (PROMO_CODES[code]) {
-      setAppliedCoupon({ code, ...PROMO_CODES[code] })
-      setCouponError('')
-    } else {
-      setCouponError('Invalid promo code. Try SNAP20, NEWUSER or FREEDEL.')
-    }
+    if (!code) { setCouponError('Please enter a coupon code'); return }
+    const randomDiscount = Math.floor(Math.random() * 8) + 1
+    setCouponDiscount(randomDiscount)
+    setAppliedCouponCode(code)
+    setCouponError('')
   }
 
   const removeCoupon = () => {
-    setAppliedCoupon(null)
+    setCouponDiscount(0)
+    setAppliedCouponCode('')
     setCouponCode('')
     setCouponError('')
   }
@@ -191,7 +204,9 @@ const FoodCheckoutPage = () => {
       scheduledDelivery: scheduleNow ? null : scheduleSlot,
       deliveryInstructions: fullInstructions || undefined,
       tip: tipAmt,
-      couponCode: appliedCoupon?.code || undefined,
+      offerKey: appliedOffer?.key || undefined,
+      couponCode: appliedCouponCode || undefined,
+      couponDiscount: couponDiscount || undefined,
       walletAmountUsed: walletDeduct || undefined,
       items: resolvedItems.map(({ item, basePrice, sizeName, key }) => ({
         menuItemId: item._id,
@@ -209,8 +224,8 @@ const FoodCheckoutPage = () => {
   }, [
     activeTags, instructions, restaurantId, restaurantName,
     addressList, selectAddress, scheduleNow, scheduleSlot,
-    tipAmt, appliedCoupon, walletDeduct, resolvedItems,
-    quantities, subTotal, deliveryFee, grandTotal,
+    tipAmt, appliedOffer, appliedCouponCode, couponDiscount,
+    walletDeduct, resolvedItems, quantities, subTotal, deliveryFee, grandTotal,
   ])
 
   // ── Payment handlers ─────────────────────────────────────────────────────────
@@ -517,52 +532,74 @@ const FoodCheckoutPage = () => {
         />
       </div>
 
-      {/* ── Promo code ───────────────────────────────────────────────── */}
+      {/* ── Offers + Coupon ───────────────────────────────────────────── */}
       <div className='bg-white mt-2 px-4 py-4'>
-        <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3'>Promo code</p>
-        <div className='flex gap-2 flex-wrap mb-3'>
-          {Object.keys(PROMO_CODES).map(code => (
-            <button
-              key={code}
-              onClick={() => { setCouponCode(code); setCouponError('') }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
-                appliedCoupon?.code === code
-                  ? 'border-red-400 bg-red-50 text-red-600'
-                  : 'border-gray-200 text-gray-500'
-              }`}
-            >
-              🏷️ {code}
-            </button>
-          ))}
-        </div>
-        {!appliedCoupon ? (
-          <>
-            <div className='flex gap-2'>
-              <input
-                value={couponCode}
-                onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
-                placeholder='Enter promo code'
-                className='flex-1 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
-              />
+
+        {/* % Offer buttons */}
+        <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3'>Offers</p>
+        <div className='grid grid-cols-2 gap-2 mb-1'>
+          {OFFER_PRESETS.map(offer => {
+            const isActive = appliedOffer?.key === offer.key
+            const tooLow   = offer.minOrder > 0 && subTotal < offer.minOrder
+            return (
               <button
-                onClick={applyCoupon}
-                className='px-5 h-10 bg-red-500 text-white text-sm font-semibold rounded-xl'
+                key={offer.key}
+                onClick={() => handleApplyOffer(offer)}
+                className={`border-2 rounded-xl py-3 text-center transition-all ${
+                  isActive
+                    ? 'border-red-500 bg-red-50'
+                    : tooLow
+                    ? 'border-gray-100 opacity-50'
+                    : 'border-gray-200'
+                }`}
               >
-                Apply
+                <p className={`text-sm font-bold ${isActive ? 'text-red-500' : 'text-gray-800'}`}>
+                  {offer.label}
+                </p>
+                {offer.minOrder > 0 && (
+                  <p className='text-xs text-gray-400 mt-0.5'>Min ₹{offer.minOrder}</p>
+                )}
+                {isActive && (
+                  <p className='text-xs text-red-400 mt-0.5'>Tap to remove</p>
+                )}
               </button>
+            )
+          })}
+        </div>
+        {offerError && <p className='text-xs text-red-500 mb-3'>{offerError}</p>}
+
+        {/* Flat coupon — random ₹1–8 */}
+        <div className='mt-4'>
+          <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2'>Coupon code</p>
+          {!appliedCouponCode ? (
+            <>
+              <div className='flex gap-2'>
+                <input
+                  value={couponCode}
+                  onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
+                  placeholder='Enter any coupon code'
+                  className='flex-1 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
+                />
+                <button
+                  onClick={applyCoupon}
+                  className='px-5 h-10 bg-red-500 text-white text-sm font-semibold rounded-xl'
+                >
+                  Apply
+                </button>
+              </div>
+              {couponError && <p className='text-xs text-red-500 mt-2'>{couponError}</p>}
+            </>
+          ) : (
+            <div className='bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 flex items-center gap-2'>
+              <span className='text-green-600'>✅</span>
+              <div className='flex-1'>
+                <p className='text-xs font-semibold text-green-700'>{appliedCouponCode} applied</p>
+                <p className='text-xs text-green-600'>−₹{couponDiscount} off</p>
+              </div>
+              <button onClick={removeCoupon} className='text-xs text-red-500 font-medium'>Remove</button>
             </div>
-            {couponError && <p className='text-xs text-red-500 mt-2'>{couponError}</p>}
-          </>
-        ) : (
-          <div className='bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 flex items-center gap-2'>
-            <span className='text-green-600'>✅</span>
-            <div className='flex-1'>
-              <p className='text-xs font-semibold text-green-700'>{appliedCoupon.code} applied</p>
-              <p className='text-xs text-green-600'>−₹{discount} off · {appliedCoupon.label}</p>
-            </div>
-            <button onClick={removeCoupon} className='text-xs text-red-500 font-medium'>Remove</button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ── Wallet ───────────────────────────────────────────────────── */}
@@ -603,10 +640,16 @@ const FoodCheckoutPage = () => {
             <span className='text-gray-500'>Item total</span>
             <span className='font-semibold text-gray-800'>₹{subTotal}</span>
           </div>
-          {discount > 0 && (
+          {offerDiscount > 0 && (
             <div className='flex justify-between text-sm'>
-              <span className='text-gray-500'>Promo discount</span>
-              <span className='font-semibold text-green-600'>−₹{discount}</span>
+              <span className='text-gray-500'>Offer discount ({appliedOffer.label})</span>
+              <span className='font-semibold text-green-600'>−₹{offerDiscount}</span>
+            </div>
+          )}
+          {couponDiscount > 0 && (
+            <div className='flex justify-between text-sm'>
+              <span className='text-gray-500'>Coupon ({appliedCouponCode})</span>
+              <span className='font-semibold text-green-600'>−₹{couponDiscount}</span>
             </div>
           )}
           {walletDeduct > 0 && (
@@ -623,10 +666,6 @@ const FoodCheckoutPage = () => {
                 : `₹${deliveryFee}`
               }
             </span>
-          </div>
-          <div className='flex justify-between text-sm'>
-            <span className='text-gray-500'>Taxes & charges (5%)</span>
-            <span className='font-semibold text-gray-800'>₹{taxes}</span>
           </div>
           {tipAmt > 0 && (
             <div className='flex justify-between text-sm'>

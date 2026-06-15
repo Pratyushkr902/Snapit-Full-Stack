@@ -5,7 +5,7 @@ import crypto     from 'crypto'
 
 const getRazorpay = () => new Razorpay({
   key_id:     process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_SECRET_KEY,  // match your .env
+  key_secret: process.env.RAZORPAY_KEY_SECRET,   // ✅ single consistent name
 })
 
 const genOrderId = () =>
@@ -13,13 +13,13 @@ const genOrderId = () =>
 
 const buildCartItems = (items) =>
   (items || []).map(i => ({
-    productId:       i.menuItemId,
-    name:            i.name,
-    image:           i.image || '',
-    price:           Number(i.price),
-    sellerPrice:     Number(i.price),
-    snapitMargin:    0,
-    quantity:        Number(i.quantity),
+    productId:         i.menuItemId,
+    name:              i.name,
+    image:             i.image || '',
+    price:             Number(i.price),
+    sellerPrice:       Number(i.price),
+    snapitMargin:      0,
+    quantity:          Number(i.quantity),
     seller_store_name: null,
   }))
 
@@ -34,11 +34,13 @@ const extractBody = (body) => {
     delivery_fee,
     totalAmt,
     deliveryLocation,
-    tip                 = 0,
-    couponCode          = null,
-    walletAmountUsed    = 0,
+    tip                  = 0,
+    offerKey             = null,   // ✅ now extracted
+    couponCode           = null,
+    couponDiscount       = 0,      // ✅ also extract coupon discount amount
+    walletAmountUsed     = 0,
     deliveryInstructions = null,
-    scheduledDelivery   = null,
+    scheduledDelivery    = null,
   } = body
 
   return {
@@ -51,7 +53,9 @@ const extractBody = (body) => {
     totalAmt:             Number(totalAmt       || 0),
     deliveryLocation,
     tip:                  Math.max(0, Number(tip || 0)),
+    offerKey:             offerKey || null,
     couponCode:           couponCode || null,
+    couponDiscount:       Math.max(0, Number(couponDiscount || 0)),
     walletAmountUsed:     Math.max(0, Number(walletAmountUsed || 0)),
     deliveryInstructions: deliveryInstructions || null,
     scheduledDelivery:    scheduledDelivery    || null,
@@ -63,7 +67,7 @@ const buildOrderFields = (userId, fields, extra = {}) => {
   const {
     restaurantName, addressId, items,
     subTotalAmt, delivery_fee, totalAmt,
-    deliveryLocation, tip, couponCode,
+    deliveryLocation, tip, offerKey, couponCode, couponDiscount,
     walletAmountUsed, deliveryInstructions, scheduledDelivery,
   } = fields
 
@@ -77,7 +81,9 @@ const buildOrderFields = (userId, fields, extra = {}) => {
     delivery_fee,
     totalAmt,
     tip,
+    offerKey,           // ✅ saved
     couponCode,
+    couponDiscount,     // ✅ saved
     walletAmountUsed,
     deliveryInstructions,
     scheduledDelivery,
@@ -94,6 +100,25 @@ const buildOrderFields = (userId, fields, extra = {}) => {
   }
 }
 
+// ── Deduct wallet helper (reused across routes) ─────────────────────────────
+const deductWallet = async (userId, amount, restaurantName) => {
+  if (!amount || amount <= 0) return
+  await UserModel.findByIdAndUpdate(userId, {
+    $inc:  { walletBalance: -amount },
+    $push: {
+      walletTransactions: {
+        $each: [{
+          type:        'debit',
+          amount,
+          description: `Food order at ${restaurantName || 'Restaurant'}`,
+          date:        new Date(),
+        }],
+        $position: 0,
+      },
+    },
+  })
+}
+
 // ── POST /api/restaurant/food-order/cash-on-delivery ───────────────────────
 export async function foodOrderCOD(req, res) {
   try {
@@ -102,13 +127,13 @@ export async function foodOrderCOD(req, res) {
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
 
     const order = new OrderModel(buildOrderFields(req.user._id, fields, {
-      payment_status: 'CASH ON DELIVERY',
-      payment_mode:   'COD',
+      payment_status:  'CASH ON DELIVERY',
+      payment_mode:    'COD',
       delivery_status: 'Pending',
     }))
     await order.save()
 
-    console.log(`[foodOrderCOD] ✅ orderId=${order.orderId} total=₹${fields.totalAmt} tip=₹${fields.tip} coupon=${fields.couponCode}`)
+    console.log(`[foodOrderCOD] ✅ orderId=${order.orderId} total=₹${fields.totalAmt} tip=₹${fields.tip} offer=${fields.offerKey} coupon=${fields.couponCode}`)
     return res.json({ success: true, message: 'Food order placed!', data: order })
 
   } catch (err) {
@@ -128,34 +153,26 @@ export async function foodOrderWallet(req, res) {
     if (!user) return res.status(404).json({ success: false, message: 'User not found' })
 
     const walletBal = Number(user.walletBalance || 0)
-    if (walletBal < fields.totalAmt)
-      return res.status(400).json({ success: false, message: `Insufficient wallet balance. Have ₹${walletBal}, need ₹${fields.totalAmt}` })
+    // ✅ deduct only what the frontend says was used from wallet (grandTotal when paying 100% via wallet)
+    const deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : fields.totalAmt
 
-    // Deduct full totalAmt (already accounts for walletAmountUsed on frontend)
-    await UserModel.findByIdAndUpdate(req.user._id, {
-      $inc:  { walletBalance: -fields.totalAmt },
-      $push: {
-        walletTransactions: {
-          $each: [{
-            type:        'debit',
-            amount:      fields.totalAmt,
-            description: `Food order at ${fields.restaurantName || 'Restaurant'}`,
-            date:        new Date(),
-          }],
-          $position: 0,
-        },
-      },
-    })
+    if (walletBal < deductAmt)
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient wallet balance. Have ₹${walletBal}, need ₹${deductAmt}`,
+      })
+
+    await deductWallet(req.user._id, deductAmt, fields.restaurantName)
 
     const order = new OrderModel(buildOrderFields(req.user._id, fields, {
-      paymentId:      'WALLET-' + Date.now(),
-      payment_status: 'PAID',
-      payment_mode:   'WALLET',
+      paymentId:       'WALLET-' + Date.now(),
+      payment_status:  'PAID',
+      payment_mode:    'WALLET',
       delivery_status: 'Confirmed',
     }))
     await order.save()
 
-    console.log(`[foodOrderWallet] ✅ orderId=${order.orderId} total=₹${fields.totalAmt}`)
+    console.log(`[foodOrderWallet] ✅ orderId=${order.orderId} walletDeducted=₹${deductAmt}`)
     return res.json({ success: true, message: 'Paid via wallet!', data: order })
 
   } catch (err) {
@@ -199,6 +216,7 @@ export async function foodOrderVerifyPayment(req, res) {
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature)
       return res.status(400).json({ success: false, message: 'Missing payment verification fields' })
 
+    // ✅ uses same env var as getRazorpay()
     const expected = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -213,28 +231,13 @@ export async function foodOrderVerifyPayment(req, res) {
     if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
 
-    // If partial wallet was also used, deduct that portion
-    if (fields.walletAmountUsed > 0) {
-      await UserModel.findByIdAndUpdate(req.user._id, {
-        $inc:  { walletBalance: -fields.walletAmountUsed },
-        $push: {
-          walletTransactions: {
-            $each: [{
-              type:        'debit',
-              amount:      fields.walletAmountUsed,
-              description: `Wallet used for food order at ${fields.restaurantName || 'Restaurant'}`,
-              date:        new Date(),
-            }],
-            $position: 0,
-          },
-        },
-      })
-    }
+    // ✅ deduct partial wallet if used alongside online payment
+    await deductWallet(req.user._id, fields.walletAmountUsed, fields.restaurantName)
 
     const order = new OrderModel(buildOrderFields(req.user._id, fields, {
-      paymentId:      razorpay_payment_id,
-      payment_status: 'PAID',
-      payment_mode:   'ONLINE',
+      paymentId:       razorpay_payment_id,
+      payment_status:  'PAID',
+      payment_mode:    'ONLINE',
       delivery_status: 'Confirmed',
     }))
     await order.save()
