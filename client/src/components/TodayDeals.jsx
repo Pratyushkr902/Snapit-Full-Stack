@@ -4,24 +4,12 @@ import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
 
-const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "pack of 5", "bundle", "duo", "trio", "multipack", "multi pack", "value pack", "2 pieces", "2pieces", "3 pieces", "3pieces", "2 pcs", "3 pcs", "2pcs", "3pcs", "set of 2", "set of 3"]
-const BOGO_KEYWORDS  = ["b1g1", "buy 1 get 1", "buy one get one", "bogo", "free item", "1+1", "1 + 1", "get 1 free", "get one free", "buy 1 get 1 free", "buy1get1"]
+const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "pack of 5", "bundle", "duo", "trio", "multipack", "multi pack", "value pack", "2 pieces", "3 pieces", "4 pieces", "set of 2", "set of 3"]
+const BOGO_KEYWORDS  = ["buy 1 get 1", "buy one get one", "bogo", "b1g1", "1+1", "get 1 free", "get one free", "buy 1 get 1 free"]
 
 // Check ALL fields of a product for combo/bogo keywords
 const getAllText = (p) =>
-  [
-    p.unit,
-    p.name,
-    p.description,
-    p.category?.name,
-    p.subCategory?.name,
-    p.tags,
-    p.dealType,
-    p.offer,
-    p.offerType,
-    p.label,
-  ]
-    .flat()
+  [p.unit, p.name]
     .filter(Boolean)
     .join(" ")
     .toLowerCase()
