@@ -143,10 +143,15 @@ export function useDealsData() {
       setLoading(true)
       let page = 1, allProducts = [], hasMore = true
       while (hasMore && allProducts.length < 200) {
-        const res = await Axios({ ...SummaryApi.getProduct, data: { page, limit: 100 } })
-        const data = res.data?.data ?? []
-        allProducts = [...allProducts, ...data]
-        hasMore = data.length === 100
+        const res = await Axios({
+          ...SummaryApi.getProduct,
+          data: { page, limit: 100 },
+          withCredentials: true,
+        })
+        const data = res.data?.data ?? res.data ?? []
+        const list = Array.isArray(data) ? data : (data.products ?? data.list ?? [])
+        allProducts = [...allProducts, ...list]
+        hasMore = list.length === 100
         page++
       }
 
