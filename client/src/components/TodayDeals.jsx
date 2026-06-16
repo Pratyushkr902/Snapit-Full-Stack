@@ -4,10 +4,9 @@ import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
 
-const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "pack of 5", "bundle", "duo", "trio", "multipack", "multi pack", "set of 2", "set of 3"]
+const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "pack of 5", "bundle", "duo", "trio", "multipack", "multi pack", "value pack", "set of 2", "set of 3"]
 const BOGO_KEYWORDS  = ["buy 1 get 1", "buy one get one", "bogo", "b1g1", "1+1", "get 1 free", "get one free", "buy 1 get 1 free"]
 
-// Check ALL fields of a product for combo/bogo keywords
 const getAllText = (p) =>
   [p.unit, p.name]
     .filter(Boolean)
@@ -17,7 +16,6 @@ const getAllText = (p) =>
 const isComboProduct = (p) => COMBO_KEYWORDS.some(k => getAllText(p).includes(k))
 const isBogoProduct  = (p) => BOGO_KEYWORDS.some(k => getAllText(p).includes(k))
 
-// discount works with price/sellingPrice OR price/discount fields
 const getDiscount = (product) => {
   const mrp     = Number(product.price)
   const selling = Number(product.sellingPrice ?? product.discount ?? product.discountPrice ?? product.offerPrice)
@@ -55,7 +53,6 @@ function DealCard({ product, isCombo }) {
       className="flex-shrink-0 w-36 bg-white rounded-xl border border-slate-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow relative"
       onClick={() => navigate(`/product/${product._id}`)}
     >
-      {/* Image */}
       <div className="w-full h-28 bg-slate-100 flex items-center justify-center p-2">
         <img
           src={product.image?.[0]}
@@ -70,26 +67,22 @@ function DealCard({ product, isCombo }) {
         />
       </div>
 
-      {/* COMBO / B1G1 top-left badge */}
       <span className={`absolute top-2 left-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded ${isCombo ? "bg-purple-500" : "bg-blue-500"}`}>
         {isCombo ? "COMBO" : "B1G1"}
       </span>
 
-      {/* Discount % — top-right */}
       {discount > 0 && (
         <span className="absolute top-2 right-2 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
           {discount}% OFF
         </span>
       )}
 
-      {/* Low stock */}
       {product.stock > 0 && product.stock <= 10 && (
         <div className="absolute top-[88px] left-0 right-0 bg-red-50 text-red-600 text-[9px] font-bold text-center py-0.5 tracking-wide">
           ONLY {product.stock} LEFT
         </div>
       )}
 
-      {/* 10 MIN + FREE ITEM tags */}
       <div className="flex items-center gap-1 px-2 pt-2">
         <span className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">10 MIN</span>
         {!isCombo && (
@@ -97,13 +90,9 @@ function DealCard({ product, isCombo }) {
         )}
       </div>
 
-      {/* Name */}
       <p className="text-xs font-semibold text-slate-800 line-clamp-2 px-2 pt-1 leading-tight">{product.name}</p>
-
-      {/* Unit */}
       <p className="text-[10px] text-slate-400 px-2 pb-1">{product.unit}</p>
 
-      {/* Price row */}
       <div className="flex items-center justify-between px-2 pb-2 gap-1" onClick={e => e.stopPropagation()}>
         <div className="flex flex-col">
           <span className="text-sm font-bold text-slate-800">₹{sellingPrice}</span>
@@ -120,7 +109,6 @@ function DealCard({ product, isCombo }) {
 }
 
 function CountdownTimer() {
-  // Real timer: counts down to the next exact hour
   const getSecsUntilNextHour = () => {
     const now = new Date()
     return 3600 - (now.getMinutes() * 60 + now.getSeconds())
@@ -166,26 +154,25 @@ export function useDealsData() {
         page++
       }
 
-      // First try: match by keywords in any field
+      // Step 1: keyword match
       let combos = allProducts.filter(p => isComboProduct(p))
       let bogos  = allProducts.filter(p => isBogoProduct(p))
 
-      // Fallback: if no keyword matches found, use discount-based grouping
-      // Combo = 10–29% off, B1G1 = 30%+ off
-      if (combos.length === 0 && bogos.length === 0) {
-        const discounted = allProducts.filter(p => getDiscount(p) > 0)
-        combos = discounted.filter(p => {
-          const d = getDiscount(p)
-          return d >= 10 && d < 30
-        })
-        bogos = discounted.filter(p => getDiscount(p) >= 30)
+      // Step 2: fallback — fill with discounted products if fewer than 5
+      const usedIds = new Set([...combos, ...bogos].map(p => p._id))
+      const discounted = allProducts
+        .filter(p => !usedIds.has(p._id) && getDiscount(p) > 0)
+        .sort((a, b) => getDiscount(b) - getDiscount(a))
 
-        // Last resort: just split discounted products evenly if still empty
-        if (combos.length === 0 && bogos.length === 0 && discounted.length > 0) {
-          const mid = Math.ceil(discounted.length / 2)
-          combos = discounted.slice(0, mid)
-          bogos  = discounted.slice(mid)
-        }
+      if (combos.length < 5) {
+        const needed = 10 - combos.length
+        combos = [...combos, ...discounted.slice(0, needed)]
+      }
+
+      if (bogos.length < 5) {
+        const alreadyUsed = new Set(combos.map(p => p._id))
+        const remaining = discounted.filter(p => !alreadyUsed.has(p._id))
+        bogos = [...bogos, ...remaining.slice(0, 10 - bogos.length)]
       }
 
       setComboProducts(combos)
@@ -211,7 +198,6 @@ export default function TodayDeals() {
     <div className="container mx-auto px-4 my-4">
       <div className="bg-green-50 border border-green-100 rounded-2xl py-4 overflow-hidden">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Today's Deals 🔥</h2>
           <button
@@ -222,10 +208,8 @@ export default function TodayDeals() {
           </button>
         </div>
 
-        {/* Countdown */}
         <CountdownTimer />
 
-        {/* Combo */}
         {(loading || comboProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
@@ -245,7 +229,6 @@ export default function TodayDeals() {
           <div className="mx-4 my-4 border-t border-green-100" />
         )}
 
-        {/* B1G1 */}
         {(loading || bogoProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
