@@ -4,31 +4,28 @@ import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
 
-const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "pack of 5", "bundle", "duo", "trio", "multipack", "multi pack", "value pack", "set of 2", "set of 3"]
-const BOGO_KEYWORDS  = ["buy 1 get 1", "buy one get one", "bogo", "b1g1", "1+1", "get 1 free", "get one free", "buy 1 get 1 free"]
+// Matches: "Pack of 2", "pack of 2", "Pack of 3" etc
+const COMBO_KEYWORDS = ["pack of 2", "pack of 3", "pack of 4", "pack of 5", "combo", "bundle", "duo", "trio", "multipack", "value pack", "set of 2", "set of 3"]
 
-const getAllText = (p) =>
-  [p.unit, p.name]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase()
+// Matches: "Buy 1 Get 1 Free", "buy 1 get 1", "BOGO" etc
+const BOGO_KEYWORDS = ["buy 1 get 1", "buy one get one", "bogo", "b1g1", "1+1", "get 1 free", "get one free"]
 
-const isComboProduct = (p) => COMBO_KEYWORDS.some(k => getAllText(p).includes(k))
-const isBogoProduct  = (p) => BOGO_KEYWORDS.some(k => getAllText(p).includes(k))
+// toLowerCase ensures "Pack of 2" matches "pack of 2"
+const getText = (p) => [p.unit, p.name].filter(Boolean).join(" ").toLowerCase()
+
+const isCombo = (p) => COMBO_KEYWORDS.some(k => getText(p).includes(k))
+const isBogo  = (p) => BOGO_KEYWORDS.some(k => getText(p).includes(k))
 
 const getDiscount = (product) => {
   const mrp     = Number(product.price)
   const selling = Number(product.sellingPrice ?? product.discount ?? product.discountPrice ?? product.offerPrice)
-  if (mrp > 0 && selling > 0 && mrp > selling) {
-    return Math.round(((mrp - selling) / mrp) * 100)
-  }
+  if (mrp > 0 && selling > 0 && mrp > selling) return Math.round(((mrp - selling) / mrp) * 100)
   if (product.discountPercentage > 0) return Math.round(product.discountPercentage)
   return 0
 }
 
-const getSellingPrice = (product) => {
-  return product.sellingPrice ?? product.discount ?? product.discountPrice ?? product.offerPrice ?? product.price
-}
+const getSellingPrice = (product) =>
+  product.sellingPrice ?? product.discount ?? product.discountPrice ?? product.offerPrice ?? product.price
 
 function SkeletonCard() {
   return (
@@ -43,7 +40,7 @@ function SkeletonCard() {
   )
 }
 
-function DealCard({ product, isCombo }) {
+function DealCard({ product, isComboCard }) {
   const navigate = useNavigate()
   const discount     = getDiscount(product)
   const sellingPrice = getSellingPrice(product)
@@ -61,14 +58,13 @@ function DealCard({ product, isCombo }) {
           height={100}
           className="w-full h-full object-contain"
           loading="eager"
-          fetchpriority="high"
           decoding="async"
           onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }}
         />
       </div>
 
-      <span className={`absolute top-2 left-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded ${isCombo ? "bg-purple-500" : "bg-blue-500"}`}>
-        {isCombo ? "COMBO" : "B1G1"}
+      <span className={`absolute top-2 left-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded ${isComboCard ? "bg-purple-500" : "bg-blue-500"}`}>
+        {isComboCard ? "COMBO" : "B1G1"}
       </span>
 
       {discount > 0 && (
@@ -85,7 +81,7 @@ function DealCard({ product, isCombo }) {
 
       <div className="flex items-center gap-1 px-2 pt-2">
         <span className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">10 MIN</span>
-        {!isCombo && (
+        {!isComboCard && (
           <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">FREE ITEM</span>
         )}
       </div>
@@ -154,26 +150,9 @@ export function useDealsData() {
         page++
       }
 
-      // Step 1: keyword match
-      let combos = allProducts.filter(p => isComboProduct(p))
-      let bogos  = allProducts.filter(p => isBogoProduct(p))
-
-      // Step 2: fallback — fill with discounted products if fewer than 5
-      const usedIds = new Set([...combos, ...bogos].map(p => p._id))
-      const discounted = allProducts
-        .filter(p => !usedIds.has(p._id) && getDiscount(p) > 0)
-        .sort((a, b) => getDiscount(b) - getDiscount(a))
-
-      if (combos.length < 5) {
-        const needed = 10 - combos.length
-        combos = [...combos, ...discounted.slice(0, needed)]
-      }
-
-      if (bogos.length < 5) {
-        const alreadyUsed = new Set(combos.map(p => p._id))
-        const remaining = discounted.filter(p => !alreadyUsed.has(p._id))
-        bogos = [...bogos, ...remaining.slice(0, 10 - bogos.length)]
-      }
+      // Exact keyword match — covers "Pack of 2", "Buy 1 Get 1 Free" etc
+      const combos = allProducts.filter(p => isCombo(p))
+      const bogos  = allProducts.filter(p => isBogo(p))
 
       setComboProducts(combos)
       setBogoProducts(bogos)
@@ -210,6 +189,7 @@ export default function TodayDeals() {
 
         <CountdownTimer />
 
+        {/* Combo Offers */}
         {(loading || comboProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
@@ -219,7 +199,7 @@ export default function TodayDeals() {
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
               {loading
                 ? [1,2,3].map(i => <SkeletonCard key={i} />)
-                : comboProducts.map(p => <DealCard key={p._id} product={p} isCombo={true} />)
+                : comboProducts.map(p => <DealCard key={p._id} product={p} isComboCard={true} />)
               }
             </div>
           </>
@@ -229,6 +209,7 @@ export default function TodayDeals() {
           <div className="mx-4 my-4 border-t border-green-100" />
         )}
 
+        {/* Buy 1 Get 1 Free */}
         {(loading || bogoProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
@@ -238,7 +219,7 @@ export default function TodayDeals() {
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
               {loading
                 ? [1,2,3].map(i => <SkeletonCard key={i} />)
-                : bogoProducts.map(p => <DealCard key={p._id} product={p} isCombo={false} />)
+                : bogoProducts.map(p => <DealCard key={p._id} product={p} isComboCard={false} />)
               }
             </div>
           </>
