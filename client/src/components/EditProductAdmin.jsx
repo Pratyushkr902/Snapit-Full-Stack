@@ -6,14 +6,21 @@ import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import Loading from './Loading' 
+import { useSelector } from 'react-redux'
 
 const EditProductAdmin = ({ data, close, fetchProductData }) => {
+    const allCategory    = useSelector(state => state.product.allCategory)
+    const allSubCategory = useSelector(state => state.product.allSubCategory)
+
+    const [selectCategory, setSelectCategory]       = useState("")
+    const [selectSubCategory, setSelectSubCategory] = useState("")
+
     const [productData, setProductData] = useState({
         _id: data?._id,
         name: data?.name,
         image: data?.image || [],
-        category: data?.category ? data.category.map(c => c._id || c) : [], 
-        subCategory: data?.subCategory ? data.subCategory.map(s => s._id || s) : [],
+        category: data?.category ? data.category.map(c => ({ _id: c._id || c, name: c.name || '' })) : [],
+        subCategory: data?.subCategory ? data.subCategory.map(s => ({ _id: s._id || s, name: s.name || '' })) : [],
         unit: data?.unit,
         stock: data?.stock,
         sellerPrice: (data?.sellerPrice !== undefined && data?.sellerPrice !== null && data?.sellerPrice !== '') ? Number(data.sellerPrice) : '',
@@ -29,8 +36,8 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
             _id: data?._id,
             name: data?.name,
             image: data?.image || [],
-            category: data?.category ? data.category.map(c => c._id || c) : [], 
-            subCategory: data?.subCategory ? data.subCategory.map(s => s._id || s) : [],
+            category: data?.category ? data.category.map(c => ({ _id: c._id || c, name: c.name || '' })) : [],
+            subCategory: data?.subCategory ? data.subCategory.map(s => ({ _id: s._id || s, name: s.name || '' })) : [],
             unit: data?.unit,
             stock: data?.stock,
             sellerPrice: (data?.sellerPrice !== undefined && data?.sellerPrice !== null && data?.sellerPrice !== '') ? Number(data.sellerPrice) : '',
@@ -50,6 +57,32 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
             ...prev,
             [name]: numericFields.includes(name) ? (value === '' ? '' : Number(value)) : value
         }))
+    }
+
+    const handleAddCategory = (e) => {
+        const value = e.target.value
+        setSelectCategory(value)
+        const category = allCategory.find(el => el._id === value)
+        if (category && !productData.category.some(c => c._id === category._id)) {
+            setProductData(prev => ({ ...prev, category: [...prev.category, { _id: category._id, name: category.name }] }))
+        }
+    }
+
+    const handleRemoveCategory = (id) => {
+        setProductData(prev => ({ ...prev, category: prev.category.filter(c => c._id !== id) }))
+    }
+
+    const handleAddSubCategory = (e) => {
+        const value = e.target.value
+        setSelectSubCategory(value)
+        const subCategory = allSubCategory.find(el => el._id === value)
+        if (subCategory && !productData.subCategory.some(s => s._id === subCategory._id)) {
+            setProductData(prev => ({ ...prev, subCategory: [...prev.subCategory, { _id: subCategory._id, name: subCategory.name }] }))
+        }
+    }
+
+    const handleRemoveSubCategory = (id) => {
+        setProductData(prev => ({ ...prev, subCategory: prev.subCategory.filter(s => s._id !== id) }))
     }
 
     const handleUploadImage = async (e) => {
@@ -79,13 +112,14 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        // If the field is still empty (user never typed), fall back to the original data value
         const resolvedSellerPrice  = productData.sellerPrice !== '' ? Number(productData.sellerPrice)  : Number(data?.sellerPrice  ?? 0)
         const resolvedMargin       = productData.snapitMargin !== '' ? Number(productData.snapitMargin) : Number(data?.snapitMargin ?? 0)
         const resolvedSellingPrice = resolvedSellerPrice + resolvedMargin
 
         const payload = {
             ...productData,
+            category     : productData.category.map(c => c._id),
+            subCategory  : productData.subCategory.map(s => s._id),
             sellerPrice  : resolvedSellerPrice,
             snapitMargin : resolvedMargin,
             sellingPrice : resolvedSellingPrice,
@@ -123,6 +157,7 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                 </div>
 
                 <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
+                    {/* Images */}
                     <div className='grid gap-1'>
                         <p className='font-medium'>Product Images</p>
                         <div className='flex flex-wrap gap-3'>
@@ -141,11 +176,55 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                         </div>
                     </div>
 
+                    {/* Name */}
                     <div className='grid gap-1'>
                         <label htmlFor='name' className='font-medium'>Name</label>
                         <input id='name' name='name' value={productData.name} onChange={handleOnChange} className='bg-blue-50 p-2 border outline-none focus-within:border-primary-200 rounded' required/>
                     </div>
 
+                    {/* Category */}
+                    <div className='grid gap-1'>
+                        <label className='font-medium'>Category</label>
+                        <div className='flex flex-wrap gap-2 mb-1'>
+                            {productData.category.map((c) => (
+                                <div key={c._id} className='flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full'>
+                                    <span>{c.name || c._id}</span>
+                                    <button type="button" onClick={() => handleRemoveCategory(c._id)} className='hover:text-red-600'>
+                                        <IoClose size={13} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <select value={selectCategory} onChange={handleAddCategory} className='bg-blue-50 p-2 border outline-none rounded'>
+                            <option value=''>-- Select Category --</option>
+                            {allCategory.map(cat => (
+                                <option key={cat._id} value={cat._id}>{cat.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* SubCategory */}
+                    <div className='grid gap-1'>
+                        <label className='font-medium'>Sub Category</label>
+                        <div className='flex flex-wrap gap-2 mb-1'>
+                            {productData.subCategory.map((s) => (
+                                <div key={s._id} className='flex items-center gap-1 bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full'>
+                                    <span>{s.name || s._id}</span>
+                                    <button type="button" onClick={() => handleRemoveSubCategory(s._id)} className='hover:text-red-600'>
+                                        <IoClose size={13} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <select value={selectSubCategory} onChange={handleAddSubCategory} className='bg-blue-50 p-2 border outline-none rounded'>
+                            <option value=''>-- Select Sub Category --</option>
+                            {allSubCategory.map(sub => (
+                                <option key={sub._id} value={sub._id}>{sub.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Unit & Stock */}
                     <div className='grid grid-cols-2 gap-4'>
                         <div className='grid gap-1'>
                             <label htmlFor='unit' className='font-medium'>Unit</label>
@@ -157,6 +236,7 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                         </div>
                     </div>
 
+                    {/* Pricing */}
                     <div className='bg-green-50 border border-green-200 rounded-xl p-4 grid gap-3'>
                         <p className='font-bold text-green-800 text-sm uppercase tracking-wider'>💰 Pricing</p>
                         <div className='grid gap-1'>
@@ -184,16 +264,19 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                         </div>
                     </div>
 
+                    {/* Discount */}
                     <div className='grid gap-1'>
                         <label htmlFor='discount' className='font-medium'>Discount %</label>
                         <input id='discount' name='discount' type='number' placeholder='Enter discount %' value={productData.discount} onChange={handleOnChange} className='bg-blue-50 p-2 border outline-none rounded'/>
                     </div>
 
+                    {/* Description */}
                     <div className='grid gap-1'>
                         <label htmlFor='description' className='font-medium'>Description</label>
                         <textarea id='description' name='description' rows={3} value={productData.description} onChange={handleOnChange} className='bg-blue-50 p-2 border outline-none rounded resize-none'/>
                     </div>
 
+                    {/* Variant Group */}
                     <div className='grid gap-1'>
                         <label htmlFor='variantGroup' className='font-medium'>Variant Group <span className='text-gray-400 font-normal text-xs'>(optional)</span></label>
                         <input id='variantGroup' name='variantGroup' value={productData.variantGroup} onChange={handleOnChange} placeholder='e.g. lays-classic or amul-butter' className='bg-blue-50 p-2 border outline-none rounded'/>
