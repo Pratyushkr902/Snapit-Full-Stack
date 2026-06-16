@@ -4,15 +4,20 @@ import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
 
-const COMBO_KEYWORDS = ["pack of 2", "pack of 3", "pack of 4", "pack of 5", "combo", "bundle", "duo", "trio", "multipack", "value pack", "set of 2", "set of 3", "4 pcs", "2 pcs", "3 pcs", "6 pcs", "pcs"]
-const BOGO_KEYWORDS = ["buy 1 get 1", "buy one get one", "bogo", "b1g1", "1+1", "get 1 free", "get one free", "buy 1 get 1 free"]
+// Matches: "Pack of 2", "pack of 2", "Pack of 3" etc
+const COMBO_KEYWORDS = ["pack of 2", "pack of 3", "pack of 4", "pack of 5", "combo", "bundle", "duo", "trio", "multipack", "value pack", "set of 2", "set of 3"]
 
+// Matches: "Buy 1 Get 1 Free", "buy 1 get 1", "BOGO" etc
+const BOGO_KEYWORDS = ["buy 1 get 1", "buy one get one", "bogo", "b1g1", "1+1", "get 1 free", "get one free"]
+
+// toLowerCase ensures "Pack of 2" matches "pack of 2"
 const getText = (p) => [p.unit, p.name].filter(Boolean).join(" ").toLowerCase()
+
 const isCombo = (p) => COMBO_KEYWORDS.some(k => getText(p).includes(k))
 const isBogo  = (p) => BOGO_KEYWORDS.some(k => getText(p).includes(k))
 
 const getDiscount = (product) => {
-  const mrp = Number(product.price)
+  const mrp     = Number(product.price)
   const selling = Number(product.sellingPrice ?? product.discount ?? product.discountPrice ?? product.offerPrice)
   if (mrp > 0 && selling > 0 && mrp > selling) return Math.round(((mrp - selling) / mrp) * 100)
   if (product.discountPercentage > 0) return Math.round(product.discountPercentage)
@@ -37,43 +42,63 @@ function SkeletonCard() {
 
 function DealCard({ product, isComboCard }) {
   const navigate = useNavigate()
-  const discount = getDiscount(product)
+  const discount     = getDiscount(product)
   const sellingPrice = getSellingPrice(product)
+
   return (
     <div
       className="flex-shrink-0 w-36 bg-white rounded-xl border border-slate-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow relative"
       onClick={() => navigate(`/product/${product._id}`)}
     >
       <div className="w-full h-28 bg-slate-100 flex items-center justify-center p-2">
-        <img src={product.image?.[0]} alt={product.name} width={100} height={100}
-          className="w-full h-full object-contain" loading="eager" decoding="async"
-          onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }} />
+        <img
+          src={product.image?.[0]}
+          alt={product.name}
+          width={100}
+          height={100}
+          className="w-full h-full object-contain"
+          loading="eager"
+          decoding="async"
+          onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }}
+        />
       </div>
+
       <span className={`absolute top-2 left-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded ${isComboCard ? "bg-purple-500" : "bg-blue-500"}`}>
         {isComboCard ? "COMBO" : "B1G1"}
       </span>
+
       {discount > 0 && (
         <span className="absolute top-2 right-2 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
           {discount}% OFF
         </span>
       )}
+
       {product.stock > 0 && product.stock <= 10 && (
         <div className="absolute top-[88px] left-0 right-0 bg-red-50 text-red-600 text-[9px] font-bold text-center py-0.5 tracking-wide">
           ONLY {product.stock} LEFT
         </div>
       )}
+
       <div className="flex items-center gap-1 px-2 pt-2">
         <span className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">10 MIN</span>
-        {!isComboCard && <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">FREE ITEM</span>}
+        {!isComboCard && (
+          <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">FREE ITEM</span>
+        )}
       </div>
+
       <p className="text-xs font-semibold text-slate-800 line-clamp-2 px-2 pt-1 leading-tight">{product.name}</p>
       <p className="text-[10px] text-slate-400 px-2 pb-1">{product.unit}</p>
+
       <div className="flex items-center justify-between px-2 pb-2 gap-1" onClick={e => e.stopPropagation()}>
         <div className="flex flex-col">
           <span className="text-sm font-bold text-slate-800">₹{sellingPrice}</span>
-          {discount > 0 && <span className="text-[10px] text-slate-400 line-through">₹{product.price}</span>}
+          {discount > 0 && (
+            <span className="text-[10px] text-slate-400 line-through">₹{product.price}</span>
+          )}
         </div>
-        <div className="w-16"><AddToCartButton data={product} /></div>
+        <div className="w-16">
+          <AddToCartButton data={product} />
+        </div>
       </div>
     </div>
   )
@@ -110,21 +135,30 @@ function CountdownTimer() {
 
 export function useDealsData() {
   const [comboProducts, setComboProducts] = useState([])
-  const [bogoProducts, setBogoProducts] = useState([])
+  const [bogoProducts,  setBogoProducts]  = useState([])
   const [loading, setLoading] = useState(true)
 
   const fetchDeals = useCallback(async () => {
     try {
       setLoading(true)
-      const [comboRes1, comboRes2, bogoRes] = await Promise.all([
-        Axios({ ...SummaryApi.searchProduct, data: { q: "Pack of 2", page: 1, limit: 50 } }),
-        Axios({ ...SummaryApi.searchProduct, data: { q: "combo", page: 1, limit: 50 } }),
-        Axios({ ...SummaryApi.searchProduct, data: { q: "Buy 1 Get 1 Free", page: 1, limit: 50 } }),
-      ])
-      const comboRaw = [...(comboRes1.data?.data ?? []), ...(comboRes2.data?.data ?? [])]
-      const seen = new Set()
-      const combos = comboRaw.filter(p => { if (seen.has(p._id)) return false; seen.add(p._id); return true })
-      const bogos = bogoRes.data?.data ?? []
+      let page = 1, allProducts = [], hasMore = true
+      while (hasMore) {
+        const res = await Axios({
+          ...SummaryApi.getProduct,
+          data: { page, limit: 100 },
+          withCredentials: true,
+        })
+        const data = res.data?.data ?? res.data ?? []
+        const list = Array.isArray(data) ? data : (data.products ?? data.list ?? [])
+        allProducts = [...allProducts, ...list]
+        hasMore = list.length === 100
+        page++
+      }
+
+      // Exact keyword match — covers "Pack of 2", "Buy 1 Get 1 Free" etc
+      const combos = allProducts.filter(p => isCombo(p))
+      const bogos  = allProducts.filter(p => isBogo(p))
+
       setComboProducts(combos)
       setBogoProducts(bogos)
     } catch (err) {
@@ -147,14 +181,20 @@ export default function TodayDeals() {
   return (
     <div className="container mx-auto px-4 my-4">
       <div className="bg-green-50 border border-green-100 rounded-2xl py-4 overflow-hidden">
+
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Today's Deals 🔥</h2>
-          <button onClick={() => navigate("/deals")}
-            className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-full px-4 py-1.5 transition-colors">
+          <button
+            onClick={() => navigate("/deals")}
+            className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-full px-4 py-1.5 transition-colors"
+          >
             See All →
           </button>
         </div>
+
         <CountdownTimer />
+
+        {/* Combo Offers */}
         {(loading || comboProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
@@ -162,13 +202,19 @@ export default function TodayDeals() {
               <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-100 rounded px-2 py-0.5">SAVE MORE</span>
             </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
-              {loading ? [1,2,3].map(i => <SkeletonCard key={i} />) : comboProducts.map(p => <DealCard key={p._id} product={p} isComboCard={true} />)}
+              {loading
+                ? [1,2,3].map(i => <SkeletonCard key={i} />)
+                : comboProducts.map(p => <DealCard key={p._id} product={p} isComboCard={true} />)
+              }
             </div>
           </>
         )}
+
         {(comboProducts.length > 0 || loading) && (bogoProducts.length > 0 || loading) && (
           <div className="mx-4 my-4 border-t border-green-100" />
         )}
+
+        {/* Buy 1 Get 1 Free */}
         {(loading || bogoProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
@@ -176,10 +222,14 @@ export default function TodayDeals() {
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5">FREE ITEM</span>
             </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
-              {loading ? [1,2,3].map(i => <SkeletonCard key={i} />) : bogoProducts.map(p => <DealCard key={p._id} product={p} isComboCard={false} />)}
+              {loading
+                ? [1,2,3].map(i => <SkeletonCard key={i} />)
+                : bogoProducts.map(p => <DealCard key={p._id} product={p} isComboCard={false} />)
+              }
             </div>
           </>
         )}
+
       </div>
     </div>
   )
