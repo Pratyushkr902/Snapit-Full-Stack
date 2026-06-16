@@ -142,7 +142,7 @@ export function useDealsData() {
     try {
       setLoading(true)
       let page = 1, allProducts = [], hasMore = true
-      while (hasMore && allProducts.length < 200) {
+      while (hasMore) {
         const res = await Axios({
           ...SummaryApi.getProduct,
           data: { page, limit: 100 },
