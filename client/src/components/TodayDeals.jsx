@@ -4,11 +4,30 @@ import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
 
-const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "bundle", "duo", "trio"]
-const BOGO_KEYWORDS  = ["b1g1", "buy 1 get 1", "buy one get one", "bogo", "free item", "1+1"]
+const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "bundle", "duo", "trio", "multipack", "multi pack", "value pack"]
+const BOGO_KEYWORDS  = ["b1g1", "buy 1 get 1", "buy one get one", "bogo", "free item", "1+1", "1 + 1", "get 1 free", "get one free"]
 
-const isComboUnit = (unit = "") => COMBO_KEYWORDS.some(k => unit.toLowerCase().includes(k))
-const isBogoUnit  = (unit = "") => BOGO_KEYWORDS.some(k => unit.toLowerCase().includes(k))
+// Check ALL fields of a product for combo/bogo keywords
+const getAllText = (p) =>
+  [
+    p.unit,
+    p.name,
+    p.description,
+    p.category?.name,
+    p.subCategory?.name,
+    p.tags,
+    p.dealType,
+    p.offer,
+    p.offerType,
+    p.label,
+  ]
+    .flat()
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+
+const isComboProduct = (p) => COMBO_KEYWORDS.some(k => getAllText(p).includes(k))
+const isBogoProduct  = (p) => BOGO_KEYWORDS.some(k => getAllText(p).includes(k))
 
 // discount works with price/sellingPrice OR price/discount fields
 const getDiscount = (product) => {
@@ -17,7 +36,6 @@ const getDiscount = (product) => {
   if (mrp > 0 && selling > 0 && mrp > selling) {
     return Math.round(((mrp - selling) / mrp) * 100)
   }
-  // fallback: if product has a discountPercentage field
   if (product.discountPercentage > 0) return Math.round(product.discountPercentage)
   return 0
 }
@@ -113,10 +131,15 @@ function DealCard({ product, isCombo }) {
   )
 }
 
-function CountdownTimer({ initialSeconds }) {
-  const [secs, setSecs] = useState(initialSeconds)
+function CountdownTimer() {
+  // Real timer: counts down to the next exact hour
+  const getSecsUntilNextHour = () => {
+    const now = new Date()
+    return 3600 - (now.getMinutes() * 60 + now.getSeconds())
+  }
+  const [secs, setSecs] = useState(getSecsUntilNextHour)
   useEffect(() => {
-    const id = setInterval(() => setSecs(s => (s > 0 ? s - 1 : 0)), 1000)
+    const id = setInterval(() => setSecs(getSecsUntilNextHour), 1000)
     return () => clearInterval(id)
   }, [])
   const h = String(Math.floor(secs / 3600)).padStart(2, "0")
@@ -154,8 +177,31 @@ export function useDealsData() {
         hasMore = data.length === 100
         page++
       }
-      setComboProducts(allProducts.filter(p => isComboUnit(p.unit)))
-      setBogoProducts(allProducts.filter(p => isBogoUnit(p.unit)))
+
+      // First try: match by keywords in any field
+      let combos = allProducts.filter(p => isComboProduct(p))
+      let bogos  = allProducts.filter(p => isBogoProduct(p))
+
+      // Fallback: if no keyword matches found, use discount-based grouping
+      // Combo = 10–29% off, B1G1 = 30%+ off
+      if (combos.length === 0 && bogos.length === 0) {
+        const discounted = allProducts.filter(p => getDiscount(p) > 0)
+        combos = discounted.filter(p => {
+          const d = getDiscount(p)
+          return d >= 10 && d < 30
+        })
+        bogos = discounted.filter(p => getDiscount(p) >= 30)
+
+        // Last resort: just split discounted products evenly if still empty
+        if (combos.length === 0 && bogos.length === 0 && discounted.length > 0) {
+          const mid = Math.ceil(discounted.length / 2)
+          combos = discounted.slice(0, mid)
+          bogos  = discounted.slice(mid)
+        }
+      }
+
+      setComboProducts(combos)
+      setBogoProducts(bogos)
     } catch (err) {
       console.error("TodayDeals fetch error:", err)
     } finally {
@@ -189,7 +235,7 @@ export default function TodayDeals() {
         </div>
 
         {/* Countdown */}
-        <CountdownTimer initialSeconds={8 * 3600 + 42 * 60 + 17} />
+        <CountdownTimer />
 
         {/* Combo */}
         {(loading || comboProducts.length > 0) && (
@@ -199,7 +245,10 @@ export default function TodayDeals() {
               <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-100 rounded px-2 py-0.5">SAVE MORE</span>
             </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
-              {loading ? [1,2,3].map(i => <SkeletonCard key={i} />) : comboProducts.map(p => <DealCard key={p._id} product={p} isCombo={true} />)}
+              {loading
+                ? [1,2,3].map(i => <SkeletonCard key={i} />)
+                : comboProducts.map(p => <DealCard key={p._id} product={p} isCombo={true} />)
+              }
             </div>
           </>
         )}
@@ -216,7 +265,10 @@ export default function TodayDeals() {
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5">FREE ITEM</span>
             </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
-              {loading ? [1,2,3].map(i => <SkeletonCard key={i} />) : bogoProducts.map(p => <DealCard key={p._id} product={p} isCombo={false} />)}
+              {loading
+                ? [1,2,3].map(i => <SkeletonCard key={i} />)
+                : bogoProducts.map(p => <DealCard key={p._id} product={p} isCombo={false} />)
+              }
             </div>
           </>
         )}
