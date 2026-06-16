@@ -4,7 +4,7 @@ import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
 
-const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "pack of 5", "bundle", "duo", "trio", "multipack", "multi pack", "value pack", "2 pieces", "3 pieces", "4 pieces", "set of 2", "set of 3"]
+const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "pack of 5", "bundle", "duo", "trio", "multipack", "multi pack", "set of 2", "set of 3"]
 const BOGO_KEYWORDS  = ["buy 1 get 1", "buy one get one", "bogo", "b1g1", "1+1", "get 1 free", "get one free", "buy 1 get 1 free"]
 
 // Check ALL fields of a product for combo/bogo keywords
