@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux'; // ⚠️ adjust import if you don't use redux for auth state
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import { io } from 'socket.io-client';
 import 'leaflet/dist/leaflet.css';
@@ -63,6 +64,12 @@ const RiderTracking = () => {
     const { id: orderId } = useParams();
     const destination = [25.2921, 84.817];
 
+    // ⚠️ FIX: pull the logged-in user's id from wherever your app stores auth state.
+    // This is the value the backend checks against order.userId / order.riderId
+    // before allowing join_order to succeed. Adjust the selector path below to
+    // match your actual redux store (or swap this for your auth context/hook).
+    const user = useSelector((state) => state.user);
+
     const [riderPos, setRiderPos] = useState([25.36, 84.816]);
     const [distance, setDistance] = useState(null);
     const [currentStatus, setCurrentStatus] = useState('Locating Rider…');
@@ -76,7 +83,6 @@ const RiderTracking = () => {
     // ─── Fetch rider info + last known GPS position ───────────────────────────
     const fetchOrderDetails = async () => {
         try {
-            // ✅ NEW: dedicated endpoint returns rider info + last GPS fix in one call
             const response = await Axios({
                 url: `/api/order/rider-location/${orderId}`,
                 method: 'GET',
@@ -90,7 +96,6 @@ const RiderTracking = () => {
                     contact: rider_contact || '9472026580',
                 });
 
-                // Seed map with last persisted position (survives page refresh)
                 if (riderLocation?.latitude && riderLocation?.longitude) {
                     const lastPos = [riderLocation.latitude, riderLocation.longitude];
                     setRiderPos(lastPos);
@@ -110,6 +115,11 @@ const RiderTracking = () => {
     // ─── Socket setup ─────────────────────────────────────────────────────────
     useEffect(() => {
         if (!orderId) return;
+        // Wait until we actually have a userId before connecting — connecting
+        // too early means join_order fires with auth.userId = undefined and
+        // gets silently rejected by the backend.
+        if (!user?._id) return;
+
         fetchOrderDetails();
 
         const socket = io(
@@ -118,12 +128,18 @@ const RiderTracking = () => {
                 path: '/socket.io/',
                 transports: ['websocket', 'polling'],
                 withCredentials: true,
+                auth: { userId: user._id }, // ✅ FIX: required by backend's join_order auth check
             }
         );
         socketRef.current = socket;
 
         socket.emit('join_order', orderId);
         socket.on('connect', () => socket.emit('join_order', orderId));
+
+        socket.on('error', (err) => {
+            console.error('[Socket] server error:', err?.message);
+            toast.error(err?.message || 'Tracking connection error');
+        });
 
         const handleMovement = (data) => {
             if (!data.latitude || !data.longitude) return;
@@ -134,7 +150,6 @@ const RiderTracking = () => {
             const d = calculateDistance(data.latitude, data.longitude, destination[0], destination[1]);
             setDistance(d);
 
-            // Landmark proximity alerts
             LANDMARKS.forEach((landmark) => {
                 const distToLandmark = calculateDistance(
                     data.latitude, data.longitude, landmark.lat, landmark.lon
@@ -159,7 +174,7 @@ const RiderTracking = () => {
             socket.emit('leave_order', orderId);
             socket.disconnect();
         };
-    }, [orderId]);
+    }, [orderId, user?._id]);
 
     // ─── Derived ──────────────────────────────────────────────────────────────
     const initials = riderData.name.split(' ').map((n) => n[0]).join('');

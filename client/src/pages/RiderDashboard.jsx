@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
@@ -6,8 +6,6 @@ import { FaMapMarkedAlt, FaCheckCircle, FaShoppingBasket, FaPhone, FaMotorcycle,
 import { MdPayment } from "react-icons/md";
 import { io } from 'socket.io-client';
 import CollectPayment from '../components/CollectPayment';
-
-const socket = io(import.meta.env.VITE_API_URL);
 
 const STORE_EMOJI = {
     'Pali Mega Mart':                 '🛒',
@@ -26,7 +24,6 @@ const storeMapLink = (store) => {
     return `https://www.google.com/maps?q=${lat},${lng}`;
 };
 
-// ✅ FIXED: robust fee extraction with NaN guard
 const getDeliveryFee = (o) => {
     const fee = o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? o.riderFee ?? o.rider_fee ?? 0;
     return isNaN(Number(fee)) ? 0 : Number(fee);
@@ -42,8 +39,19 @@ const RiderDashboard = () => {
     const [isTracking, setIsTracking]       = useState(false);
     const [paymentOrder, setPaymentOrder]   = useState(null);
     const [activeTab, setActiveTab]         = useState('orders');
-    const [earningFilter, setEarningFilter] = useState('all'); // ✅ FIXED: was 'today' — showed ₹0 for past deliveries
+    const [earningFilter, setEarningFilter] = useState('all');
     const [lastSynced, setLastSynced]       = useState(null);
+
+    // ✅ FIX: socket now lives in a ref, created once inside a useEffect on
+    // mount (not at module scope). Module-level sockets connect immediately
+    // on import and never get cleaned up between page visits.
+    const socketRef = useRef(null);
+
+    // Keep a ref mirror of orders so the GPS watchPosition callback (registered
+    // once in its own effect) always reads the latest order list without
+    // needing to be re-subscribed every time `orders` changes.
+    const ordersRef = useRef(orders);
+    useEffect(() => { ordersRef.current = orders; }, [orders]);
 
     const fetchRiderOrders = useCallback(async (silent = false) => {
         try {
@@ -75,7 +83,18 @@ const RiderDashboard = () => {
         return () => clearInterval(interval);
     }, [fetchRiderOrders]);
 
+    // ─── Socket connection — created once on mount ────────────────────────────
     useEffect(() => {
+        const socket = io(
+            import.meta.env.VITE_API_URL || 'https://snapit-backend-bn8r.onrender.com',
+            {
+                path: '/socket.io/',
+                transports: ['websocket', 'polling'],
+                withCredentials: true,
+            }
+        );
+        socketRef.current = socket;
+
         socket.on('new_order', () => {
             fetchRiderOrders(true);
             toast('🛵 New order available!', { icon: '📦' });
@@ -83,19 +102,25 @@ const RiderDashboard = () => {
         socket.on('order_confirmed', () => {
             fetchRiderOrders(true);
         });
+
         return () => {
             socket.off('new_order');
             socket.off('order_confirmed');
+            socket.disconnect();
         };
     }, [fetchRiderOrders]);
 
+    // ─── GPS tracking — emits to backend while isTracking is true ────────────
     useEffect(() => {
         let watchId;
         if (isTracking) {
             watchId = navigator.geolocation.watchPosition((pos) => {
-                const activeOrder = orders.find(o => o.delivery_status === "Out for Delivery");
-                if (activeOrder) {
-                    socket.emit('update_location', {
+                const activeOrder = ordersRef.current.find(o => o.delivery_status === "Out for Delivery");
+                if (activeOrder && socketRef.current) {
+                    // ✅ FIX: was 'update_location' — backend only listens for
+                    // 'send_location', so every GPS update was previously
+                    // dropped silently and never reached the customer.
+                    socketRef.current.emit('send_location', {
                         orderId:   activeOrder.orderId,
                         latitude:  pos.coords.latitude,
                         longitude: pos.coords.longitude
@@ -105,7 +130,7 @@ const RiderDashboard = () => {
             toast.success("Live tracking active!");
         }
         return () => navigator.geolocation.clearWatch(watchId);
-    }, [isTracking, orders]);
+    }, [isTracking]);
 
     const handlePickup = async (order) => {
         try {
