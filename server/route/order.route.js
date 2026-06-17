@@ -20,6 +20,7 @@ import {
     applyCouponController,
     getScratchCardsController,
     getOrderItems,
+    updateSellerOrderStatusController 
 } from "../controllers/order.controller.js"
 import {
     getRestaurantOrdersController,
