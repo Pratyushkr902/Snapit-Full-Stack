@@ -87,8 +87,9 @@ const buildOrderFields = (userId, fields, extra = {}) => {
     walletAmountUsed,
     deliveryInstructions,
     scheduledDelivery,
-    store_details: {
-      name:     restaurantName || 'Restaurant',
+     restaurantId: fields.restaurantId,   // add this line in buildOrderFields return object
+       store_details: {
+        name:     restaurantName || 'Restaurant',
       address:  '',
       location: {
         lat: deliveryLocation?.lat || 25.2921,
