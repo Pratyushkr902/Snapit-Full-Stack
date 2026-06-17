@@ -126,7 +126,8 @@ export async function foodOrderCOD(req, res) {
     if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
 
-    const order = new OrderModel(buildOrderFields(req.user._id, fields, {
+    // ✅ FIX: auth middleware sets req.userId (not req.user._id) — req.user does not exist
+    const order = new OrderModel(buildOrderFields(req.userId, fields, {
       payment_status:  'CASH ON DELIVERY',
       payment_mode:    'COD',
       delivery_status: 'Pending',
@@ -149,7 +150,8 @@ export async function foodOrderWallet(req, res) {
     if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
 
-    const user = await UserModel.findById(req.user._id)
+    // ✅ FIX: req.userId, not req.user._id
+    const user = await UserModel.findById(req.userId)
     if (!user) return res.status(404).json({ success: false, message: 'User not found' })
 
     const walletBal = Number(user.walletBalance || 0)
@@ -162,9 +164,11 @@ export async function foodOrderWallet(req, res) {
         message: `Insufficient wallet balance. Have ₹${walletBal}, need ₹${deductAmt}`,
       })
 
-    await deductWallet(req.user._id, deductAmt, fields.restaurantName)
+    // ✅ FIX: req.userId, not req.user._id
+    await deductWallet(req.userId, deductAmt, fields.restaurantName)
 
-    const order = new OrderModel(buildOrderFields(req.user._id, fields, {
+    // ✅ FIX: req.userId, not req.user._id
+    const order = new OrderModel(buildOrderFields(req.userId, fields, {
       paymentId:       'WALLET-' + Date.now(),
       payment_status:  'PAID',
       payment_mode:    'WALLET',
@@ -231,10 +235,11 @@ export async function foodOrderVerifyPayment(req, res) {
     if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
 
-    // ✅ deduct partial wallet if used alongside online payment
-    await deductWallet(req.user._id, fields.walletAmountUsed, fields.restaurantName)
+    // ✅ FIX: req.userId, not req.user._id — deduct partial wallet if used alongside online payment
+    await deductWallet(req.userId, fields.walletAmountUsed, fields.restaurantName)
 
-    const order = new OrderModel(buildOrderFields(req.user._id, fields, {
+    // ✅ FIX: req.userId, not req.user._id
+    const order = new OrderModel(buildOrderFields(req.userId, fields, {
       paymentId:       razorpay_payment_id,
       payment_status:  'PAID',
       payment_mode:    'ONLINE',
