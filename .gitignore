@@ -30,3 +30,5 @@ client/ios/App/build/
 !client/dist/.well-known/
 server/node_modules/
 client/dist/
+server/*.cjs
+server/seed*.mjs
