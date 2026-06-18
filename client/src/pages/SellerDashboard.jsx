@@ -855,22 +855,107 @@ const SellerDashboard = () => {
                                                                 {stockStatus==='out' ? '❌ Out of stock' : `${product.stock} in stock`}
                                                             </span>
                                                         </div>
-                                                        <div className='flex items-center gap-2 mt-2.5'>
-                                                            <input type='number' placeholder='New qty'
-                                                                value={editingStock[product._id] ?? ''}
-                                                                onChange={e => setEditingStock(p => ({ ...p, [product._id]: e.target.value }))}
-                                                                className='w-20 text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-orange-500'
-                                                            />
-                                                            <button onClick={() => handleUpdateStock(product._id)}
-                                                                disabled={!editingStock[product._id]}
-                                                                className='text-xs bg-orange-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-3 py-1.5 rounded-lg font-black'>
-                                                                Update
-                                                            </button>
-                                                            <button onClick={() => handleDeleteProduct(product._id)}
-                                                                className='text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2.5 py-1.5 rounded-lg font-black hover:bg-red-500/20'>
-                                                                <MdDelete size={14}/>
-                                                            </button>
-                                                        </div>
+                                                        <div className='flex items-center gap-2 mt-2.5 flex-wrap'>
+    <input type='number' placeholder='New qty'
+        value={editingStock[product._id] ?? ''}
+        onChange={e => setEditingStock(p => ({ ...p, [product._id]: e.target.value }))}
+        className='w-20 text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-orange-500'
+    />
+    <button onClick={() => handleUpdateStock(product._id)}
+        disabled={!editingStock[product._id]}
+        className='text-xs bg-orange-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-3 py-1.5 rounded-lg font-black'>
+        Update
+    </button>
+    <button onClick={() => setEditingProductPrice(p => ({
+        ...p,
+        [product._id]: p[product._id] ? undefined : {
+            sellerPrice: product.sellerPrice || '',
+            snapitMargin: product.snapitMargin || '',
+            discount: product.discount || '',
+            stock: product.stock || '',
+            unit: product.unit || '',
+            name: product.name || '',
+        }
+    }))}
+        className='text-xs bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2.5 py-1.5 rounded-lg font-black hover:bg-sky-500/20'>
+        ✏️ Edit
+    </button>
+    <button onClick={() => handleDeleteProduct(product._id)}
+        className='text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2.5 py-1.5 rounded-lg font-black hover:bg-red-500/20'>
+        <MdDelete size={14}/>
+    </button>
+</div>
+
+{/* Inline Edit Panel */}
+{editingProductPrice[product._id] && (
+    <div className='mt-3 bg-slate-800 rounded-xl p-3 border border-slate-700 flex flex-col gap-2'>
+        <p className='text-[10px] font-black text-orange-400 uppercase tracking-wider'>✏️ Edit Product</p>
+        <div className='grid grid-cols-2 gap-2'>
+            <div>
+                <label className='text-[9px] text-slate-500 font-black uppercase'>Product Name</label>
+                <input type='text' value={editingProductPrice[product._id]?.name ?? ''}
+                    onChange={e => setEditingProductPrice(p => ({ ...p, [product._id]: { ...p[product._id], name: e.target.value } }))}
+                    className='w-full text-xs bg-slate-700 border border-slate-600 text-white rounded-lg px-2 py-1.5 outline-none focus:border-orange-500 mt-0.5'
+                />
+            </div>
+            <div>
+                <label className='text-[9px] text-slate-500 font-black uppercase'>Unit</label>
+                <input type='text' value={editingProductPrice[product._id]?.unit ?? ''}
+                    onChange={e => setEditingProductPrice(p => ({ ...p, [product._id]: { ...p[product._id], unit: e.target.value } }))}
+                    className='w-full text-xs bg-slate-700 border border-slate-600 text-white rounded-lg px-2 py-1.5 outline-none focus:border-orange-500 mt-0.5'
+                />
+            </div>
+            <div>
+                <label className='text-[9px] text-slate-500 font-black uppercase'>Your Price (₹)</label>
+                <input type='number' value={editingProductPrice[product._id]?.sellerPrice ?? ''}
+                    onChange={e => setEditingProductPrice(p => ({ ...p, [product._id]: { ...p[product._id], sellerPrice: e.target.value } }))}
+                    className='w-full text-xs bg-slate-700 border border-slate-600 text-white rounded-lg px-2 py-1.5 outline-none focus:border-orange-500 mt-0.5'
+                />
+            </div>
+            <div>
+                <label className='text-[9px] text-slate-500 font-black uppercase'>Snapit Margin (₹)</label>
+                <input type='number' value={editingProductPrice[product._id]?.snapitMargin ?? ''}
+                    onChange={e => setEditingProductPrice(p => ({ ...p, [product._id]: { ...p[product._id], snapitMargin: e.target.value } }))}
+                    className='w-full text-xs bg-slate-700 border border-slate-600 text-white rounded-lg px-2 py-1.5 outline-none focus:border-orange-500 mt-0.5'
+                />
+            </div>
+            <div>
+                <label className='text-[9px] text-slate-500 font-black uppercase'>Discount (%)</label>
+                <input type='number' value={editingProductPrice[product._id]?.discount ?? ''}
+                    onChange={e => setEditingProductPrice(p => ({ ...p, [product._id]: { ...p[product._id], discount: e.target.value } }))}
+                    className='w-full text-xs bg-slate-700 border border-slate-600 text-white rounded-lg px-2 py-1.5 outline-none focus:border-orange-500 mt-0.5'
+                />
+            </div>
+            <div>
+                <label className='text-[9px] text-slate-500 font-black uppercase'>Stock (qty)</label>
+                <input type='number' value={editingProductPrice[product._id]?.stock ?? ''}
+                    onChange={e => setEditingProductPrice(p => ({ ...p, [product._id]: { ...p[product._id], stock: e.target.value } }))}
+                    className='w-full text-xs bg-slate-700 border border-slate-600 text-white rounded-lg px-2 py-1.5 outline-none focus:border-orange-500 mt-0.5'
+                />
+            </div>
+        </div>
+        {/* Live MRP Preview */}
+        <div className='bg-slate-900 rounded-lg px-3 py-2 text-[10px] text-slate-400 flex gap-3 flex-wrap'>
+            <span>MRP: <strong className='text-white'>₹{(Number(editingProductPrice[product._id]?.sellerPrice||0) + Number(editingProductPrice[product._id]?.snapitMargin||0)).toFixed(0)}</strong></span>
+            <span>Customer Pays: <strong className='text-emerald-400'>₹{(() => {
+                const mrp = Number(editingProductPrice[product._id]?.sellerPrice||0) + Number(editingProductPrice[product._id]?.snapitMargin||0);
+                const disc = Number(editingProductPrice[product._id]?.discount||0);
+                return disc > 0 ? (mrp * (1 - disc/100)).toFixed(0) : mrp.toFixed(0);
+            })()}</strong></span>
+        </div>
+        <div className='flex gap-2 mt-1'>
+            <button onClick={() => handleSaveFullEdit(product._id, product.name)}
+                disabled={updatingPrice[product._id]}
+                className='flex-1 text-xs bg-orange-500 disabled:bg-slate-700 text-white py-2 rounded-lg font-black'>
+                {updatingPrice[product._id] ? 'Saving...' : '💾 Save All Changes'}
+            </button>
+            <button onClick={() => setEditingProductPrice(p => { const n={...p}; delete n[product._id]; return n; })}
+                className='text-xs bg-slate-700 text-slate-300 px-3 py-2 rounded-lg font-black'>
+                Cancel
+            </button>
+        </div>
+    </div>
+)}
                                                     </div>
                                                 </div>
                                             );
