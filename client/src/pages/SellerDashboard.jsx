@@ -245,6 +245,41 @@ const SellerDashboard = () => {
         finally { setUpdatingPrice(p => ({ ...p, [productId]: false })); }
     };
 
+
+    const handleSaveFullEdit = async (productId, productName) => {
+        const data = editingProductPrice[productId];
+        if (!data) return;
+        const sp     = Number(data.sellerPrice)  || 0;
+        const margin = Number(data.snapitMargin) || 0;
+        const disc   = Number(data.discount)     || 0;
+        const stock  = Number(data.stock)        || 0;
+        const mrp    = sp + margin;
+        const selling = disc > 0 ? mrp * (1 - disc / 100) : mrp;
+        setUpdatingPrice(p => ({ ...p, [productId]: true }));
+        try {
+            const res = await Axios({
+                ...SummaryApi.updateProductDetails,
+                data: {
+                    _id: productId,
+                    name: data.name,
+                    unit: data.unit,
+                    sellerPrice: sp,
+                    snapitMargin: margin,
+                    discount: disc,
+                    stock: stock,
+                    sellingPrice: selling,
+                    price: mrp,
+                },
+            });
+            if (res.data.success) {
+                toast.success('Updated!');
+                setEditingProductPrice(p => { const n = {...p}; delete n[productId]; return n; });
+                fetchProducts();
+            }
+        } catch(e) { toast.error('Update failed'); }
+        finally { setUpdatingPrice(p => ({ ...p, [productId]: false })); }
+    };
+
     // ── Effects ───────────────────────────────────────────────
     // FIX 3: Depend on userId (stable string), NOT the user object.
     //         fetchOrders / fetchProducts are stable via useCallback.
