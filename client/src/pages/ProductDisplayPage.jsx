@@ -359,7 +359,7 @@ const ProductDisplayPage = () => {
         {/* Gallery */}
         <div className='space-y-3'>
           <div
-            className='bg-white w-full aspect-square max-h-[280px] sm:max-h-[340px] lg:max-h-[420px] rounded-2xl overflow-hidden border border-gray-100/70 shadow-sm relative select-none'
+            className='bg-white w-full aspect-[4/3] max-h-[240px] sm:max-h-[320px] lg:max-h-[420px] rounded-2xl overflow-hidden border border-gray-100/70 shadow-sm relative select-none'
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
