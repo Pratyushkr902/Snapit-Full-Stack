@@ -10,18 +10,30 @@ const FALLBACK_IMG =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Crect x='90' y='80' width='120' height='100' rx='8' fill='%23e5e7eb'/%3E%3Ccircle cx='150' cy='210' r='18' fill='%23e5e7eb'/%3E%3Ctext x='150' y='255' text-anchor='middle' fill='%239ca3af' font-size='13' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
 
 // ✅ Safely extract a valid image src from various data shapes
+const optimizeImage = (url) => {
+    if (!url) return FALLBACK_IMG
+    if (url.includes('res.cloudinary.com')) {
+        return url.replace('/upload/', '/upload/w_400,f_auto,q_auto/')
+    }
+    if (url.includes('unsplash.com')) {
+        return url.includes('?') ? url + '&w=400&q=60' : url + '?w=400&q=60'
+    }
+    return url
+}
+
 const getImageSrc = (image) => {
     if (Array.isArray(image) && image.length > 0 && typeof image[0] === 'string' && image[0].startsWith('http')) {
-        return image[0]
+        return optimizeImage(image[0])
     }
     if (typeof image === 'string' && image.startsWith('http')) {
-        return image
+        return optimizeImage(image)
     }
     return FALLBACK_IMG
 }
 
 const CardProduct = ({ data }) => {
     const [imgSrc, setImgSrc] = useState(() => getImageSrc(data?.image))
+    const [imgLoaded, setImgLoaded] = useState(false)
 
     const url = `/product/${valideURLConvert(data?.name || "")}-${data?._id}`
 
@@ -61,12 +73,17 @@ const CardProduct = ({ data }) => {
 
             {/* Image Container */}
             <div className='w-full aspect-square rounded-lg overflow-hidden flex items-center justify-center bg-[#f9f9f9] dark:bg-[#1A1A1A] relative'>
+                {!imgLoaded && (
+                    <div className='absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 animate-pulse rounded-lg' />
+                )}
                 <img
                     src={imgSrc}
                     alt={data?.name || "Product"}
                     onError={handleImgError}
-                    loading="eager"
-                    className='w-full h-full object-contain transition-transform duration-500 lg:group-hover:scale-105'
+                    onLoad={() => setImgLoaded(true)}
+                    loading="lazy"
+                    decoding="async"
+                    className={`w-full h-full object-contain transition-all duration-300 lg:group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
 
                 {/* Soft Overlay */}
