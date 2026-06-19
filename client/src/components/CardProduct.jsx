@@ -102,9 +102,16 @@ const CardProduct = ({ data }) => {
                     {data?.name}
                 </div>
 
-                {/* Unit */}
-                <div className='text-[9px] lg:text-xs text-neutral-400 italic leading-tight'>
-                    {data?.unit}
+                {/* Unit Pill - Zepto/Blinkit style */}
+                <div className='flex items-center gap-1 mt-0.5'>
+                    <span className='text-[7px] lg:text-[9px] px-1.5 py-0.5 rounded-full border border-slate-200 text-slate-500 bg-slate-50 font-bold'>
+                        {data?.unit}
+                    </span>
+                    {data?.variantGroup && (
+                        <span className='text-[7px] lg:text-[9px] px-1.5 py-0.5 rounded-full border border-green-200 text-green-600 bg-green-50 font-bold'>
+                            + more sizes
+                        </span>
+                    )}
                 </div>
 
                 {/* Price + Cart */}
