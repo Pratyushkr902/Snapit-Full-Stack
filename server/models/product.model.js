@@ -34,6 +34,21 @@ const productSchema = new mongoose.Schema({
         trim : true,
         index : true  // indexed for fast sibling lookups
     },
+    variantType : {
+        type : String,
+        default : "size",   // "size" | "color"
+        trim : true,
+    },
+    variantLabel : {
+        type : String,
+        default : "",       // e.g. "10 Litre", "Blue", "500gm"
+        trim : true,
+    },
+    variantColor : {
+        type : String,
+        default : "",       // hex or css color e.g. "#2563eb" for blue
+        trim : true,
+    },
     store_inventory: [
         {
             store_name: { type: String, required: true }, 
