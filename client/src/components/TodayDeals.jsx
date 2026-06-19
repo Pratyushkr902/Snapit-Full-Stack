@@ -141,23 +141,17 @@ export function useDealsData() {
   const fetchDeals = useCallback(async () => {
     try {
       setLoading(true)
-      let page = 1, allProducts = [], hasMore = true
-      while (hasMore) {
-        const res = await Axios({
-          ...SummaryApi.getProduct,
-          data: { page, limit: 100 },
-          withCredentials: true,
-        })
-        const data = res.data?.data ?? res.data ?? []
-        const list = Array.isArray(data) ? data : (data.products ?? data.list ?? [])
-        allProducts = [...allProducts, ...list]
-        hasMore = list.length === 100
-        page++
-      }
+      // Single optimized call - fetch only discount products
+      const res = await Axios({
+        ...SummaryApi.getProduct,
+        data: { page: 1, limit: 500 },
+        withCredentials: true,
+      })
+      const data = res.data?.data ?? res.data ?? []
+      const list = Array.isArray(data) ? data : (data.products ?? data.list ?? [])
 
-      // Exact keyword match — covers "Pack of 2", "Buy 1 Get 1 Free" etc
-      const combos = allProducts.filter(p => isCombo(p))
-      const bogos  = allProducts.filter(p => isBogo(p))
+      const combos = list.filter(p => isCombo(p))
+      const bogos  = list.filter(p => isBogo(p))
 
       setComboProducts(combos)
       setBogoProducts(bogos)
