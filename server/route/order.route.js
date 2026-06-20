@@ -24,6 +24,7 @@ import {
 } from "../controllers/order.controller.js"
 import {
     getRestaurantOrdersController,
+    getRestoSellerOrdersController,
     updateFoodOrderStatusController,
 } from "../controllers/foodOrderAdmin.controller.js"
 
