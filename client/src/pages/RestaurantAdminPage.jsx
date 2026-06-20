@@ -47,8 +47,36 @@ function ImageUploadField({ value, onChange, label = 'Photo', uploadingImage, on
   )
 }
 
-// ── Order Row Component ────────────────────────────────────────────────────────
-function OrderRow({ order, onUpdateStatus }) {
+// ── Store Open/Closed Toggle ───────────────────────────────────────────────────
+function OpenClosedToggle({ isOpen, busy, onToggle, size = 'md' }) {
+  const sizes = {
+    md: { track: 'w-12 h-6', thumb: 'w-5 h-5', translate: 'translate-x-6' },
+    sm: { track: 'w-9 h-5',  thumb: 'w-4 h-4', translate: 'translate-x-4' },
+  }
+  const s = sizes[size] || sizes.md
+  return (
+    <button
+      type='button'
+      disabled={busy}
+      onClick={(e) => { e.stopPropagation(); onToggle() }}
+      className='flex items-center gap-2 disabled:opacity-50'
+      title={isOpen ? 'Store is open — tap to close' : 'Store is closed — tap to open'}
+    >
+      <span className={`text-[10px] font-black ${isOpen ? 'text-green-400' : 'text-red-400'}`}>
+        {busy ? '...' : isOpen ? '● OPEN' : '● CLOSED'}
+      </span>
+      <span className={`relative ${s.track} rounded-full transition-colors ${isOpen ? 'bg-green-500' : 'bg-slate-700'}`}>
+        <span className={`absolute top-0.5 left-0.5 ${s.thumb} bg-white rounded-full shadow transition-transform ${isOpen ? s.translate : ''}`}/>
+      </span>
+    </button>
+  )
+}
+
+// ── Order Row Component (now with net-earnings line) ───────────────────────────
+function OrderRow({ order, onUpdateStatus, getOrderNetEarnings }) {
+  const isCancelled = order.delivery_status === 'Cancelled'
+  const net = getOrderNetEarnings(order)
+
   return (
     <div className='bg-slate-900 border border-slate-800 rounded-xl p-4'>
       <div className='flex items-start justify-between gap-2 mb-3'>
@@ -72,7 +100,12 @@ function OrderRow({ order, onUpdateStatus }) {
         ))}
       </div>
       <div className='flex items-center justify-between border-t border-slate-800 pt-3'>
-        <p className='text-sm font-black text-white'>₹{order.totalAmount}</p>
+        <div>
+          <p className='text-sm font-black text-white'>₹{order.totalAmount}</p>
+          {!isCancelled && (
+            <p className='text-[10px] font-black text-emerald-400'>You earn ₹{net.toFixed(0)}</p>
+          )}
+        </div>
         <select
           value={order.delivery_status || 'Pending'}
           onChange={e => onUpdateStatus(order._id, e.target.value)}
@@ -100,6 +133,8 @@ export default function RestaurantAdminPage() {
   const [uploadingRestoImage, setUploadingRestoImage] = useState(false)
   const [uploadingItemImage,  setUploadingItemImage]  = useState(false)
   const [ordersLoading, setOrdersLoading] = useState(false)
+  const [togglingRestoId, setTogglingRestoId] = useState(null)
+  const [uploadingPhotoItemId, setUploadingPhotoItemId] = useState(null)
 
   const inp   = 'w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-500 placeholder-slate-500'
   const label = 'text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1'
@@ -131,16 +166,16 @@ export default function RestaurantAdminPage() {
     finally { setOrdersLoading(false) }
   }
 
-  // ── Image upload helpers ──
+  // ── Image upload helper (generic, optional setUploading callback) ──
   const uploadImage = async (file, setUploading) => {
-    setUploading(true)
+    if (setUploading) setUploading(true)
     try {
       const fd = new FormData()
       fd.append('image', file)
       const res = await Axios({ method: 'POST', url: '/api/file/upload', data: fd })
       return res.data?.data?.url || res.data?.url || null
     } catch { toast.error('Image upload failed'); return null }
-    finally { setUploading(false) }
+    finally { if (setUploading) setUploading(false) }
   }
 
   const handleRestoImageUpload = async (e) => {
@@ -153,6 +188,41 @@ export default function RestaurantAdminPage() {
     const file = e.target.files?.[0]; if (!file) return
     const url = await uploadImage(file, setUploadingItemImage)
     if (url) setItemForm(p => ({ ...p, image: url }))
+  }
+
+  // ── NEW: inline photo update directly from the menu list (no need to open edit form) ──
+  const handleInlineItemPhotoUpload = async (item, e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhotoItemId(item._id)
+    try {
+      const url = await uploadImage(file, null)
+      if (!url) return
+      await Axios({ method: 'PUT', url: `/api/restaurant/menu/${item._id}`, data: { image: url } })
+      setMenuItems(prev => prev.map(i => i._id === item._id ? { ...i, image: url } : i))
+      toast.success('Photo updated')
+    } catch {
+      toast.error('Failed to update photo')
+    } finally {
+      setUploadingPhotoItemId(null)
+      e.target.value = '' // allow re-selecting the same file again later
+    }
+  }
+
+  // ── NEW: open/closed toggle ──
+  const handleToggleOpen = async (resto) => {
+    const nextOpen = !resto.isOpen
+    setTogglingRestoId(resto._id)
+    try {
+      await Axios({ method: 'PATCH', url: `/api/restaurant/update/${resto._id}`, data: { isOpen: nextOpen } })
+      setRestaurants(prev => prev.map(r => r._id === resto._id ? { ...r, isOpen: nextOpen } : r))
+      setSelectedResto(prev => (prev && prev._id === resto._id) ? { ...prev, isOpen: nextOpen } : prev)
+      toast.success(nextOpen ? 'Store is now Open' : 'Store is now Closed')
+    } catch {
+      toast.error('Failed to update store status')
+    } finally {
+      setTogglingRestoId(null)
+    }
   }
 
   // ── Save Restaurant ──
@@ -239,6 +309,29 @@ export default function RestaurantAdminPage() {
     } catch { toast.error('Failed to update status') }
   }
 
+  // ── NEW: net earnings math ──
+  // Net earning per cart item = (price charged to customer) - (snapit's margin).
+  // Promo codes / wallet deductions are absorbed by Snapit's own margin, not the seller,
+  // so they don't reduce what the seller earns per item.
+  // Best case: cartItems carry a `snapitMargin` snapshot taken at order time (recommended —
+  // add this in foodOrder.controller.js alongside price/discountedPrice when the order is created,
+  // since menu margins can change after the order was placed).
+  // Fallback: look up the *current* menu item's margin by name if no snapshot exists.
+  const getItemNet = useCallback((ci) => {
+    let margin = ci.snapitMargin
+    if (margin === undefined || margin === null) {
+      const menuItem = menuItems.find(m => m.name === ci.name)
+      margin = menuItem?.snapitMargin || 0
+    }
+    const price = ci.discountedPrice || ci.price || 0
+    return Math.max(0, price - margin) * (ci.quantity || 1)
+  }, [menuItems])
+
+  const getOrderNetEarnings = useCallback((order) => {
+    if (order.delivery_status === 'Cancelled') return 0
+    return (order.cartItems || []).reduce((sum, ci) => sum + getItemNet(ci), 0)
+  }, [getItemNet])
+
   const grouped = menuItems.reduce((acc, item) => {
     const cat = item.category || 'Other'
     if (!acc[cat]) acc[cat] = []
@@ -251,6 +344,14 @@ export default function RestaurantAdminPage() {
     </div>
   )
 
+  // Orders scoped to the currently selected restaurant
+  const restoOrders = orders.filter(o => o.store_details?.name === selectedResto?.name)
+  const deliveredOrders = restoOrders.filter(o => o.delivery_status === 'Delivered')
+  const cancelledCount = restoOrders.filter(o => o.delivery_status === 'Cancelled').length
+  const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
+  const totalNetEarnings = restoOrders.reduce((sum, o) => sum + getOrderNetEarnings(o), 0)
+  const totalSnapitCut = Math.max(0, totalRevenue - totalNetEarnings)
+
   return (
     <div className='min-h-screen bg-slate-950 text-white'>
 
@@ -261,12 +362,21 @@ export default function RestaurantAdminPage() {
             <p className='font-black text-white text-base'>🍽️ Restaurant Admin</p>
             {selectedResto && <p className='text-[10px] text-orange-400 mt-0.5'>{selectedResto.name}</p>}
           </div>
-          {selectedResto && (
-            <button onClick={() => { setSelectedResto(null); setMenuItems([]); setTab('restaurants') }}
-              className='text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-lg font-black'>
-              ← All Restos
-            </button>
-          )}
+          <div className='flex items-center gap-3'>
+            {selectedResto && (
+              <OpenClosedToggle
+                isOpen={selectedResto.isOpen}
+                busy={togglingRestoId === selectedResto._id}
+                onToggle={() => handleToggleOpen(selectedResto)}
+              />
+            )}
+            {selectedResto && (
+              <button onClick={() => { setSelectedResto(null); setMenuItems([]); setTab('restaurants') }}
+                className='text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-lg font-black'>
+                ← All Restos
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -278,7 +388,7 @@ export default function RestaurantAdminPage() {
           ...(selectedResto ? [
             { key: 'menu',    label: '📋 Menu' },
             { key: 'addItem', label: editingItem ? '✏️ Edit Item' : '➕ Add Item' },
-            { key: 'orders',  label: '🛍️ Orders' },
+            { key: 'orders',  label: '🛍️ Orders & Earnings' },
           ] : []),
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -324,17 +434,22 @@ export default function RestaurantAdminPage() {
                           {Array.isArray(r.cuisineTypes) ? r.cuisineTypes.join(', ') : r.cuisineTypes}
                         </p>
                         <div className='flex items-center gap-2 mt-1'>
-                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${r.isOpen ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                            {r.isOpen ? '● Open' : '● Closed'}
-                          </span>
                           {r.isPureVeg && <span className='text-[9px] font-black px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400'>Pure Veg</span>}
                           <span className='text-[9px] text-slate-500'>★ {r.rating || '—'}</span>
                         </div>
                       </div>
-                      <button onClick={() => handleEditResto(r)}
-                        className='flex-shrink-0 bg-slate-800 border border-slate-700 text-slate-300 text-xs font-black px-3 py-2 rounded-xl hover:border-orange-500 transition-all'>
-                        ✏️ Edit
-                      </button>
+                      <div className='flex flex-col items-end gap-2 flex-shrink-0'>
+                        <OpenClosedToggle
+                          isOpen={r.isOpen}
+                          busy={togglingRestoId === r._id}
+                          onToggle={() => handleToggleOpen(r)}
+                          size='sm'
+                        />
+                        <button onClick={() => handleEditResto(r)}
+                          className='bg-slate-800 border border-slate-700 text-slate-300 text-xs font-black px-3 py-2 rounded-xl hover:border-orange-500 transition-all'>
+                          ✏️ Edit
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -386,13 +501,20 @@ export default function RestaurantAdminPage() {
               ))}
             </div>
 
-            <div className='flex gap-4 flex-wrap'>
-              {[{ key: 'isPureVeg', label: 'Pure Veg' }, { key: 'isOpen', label: 'Open Now' }].map(f => (
-                <label key={f.key} className='flex items-center gap-2 cursor-pointer'>
-                  <input type='checkbox' checked={restoForm[f.key]} onChange={e => setRestoForm(p => ({ ...p, [f.key]: e.target.checked }))} className='w-4 h-4 accent-orange-500'/>
-                  <span className='text-sm text-slate-300'>{f.label}</span>
-                </label>
-              ))}
+            <div className='flex gap-4 flex-wrap items-center'>
+              <label className='flex items-center gap-2 cursor-pointer'>
+                <input type='checkbox' checked={restoForm.isPureVeg} onChange={e => setRestoForm(p => ({ ...p, isPureVeg: e.target.checked }))} className='w-4 h-4 accent-orange-500'/>
+                <span className='text-sm text-slate-300'>Pure Veg</span>
+              </label>
+              <div className='flex items-center gap-2'>
+                <span className='text-sm text-slate-300'>Open Now</span>
+                <OpenClosedToggle
+                  isOpen={restoForm.isOpen}
+                  busy={false}
+                  onToggle={() => setRestoForm(p => ({ ...p, isOpen: !p.isOpen }))}
+                  size='sm'
+                />
+              </div>
             </div>
 
             <div className='flex gap-3'>
@@ -431,11 +553,24 @@ export default function RestaurantAdminPage() {
                     {items.map(item => (
                       <div key={item._id} className={`bg-slate-900 border rounded-xl p-3 ${item.isAvailable ? 'border-slate-800' : 'border-slate-700 opacity-50'}`}>
                         <div className='flex items-start gap-3'>
-                          <div className='w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0'>
+                          {/* Thumbnail with inline photo-edit overlay */}
+                          <label className='relative w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 cursor-pointer group'>
                             {item.image
                               ? <img src={item.image} alt={item.name} className='w-full h-full object-cover'/>
                               : <div className='w-full h-full flex items-center justify-center text-xl'>🍽️</div>}
-                          </div>
+                            <span className='absolute inset-0 bg-black/0 group-hover:bg-black/50 flex items-center justify-center transition-all'>
+                              <span className='opacity-0 group-hover:opacity-100 text-[9px] font-black text-white'>
+                                {uploadingPhotoItemId === item._id ? '⏳' : '📷'}
+                              </span>
+                            </span>
+                            <input
+                              type='file'
+                              accept='image/*'
+                              className='hidden'
+                              disabled={uploadingPhotoItemId === item._id}
+                              onChange={(e) => handleInlineItemPhotoUpload(item, e)}
+                            />
+                          </label>
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center gap-1.5 mb-0.5'>
                               <span className={`w-3 h-3 border-2 rounded-sm flex-shrink-0 inline-flex items-center justify-center ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>
@@ -562,21 +697,41 @@ export default function RestaurantAdminPage() {
           </div>
         )}
 
-        {/* ── ORDERS (admin view — all orders across all restos, or filtered) ── */}
+        {/* ── ORDERS & EARNINGS ── */}
         {tab === 'orders' && selectedResto && (
           <div>
             <div className='flex justify-between items-center mb-4'>
               <p className='text-sm font-black text-white'>
-                {orders.filter(o => o.store_details?.name === selectedResto.name).length} Orders · {selectedResto.name}
+                {restoOrders.length} Orders · {selectedResto.name}
               </p>
               <button onClick={loadOrders} className='text-xs font-black text-orange-400 bg-orange-500/10 border border-orange-500/30 px-3 py-1.5 rounded-lg'>
                 🔄 Refresh
               </button>
             </div>
 
+            {/* Earnings summary cards */}
+            <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5'>
+              <div className='bg-slate-900 border border-slate-800 rounded-xl p-3 text-center'>
+                <p className='text-[9px] text-slate-500 uppercase font-black'>Delivered</p>
+                <p className='text-base font-black text-white'>{deliveredOrders.length}</p>
+              </div>
+              <div className='bg-slate-900 border border-slate-800 rounded-xl p-3 text-center'>
+                <p className='text-[9px] text-slate-500 uppercase font-black'>Cancelled</p>
+                <p className='text-base font-black text-red-400'>{cancelledCount}</p>
+              </div>
+              <div className='bg-slate-900 border border-slate-800 rounded-xl p-3 text-center'>
+                <p className='text-[9px] text-amber-400/70 uppercase font-black'>Snapit Cut</p>
+                <p className='text-base font-black text-amber-400'>₹{totalSnapitCut.toFixed(0)}</p>
+              </div>
+              <div className='bg-slate-900 border border-emerald-500/30 rounded-xl p-3 text-center'>
+                <p className='text-[9px] text-emerald-400/70 uppercase font-black'>You Earn</p>
+                <p className='text-base font-black text-emerald-400'>₹{totalNetEarnings.toFixed(0)}</p>
+              </div>
+            </div>
+
             {ordersLoading && <p className='text-slate-500 text-xs text-center py-8 animate-pulse'>Loading orders…</p>}
 
-            {!ordersLoading && orders.filter(o => o.store_details?.name === selectedResto.name).length === 0 && (
+            {!ordersLoading && restoOrders.length === 0 && (
               <div className='bg-slate-900 rounded-3xl p-12 text-center border-2 border-dashed border-slate-700'>
                 <p className='text-4xl mb-3'>🛍️</p>
                 <p className='text-white font-black mb-1'>No orders for this restaurant</p>
@@ -584,11 +739,14 @@ export default function RestaurantAdminPage() {
             )}
 
             <div className='flex flex-col gap-3'>
-              {orders
-                .filter(o => o.store_details?.name === selectedResto.name)
-                .map(order => (
-                  <OrderRow key={order._id} order={order} onUpdateStatus={handleUpdateOrderStatus}/>
-                ))}
+              {restoOrders.map(order => (
+                <OrderRow
+                  key={order._id}
+                  order={order}
+                  onUpdateStatus={handleUpdateOrderStatus}
+                  getOrderNetEarnings={getOrderNetEarnings}
+                />
+              ))}
             </div>
           </div>
         )}
