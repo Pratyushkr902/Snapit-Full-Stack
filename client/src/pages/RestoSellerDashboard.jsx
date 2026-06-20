@@ -29,6 +29,9 @@ export default function RestoSellerDashboard() {
   const [loading, setLoading]             = useState(true)
   const [uploadingImage, setUploadingImage] = useState(false)
 
+  // NEW: inline photo-edit-from-list state (tracks which item's photo is uploading)
+  const [uploadingPhotoItemId, setUploadingPhotoItemId] = useState(null)
+
   // Orders
   const [orders, setOrders]               = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
@@ -101,6 +104,29 @@ export default function RestoSellerDashboard() {
       else toast.error('Upload failed — no URL returned')
     } catch { toast.error('Image upload failed') }
     finally { setUploadingImage(false) }
+  }
+
+  // ── NEW: inline photo update directly from the menu list (no need to open edit form) ──
+  const handleInlineItemPhotoUpload = async (item, e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhotoItemId(item._id)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const uploadRes = await Axios({ method: 'POST', url: '/api/file/upload', data: fd })
+      const url = uploadRes.data?.data?.url || uploadRes.data?.url
+      if (!url) { toast.error('Upload failed — no URL returned'); return }
+
+      await Axios({ method: 'PUT', url: `/api/restaurant/menu/${item._id}`, data: { image: url } })
+      setMenuItems(prev => prev.map(i => i._id === item._id ? { ...i, image: url } : i))
+      toast.success('Photo updated')
+    } catch {
+      toast.error('Failed to update photo')
+    } finally {
+      setUploadingPhotoItemId(null)
+      e.target.value = '' // allow re-selecting the same file again later
+    }
   }
 
   const handleSaveItem = async () => {
@@ -284,12 +310,24 @@ export default function RestoSellerDashboard() {
                           item.isAvailable ? 'border-slate-800' : 'border-slate-700 opacity-50'
                         }`}>
                         <div className='flex items-start gap-3'>
-                          {/* Image */}
-                          <div className='w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0'>
+                          {/* Image — now with inline photo-edit overlay (tap/hover the thumbnail) */}
+                          <label className='relative w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 cursor-pointer group'>
                             {item.image
                               ? <img src={item.image} alt={item.name} className='w-full h-full object-cover'/>
                               : <div className='w-full h-full flex items-center justify-center text-xl'>🍽️</div>}
-                          </div>
+                            <span className='absolute inset-0 bg-black/0 group-hover:bg-black/50 flex items-center justify-center transition-all'>
+                              <span className='opacity-0 group-hover:opacity-100 text-[9px] font-black text-white'>
+                                {uploadingPhotoItemId === item._id ? '⏳' : '📷'}
+                              </span>
+                            </span>
+                            <input
+                              type='file'
+                              accept='image/*'
+                              className='hidden'
+                              disabled={uploadingPhotoItemId === item._id}
+                              onChange={(e) => handleInlineItemPhotoUpload(item, e)}
+                            />
+                          </label>
                           {/* Info */}
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center gap-1.5 mb-0.5'>
