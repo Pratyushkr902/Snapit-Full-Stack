@@ -424,6 +424,23 @@ export default function RestaurantAdminPage() {
   const [editingItem, setEditingItem] = useState(null)
   const [editingResto, setEditingResto] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+
+  const handleImageUpload = async (e, setter, key) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await Axios({ method: 'POST', url: '/api/upload/image', data: formData })
+      if (res.data?.success) {
+        setter(p => ({ ...p, [key]: res.data.data.url }))
+        toast.success('Image uploaded!')
+      }
+    } catch { toast.error('Upload failed') }
+    finally { setUploadingImage(false) }
+  }
 
   const loadRestaurants = async () => {
     try {
@@ -660,7 +677,6 @@ export default function RestaurantAdminPage() {
             {[
               { key:'name', label:'Restaurant Name *', ph:'e.g. Dom Biryani' },
               { key:'description', label:'Description', ph:'Short tagline' },
-              { key:'image', label:'Cover Image URL', ph:'https://...' },
               { key:'cuisineTypes', label:'Cuisine Types (comma separated)', ph:'e.g. Biryani, North Indian' },
               { key:'offers', label:'Offers (one per line)', ph:'50% OFF up to ₹100\nFree delivery above ₹199' },
             ].map(f => (
@@ -672,6 +688,25 @@ export default function RestaurantAdminPage() {
                 }
               </div>
             ))}
+
+            {/* Restaurant Cover Image Upload */}
+            <div>
+              <p className={label}>Cover Image</p>
+              <div className='flex items-center gap-3 mt-1'>
+                {restoForm.image
+                  ? <img src={restoForm.image} alt='preview' className='w-16 h-16 object-cover rounded-xl border border-slate-700'/>
+                  : <div className='w-16 h-16 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center text-2xl'>🍽️</div>
+                }
+                <div className='flex flex-col gap-2 flex-1'>
+                  <label className='cursor-pointer bg-slate-800 border border-slate-700 text-slate-300 text-xs font-black px-3 py-2 rounded-xl text-center hover:border-orange-500 transition'>
+                    {uploadingImage ? '⏳ Uploading...' : '📷 Upload Cover Photo'}
+                    <input type='file' accept='image/*' className='hidden' onChange={e => handleImageUpload(e, setRestoForm, 'image')} disabled={uploadingImage}/>
+                  </label>
+                  <input value={restoForm.image} onChange={e=>setRestoForm(p=>({...p,image:e.target.value}))}
+                    placeholder='or paste image URL' className={inp + ' text-[10px]'}/>
+                </div>
+              </div>
+            </div>
             <div className='grid grid-cols-2 gap-3'>
               {[
                 { key:'deliveryTimeMin', label:'Min Delivery (min)' },
@@ -711,7 +746,6 @@ export default function RestaurantAdminPage() {
             {[
               { key:'name', label:'Item Name *', ph:'e.g. Chicken Biryani' },
               { key:'description', label:'Description', ph:'Short description' },
-              { key:'image', label:'Image URL', ph:'https://...' },
               { key:'category', label:'Menu Category *', ph:'e.g. Biryani, Drinks, Starters' },
             ].map(f => (
               <div key={f.key}>

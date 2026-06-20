@@ -46,6 +46,7 @@ orderRouter.post("/rider-location/:orderId", auth, rider,  updateRiderLocationCo
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 orderRouter.get( "/admin/restaurant-orders", auth, admin, getRestaurantOrdersController)
+orderRouter.get( "/resto-seller/orders", auth, getRestoSellerOrdersController)
 orderRouter.put( "/update-status/:id",       auth, admin, updateFoodOrderStatusController)
 orderRouter.get( "/daily-report",            auth, admin, getDailySalesReport)
 orderRouter.post("/settle-cash",             auth, admin, settleRiderCashController)

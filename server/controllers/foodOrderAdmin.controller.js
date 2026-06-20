@@ -45,3 +45,22 @@ export async function updateFoodOrderStatusController(req, res) {
     return res.status(500).json({ success: false, message: 'Server error' })
   }
 }
+// GET /api/order/resto-seller/orders — for RESTO_SELLER role
+export async function getRestoSellerOrdersController(req, res) {
+  try {
+    const restaurantId = req.user?.restaurantId
+    if (!restaurantId) return res.status(400).json({ success: false, message: 'No restaurant linked' })
+
+    const orders = await OrderModel
+      .find({ orderId: /^FOOD-/, 'store_details.restaurantId': String(restaurantId) })
+      .populate('userId', 'name email mobile')
+      .populate('delivery_address')
+      .sort({ createdAt: -1 })
+      .lean()
+
+    return res.json({ success: true, data: orders })
+  } catch (err) {
+    console.error('[getRestoSellerOrders]', err)
+    return res.status(500).json({ success: false, message: 'Server error' })
+  }
+}

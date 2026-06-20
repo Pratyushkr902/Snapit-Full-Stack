@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useSelector } from 'react-redux'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
+import SummaryApi from '../common/SummaryApi'
 
 const EMPTY_ITEM = {
   name: '', description: '', image: '', price: '', discountedPrice: '',
@@ -18,6 +19,9 @@ export default function RestoSellerDashboard() {
   const [editingItem, setEditingItem] = useState(null)
   const [saving, setSaving]         = useState(false)
   const [loading, setLoading]       = useState(true)
+  const [orders, setOrders]         = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     const restoId = user?.restaurantId
@@ -39,6 +43,44 @@ export default function RestoSellerDashboard() {
       const res = await Axios({ method: 'GET', url: `/api/restaurant/${id}/menu` })
       if (res.data?.success) setMenuItems(res.data.data)
     } catch { toast.error('Failed to load menu') }
+  }
+
+  const loadOrders = useCallback(async () => {
+    if (!user?.restaurantId) return
+    try {
+      setOrdersLoading(true)
+      const res = await Axios({ method: 'GET', url: '/api/order/resto-seller/orders' })
+      if (res.data?.success) setOrders(res.data.data || [])
+    } catch { toast.error('Failed to load orders') }
+    finally { setOrdersLoading(false) }
+  }, [user])
+
+  useEffect(() => {
+    if (tab === 'orders') loadOrders()
+  }, [tab, loadOrders])
+
+  const handleImageUpload = async (e, field) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await Axios({ method: 'POST', url: '/api/upload/image', data: formData })
+      if (res.data?.success) {
+        setItemForm(p => ({ ...p, [field]: res.data.data.url }))
+        toast.success('Image uploaded!')
+      }
+    } catch { toast.error('Upload failed') }
+    finally { setUploadingImage(false) }
+  }
+
+  const handleUpdateOrderStatus = async (orderId, status) => {
+    try {
+      await Axios({ method: 'PATCH', url: `/api/food-order/${orderId}/status`, data: { status } })
+      toast.success('Order updated!')
+      loadOrders()
+    } catch { toast.error('Failed to update order') }
   }
 
   const handleToggleOpen = async () => {
@@ -176,8 +218,10 @@ export default function RestoSellerDashboard() {
       {/* FIX 2: flex-shrink-0 on tab buttons so they never collapse */}
       <div className='bg-slate-900 border-b border-slate-800 flex overflow-x-auto scrollbar-none'>
         {[
-          { key: 'menu',    label: '📋 Menu' },
-          { key: 'addItem', label: editingItem ? '✏️ Edit Item' : '➕ Add Item' },
+          { key: 'menu',     label: '📋 Menu' },
+          { key: 'addItem',  label: editingItem ? '✏️ Edit Item' : '➕ Add Item' },
+          { key: 'orders',   label: '🛍️ Orders' },
+          { key: 'earnings', label: '💰 Earnings' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`flex-shrink-0 px-5 py-3 text-xs font-black whitespace-nowrap border-b-2 transition-all ${
@@ -285,7 +329,6 @@ export default function RestoSellerDashboard() {
             {[
               { key: 'name',        label: 'Item Name *',   ph: 'e.g. Chicken Biryani' },
               { key: 'description', label: 'Description',   ph: 'Short description' },
-              { key: 'image',       label: 'Image URL',     ph: 'https://...' },
               { key: 'category',    label: 'Category *',    ph: 'e.g. Biryani, Drinks, Starters' },
             ].map(f => (
               <div key={f.key}>
@@ -295,6 +338,25 @@ export default function RestoSellerDashboard() {
                   placeholder={f.ph} className={inp}/>
               </div>
             ))}
+
+            {/* Image Upload */}
+            <div>
+              <label className={lbl}>Item Photo</label>
+              <div className='flex items-center gap-3 mt-1'>
+                {itemForm.image
+                  ? <img src={itemForm.image} alt='preview' className='w-16 h-16 object-cover rounded-xl border border-slate-700'/>
+                  : <div className='w-16 h-16 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center text-2xl'>🍽️</div>
+                }
+                <div className='flex flex-col gap-2 flex-1'>
+                  <label className='cursor-pointer bg-slate-800 border border-slate-700 text-slate-300 text-xs font-black px-3 py-2 rounded-xl text-center hover:border-orange-500 transition'>
+                    {uploadingImage ? '⏳ Uploading...' : '📷 Upload Photo'}
+                    <input type='file' accept='image/*' className='hidden' onChange={e => handleImageUpload(e, 'image')} disabled={uploadingImage}/>
+                  </label>
+                  <input value={itemForm.image} onChange={e => setItemForm(p => ({ ...p, image: e.target.value }))}
+                    placeholder='or paste image URL' className={inp + ' text-[10px]'}/>
+                </div>
+              </div>
+            </div>
 
             {/* Category quick-pick */}
             {Object.keys(grouped).length > 0 && (
@@ -391,6 +453,113 @@ export default function RestoSellerDashboard() {
                 Cancel
               </button>
             </div>
+          </div>
+        )}
+
+        {/* ── ORDERS TAB ── */}
+        {tab === 'orders' && (
+          <div className='flex flex-col gap-3'>
+            <p className='text-sm font-black text-white mb-2'>{orders.length} Orders</p>
+            {ordersLoading && <p className='text-slate-500 text-xs'>Loading orders...</p>}
+            {!ordersLoading && orders.length === 0 && (
+              <div className='bg-slate-900 rounded-2xl p-8 text-center border border-slate-800'>
+                <p className='text-2xl mb-2'>🛍️</p>
+                <p className='text-slate-500 text-sm font-black'>No orders yet</p>
+              </div>
+            )}
+            {orders.map(order => (
+              <div key={order._id} className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                <div className='flex justify-between items-start mb-2'>
+                  <div>
+                    <p className='text-xs font-black text-orange-400'>{order.orderId}</p>
+                    <p className='text-[10px] text-slate-500'>{new Date(order.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${
+                    order.delivery_status === 'Delivered' ? 'bg-emerald-500/15 text-emerald-400' :
+                    order.delivery_status === 'Cancelled' ? 'bg-red-500/15 text-red-400' :
+                    'bg-amber-500/15 text-amber-400'
+                  }`}>{order.delivery_status}</span>
+                </div>
+                <div className='flex flex-col gap-1 mb-3'>
+                  {(order.cartItems || []).map((item, i) => (
+                    <div key={i} className='flex justify-between text-xs'>
+                      <span className='text-slate-300'>{item.name || item.productId?.name} x{item.quantity}</span>
+                      <span className='text-white font-black'>₹{item.price * item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className='flex justify-between items-center border-t border-slate-800 pt-2'>
+                  <p className='text-sm font-black text-white'>₹{order.totalAmt || order.subTotalAmt}</p>
+                  {order.delivery_status === 'Pending' && (
+                    <div className='flex gap-2'>
+                      <button onClick={() => handleUpdateOrderStatus(order._id, 'Preparing')}
+                        className='text-[10px] font-black bg-orange-500 text-white px-3 py-1.5 rounded-lg'>
+                        Accept
+                      </button>
+                      <button onClick={() => handleUpdateOrderStatus(order._id, 'Cancelled')}
+                        className='text-[10px] font-black bg-red-500/15 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg'>
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                  {order.delivery_status === 'Preparing' && (
+                    <button onClick={() => handleUpdateOrderStatus(order._id, 'Ready')}
+                      className='text-[10px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-lg'>
+                      Mark Ready
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── EARNINGS TAB ── */}
+        {tab === 'earnings' && (
+          <div className='flex flex-col gap-4'>
+            {(() => {
+              const delivered = orders.filter(o => o.delivery_status === 'Delivered')
+              const total = delivered.reduce((a, o) => a + (o.totalAmt || o.subTotalAmt || 0), 0)
+              const snapitCut = delivered.reduce((a, o) => a + ((o.cartItems || []).reduce((b, i) => b + (i.snapitMargin || 0) * (i.quantity || 1), 0)), 0)
+              const earned = total - snapitCut
+              const today = delivered.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString())
+              const todayTotal = today.reduce((a, o) => a + (o.totalAmt || o.subTotalAmt || 0), 0)
+              return (
+                <>
+                  <div className='grid grid-cols-2 gap-3'>
+                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                      <p className='text-[10px] text-slate-500 uppercase font-black'>Total Orders</p>
+                      <p className='text-2xl font-black text-white mt-1'>{delivered.length}</p>
+                    </div>
+                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                      <p className='text-[10px] text-slate-500 uppercase font-black'>Today Sales</p>
+                      <p className='text-2xl font-black text-emerald-400 mt-1'>₹{todayTotal}</p>
+                    </div>
+                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                      <p className='text-[10px] text-slate-500 uppercase font-black'>Total Sales</p>
+                      <p className='text-2xl font-black text-white mt-1'>₹{total}</p>
+                    </div>
+                    <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                      <p className='text-[10px] text-slate-500 uppercase font-black'>Your Earnings</p>
+                      <p className='text-2xl font-black text-orange-400 mt-1'>₹{earned}</p>
+                    </div>
+                  </div>
+                  <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'>
+                    <p className='text-xs font-black text-slate-400 mb-3 uppercase'>Recent Delivered Orders</p>
+                    {delivered.length === 0 && <p className='text-slate-500 text-xs'>No delivered orders yet</p>}
+                    {delivered.slice(0, 10).map(order => (
+                      <div key={order._id} className='flex justify-between items-center py-2 border-b border-slate-800 last:border-0'>
+                        <div>
+                          <p className='text-xs font-black text-white'>{order.orderId}</p>
+                          <p className='text-[10px] text-slate-500'>{new Date(order.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <p className='text-sm font-black text-emerald-400'>₹{order.totalAmt || order.subTotalAmt}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         )}
 
