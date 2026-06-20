@@ -5,7 +5,7 @@ import crypto     from 'crypto'
 
 const getRazorpay = () => new Razorpay({
   key_id:     process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,   // ✅ single consistent name
+  key_secret: process.env.RAZORPAY_SECRET_KEY,
 })
 
 const genOrderId = () =>
@@ -223,7 +223,7 @@ export async function foodOrderVerifyPayment(req, res) {
 
     // ✅ uses same env var as getRazorpay()
     const expected = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest('hex')
 
