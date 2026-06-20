@@ -872,21 +872,29 @@ export const applyCouponController = async (request, response) => {
         const user = await UserModel.findById(userId)
         if (!user) return response.status(404).json({ message: 'User not found.', error: true, success: false })
 
-        if (couponCode.trim().toUpperCase() === 'FIRSTUSER') {
+        const code = couponCode.trim().toUpperCase()
+        const VALID_CODES = ['SNAPIT', 'FIRSTUSER', 'FIRSTFREE', 'FIRST50']
+
+        if (!VALID_CODES.includes(code)) {
+            return response.status(400).json({ message: 'Invalid coupon code.', error: true, success: false })
+        }
+
+        // FIRSTUSER / FIRSTFREE reserved for first-time customers only
+        if (code === 'FIRSTUSER' || code === 'FIRSTFREE') {
             const previousOrder = await OrderModel.findOne({ userId })
             if (previousOrder) {
                 return response.status(400).json({ message: 'This code is for first-time customers only.', error: true, success: false })
             }
-            const discount = Math.floor(Math.random() * 4) + 2
-            return response.json({
-                message:  `Lucky coupon! You got ₹${discount} surprise discount.`,
-                error:    false,
-                success:  true,
-                data:     { couponCode: 'FIRSTUSER', discount_label: 'Surprise Discount', discount, newTotal: Number(totalAmt) - discount },
-            })
         }
 
-        return response.status(400).json({ message: 'Invalid coupon code.', error: true, success: false })
+        const discount = Math.floor(Math.random() * 8) + 1   // ₹1–8
+
+        return response.json({
+            message:  `Lucky coupon! You got ₹${discount} surprise discount.`,
+            error:    false,
+            success:  true,
+            data:     { couponCode: code, discount_label: 'Surprise Discount', discount, newTotal: Number(totalAmt) - discount },
+        })
     } catch (error) {
         console.error('applyCouponController:', error.message)
         return response.status(500).json({ message: 'Coupon application failed.', error: true, success: false })

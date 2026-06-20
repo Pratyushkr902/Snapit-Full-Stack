@@ -22,10 +22,7 @@ const QUICK_TAGS = [
   { icon: '🪜', label: 'Climb stairs' },
 ]
 
-const OFFER_PRESETS = [
-  { key: 'OFF20', pct: 0.20, label: '20% off', minOrder: 300 },
-  { key: 'OFF15', pct: 0.15, label: '15% off', minOrder: 0 },
-]
+const VALID_COUPONS = ['SNAPIT', 'FIRSTUSER', 'FIRSTFREE', 'FIRST50']
 
 const VegDot = ({ isVeg }) => (
   <span
@@ -96,10 +93,6 @@ const FoodCheckoutPage = () => {
   const [customTip,     setCustomTip]       = useState('')
   const [activeTipIdx,  setActiveTipIdx]    = useState(1)
 
-  // % offer (20% / 15% buttons)
-  const [appliedOffer,  setAppliedOffer]    = useState(null)
-  const [offerError,    setOfferError]      = useState('')
-
   // flat coupon (random ₹1–8)
   const [couponCode,       setCouponCode]       = useState('')
   const [couponDiscount,   setCouponDiscount]   = useState(0)
@@ -119,17 +112,13 @@ const FoodCheckoutPage = () => {
     return acc + basePrice * (quantities[key] || 1)
   }, 0)
 
-  const offerDiscount = appliedOffer
-    ? Math.round(subTotal * appliedOffer.pct)
-    : 0
-
   const FREE_DELIVERY_THRESHOLD = 399
   const deliveryFee = subTotal >= FREE_DELIVERY_THRESHOLD ? 0 : restaurantDeliveryFee
   const walletBal   = Number(user?.walletBalance || 0)
-  const preWallet   = subTotal - offerDiscount - couponDiscount + deliveryFee + tipAmt
+  const preWallet   = subTotal - couponDiscount + deliveryFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
   const grandTotal  = Math.max(0, preWallet - walletDeduct)
-  const totalSaved  = 48 + offerDiscount + couponDiscount + walletDeduct
+  const totalSaved  = 48 + couponDiscount + walletDeduct
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const changeQty = (key, delta) => {
@@ -149,18 +138,13 @@ const FoodCheckoutPage = () => {
     setTipAmt(isNaN(n) || n < 0 ? 0 : Math.min(500, n))
   }
 
-  const handleApplyOffer = (offer) => {
-    if (offer.minOrder > 0 && subTotal < offer.minOrder) {
-      setOfferError(`Min order ₹${offer.minOrder} needed for this offer`)
-      return
-    }
-    setAppliedOffer(prev => prev?.key === offer.key ? null : offer)
-    setOfferError('')
-  }
-
   const applyCoupon = () => {
     const code = couponCode.trim().toUpperCase()
     if (!code) { setCouponError('Please enter a coupon code'); return }
+    if (!VALID_COUPONS.includes(code)) {
+      setCouponError('Invalid coupon code')
+      return
+    }
     const randomDiscount = Math.floor(Math.random() * 8) + 1
     setCouponDiscount(randomDiscount)
     setAppliedCouponCode(code)
@@ -204,7 +188,6 @@ const FoodCheckoutPage = () => {
       scheduledDelivery: scheduleNow ? null : scheduleSlot,
       deliveryInstructions: fullInstructions || undefined,
       tip: tipAmt,
-      offerKey: appliedOffer?.key || undefined,
       couponCode: appliedCouponCode || undefined,
       couponDiscount: couponDiscount || undefined,
       walletAmountUsed: walletDeduct || undefined,
@@ -224,7 +207,7 @@ const FoodCheckoutPage = () => {
   }, [
     activeTags, instructions, restaurantId, restaurantName,
     addressList, selectAddress, scheduleNow, scheduleSlot,
-    tipAmt, appliedOffer, appliedCouponCode, couponDiscount,
+    tipAmt, appliedCouponCode, couponDiscount,
     walletDeduct, resolvedItems, quantities, subTotal, deliveryFee, grandTotal,
   ])
 
@@ -532,42 +515,7 @@ const FoodCheckoutPage = () => {
         />
       </div>
 
-      {/* ── Offers + Coupon ───────────────────────────────────────────── */}
       <div className='bg-white mt-2 px-4 py-4'>
-
-        {/* % Offer buttons */}
-        <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3'>Offers</p>
-        <div className='grid grid-cols-2 gap-2 mb-1'>
-          {OFFER_PRESETS.map(offer => {
-            const isActive = appliedOffer?.key === offer.key
-            const tooLow   = offer.minOrder > 0 && subTotal < offer.minOrder
-            return (
-              <button
-                key={offer.key}
-                onClick={() => handleApplyOffer(offer)}
-                className={`border-2 rounded-xl py-3 text-center transition-all ${
-                  isActive
-                    ? 'border-red-500 bg-red-50'
-                    : tooLow
-                    ? 'border-gray-100 opacity-50'
-                    : 'border-gray-200'
-                }`}
-              >
-                <p className={`text-sm font-bold ${isActive ? 'text-red-500' : 'text-gray-800'}`}>
-                  {offer.label}
-                </p>
-                {offer.minOrder > 0 && (
-                  <p className='text-xs text-gray-400 mt-0.5'>Min ₹{offer.minOrder}</p>
-                )}
-                {isActive && (
-                  <p className='text-xs text-red-400 mt-0.5'>Tap to remove</p>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        {offerError && <p className='text-xs text-red-500 mb-3'>{offerError}</p>}
-
         {/* Flat coupon — random ₹1–8 */}
         <div className='mt-4'>
           <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2'>Coupon code</p>
@@ -577,7 +525,7 @@ const FoodCheckoutPage = () => {
                 <input
                   value={couponCode}
                   onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
-                  placeholder='Enter any coupon code'
+                 placeholder='Try SNAPIT, FIRSTUSER, FIRSTFREE, FIRST50'
                   className='flex-1 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
                 />
                 <button
@@ -640,12 +588,6 @@ const FoodCheckoutPage = () => {
             <span className='text-gray-500'>Item total</span>
             <span className='font-semibold text-gray-800'>₹{subTotal}</span>
           </div>
-          {offerDiscount > 0 && (
-            <div className='flex justify-between text-sm'>
-              <span className='text-gray-500'>Offer discount ({appliedOffer.label})</span>
-              <span className='font-semibold text-green-600'>−₹{offerDiscount}</span>
-            </div>
-          )}
           {couponDiscount > 0 && (
             <div className='flex justify-between text-sm'>
               <span className='text-gray-500'>Coupon ({appliedCouponCode})</span>
