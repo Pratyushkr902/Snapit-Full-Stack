@@ -1,27 +1,53 @@
 import OrderModel from '../models/order.model.js'
+import RestaurantModel from '../models/restaurant.model.js'
 
-// GET /api/order/admin/restaurant-orders
+// GET /api/order/admin/restaurant-orders  (admin — all food orders)
 export async function getRestaurantOrdersController(req, res) {
   try {
     const orders = await OrderModel
-      .find({ payment_mode: { $in: ['COD', 'WALLET', 'ONLINE'] }, 'store_details.name': { $exists: true } })
+      .find({ orderId: /^FOOD-/ })
       .populate('userId', 'name email mobile')
       .populate('delivery_address')
       .sort({ createdAt: -1 })
       .lean()
 
-    // Filter to food orders only — they have no cartItems[].productId (it's menuItemId)
-    // Reliable distinguisher: orderId starts with 'FOOD-'
-    const foodOrders = orders.filter(o => String(o.orderId).startsWith('FOOD-'))
-
-    return res.json({ success: true, data: foodOrders })
+    return res.json({ success: true, data: orders })
   } catch (err) {
     console.error('[getRestaurantOrders]', err)
     return res.status(500).json({ success: false, message: 'Server error' })
   }
 }
 
-// PUT /api/order/update-status/:id  (used by OrderRow in RestaurantAdminPage)
+// GET /api/order/resto-seller/orders  (seller — only their restaurant's orders)
+// Matches by store_details.name because food orders don't store restaurantId
+export async function getRestoSellerOrdersController(req, res) {
+  try {
+    const restaurantId = req.user?.restaurantId
+    if (!restaurantId) {
+      return res.status(403).json({ success: false, message: 'No restaurant linked to your account' })
+    }
+
+    // Look up the restaurant name so we can match store_details.name
+    const restaurant = await RestaurantModel.findById(restaurantId).lean()
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' })
+    }
+
+    const orders = await OrderModel
+      .find({ orderId: /^FOOD-/, 'store_details.name': restaurant.name })
+      .populate('userId', 'name email mobile')
+      .populate('delivery_address')
+      .sort({ createdAt: -1 })
+      .lean()
+
+    return res.json({ success: true, data: orders })
+  } catch (err) {
+    console.error('[getRestoSellerOrders]', err)
+    return res.status(500).json({ success: false, message: 'Server error' })
+  }
+}
+
+// PUT /api/order/update-status/:id
 export async function updateFoodOrderStatusController(req, res) {
   try {
     const { id } = req.params
@@ -42,25 +68,6 @@ export async function updateFoodOrderStatusController(req, res) {
     return res.json({ success: true, data: order })
   } catch (err) {
     console.error('[updateFoodOrderStatus]', err)
-    return res.status(500).json({ success: false, message: 'Server error' })
-  }
-}
-// GET /api/order/resto-seller/orders — for RESTO_SELLER role
-export async function getRestoSellerOrdersController(req, res) {
-  try {
-    const restaurantId = req.user?.restaurantId
-    if (!restaurantId) return res.status(400).json({ success: false, message: 'No restaurant linked' })
-
-    const orders = await OrderModel
-      .find({ orderId: /^FOOD-/, 'store_details.restaurantId': String(restaurantId) })
-      .populate('userId', 'name email mobile')
-      .populate('delivery_address')
-      .sort({ createdAt: -1 })
-      .lean()
-
-    return res.json({ success: true, data: orders })
-  } catch (err) {
-    console.error('[getRestoSellerOrders]', err)
     return res.status(500).json({ success: false, message: 'Server error' })
   }
 }
