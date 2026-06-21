@@ -146,22 +146,16 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
         e.target.src = "https://res.cloudinary.com/daso5ntlt/image/upload/v1773599668/Aashirvaad_Superior_MP_Whole_Wheat_Atta_z8tqsf.jpg"
     }
 
-    // Shared input classes — w-full + min-w-0 are critical: without them, inputs
-    // (especially type="number") default to their intrinsic browser width, which
-    // can exceed the grid column width on mobile and force the whole modal to
-    // overflow horizontally. min-w-0 overrides the browser default that prevents
-    // grid/flex children from shrinking below their content's natural size.
     const fieldClass = 'bg-blue-50 p-2 border outline-none focus-within:border-primary-200 rounded w-full min-w-0 box-border'
 
     return (
         <section
-            className='fixed inset-0 bg-neutral-800/70 z-50 flex items-start sm:items-center justify-center overflow-y-auto overscroll-contain'
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            className='fixed inset-0 bg-neutral-800/70 z-50 flex items-start sm:items-center justify-center'
             onClick={close}
         >
             <div
-                className='bg-white w-full sm:max-w-2xl sm:my-8 sm:rounded-md p-4 min-h-dvh sm:min-h-0 sm:max-h-[90vh] overflow-y-auto overscroll-contain shadow-xl box-border'
-                style={{ WebkitOverflowScrolling: 'touch' }}
+                className='bg-white w-full sm:max-w-2xl sm:my-8 sm:rounded-md p-4 h-dvh sm:h-auto sm:max-h-[90vh] overflow-y-auto overscroll-contain shadow-xl box-border'
+                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className='flex items-center justify-between pb-4 border-b'>

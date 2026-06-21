@@ -16,8 +16,7 @@ import toast from 'react-hot-toast'
 const FALLBACK_IMG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' fill='%23f3f4f6'/%3E%3Ctext x='60' y='64' text-anchor='middle' fill='%23d1d5db' font-size='11' font-family='sans-serif'%3EFood%3C/text%3E%3C/svg%3E"
 
-const BANNER_FALLBACK =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='300' viewBox='0 0 800 300'%3E%3Crect width='800' height='300' fill='%23fef3c7'/%3E%3Ctext x='400' y='155' text-anchor='middle' fill='%23d97706' font-size='20' font-family='sans-serif'%3ERestaurant%3C/text%3E%3C/svg%3E"
+const BANNER_FALLBACK = null
 
 // ── Haversine distance ────────────────────────────────────────────────────────
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -368,7 +367,7 @@ export default function RestaurantDetailPage() {
       if (res.data?.success) {
         const { restaurant: r, menu: m } = res.data.data
         setRestaurant(r)
-        setBannerSrc(r.image ? `${r.image}&fm=webp&q=75` : BANNER_FALLBACK)
+        setBannerSrc(r.image ? `${r.image}&fm=webp&q=75` : null)
         setMenu(m)
         if (m.length > 0) setActiveCategory(m[0].category)
       }
@@ -414,18 +413,20 @@ export default function RestaurantDetailPage() {
     <div className="bg-gray-50 min-h-screen">
 
       {/* ── Banner ── */}
-      <div className="relative">
-        <div className="h-48 sm:h-64 bg-gray-200 overflow-hidden">
-          <img
-            src={bannerSrc}
-            alt={restaurant?.name || 'Restaurant'}
-            onError={() => setBannerSrc(BANNER_FALLBACK)}
-            className="w-full h-full object-cover"
-            fetchPriority="high"
-            decoding="async"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        </div>
+<div className="relative">
+  {bannerSrc && (
+    <div className="h-48 sm:h-64 bg-gray-200 overflow-hidden">
+      <img
+        src={bannerSrc}
+        alt={restaurant?.name || 'Restaurant'}
+        onError={() => setBannerSrc(null)}
+        className="w-full h-full object-cover"
+        fetchPriority="high"
+        decoding="async"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+    </div>
+  )}
         <button
           onClick={() => navigate(-1)}
           className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2.5 rounded-xl shadow"
