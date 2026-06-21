@@ -124,7 +124,7 @@ function QtyControl({ qty, onAdd, onIncrease, onDecrease }) {
 
 // ── Solo Food Item Card ───────────────────────────────────────────────────────
 function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
-  const [imgSrc, setImgSrc] = useState(item.image || FALLBACK_IMG)
+  const [imgSrc, setImgSrc] = useState(item.image ? `${item.image}&fm=webp&q=70` : FALLBACK_IMG)
   const effectivePrice = item.discountedPrice > 0 ? item.discountedPrice : item.price
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
@@ -155,7 +155,7 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
       </div>
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
         <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
-          <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMG)} className="w-full h-full object-cover" />
+          <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMG)} className="w-full h-full object-cover" loading="lazy" decoding="async" />
         </div>
         <QtyControl qty={qty} onAdd={onAdd} onIncrease={onIncrease} onDecrease={onDecrease} />
       </div>
@@ -165,7 +165,7 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
 
 // ── Grouped Variant Card ──────────────────────────────────────────────────────
 function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
-  const [imgSrc, setImgSrc] = useState(group.image || FALLBACK_IMG)
+  const [imgSrc, setImgSrc] = useState(group.image ? `${group.image}&fm=webp&q=70` : FALLBACK_IMG)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = group.variants[selectedIdx]
   const selectedItem = selectedVariant.item
@@ -214,7 +214,7 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
       </div>
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
         <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
-          <img src={imgSrc} alt={group.baseName} onError={() => setImgSrc(FALLBACK_IMG)} className="w-full h-full object-cover" />
+          <img src={imgSrc} alt={group.baseName} onError={() => setImgSrc(FALLBACK_IMG)} className="w-full h-full object-cover" loading="lazy" decoding="async" />
         </div>
         <QtyControl
           qty={qty}
@@ -368,7 +368,7 @@ export default function RestaurantDetailPage() {
       if (res.data?.success) {
         const { restaurant: r, menu: m } = res.data.data
         setRestaurant(r)
-        setBannerSrc(r.image || BANNER_FALLBACK)
+        setBannerSrc(r.image ? `${r.image}&fm=webp&q=75` : BANNER_FALLBACK)
         setMenu(m)
         if (m.length > 0) setActiveCategory(m[0].category)
       }
@@ -421,6 +421,8 @@ export default function RestaurantDetailPage() {
             alt={restaurant?.name || 'Restaurant'}
             onError={() => setBannerSrc(BANNER_FALLBACK)}
             className="w-full h-full object-cover"
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         </div>

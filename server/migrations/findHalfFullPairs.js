@@ -11,6 +11,9 @@ import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import RestaurantModel from '../models/restaurant.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
+import NodeCache from 'node-cache'
+
+const cache = new NodeCache({ stdTTL: 60, checkperiod: 120 })
 
 dotenv.config({ path: new URL('../.env', import.meta.url).pathname })
 

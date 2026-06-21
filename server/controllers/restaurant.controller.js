@@ -1,10 +1,16 @@
 import RestaurantModel from '../models/restaurant.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
+import NodeCache from 'node-cache'
+
+const cache = new NodeCache({ stdTTL: 60, checkperiod: 120 })
 
 // ── GET /api/restaurant/all ────────────────────────────────────────────────────
 export async function getAllRestaurants(req, res) {
   try {
     const { cuisine, search, isOpen } = req.query
+    const cacheKey = `all_${isOpen}_${cuisine}_${search}`
+    const cached = cache.get(cacheKey)
+    if (cached) return res.json(cached)
 
     const filter = { isActive: true }
     if (isOpen === 'true') filter.isOpen = true
@@ -16,7 +22,9 @@ export async function getAllRestaurants(req, res) {
       .sort({ isOpen: -1, rating: -1, createdAt: -1 })
       .lean()
 
-    return res.json({ success: true, data: restaurants, message: 'Restaurants fetched successfully' })
+    const response = { success: true, data: restaurants, message: 'Restaurants fetched successfully' }
+    cache.set(cacheKey, response)
+    return res.json(response)
   } catch (err) {
     console.error(err)
     return res.status(500).json({ success: false, message: err.message })
@@ -26,6 +34,10 @@ export async function getAllRestaurants(req, res) {
 // ── GET /api/restaurant/:id ────────────────────────────────────────────────────
 export async function getRestaurantById(req, res) {
   try {
+    const cacheKey = `restaurant_${req.params.id}`
+    const cached = cache.get(cacheKey)
+    if (cached) return res.json(cached)
+
     const restaurant = await RestaurantModel.findById(req.params.id).lean()
     if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' })
 
@@ -50,7 +62,9 @@ export async function getRestaurantById(req, res) {
 
     const menu = categories.map(cat => ({ category: cat, items: categoryMap[cat] || [] }))
 
-    return res.json({ success: true, data: { restaurant, menu }, message: 'Restaurant details fetched' })
+    const response = { success: true, data: { restaurant, menu }, message: 'Restaurant details fetched' }
+    cache.set(cacheKey, response)
+    return res.json(response)
   } catch (err) {
     console.error(err)
     return res.status(500).json({ success: false, message: err.message })
@@ -62,6 +76,7 @@ export async function createRestaurant(req, res) {
   try {
     const restaurant = new RestaurantModel(req.body)
     await restaurant.save()
+    cache.flushAll()
     return res.status(201).json({ success: true, data: restaurant, message: 'Restaurant created' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -77,6 +92,8 @@ export async function updateRestaurant(req, res) {
       req.params.id, req.body, { new: true, runValidators: true }
     )
     if (!updated) return res.status(404).json({ success: false, message: 'Restaurant not found' })
+    cache.del(`restaurant_${req.params.id}`)
+    cache.flushAll()
     return res.json({ success: true, data: updated, message: 'Restaurant updated' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -84,14 +101,9 @@ export async function updateRestaurant(req, res) {
 }
 
 // ── Helper: verify RESTO_SELLER owns this restaurant ─────────────────────────
-// Uses req.userId (set by auth.js) and req.userRole (set by auth.js).
-// When the route also runs Admin.js middleware, req.user is available too,
-// but we deliberately avoid it here so this helper works on auth-only routes.
 async function assertOwnership(req, res, restaurantId) {
-  // ADMIN bypasses ownership check entirely
   if (req.userRole === 'ADMIN') return true
 
-  // RESTO_SELLER must own the restaurant
   if (req.userRole === 'RESTO_SELLER') {
     const resto = await RestaurantModel.findById(restaurantId).lean()
     if (!resto) {
@@ -134,6 +146,8 @@ export async function addMenuItem(req, res) {
       $addToSet: { menuCategories: item.category },
     })
 
+    cache.del(`restaurant_${req.params.id}`)
+    cache.flushAll()
     return res.status(201).json({ success: true, data: item, message: 'Menu item created' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -153,6 +167,8 @@ export async function updateMenuItem(req, res) {
       req.params.itemId, req.body, { new: true, runValidators: true }
     )
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
+    cache.del(`restaurant_${item.restaurantId}`)
+    cache.flushAll()
     return res.json({ success: true, data: item, message: 'Menu item updated' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -170,6 +186,8 @@ export async function deleteMenuItem(req, res) {
 
     const item = await MenuItemModel.findByIdAndDelete(req.params.itemId)
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
+    cache.del(`restaurant_${item.restaurantId}`)
+    cache.flushAll()
     return res.json({ success: true, message: 'Menu item deleted' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -189,6 +207,8 @@ export async function createFoodItem(req, res) {
     await RestaurantModel.findByIdAndUpdate(restaurantId, {
       $addToSet: { menuCategories: item.category },
     })
+    cache.del(`restaurant_${restaurantId}`)
+    cache.flushAll()
     return res.status(201).json({ success: true, data: item, message: 'Food item created' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -199,6 +219,10 @@ export async function createFoodItem(req, res) {
 export async function updateFoodItem(req, res) {
   try {
     const updated = await MenuItemModel.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    if (updated) {
+      cache.del(`restaurant_${updated.restaurantId}`)
+      cache.flushAll()
+    }
     return res.json({ success: true, data: updated, message: 'Food item updated' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -264,6 +288,7 @@ export async function seedDemoRestaurants(req, res) {
       },
     ]
     await RestaurantModel.insertMany(demos)
+    cache.flushAll()
     return res.json({ success: true, message: 'Demo restaurants seeded', count: demos.length })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
