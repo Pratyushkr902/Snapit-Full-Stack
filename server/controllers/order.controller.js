@@ -68,8 +68,12 @@ const toSafeOrder = (o) => ({
 })
 
 const calcDeliveryFee = (subTotal, user) => {
-    if (user?.isSnapitPlusMember) return 0
-    return Number(subTotal) >= 499 ? 0 : 40
+    const isPlus = user?.isSnapitPlusMember &&
+        user?.snapitPlusExpiresAt &&
+        new Date() < new Date(user.snapitPlusExpiresAt)
+
+    const freeThreshold = isPlus ? 149 : 399
+    return Number(subTotal) >= freeThreshold ? 0 : 12
 }
 
 const resolveStore = async (lat, lng) => {
