@@ -21,7 +21,7 @@ const DisplayCartItem = ({close}) => {
     const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
     const navigate = useNavigate()
 
-    const deliveryFee = totalPrice >= 399 ? 0 : 12;
+    const deliveryFee = totalPrice >= 399 ? 0 : (isSnapitPlus && totalPrice >= 149) ? 0 : 12;
     const grandTotal = totalPrice + deliveryFee;
 
     const redirectToCheckoutPage = (e) => {

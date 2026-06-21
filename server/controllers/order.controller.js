@@ -90,6 +90,54 @@ const updateStreak = async (userId) => {
     // Streak update logic unchanged
 }
 
+// ── Snapit Plus cashback config (tune these) ─────────────────────────────────
+const SNAPIT_PLUS_CASHBACK_RATE = 0.02        // 2% instead of 5%
+const SNAPIT_PLUS_MAX_CASHBACK_PER_ORDER = 25 // ₹ cap per order
+const SNAPIT_PLUS_MAX_CASHBACK_PER_MONTH = 150 // ₹ cap per member per month
+
+const giveSnapitPlusCashback = async (userId, orderSubTotal) => {
+    try {
+        const u = await UserModel.findById(userId)
+            .select('isSnapitPlusMember snapitPlusExpiresAt walletCashbackThisMonth walletCashbackMonthKey')
+            .lean()
+
+        const isActive = u?.isSnapitPlusMember &&
+            u?.snapitPlusExpiresAt &&
+            new Date() < new Date(u.snapitPlusExpiresAt)
+        if (!isActive) return
+
+        const monthKey = new Date().toISOString().slice(0, 7)
+        const usedThisMonth = (u.walletCashbackMonthKey === monthKey)
+            ? (u.walletCashbackThisMonth || 0)
+            : 0
+
+        let cashback = Math.round(orderSubTotal * SNAPIT_PLUS_CASHBACK_RATE * 100) / 100
+        cashback = Math.min(cashback, SNAPIT_PLUS_MAX_CASHBACK_PER_ORDER)
+        cashback = Math.min(cashback, SNAPIT_PLUS_MAX_CASHBACK_PER_MONTH - usedThisMonth)
+
+        if (cashback <= 0) return
+
+        await UserModel.findByIdAndUpdate(userId, {
+            $inc: { walletBalance: cashback },
+            $set: {
+                walletCashbackMonthKey: monthKey,
+                walletCashbackThisMonth: usedThisMonth + cashback
+            },
+            $push: {
+                walletTransactions: {
+                    type: 'CREDIT',
+                    amount: cashback,
+                    description: `Snapit Plus ${SNAPIT_PLUS_CASHBACK_RATE * 100}% cashback`,
+                    date: new Date()
+                }
+            }
+        })
+        console.log(`[SnapitPlus] ₹${cashback} cashback credited to userId=${userId}`)
+    } catch (e) {
+        console.error('[SnapitPlus cashback error]', e.message)
+    }
+}
+
 // Validate coordinate bounds
 const isValidCoord = (lat, lng) =>
     lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180

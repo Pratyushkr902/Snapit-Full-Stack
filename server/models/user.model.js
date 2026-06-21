@@ -127,6 +127,14 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+walletCashbackThisMonth: {
+    type: Number,
+    default: 0
+},
+walletCashbackMonthKey: {
+    type: String,
+    default: ''
+},
     currentStreak: {
         type: Number,
         default: 0
