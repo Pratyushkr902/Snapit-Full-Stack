@@ -4,12 +4,12 @@
  *
  * Zomato-style menu page with working Add/+/− cart controls.
  * Supports grouped variant cards (Half/Full, Per Piece/Half Kg/Full Kg, etc.)
+ * Shows distance + address below banner, requests location on mount.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
-import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 
 // ── Fallbacks ─────────────────────────────────────────────────────────────────
@@ -19,29 +19,38 @@ const FALLBACK_IMG =
 const BANNER_FALLBACK =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='300' viewBox='0 0 800 300'%3E%3Crect width='800' height='300' fill='%23fef3c7'/%3E%3Ctext x='400' y='155' text-anchor='middle' fill='%23d97706' font-size='20' font-family='sans-serif'%3ERestaurant%3C/text%3E%3C/svg%3E"
 
+// ── Haversine distance ────────────────────────────────────────────────────────
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function formatDistance(km) {
+  if (km < 1) return `${Math.round(km * 1000)} m`
+  return `${km.toFixed(1)} km`
+}
+
 // ── Variant suffix extraction ─────────────────────────────────────────────────
-// Returns { baseName, variantLabel } or { baseName: fullName, variantLabel: null }
 function parseVariant(name) {
   const match = name.match(/^(.+?)\s*\(([^)]+)\)\s*$/)
   if (!match) return { baseName: name, variantLabel: null }
   return { baseName: match[1].trim(), variantLabel: match[2].trim() }
 }
 
-// Canonical sort order for variant labels
-const VARIANT_ORDER = [
-  'per piece', 'half', 'half kg', 'full', 'full kg',
-]
+const VARIANT_ORDER = ['per piece', 'half', 'half kg', 'full', 'full kg']
 function variantSortKey(label) {
   const idx = VARIANT_ORDER.indexOf(label.toLowerCase())
   return idx === -1 ? 99 : idx
 }
 
-// Group a flat array of items into:
-//   { type: 'solo', item }
-//   { type: 'group', baseName, image, description, isVeg, isBestseller, isSpicy, variants: [{ label, item }] }
 function groupItems(items) {
-  const groups = new Map() // baseName → array of { label, item }
-
+  const groups = new Map()
   items.forEach((item) => {
     const { baseName, variantLabel } = parseVariant(item.name)
     if (!variantLabel) {
@@ -51,23 +60,19 @@ function groupItems(items) {
     if (!groups.has(baseName)) groups.set(baseName, [])
     groups.get(baseName).push({ label: variantLabel, item })
   })
-
   return Array.from(groups.entries()).map(([key, variants]) => {
-    if (key.startsWith('__solo__')) {
-      return { type: 'solo', item: variants[0].item }
-    }
-    // Sort variants: Per Piece < Half < Half Kg < Full < Full Kg
+    if (key.startsWith('__solo__')) return { type: 'solo', item: variants[0].item }
     variants.sort((a, b) => variantSortKey(a.label) - variantSortKey(b.label))
-    const representative = variants[0].item
+    const rep = variants[0].item
     return {
       type: 'group',
       baseName: key,
-      image: representative.image,
-      description: representative.description,
-      isVeg: representative.isVeg,
-      isBestseller: representative.isBestseller,
-      isSpicy: representative.isSpicy,
-      calories: representative.calories,
+      image: rep.image,
+      description: rep.description,
+      isVeg: rep.isVeg,
+      isBestseller: rep.isBestseller,
+      isSpicy: rep.isSpicy,
+      calories: rep.calories,
       variants,
     }
   })
@@ -110,43 +115,30 @@ function QtyControl({ qty, onAdd, onIncrease, onDecrease }) {
   }
   return (
     <div className="flex items-center gap-1 bg-green-600 rounded-xl overflow-hidden shadow-sm">
-      <button
-        onClick={onDecrease}
-        className="px-2.5 py-1.5 text-white font-bold text-base active:bg-green-700 transition-colors"
-      >−</button>
+      <button onClick={onDecrease} className="px-2.5 py-1.5 text-white font-bold text-base active:bg-green-700">−</button>
       <span className="text-white font-bold text-sm min-w-[20px] text-center">{qty}</span>
-      <button
-        onClick={onIncrease}
-        className="px-2.5 py-1.5 text-white font-bold text-base active:bg-green-700 transition-colors"
-      >+</button>
+      <button onClick={onIncrease} className="px-2.5 py-1.5 text-white font-bold text-base active:bg-green-700">+</button>
     </div>
   )
 }
 
-// ── Solo Food Item Card ────────────────────────────────────────────────────────
+// ── Solo Food Item Card ───────────────────────────────────────────────────────
 function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(item.image || FALLBACK_IMG)
   const effectivePrice = item.discountedPrice > 0 ? item.discountedPrice : item.price
-
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
           <VegBadge isVeg={item.isVeg} />
           {item.isBestseller && (
-            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
-              ★ Bestseller
-            </span>
+            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">★ Bestseller</span>
           )}
           {item.isSpicy && <span className="text-[10px]">🌶️</span>}
         </div>
-        <h4 className="font-semibold text-gray-900 text-[14px] leading-snug line-clamp-2">
-          {item.name}
-        </h4>
+        <h4 className="font-semibold text-gray-900 text-[14px] leading-snug line-clamp-2">{item.name}</h4>
         {item.description && (
-          <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
-            {item.description}
-          </p>
+          <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{item.description}</p>
         )}
         <div className="flex items-center gap-2 mt-1.5">
           <span className="font-bold text-gray-900 text-[15px]">₹{effectivePrice}</span>
@@ -159,19 +151,11 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
             </>
           )}
         </div>
-        {item.calories > 0 && (
-          <p className="text-[11px] text-gray-400 mt-0.5">{item.calories} kcal</p>
-        )}
+        {item.calories > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{item.calories} kcal</p>}
       </div>
-
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
         <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
-          <img
-            src={imgSrc}
-            alt={item.name}
-            onError={() => setImgSrc(FALLBACK_IMG)}
-            className="w-full h-full object-cover"
-          />
+          <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMG)} className="w-full h-full object-cover" />
         </div>
         <QtyControl qty={qty} onAdd={onAdd} onIncrease={onIncrease} onDecrease={onDecrease} />
       </div>
@@ -179,44 +163,28 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
   )
 }
 
-// ── Grouped Variant Card ───────────────────────────────────────────────────────
+// ── Grouped Variant Card ──────────────────────────────────────────────────────
 function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(group.image || FALLBACK_IMG)
-  // Default to first variant (Half / Per Piece)
   const [selectedIdx, setSelectedIdx] = useState(0)
-
   const selectedVariant = group.variants[selectedIdx]
   const selectedItem = selectedVariant.item
-  const effectivePrice = selectedItem.discountedPrice > 0
-    ? selectedItem.discountedPrice
-    : selectedItem.price
+  const effectivePrice = selectedItem.discountedPrice > 0 ? selectedItem.discountedPrice : selectedItem.price
   const qty = foodCart[selectedItem._id]?.qty || 0
-
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
-      {/* Left: text */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
           <VegBadge isVeg={group.isVeg} />
           {group.isBestseller && (
-            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
-              ★ Bestseller
-            </span>
+            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">★ Bestseller</span>
           )}
           {group.isSpicy && <span className="text-[10px]">🌶️</span>}
         </div>
-
-        <h4 className="font-semibold text-gray-900 text-[14px] leading-snug">
-          {group.baseName}
-        </h4>
-
+        <h4 className="font-semibold text-gray-900 text-[14px] leading-snug">{group.baseName}</h4>
         {group.description && (
-          <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
-            {group.description}
-          </p>
+          <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{group.description}</p>
         )}
-
-        {/* Variant toggle buttons */}
         <div className="flex gap-1.5 mt-2 flex-wrap">
           {group.variants.map((v, idx) => (
             <button
@@ -231,8 +199,6 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
             </button>
           ))}
         </div>
-
-        {/* Price for selected variant */}
         <div className="flex items-center gap-2 mt-1.5">
           <span className="font-bold text-gray-900 text-[15px]">₹{effectivePrice}</span>
           {selectedItem.discountedPrice > 0 && (
@@ -244,21 +210,11 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
             </>
           )}
         </div>
-
-        {group.calories > 0 && (
-          <p className="text-[11px] text-gray-400 mt-0.5">{group.calories} kcal</p>
-        )}
+        {group.calories > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{group.calories} kcal</p>}
       </div>
-
-      {/* Right: image + ADD */}
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
         <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
-          <img
-            src={imgSrc}
-            alt={group.baseName}
-            onError={() => setImgSrc(FALLBACK_IMG)}
-            className="w-full h-full object-cover"
-          />
+          <img src={imgSrc} alt={group.baseName} onError={() => setImgSrc(FALLBACK_IMG)} className="w-full h-full object-cover" />
         </div>
         <QtyControl
           qty={qty}
@@ -274,26 +230,19 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
 // ── Category Tab Bar ──────────────────────────────────────────────────────────
 function CategoryTabs({ categories, active, onSelect }) {
   const scrollRef = useRef(null)
-
   useEffect(() => {
     const el = scrollRef.current?.querySelector(`[data-cat="${active}"]`)
     el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
   }, [active])
-
   return (
-    <div ref={scrollRef}
-      className="flex gap-2 overflow-x-auto scrollbar-none py-2 px-4 bg-white border-b border-gray-100">
+    <div ref={scrollRef} className="flex gap-2 overflow-x-auto scrollbar-none py-2 px-4 bg-white border-b border-gray-100">
       {categories.map((cat) => (
         <button
           key={cat}
           data-cat={cat}
           onClick={() => onSelect(cat)}
-          className={`
-            flex-shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all
-            ${active === cat
-              ? 'bg-green-600 text-white shadow-sm'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}
-          `}
+          className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all
+            ${active === cat ? 'bg-green-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
         >
           {cat}
         </button>
@@ -320,7 +269,7 @@ function Skeleton() {
 function CartBar({ totalItems, totalPrice, onViewCart }) {
   if (totalItems === 0) return null
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 animate-slide-up">
+    <div className="fixed bottom-4 left-4 right-4 z-50">
       <button
         onClick={onViewCart}
         className="w-full bg-green-600 text-white rounded-2xl px-5 py-4 flex items-center
@@ -355,6 +304,41 @@ function OfferStrip({ offers }) {
   )
 }
 
+// ── Distance + Address Bar (Zomato-style, below banner info) ─────────────────
+function LocationBar({ restaurant, userLocation }) {
+  const address = restaurant?.address
+  const addressStr = [address?.street, address?.area, address?.city]
+    .filter(Boolean).join(', ')
+
+  const distKm =
+    userLocation && restaurant?.location?.lat && restaurant?.location?.lng
+      ? getDistanceKm(
+          userLocation.lat, userLocation.lng,
+          restaurant.location.lat, restaurant.location.lng
+        )
+      : null
+
+  if (!addressStr && distKm === null) return null
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+      <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span className="text-xs text-gray-500 flex-1 leading-relaxed">
+        {addressStr}
+      </span>
+      {distKm !== null && (
+        <span className="text-xs font-bold text-gray-700 flex-shrink-0 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+          {distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`}
+        </span>
+      )}
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function RestaurantDetailPage() {
   const { id } = useParams()
@@ -365,17 +349,22 @@ export default function RestaurantDetailPage() {
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('')
   const [bannerSrc, setBannerSrc] = useState(BANNER_FALLBACK)
-
-  // Local food cart: { [itemId]: { item, qty } }
+  const [userLocation, setUserLocation] = useState(null)
   const [foodCart, setFoodCart] = useState({})
+
+  // Request location on mount
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {} // silent fail — distance just won't show
+    )
+  }, [])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await Axios({
-        method: 'GET',
-        url: `/api/restaurant/${id}`,
-      })
+      const res = await Axios({ method: 'GET', url: `/api/restaurant/${id}` })
       if (res.data?.success) {
         const { restaurant: r, menu: m } = res.data.data
         setRestaurant(r)
@@ -398,27 +387,17 @@ export default function RestaurantDetailPage() {
     setFoodCart(prev => ({ ...prev, [item._id]: { item, qty: 1 } }))
     toast.success(`${item.name} added!`, { duration: 1200, icon: '🛒' })
   }
-
   const handleIncrease = (item) => {
-    setFoodCart(prev => ({
-      ...prev,
-      [item._id]: { item, qty: (prev[item._id]?.qty || 0) + 1 }
-    }))
+    setFoodCart(prev => ({ ...prev, [item._id]: { item, qty: (prev[item._id]?.qty || 0) + 1 } }))
   }
-
   const handleDecrease = (item) => {
     setFoodCart(prev => {
       const current = prev[item._id]?.qty || 0
-      if (current <= 1) {
-        const next = { ...prev }
-        delete next[item._id]
-        return next
-      }
+      if (current <= 1) { const next = { ...prev }; delete next[item._id]; return next }
       return { ...prev, [item._id]: { item, qty: current - 1 } }
     })
   }
 
-  // ── Cart totals ────────────────────────────────────────────────────────────
   const cartEntries = Object.values(foodCart)
   const cartCount = cartEntries.reduce((s, e) => s + e.qty, 0)
   const cartTotal = cartEntries.reduce((s, e) => {
@@ -427,12 +406,8 @@ export default function RestaurantDetailPage() {
   }, 0)
 
   const allItems = menu.flatMap(s => s.items)
-  const cartForCheckout = Object.fromEntries(
-    Object.entries(foodCart).map(([k, v]) => [k, v.qty])
-  )
-
+  const cartForCheckout = Object.fromEntries(Object.entries(foodCart).map(([k, v]) => [k, v.qty]))
   const activeSection = menu.find(m => m.category === activeCategory)
-  // Group items for the active section
   const groupedItems = activeSection ? groupItems(activeSection.items) : []
 
   return (
@@ -462,50 +437,53 @@ export default function RestaurantDetailPage() {
       {loading ? <Skeleton /> : !restaurant ? (
         <div className="flex flex-col items-center py-20">
           <p className="text-gray-500">Restaurant not found.</p>
-          <button onClick={() => navigate('/food')} className="mt-3 text-green-600 font-semibold">
-            ← Back to Food
-          </button>
+          <button onClick={() => navigate('/food')} className="mt-3 text-green-600 font-semibold">← Back to Food</button>
         </div>
       ) : (
         <>
           {/* ── Restaurant Info ── */}
-          <div className="bg-white px-4 pt-4 pb-0 shadow-sm">
-            <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">{restaurant.name}</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{restaurant.cuisineTypes?.join(' • ')}</p>
+          <div className="bg-white shadow-sm">
+            <div className="px-4 pt-4 pb-3">
+              <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">{restaurant.name}</h1>
+              <p className="text-sm text-gray-500 mt-0.5">{restaurant.cuisineTypes?.join(' • ')}</p>
 
-            <div className="flex flex-wrap items-center gap-4 mt-3">
-              <div className="flex items-center gap-1.5">
-                <StarRating rating={restaurant.rating} />
-                {restaurant.totalRatings > 0 && (
-                  <span className="text-xs text-gray-400">({restaurant.totalRatings}+)</span>
+              <div className="flex flex-wrap items-center gap-4 mt-3">
+                <div className="flex items-center gap-1.5">
+                  <StarRating rating={restaurant.rating} />
+                  {restaurant.totalRatings > 0 && (
+                    <span className="text-xs text-gray-400">({restaurant.totalRatings}+)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-semibold">{restaurant.deliveryTimeMin}–{restaurant.deliveryTimeMax} mins</span>
+                </div>
+                <div className="text-sm">
+                  {restaurant.deliveryFee === 0
+                    ? <span className="text-green-600 font-semibold">Free Delivery</span>
+                    : <span className="text-gray-600">₹{restaurant.deliveryFee} delivery</span>}
+                </div>
+                {restaurant.minOrderValue > 0 && (
+                  <span className="text-xs text-gray-400">Min ₹{restaurant.minOrderValue}</span>
                 )}
               </div>
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="font-semibold">{restaurant.deliveryTimeMin}–{restaurant.deliveryTimeMax} mins</span>
-              </div>
-              <div className="text-sm">
-                {restaurant.deliveryFee === 0
-                  ? <span className="text-green-600 font-semibold">Free Delivery</span>
-                  : <span className="text-gray-600">₹{restaurant.deliveryFee} delivery</span>}
-              </div>
-              {restaurant.minOrderValue > 0 && (
-                <span className="text-xs text-gray-400">Min ₹{restaurant.minOrderValue}</span>
+
+              {restaurant.description && (
+                <p className="text-xs text-gray-400 mt-2 leading-relaxed">{restaurant.description}</p>
+              )}
+
+              {!restaurant.isOpen && (
+                <div className="mt-2 bg-red-50 border border-red-200 text-red-600 text-xs font-semibold px-3 py-2 rounded-xl">
+                  ⛔ Currently closed · Opens at {restaurant.opensAt}
+                </div>
               )}
             </div>
 
-            {restaurant.description && (
-              <p className="text-xs text-gray-400 mt-2 leading-relaxed">{restaurant.description}</p>
-            )}
-
-            {!restaurant.isOpen && (
-              <div className="mt-2 bg-red-50 border border-red-200 text-red-600 text-xs font-semibold px-3 py-2 rounded-xl">
-                ⛔ Currently closed · Opens at {restaurant.opensAt}
-              </div>
-            )}
+            {/* ── Distance + Address bar (Zomato-style) ── */}
+            <LocationBar restaurant={restaurant} userLocation={userLocation} />
 
             <OfferStrip offers={restaurant.offers} />
           </div>
@@ -534,9 +512,7 @@ export default function RestaurantDetailPage() {
                 <div className="px-4 pt-4 pb-0">
                   <h2 className="font-extrabold text-gray-900 text-base">
                     {activeCategory}
-                    <span className="text-gray-400 font-normal text-sm ml-2">
-                      ({groupedItems.length})
-                    </span>
+                    <span className="text-gray-400 font-normal text-sm ml-2">({groupedItems.length})</span>
                   </h2>
                 </div>
 
@@ -568,7 +544,6 @@ export default function RestaurantDetailPage() {
                   })}
                 </div>
 
-                {/* Collapsed categories */}
                 {menu.filter(m => m.category !== activeCategory).map((section) => {
                   const sectionGrouped = groupItems(section.items)
                   return (
@@ -596,7 +571,6 @@ export default function RestaurantDetailPage() {
         </>
       )}
 
-      {/* ── Cart Bar ── */}
       <CartBar
         totalItems={cartCount}
         totalPrice={cartTotal}
