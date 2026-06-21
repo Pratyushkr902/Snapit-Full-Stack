@@ -72,11 +72,10 @@ function OpenClosedToggle({ isOpen, busy, onToggle, size = 'md' }) {
   )
 }
 
-// ── Order Row Component (now with net-earnings line) ───────────────────────────
+// ── Order Row Component ────────────────────────────────────────────────────────
 function OrderRow({ order, onUpdateStatus, getOrderNetEarnings }) {
   const isCancelled = order.delivery_status === 'Cancelled'
   const net = getOrderNetEarnings(order)
-
   return (
     <div className='bg-slate-900 border border-slate-800 rounded-xl p-4'>
       <div className='flex items-start justify-between gap-2 mb-3'>
@@ -135,6 +134,8 @@ export default function RestaurantAdminPage() {
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [togglingRestoId, setTogglingRestoId] = useState(null)
   const [uploadingPhotoItemId, setUploadingPhotoItemId] = useState(null)
+  // ── NEW: search state ──
+  const [menuSearch, setMenuSearch] = useState('')
 
   const inp   = 'w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-500 placeholder-slate-500'
   const label = 'text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1'
@@ -166,7 +167,6 @@ export default function RestaurantAdminPage() {
     finally { setOrdersLoading(false) }
   }
 
-  // ── Image upload helper (generic, optional setUploading callback) ──
   const uploadImage = async (file, setUploading) => {
     if (setUploading) setUploading(true)
     try {
@@ -190,7 +190,6 @@ export default function RestaurantAdminPage() {
     if (url) setItemForm(p => ({ ...p, image: url }))
   }
 
-  // ── NEW: inline photo update directly from the menu list (no need to open edit form) ──
   const handleInlineItemPhotoUpload = async (item, e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -205,11 +204,10 @@ export default function RestaurantAdminPage() {
       toast.error('Failed to update photo')
     } finally {
       setUploadingPhotoItemId(null)
-      e.target.value = '' // allow re-selecting the same file again later
+      e.target.value = ''
     }
   }
 
-  // ── NEW: open/closed toggle ──
   const handleToggleOpen = async (resto) => {
     const nextOpen = !resto.isOpen
     setTogglingRestoId(resto._id)
@@ -225,7 +223,6 @@ export default function RestaurantAdminPage() {
     }
   }
 
-  // ── Save Restaurant ──
   const handleSaveResto = async () => {
     if (!restoForm.name) return
     setSaving(true)
@@ -249,29 +246,34 @@ export default function RestaurantAdminPage() {
     finally { setSaving(false) }
   }
 
-  // ── Save Menu Item ──
+  // ── FIXED: Save Menu Item ──
+  // Bug was: discountedPrice used `|| price` fallback which overwrote intentional 0/empty
+  // Fix: send discountedPrice as-is (0 if blank), backend treats 0 as "no discount"
   const handleSaveItem = async () => {
     if (!itemForm.name || !itemForm.price || !itemForm.category) return
     setSaving(true)
     try {
+      const priceNum = Number(itemForm.price)
+      const discountedNum = itemForm.discountedPrice !== '' ? Number(itemForm.discountedPrice) : 0
       const body = {
         ...itemForm,
-        price: Number(itemForm.price),
-        discountedPrice: Number(itemForm.discountedPrice) || Number(itemForm.price),
+        price: priceNum,
+        discountedPrice: discountedNum,
         snapitMargin: Number(itemForm.snapitMargin) || 0,
         restaurantId: selectedResto._id,
       }
       if (editingItem) {
-        await Axios({ method: 'PUT', url: `/api/restaurant/menu/${editingItem._id}`, data: body })
-        setMenuItems(prev => prev.map(i => i._id === editingItem._id ? { ...i, ...body } : i))
+        const res = await Axios({ method: 'PUT', url: `/api/restaurant/menu/${editingItem._id}`, data: body })
+        // Use server response if available, otherwise merge locally
+        const updated = res.data?.data || { ...editingItem, ...body }
+        setMenuItems(prev => prev.map(i => i._id === editingItem._id ? updated : i))
         toast.success('Item updated')
       } else {
         const res = await Axios({ method: 'POST', url: '/api/restaurant/menu/add', data: body })
         if (res.data?.success) setMenuItems(prev => [...prev, res.data.data])
         toast.success('Item added')
       }
-      setItemForm(EMPTY_ITEM); setEditingItem(null); setTab('addItem'.replace('addItem', 'menu'))
-      setTab('menu')
+      setItemForm(EMPTY_ITEM); setEditingItem(null); setTab('menu')
     } catch { toast.error('Failed to save item') }
     finally { setSaving(false) }
   }
@@ -309,14 +311,6 @@ export default function RestaurantAdminPage() {
     } catch { toast.error('Failed to update status') }
   }
 
-  // ── NEW: net earnings math ──
-  // Net earning per cart item = (price charged to customer) - (snapit's margin).
-  // Promo codes / wallet deductions are absorbed by Snapit's own margin, not the seller,
-  // so they don't reduce what the seller earns per item.
-  // Best case: cartItems carry a `snapitMargin` snapshot taken at order time (recommended —
-  // add this in foodOrder.controller.js alongside price/discountedPrice when the order is created,
-  // since menu margins can change after the order was placed).
-  // Fallback: look up the *current* menu item's margin by name if no snapshot exists.
   const getItemNet = useCallback((ci) => {
     let margin = ci.snapitMargin
     if (margin === undefined || margin === null) {
@@ -332,7 +326,15 @@ export default function RestaurantAdminPage() {
     return (order.cartItems || []).reduce((sum, ci) => sum + getItemNet(ci), 0)
   }, [getItemNet])
 
-  const grouped = menuItems.reduce((acc, item) => {
+  // ── Menu grouping with search filter ──
+  const filteredMenuItems = menuSearch.trim()
+    ? menuItems.filter(item =>
+        item.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
+        item.category.toLowerCase().includes(menuSearch.toLowerCase())
+      )
+    : menuItems
+
+  const grouped = filteredMenuItems.reduce((acc, item) => {
     const cat = item.category || 'Other'
     if (!acc[cat]) acc[cat] = []
     acc[cat].push(item); return acc
@@ -344,7 +346,6 @@ export default function RestaurantAdminPage() {
     </div>
   )
 
-  // Orders scoped to the currently selected restaurant
   const restoOrders = orders.filter(o => o.store_details?.name === selectedResto?.name)
   const deliveredOrders = restoOrders.filter(o => o.delivery_status === 'Delivered')
   const cancelledCount = restoOrders.filter(o => o.delivery_status === 'Cancelled').length
@@ -371,7 +372,7 @@ export default function RestaurantAdminPage() {
               />
             )}
             {selectedResto && (
-              <button onClick={() => { setSelectedResto(null); setMenuItems([]); setTab('restaurants') }}
+              <button onClick={() => { setSelectedResto(null); setMenuItems([]); setTab('restaurants'); setMenuSearch('') }}
                 className='text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-lg font-black'>
                 ← All Restos
               </button>
@@ -463,7 +464,6 @@ export default function RestaurantAdminPage() {
           <div className='flex flex-col gap-4 w-full max-w-lg'>
             <p className='font-black text-white text-base'>{editingResto ? '✏️ Edit Restaurant' : '➕ New Restaurant'}</p>
 
-            {/* Restaurant image upload */}
             <ImageUploadField
               label='Cover Photo'
               value={restoForm.image}
@@ -531,7 +531,7 @@ export default function RestaurantAdminPage() {
         {/* ── MENU LIST ── */}
         {tab === 'menu' && selectedResto && (
           <div>
-            <div className='flex justify-between items-center mb-4'>
+            <div className='flex justify-between items-center mb-3'>
               <p className='text-sm font-black text-white'>{menuItems.length} items · {selectedResto.name}</p>
               <button onClick={() => { setEditingItem(null); setItemForm(EMPTY_ITEM); setTab('addItem') }}
                 className='flex-shrink-0 bg-orange-500 text-white text-xs font-black px-3 py-2 rounded-xl'>
@@ -539,21 +539,54 @@ export default function RestaurantAdminPage() {
               </button>
             </div>
 
+            {/* ── SEARCH BAR ── */}
+            <div className='relative mb-4'>
+              <svg className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/>
+              </svg>
+              <input
+                value={menuSearch}
+                onChange={e => setMenuSearch(e.target.value)}
+                placeholder='Search items or category...'
+                className='w-full bg-slate-800 border border-slate-700 text-white rounded-xl pl-9 pr-9 py-2.5 text-sm outline-none focus:border-orange-500 placeholder-slate-500'
+              />
+              {menuSearch && (
+                <button onClick={() => setMenuSearch('')} className='absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white'>
+                  <svg className='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12'/>
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Search results count */}
+            {menuSearch && (
+              <p className='text-xs text-slate-500 mb-3'>
+                {filteredMenuItems.length} result{filteredMenuItems.length !== 1 ? 's' : ''} for "{menuSearch}"
+              </p>
+            )}
+
             {menuItems.length === 0 ? (
               <div className='bg-slate-900 rounded-3xl p-12 text-center border-2 border-dashed border-slate-700'>
                 <p className='text-4xl mb-3'>🍽️</p>
                 <p className='text-white font-black mb-1'>No items yet</p>
                 <p className='text-slate-500 text-xs'>Add menu items using the tab above</p>
               </div>
+            ) : filteredMenuItems.length === 0 ? (
+              <div className='bg-slate-900 rounded-3xl p-8 text-center border border-slate-800'>
+                <p className='text-2xl mb-2'>🔍</p>
+                <p className='text-slate-400 text-sm font-black'>No items match "{menuSearch}"</p>
+              </div>
             ) : (
               Object.entries(grouped).map(([cat, items]) => (
                 <div key={cat} className='mb-6'>
-                  <p className='text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-l-2 border-orange-500 pl-2'>{cat}</p>
+                  <p className='text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-l-2 border-orange-500 pl-2'>
+                    {cat} <span className='text-slate-600 font-normal normal-case tracking-normal'>({items.length})</span>
+                  </p>
                   <div className='grid grid-cols-1 gap-2'>
                     {items.map(item => (
                       <div key={item._id} className={`bg-slate-900 border rounded-xl p-3 ${item.isAvailable ? 'border-slate-800' : 'border-slate-700 opacity-50'}`}>
                         <div className='flex items-start gap-3'>
-                          {/* Thumbnail with inline photo-edit overlay */}
                           <label className='relative w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 cursor-pointer group'>
                             {item.image
                               ? <img src={item.image} alt={item.name} className='w-full h-full object-cover'/>
@@ -564,9 +597,7 @@ export default function RestaurantAdminPage() {
                               </span>
                             </span>
                             <input
-                              type='file'
-                              accept='image/*'
-                              className='hidden'
+                              type='file' accept='image/*' className='hidden'
                               disabled={uploadingPhotoItemId === item._id}
                               onChange={(e) => handleInlineItemPhotoUpload(item, e)}
                             />
@@ -581,8 +612,10 @@ export default function RestaurantAdminPage() {
                             </div>
                             {item.description && <p className='text-[10px] text-slate-500 truncate mb-1'>{item.description}</p>}
                             <div className='flex items-center gap-2'>
-                              <p className='text-sm font-black text-white'>₹{item.discountedPrice || item.price}</p>
-                              {item.discountedPrice && item.discountedPrice < item.price &&
+                              <p className='text-sm font-black text-white'>
+                                ₹{item.discountedPrice > 0 ? item.discountedPrice : item.price}
+                              </p>
+                              {item.discountedPrice > 0 && item.discountedPrice < item.price &&
                                 <p className='text-[10px] text-slate-500 line-through'>₹{item.price}</p>}
                               <p className='text-[10px] text-amber-400/70'>cut ₹{item.snapitMargin || 0}</p>
                             </div>
@@ -608,7 +641,6 @@ export default function RestaurantAdminPage() {
           <div className='flex flex-col gap-4 w-full max-w-lg'>
             <p className='font-black text-white text-base'>{editingItem ? '✏️ Edit Item' : '➕ Add Menu Item'} · {selectedResto.name}</p>
 
-            {/* Item image upload */}
             <ImageUploadField
               label='Item Photo'
               value={itemForm.image}
@@ -628,7 +660,6 @@ export default function RestaurantAdminPage() {
               </div>
             ))}
 
-            {/* Category quick-pick */}
             {Object.keys(grouped).length > 0 && (
               <div>
                 <p className={label}>Quick-pick category</p>
@@ -701,15 +732,12 @@ export default function RestaurantAdminPage() {
         {tab === 'orders' && selectedResto && (
           <div>
             <div className='flex justify-between items-center mb-4'>
-              <p className='text-sm font-black text-white'>
-                {restoOrders.length} Orders · {selectedResto.name}
-              </p>
+              <p className='text-sm font-black text-white'>{restoOrders.length} Orders · {selectedResto.name}</p>
               <button onClick={loadOrders} className='text-xs font-black text-orange-400 bg-orange-500/10 border border-orange-500/30 px-3 py-1.5 rounded-lg'>
                 🔄 Refresh
               </button>
             </div>
 
-            {/* Earnings summary cards */}
             <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5'>
               <div className='bg-slate-900 border border-slate-800 rounded-xl p-3 text-center'>
                 <p className='text-[9px] text-slate-500 uppercase font-black'>Delivered</p>
