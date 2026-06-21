@@ -3,7 +3,7 @@
  * Route: /restaurant/:id
  *
  * Zomato-style menu page with working Add/+/− cart controls.
- * Uses local state for food cart (separate from main product cart).
+ * Supports grouped variant cards (Half/Full, Per Piece/Half Kg/Full Kg, etc.)
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -18,6 +18,60 @@ const FALLBACK_IMG =
 
 const BANNER_FALLBACK =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='300' viewBox='0 0 800 300'%3E%3Crect width='800' height='300' fill='%23fef3c7'/%3E%3Ctext x='400' y='155' text-anchor='middle' fill='%23d97706' font-size='20' font-family='sans-serif'%3ERestaurant%3C/text%3E%3C/svg%3E"
+
+// ── Variant suffix extraction ─────────────────────────────────────────────────
+// Returns { baseName, variantLabel } or { baseName: fullName, variantLabel: null }
+function parseVariant(name) {
+  const match = name.match(/^(.+?)\s*\(([^)]+)\)\s*$/)
+  if (!match) return { baseName: name, variantLabel: null }
+  return { baseName: match[1].trim(), variantLabel: match[2].trim() }
+}
+
+// Canonical sort order for variant labels
+const VARIANT_ORDER = [
+  'per piece', 'half', 'half kg', 'full', 'full kg',
+]
+function variantSortKey(label) {
+  const idx = VARIANT_ORDER.indexOf(label.toLowerCase())
+  return idx === -1 ? 99 : idx
+}
+
+// Group a flat array of items into:
+//   { type: 'solo', item }
+//   { type: 'group', baseName, image, description, isVeg, isBestseller, isSpicy, variants: [{ label, item }] }
+function groupItems(items) {
+  const groups = new Map() // baseName → array of { label, item }
+
+  items.forEach((item) => {
+    const { baseName, variantLabel } = parseVariant(item.name)
+    if (!variantLabel) {
+      groups.set(`__solo__${item._id}`, [{ label: null, item }])
+      return
+    }
+    if (!groups.has(baseName)) groups.set(baseName, [])
+    groups.get(baseName).push({ label: variantLabel, item })
+  })
+
+  return Array.from(groups.entries()).map(([key, variants]) => {
+    if (key.startsWith('__solo__')) {
+      return { type: 'solo', item: variants[0].item }
+    }
+    // Sort variants: Per Piece < Half < Half Kg < Full < Full Kg
+    variants.sort((a, b) => variantSortKey(a.label) - variantSortKey(b.label))
+    const representative = variants[0].item
+    return {
+      type: 'group',
+      baseName: key,
+      image: representative.image,
+      description: representative.description,
+      isVeg: representative.isVeg,
+      isBestseller: representative.isBestseller,
+      isSpicy: representative.isSpicy,
+      calories: representative.calories,
+      variants,
+    }
+  })
+}
 
 // ── Star Rating ───────────────────────────────────────────────────────────────
 function StarRating({ rating }) {
@@ -69,14 +123,13 @@ function QtyControl({ qty, onAdd, onIncrease, onDecrease }) {
   )
 }
 
-// ── Food Item Card ────────────────────────────────────────────────────────────
+// ── Solo Food Item Card ────────────────────────────────────────────────────────
 function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(item.image || FALLBACK_IMG)
   const effectivePrice = item.discountedPrice > 0 ? item.discountedPrice : item.price
 
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
-      {/* Text */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
           <VegBadge isVeg={item.isVeg} />
@@ -85,9 +138,7 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
               ★ Bestseller
             </span>
           )}
-          {item.isSpicy && (
-            <span className="text-[10px]">🌶️</span>
-          )}
+          {item.isSpicy && <span className="text-[10px]">🌶️</span>}
         </div>
         <h4 className="font-semibold text-gray-900 text-[14px] leading-snug line-clamp-2">
           {item.name}
@@ -100,12 +151,12 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
         <div className="flex items-center gap-2 mt-1.5">
           <span className="font-bold text-gray-900 text-[15px]">₹{effectivePrice}</span>
           {item.discountedPrice > 0 && (
-            <span className="text-gray-400 text-[12px] line-through">₹{item.price}</span>
-          )}
-          {item.discountedPrice > 0 && (
-            <span className="text-green-600 text-[11px] font-semibold">
-              {Math.round((1 - item.discountedPrice / item.price) * 100)}% off
-            </span>
+            <>
+              <span className="text-gray-400 text-[12px] line-through">₹{item.price}</span>
+              <span className="text-green-600 text-[11px] font-semibold">
+                {Math.round((1 - item.discountedPrice / item.price) * 100)}% off
+              </span>
+            </>
           )}
         </div>
         {item.calories > 0 && (
@@ -113,9 +164,8 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
         )}
       </div>
 
-      {/* Image + button */}
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
-        <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100 relative">
+        <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
           <img
             src={imgSrc}
             alt={item.name}
@@ -123,11 +173,98 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
             className="w-full h-full object-cover"
           />
         </div>
+        <QtyControl qty={qty} onAdd={onAdd} onIncrease={onIncrease} onDecrease={onDecrease} />
+      </div>
+    </div>
+  )
+}
+
+// ── Grouped Variant Card ───────────────────────────────────────────────────────
+function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
+  const [imgSrc, setImgSrc] = useState(group.image || FALLBACK_IMG)
+  // Default to first variant (Half / Per Piece)
+  const [selectedIdx, setSelectedIdx] = useState(0)
+
+  const selectedVariant = group.variants[selectedIdx]
+  const selectedItem = selectedVariant.item
+  const effectivePrice = selectedItem.discountedPrice > 0
+    ? selectedItem.discountedPrice
+    : selectedItem.price
+  const qty = foodCart[selectedItem._id]?.qty || 0
+
+  return (
+    <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
+      {/* Left: text */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-1">
+          <VegBadge isVeg={group.isVeg} />
+          {group.isBestseller && (
+            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+              ★ Bestseller
+            </span>
+          )}
+          {group.isSpicy && <span className="text-[10px]">🌶️</span>}
+        </div>
+
+        <h4 className="font-semibold text-gray-900 text-[14px] leading-snug">
+          {group.baseName}
+        </h4>
+
+        {group.description && (
+          <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
+            {group.description}
+          </p>
+        )}
+
+        {/* Variant toggle buttons */}
+        <div className="flex gap-1.5 mt-2 flex-wrap">
+          {group.variants.map((v, idx) => (
+            <button
+              key={v.item._id}
+              onClick={() => setSelectedIdx(idx)}
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all
+                ${selectedIdx === idx
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'}`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Price for selected variant */}
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className="font-bold text-gray-900 text-[15px]">₹{effectivePrice}</span>
+          {selectedItem.discountedPrice > 0 && (
+            <>
+              <span className="text-gray-400 text-[12px] line-through">₹{selectedItem.price}</span>
+              <span className="text-green-600 text-[11px] font-semibold">
+                {Math.round((1 - selectedItem.discountedPrice / selectedItem.price) * 100)}% off
+              </span>
+            </>
+          )}
+        </div>
+
+        {group.calories > 0 && (
+          <p className="text-[11px] text-gray-400 mt-0.5">{group.calories} kcal</p>
+        )}
+      </div>
+
+      {/* Right: image + ADD */}
+      <div className="flex flex-col items-center gap-2 flex-shrink-0">
+        <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
+          <img
+            src={imgSrc}
+            alt={group.baseName}
+            onError={() => setImgSrc(FALLBACK_IMG)}
+            className="w-full h-full object-cover"
+          />
+        </div>
         <QtyControl
           qty={qty}
-          onAdd={onAdd}
-          onIncrease={onIncrease}
-          onDecrease={onDecrease}
+          onAdd={() => onAdd(selectedItem)}
+          onIncrease={() => onIncrease(selectedItem)}
+          onDecrease={() => onDecrease(selectedItem)}
         />
       </div>
     </div>
@@ -258,10 +395,7 @@ export default function RestaurantDetailPage() {
 
   // ── Cart handlers ──────────────────────────────────────────────────────────
   const handleAdd = (item) => {
-    setFoodCart(prev => ({
-      ...prev,
-      [item._id]: { item, qty: 1 }
-    }))
+    setFoodCart(prev => ({ ...prev, [item._id]: { item, qty: 1 } }))
     toast.success(`${item.name} added!`, { duration: 1200, icon: '🛒' })
   }
 
@@ -292,13 +426,14 @@ export default function RestaurantDetailPage() {
     return s + price * e.qty
   }, 0)
 
-  // Build flat allItems + cart map for checkout
   const allItems = menu.flatMap(s => s.items)
   const cartForCheckout = Object.fromEntries(
     Object.entries(foodCart).map(([k, v]) => [k, v.qty])
   )
 
   const activeSection = menu.find(m => m.category === activeCategory)
+  // Group items for the active section
+  const groupedItems = activeSection ? groupItems(activeSection.items) : []
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -400,41 +535,59 @@ export default function RestaurantDetailPage() {
                   <h2 className="font-extrabold text-gray-900 text-base">
                     {activeCategory}
                     <span className="text-gray-400 font-normal text-sm ml-2">
-                      ({activeSection?.items?.length || 0})
+                      ({groupedItems.length})
                     </span>
                   </h2>
                 </div>
 
                 <div className="px-4">
-                  {activeSection?.items?.map((item) => (
-                    <FoodItemCard
-                      key={item._id}
-                      item={item}
-                      qty={foodCart[item._id]?.qty || 0}
-                      onAdd={() => handleAdd(item)}
-                      onIncrease={() => handleIncrease(item)}
-                      onDecrease={() => handleDecrease(item)}
-                    />
-                  ))}
+                  {groupedItems.map((entry) => {
+                    if (entry.type === 'solo') {
+                      const item = entry.item
+                      return (
+                        <FoodItemCard
+                          key={item._id}
+                          item={item}
+                          qty={foodCart[item._id]?.qty || 0}
+                          onAdd={() => handleAdd(item)}
+                          onIncrease={() => handleIncrease(item)}
+                          onDecrease={() => handleDecrease(item)}
+                        />
+                      )
+                    }
+                    return (
+                      <VariantCard
+                        key={entry.baseName}
+                        group={entry}
+                        foodCart={foodCart}
+                        onAdd={handleAdd}
+                        onIncrease={handleIncrease}
+                        onDecrease={handleDecrease}
+                      />
+                    )
+                  })}
                 </div>
 
                 {/* Collapsed categories */}
-                {menu.filter(m => m.category !== activeCategory).map((section) => (
-                  <button
-                    key={section.category}
-                    onClick={() => setActiveCategory(section.category)}
-                    className="w-full flex items-center justify-between px-4 py-3.5
-                               border-t border-gray-100 hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="font-semibold text-gray-700 text-sm">{section.category}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{section.items.length} items</span>
-                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
+                {menu.filter(m => m.category !== activeCategory).map((section) => {
+                  const sectionGrouped = groupItems(section.items)
+                  return (
+                    <button
+                      key={section.category}
+                      onClick={() => setActiveCategory(section.category)}
+                      className="w-full flex items-center justify-between px-4 py-3.5
+                                 border-t border-gray-100 hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="font-semibold text-gray-700 text-sm">{section.category}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">{sectionGrouped.length} items</span>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </button>
+                  )
+                })}
               </>
             )}
           </div>

@@ -177,7 +177,7 @@ export default function TodayDeals() {
       <div className="bg-green-50 border border-green-100 rounded-2xl py-4 overflow-hidden">
 
         <div className="flex items-center justify-between px-4 mb-3">
-          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Today's Deals 🔥</h2>
+          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Today's Deals </h2>
           <button
             onClick={() => navigate("/deals")}
             className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-full px-4 py-1.5 transition-colors"

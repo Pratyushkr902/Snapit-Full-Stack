@@ -1,5 +1,6 @@
 import OrderModel from '../models/order.model.js'
 import UserModel  from '../models/user.model.js'
+import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
 import crypto     from 'crypto'
 
@@ -11,17 +12,50 @@ const getRazorpay = () => new Razorpay({
 const genOrderId = () =>
   'FOOD-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase()
 
-const buildCartItems = (items) =>
-  (items || []).map(i => ({
-    productId:         i.menuItemId,
-    name:              i.name,
-    image:             i.image || '',
-    price:             Number(i.price),
-    sellerPrice:       Number(i.price),
-    snapitMargin:      0,
-    quantity:          Number(i.quantity),
-    seller_store_name: null,
-  }))
+// ── Build cart items, trusting the DATABASE for price/margin, not the client ──
+// Looks up each MenuItem by its real _id so a tampered client payload can't
+// change what the customer is charged or what the restaurant gets paid.
+// Falls back to the client-submitted price only if the menu item can't be
+// found (e.g. deleted after being added to cart), so an order doesn't hard-fail.
+const buildCartItems = async (items) => {
+  const ids = (items || []).map(i => i.menuItemId).filter(Boolean)
+  const dbItems = await MenuItemModel.find({ _id: { $in: ids } })
+  const dbById = new Map(dbItems.map(d => [String(d._id), d]))
+
+  return (items || []).map(i => {
+    const db = dbById.get(String(i.menuItemId))
+
+    if (!db) {
+      console.warn(`[buildCartItems] ⚠️ menuItemId=${i.menuItemId} not found in DB, falling back to client price`)
+      return {
+        productId:         i.menuItemId,
+        name:              i.name,
+        image:             i.image || '',
+        price:             Number(i.price),
+        sellerPrice:       Number(i.price),
+        snapitMargin:      0,
+        quantity:          Number(i.quantity),
+        seller_store_name: null,
+      }
+    }
+
+    // Effective customer-facing price: discountedPrice if set, else MRP price.
+    const effectivePrice = db.discountedPrice > 0 ? db.discountedPrice : db.price
+    const margin         = Number(db.snapitMargin || 0)
+    const sellerPrice     = effectivePrice - margin
+
+    return {
+      productId:         db._id,
+      name:              db.name,
+      image:             db.image || i.image || '',
+      price:             effectivePrice,
+      sellerPrice,
+      snapitMargin:      margin,
+      quantity:          Number(i.quantity),
+      seller_store_name: null,
+    }
+  })
+}
 
 // ── Validate & extract common fields from request body ──────────────────────
 const extractBody = (body) => {
@@ -63,7 +97,8 @@ const extractBody = (body) => {
 }
 
 // ── Shared order fields ─────────────────────────────────────────────────────
-const buildOrderFields = (userId, fields, extra = {}) => {
+// NOTE: now async because buildCartItems looks up the DB — every caller must await this.
+const buildOrderFields = async (userId, fields, extra = {}) => {
   const {
     restaurantName, addressId, items,
     subTotalAmt, delivery_fee, totalAmt,
@@ -74,7 +109,7 @@ const buildOrderFields = (userId, fields, extra = {}) => {
   return {
     userId,
     orderId:      genOrderId(),
-    cartItems:    buildCartItems(items),
+    cartItems:    await buildCartItems(items),
     product_details: { name: restaurantName || 'Food Order', image: [] },
     delivery_address: addressId,
     subTotalAmt,
@@ -128,7 +163,7 @@ export async function foodOrderCOD(req, res) {
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
 
     // ✅ FIX: auth middleware sets req.userId (not req.user._id) — req.user does not exist
-    const order = new OrderModel(buildOrderFields(req.userId, fields, {
+    const order = new OrderModel(await buildOrderFields(req.userId, fields, {
       payment_status:  'CASH ON DELIVERY',
       payment_mode:    'COD',
       delivery_status: 'Pending',
@@ -169,7 +204,7 @@ export async function foodOrderWallet(req, res) {
     await deductWallet(req.userId, deductAmt, fields.restaurantName)
 
     // ✅ FIX: req.userId, not req.user._id
-    const order = new OrderModel(buildOrderFields(req.userId, fields, {
+    const order = new OrderModel(await buildOrderFields(req.userId, fields, {
       paymentId:       'WALLET-' + Date.now(),
       payment_status:  'PAID',
       payment_mode:    'WALLET',
@@ -240,7 +275,7 @@ export async function foodOrderVerifyPayment(req, res) {
     await deductWallet(req.userId, fields.walletAmountUsed, fields.restaurantName)
 
     // ✅ FIX: req.userId, not req.user._id
-    const order = new OrderModel(buildOrderFields(req.userId, fields, {
+    const order = new OrderModel(await buildOrderFields(req.userId, fields, {
       paymentId:       razorpay_payment_id,
       payment_status:  'PAID',
       payment_mode:    'ONLINE',
