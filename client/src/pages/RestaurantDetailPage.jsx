@@ -4,6 +4,7 @@
  *
  * Zomato-style menu page with working Add/+/− cart controls.
  * Supports grouped variant cards (Half/Full, Per Piece/Half Kg/Full Kg, etc.)
+ * and inline variant cards (pizza sizes via item.variants array).
  * Shows distance + address below banner, requests location on mount.
  */
 
@@ -48,9 +49,15 @@ function variantSortKey(label) {
   return idx === -1 ? 99 : idx
 }
 
+// ── FIX 2: groupItems now handles item.variants array (e.g. pizza sizes) ─────
 function groupItems(items) {
   const groups = new Map()
   items.forEach((item) => {
+    // If item has its own variants array (e.g. pizza sizes), treat as inline variant group
+    if (item.variants?.length > 1) {
+      groups.set(`__inline__${item._id}`, [{ type: 'inline', item }])
+      return
+    }
     const { baseName, variantLabel } = parseVariant(item.name)
     if (!variantLabel) {
       groups.set(`__solo__${item._id}`, [{ label: null, item }])
@@ -60,7 +67,8 @@ function groupItems(items) {
     groups.get(baseName).push({ label: variantLabel, item })
   })
   return Array.from(groups.entries()).map(([key, variants]) => {
-    if (key.startsWith('__solo__')) return { type: 'solo', item: variants[0].item }
+    if (key.startsWith('__inline__')) return { type: 'inline', item: variants[0].item }
+    if (key.startsWith('__solo__'))   return { type: 'solo',   item: variants[0].item }
     variants.sort((a, b) => variantSortKey(a.label) - variantSortKey(b.label))
     const rep = variants[0].item
     return {
@@ -162,7 +170,70 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
   )
 }
 
-// ── Grouped Variant Card ──────────────────────────────────────────────────────
+// ── FIX 2: Inline Variant Card (for pizza sizes via item.variants array) ──────
+function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
+  const [imgSrc, setImgSrc] = useState(item.image ? `${item.image}&fm=webp&q=70` : FALLBACK_IMG)
+  const [selectedIdx, setSelectedIdx] = useState(0)
+  const selectedVariant = item.variants[selectedIdx]
+  // Use the variant's price; fall back to item.price for the base
+  const price = selectedVariant.price ?? item.price
+  // Cart key = itemId + variantLabel so each size is an independent cart slot
+  const cartKey = `${item._id}_${selectedVariant.label}`
+  const qty = foodCart[cartKey]?.qty || 0
+
+  const cartItem = { ...item, _id: cartKey, price, name: `${item.name} (${selectedVariant.label})` }
+
+  return (
+    <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-1">
+          <VegBadge isVeg={item.isVeg} />
+          {item.isBestseller && (
+            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">★ Bestseller</span>
+          )}
+          {item.isSpicy && <span className="text-[10px]">🌶️</span>}
+        </div>
+        <h4 className="font-semibold text-gray-900 text-[14px] leading-snug">{item.name}</h4>
+        {item.description && (
+          <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{item.description}</p>
+        )}
+        {/* Size selector pills */}
+        <div className="flex gap-1.5 mt-2 flex-wrap">
+          {item.variants.map((v, idx) => (
+            <button
+              key={v.label}
+              onClick={() => setSelectedIdx(idx)}
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all
+                ${selectedIdx === idx
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'}`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className="font-bold text-gray-900 text-[15px]">₹{price}</span>
+        </div>
+        {item.calories > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{item.calories} kcal</p>}
+      </div>
+      <div className="flex flex-col items-center gap-2 flex-shrink-0">
+        <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
+          <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMG)}
+            className="w-full h-full object-cover" loading="lazy" decoding="async" />
+        </div>
+        <QtyControl
+          qty={qty}
+          onAdd={() => onAdd(cartItem)}
+          onIncrease={() => onIncrease(cartItem)}
+          onDecrease={() => onDecrease(cartItem)}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── Grouped Variant Card (Half/Full suffix style) ─────────────────────────────
 function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(group.image ? `${group.image}&fm=webp&q=70` : FALLBACK_IMG)
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -303,17 +374,18 @@ function OfferStrip({ offers }) {
   )
 }
 
-// ── Distance + Address Bar (Zomato-style, below banner info) ─────────────────
+// ── FIX 1: Distance + Address Bar — reads GeoJSON coordinates[1/0] ────────────
 function LocationBar({ restaurant, userLocation }) {
   const address = restaurant?.address
   const addressStr = [address?.street, address?.area, address?.city]
     .filter(Boolean).join(', ')
 
   const distKm =
-    userLocation && restaurant?.location?.lat && restaurant?.location?.lng
+    userLocation && restaurant?.location?.coordinates
       ? getDistanceKm(
           userLocation.lat, userLocation.lng,
-          restaurant.location.lat, restaurant.location.lng
+          restaurant.location.coordinates[1],  // lat
+          restaurant.location.coordinates[0],  // lng
         )
       : null
 
@@ -413,20 +485,20 @@ export default function RestaurantDetailPage() {
     <div className="bg-gray-50 min-h-screen">
 
       {/* ── Banner ── */}
-<div className="relative">
-  {bannerSrc && (
-    <div className="h-48 sm:h-64 bg-gray-200 overflow-hidden">
-      <img
-        src={bannerSrc}
-        alt={restaurant?.name || 'Restaurant'}
-        onError={() => setBannerSrc(null)}
-        className="w-full h-full object-cover"
-        fetchPriority="high"
-        decoding="async"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-    </div>
-  )}
+      <div className="relative">
+        {bannerSrc && (
+          <div className="h-48 sm:h-64 bg-gray-200 overflow-hidden">
+            <img
+              src={bannerSrc}
+              alt={restaurant?.name || 'Restaurant'}
+              onError={() => setBannerSrc(null)}
+              className="w-full h-full object-cover"
+              fetchPriority="high"
+              decoding="async"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          </div>
+        )}
         <button
           onClick={() => navigate(-1)}
           className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2.5 rounded-xl shadow"
@@ -521,6 +593,19 @@ export default function RestaurantDetailPage() {
 
                 <div className="px-4">
                   {groupedItems.map((entry) => {
+                    // FIX 2: render InlineVariantCard for pizza-style items
+                    if (entry.type === 'inline') {
+                      return (
+                        <InlineVariantCard
+                          key={entry.item._id}
+                          item={entry.item}
+                          foodCart={foodCart}
+                          onAdd={handleAdd}
+                          onIncrease={handleIncrease}
+                          onDecrease={handleDecrease}
+                        />
+                      )
+                    }
                     if (entry.type === 'solo') {
                       const item = entry.item
                       return (
