@@ -1032,7 +1032,37 @@ export const getOrderInvoiceController = async (request, response) => {
         return response.status(500).json({ message: 'Invoice generation failed.', error: true, success: false })
     }
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// SCRATCH CARDS
+// ─────────────────────────────────────────────────────────────────────────────
+export const getScratchCardsController = async (request, response) => {
+    try {
+        const userId = request.userId
+        const user = await UserModel.findById(userId)
+            .select('scratchCards walletBalance walletTransactions')
+        if (!user) return response.status(404).json({ message: 'User not found.', error: true, success: false })
 
+        // Auto-generate a card if user has none pending
+        if (!user.scratchCards || user.scratchCards.length === 0) {
+            return response.json({
+                message: 'No scratch cards available.',
+                error: false,
+                success: true,
+                data: []
+            })
+        }
+
+        return response.json({
+            message: 'Scratch cards fetched.',
+            error: false,
+            success: true,
+            data: user.scratchCards
+        })
+    } catch (error) {
+        console.error('getScratchCardsController:', error.message)
+        return response.status(500).json({ message: 'Failed to fetch scratch cards.', error: true, success: false })
+    }
+}
 export async function webhookStripe(request, response) {
     return response.json({ message: 'Webhook received.', success: true })
 }
