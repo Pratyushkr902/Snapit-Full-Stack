@@ -12,7 +12,8 @@ import {
     verifyEmailController,
     verifyForgotPasswordOtp,
     getAllRiders,
-    saveFcmTokenController
+    saveFcmTokenController,
+    updateDobController
 } from '../controllers/user.controller.js'
 import auth from '../middleware/auth.js'
 import { admin } from '../middleware/Admin.js'        // ✅ added
@@ -37,6 +38,7 @@ userRouter.put('/upload-avatar',              auth, upload.single('avatar'), upl
 userRouter.put('/update-user',                auth, updateUserDetails)
 userRouter.get('/user-details',               auth, userDetails)
 userRouter.post('/save-fcm-token',            auth, saveFcmTokenController)
+userRouter.put('/update-dob',                 auth, updateDobController)
 
 // ── Admin only ───────────────────────────────────────────────
 userRouter.get('/all-riders',                 auth, admin, getAllRiders)  // ✅ added admin guard

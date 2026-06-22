@@ -127,14 +127,14 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-walletCashbackThisMonth: {
-    type: Number,
-    default: 0
-},
-walletCashbackMonthKey: {
-    type: String,
-    default: ''
-},
+    walletCashbackThisMonth: {
+        type: Number,
+        default: 0
+    },
+    walletCashbackMonthKey: {
+        type: String,
+        default: ''
+    },
     currentStreak: {
         type: Number,
         default: 0
@@ -162,6 +162,23 @@ walletCashbackMonthKey: {
     usedPromoCodes: {
         type: [String],
         default: []
+    },
+    // ── New: Birthday Bonus / Surprise Box / Express fields ─────────────────
+    dob: {
+        type: Date,
+        default: null
+    },
+    birthdayBonusClaimedYear: {
+        type: Number,
+        default: null
+    },
+    lastSurpriseBoxAt: {
+        type: Date,
+        default: null
+    },
+    isExpressMember: {
+        type: Boolean,
+        default: false
     }
 },{
     timestamps : true

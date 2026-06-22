@@ -28,10 +28,12 @@ import './models/order.model.js'
 import './models/wallet.model.js'
 import './models/subscription.model.js'
 import './models/notification.model.js'
-import './models/Restaurant.model.js'
+import './models/restaurant.model.js'
 import './models/MenuItem.model.js'
+import './models/scheduledOrder.model.js'
 
 import { startAutoConfirmCron } from './utils/autoConfirmOrders.js'
+import { startScheduledOrdersCron } from './cron/scheduledOrder.cron.js'
 
 console.log("RAZORPAY INTEGRITY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED")
 
@@ -55,6 +57,7 @@ import streakRouter       from './route/streak.route.js'
 import subscriptionRouter from './route/subscription.route.js'
 import notificationRouter from './route/notification.route.js'
 import restaurantRouter   from './route/restaurant.route.js'
+import scheduledOrderRouter from './route/scheduledOrder.route.js'
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -339,6 +342,7 @@ app.use('/api/payment',      paymentRouter)
 app.use('/api/admin',        adminRouter)
 app.use('/api/notification', notificationRouter)
 app.use('/api/restaurant',   restaurantRouter)
+app.use('/api/scheduled-order', scheduledOrderRouter)
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
@@ -393,10 +397,12 @@ connectDB().then(() => {
     console.log("✅ Database Connected")
     initSubscriptionCron()
     startAutoConfirmCron()
+    startScheduledOrdersCron()
     server.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Snapit running on port ${PORT}`)
         console.log(`⏰ MRP cron: daily midnight IST`)
         console.log(`⏰ Auto-confirm cron: every 2 min`)
+        console.log(`⏰ Scheduled orders cron: daily 6 AM IST`)
     })
 }).catch(err => {
     console.error("❌ Database connection failed", err)

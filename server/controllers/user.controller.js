@@ -182,7 +182,6 @@ export async function loginController(request, response) {
             })
         }
 
-        // ✅ FIXED: pass user.role so JWT includes role field
         const accesstoken = await generatedAccessToken(user._id, user.role)
         const refreshToken = await genertedRefreshToken(user._id)
 
@@ -480,7 +479,6 @@ export async function refreshToken(request, response) {
 
         const userId = verifyToken?.id
 
-        // ✅ FIXED: fetch user from DB so we have user.role available
         const user = await UserModel.findById(userId)
         if (!user) {
             return response.status(401).json({
@@ -490,7 +488,6 @@ export async function refreshToken(request, response) {
             })
         }
 
-        // ✅ FIXED: pass user.role so refreshed token also includes role
         const newAccessToken = await generatedAccessToken(userId, user.role)
 
         response.cookie('accessToken', newAccessToken, cookiesOption)
@@ -578,5 +575,40 @@ export async function saveFcmTokenController(request, response) {
             error: true,
             success: false
         })
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE DOB (needed for Birthday Bonus)
+// ─────────────────────────────────────────────────────────────────────────────
+export const updateDobController = async (request, response) => {
+    try {
+        const userId = request.userId
+        const { dob } = request.body
+
+        if (!dob) {
+            return response.status(400).json({ message: 'dob is required.', error: true, success: false })
+        }
+
+        const parsedDob = new Date(dob)
+        if (isNaN(parsedDob.getTime())) {
+            return response.status(400).json({ message: 'Invalid date format.', error: true, success: false })
+        }
+
+        if (parsedDob > new Date()) {
+            return response.status(400).json({ message: 'Date of birth cannot be in the future.', error: true, success: false })
+        }
+
+        await UserModel.findByIdAndUpdate(userId, { dob: parsedDob })
+
+        return response.json({
+            message: 'Birthday saved.',
+            error: false,
+            success: true,
+            data: { dob: parsedDob }
+        })
+    } catch (error) {
+        console.error('updateDobController:', error.message)
+        return response.status(500).json({ message: 'Failed to update birthday.', error: true, success: false })
     }
 }

@@ -20,7 +20,10 @@ import {
     applyCouponController,
     getScratchCardsController,
     getOrderItems,
-    updateSellerOrderStatusController 
+    updateSellerOrderStatusController,
+    claimBirthdayBonusController,
+    claimSurpriseBoxController,
+    getOrderInvoiceController
 } from "../controllers/order.controller.js"
 import {
     getRestaurantOrdersController,
@@ -40,6 +43,9 @@ orderRouter.get( "/order-list",         auth,        getOrderDetailsController)
 orderRouter.get( "/last-order",         auth,        getLastOrder)
 orderRouter.post("/coupon/apply",       auth,        applyCouponController)
 orderRouter.get( "/scratch-cards",      auth,        getScratchCardsController)
+orderRouter.post("/claim-birthday-bonus", auth,      claimBirthdayBonusController)
+orderRouter.post("/claim-surprise-box",   auth,      claimSurpriseBoxController)
+orderRouter.get( "/invoice/:orderId",     auth,      getOrderInvoiceController)
 
 // ── Rider Tracking ────────────────────────────────────────────────────────────
 orderRouter.get( "/rider-location/:orderId", auth,        getRiderLocationController)
