@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import AddAddress from '../components/AddAddress'
@@ -26,38 +26,28 @@ const CheckoutPage = () => {
   const user                                 = useSelector(state => state.user)
   const navigate                             = useNavigate()
 
-  const [couponCode, setCouponCode]             = useState('')
-  const [discountAmount, setDiscountAmount]     = useState(0)
-  const [discountLabel, setDiscountLabel]       = useState('')
-  const [couponApplied, setCouponApplied]       = useState(false)
+  const [couponCode, setCouponCode]               = useState('')
+  const [discountAmount, setDiscountAmount]       = useState(0)
+  const [discountLabel, setDiscountLabel]         = useState('')
+  const [couponApplied, setCouponApplied]         = useState(false)
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false)
-
-  const [coords, setCoords]         = useState(null)
-  const [deliveryInfo, setDeliveryInfo] = useState(null)
 
   const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
 
-  // Fetch GPS once on mount
-  useEffect(() => {
-    if (!navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition(
-      pos => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      ()  => setCoords(null),
-      { enableHighAccuracy: true, timeout: 6000 }
-    )
-  }, [])
-
-  // Recalculate delivery whenever coords, cart total, or membership changes
-  useEffect(() => {
-    if (!coords) return
-    setDeliveryInfo(getDeliveryInfo(coords.lat, coords.lng, totalPrice, isSnapitPlus))
-  }, [coords, totalPrice, isSnapitPlus])
+  // Read coords directly from selected address — no GPS needed on checkout
+  const selectedAddress = addressList[selectAddress]
+  const deliveryInfo = (selectedAddress?.lat && selectedAddress?.lng)
+    ? getDeliveryInfo(selectedAddress.lat, selectedAddress.lng, totalPrice, isSnapitPlus)
+    : null
 
   const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
-  // Returns coords synchronously — GPS if available, store fallback otherwise
-  const getCoords = () => coords ?? STORE_FALLBACK
+  // Coords for backend — from address or store fallback
+  const getCoords = () => ({
+    lat: selectedAddress?.lat || STORE_FALLBACK.lat,
+    lng: selectedAddress?.lng || STORE_FALLBACK.lng,
+  })
 
   // ── Coupon ──
   const handleApplyPromoCoupon = async () => {
@@ -91,10 +81,9 @@ const CheckoutPage = () => {
   }
 
   const checkServiceArea = () => {
-    const selectedAddr = addressList[selectAddress]
-    if (!selectedAddr) return true
-    const cityLower = (selectedAddr.city || '').toLowerCase()
-    const lineLower = (selectedAddr.address_line || '').toLowerCase()
+    if (!selectedAddress) return true
+    const cityLower = (selectedAddress.city || '').toLowerCase()
+    const lineLower = (selectedAddress.address_line || '').toLowerCase()
     const isServiceable = SERVICEABLE_AREAS.some(
       area => cityLower.includes(area) || lineLower.includes(area)
     )
@@ -117,7 +106,7 @@ const CheckoutPage = () => {
 
   const handleWalletPayment = async () => {
     try {
-      if (!addressList[selectAddress]) return toast.error('Please select a delivery address')
+      if (!selectedAddress) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
       const currentBalance = Number(user?.walletBalance || 0)
       if (currentBalance < grandTotal) return toast.error('Insufficient Balance!')
@@ -127,7 +116,7 @@ const CheckoutPage = () => {
         ...SummaryApi.payWithWallet,
         data: {
           list_items:       cartItemsList,
-          addressId:        addressList[selectAddress]?._id,
+          addressId:        selectedAddress?._id,
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           totalAmt:         grandTotal,
@@ -152,7 +141,7 @@ const CheckoutPage = () => {
 
   const handleCashOnDelivery = async () => {
     try {
-      if (!addressList[selectAddress]) return toast.error('Please select an address first')
+      if (!selectedAddress) return toast.error('Please select an address first')
       if (!checkServiceArea()) return
       const loadingToast = toast.loading('Placing order...')
       const c = getCoords()
@@ -160,7 +149,7 @@ const CheckoutPage = () => {
         ...SummaryApi.CashOnDeliveryOrder,
         data: {
           list_items:       cartItemsList,
-          addressId:        addressList[selectAddress]?._id,
+          addressId:        selectedAddress?._id,
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           totalAmt:         grandTotal,
@@ -185,7 +174,7 @@ const CheckoutPage = () => {
     try {
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
-      if (!addressList[selectAddress]) return toast.error('Please select a delivery address')
+      if (!selectedAddress) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
       const gatewayToast = toast.loading('Loading payment gateway...')
       let RazorpayClass
@@ -202,7 +191,7 @@ const CheckoutPage = () => {
         ...SummaryApi.payment_url,
         data: {
           list_items:       cartItemsList,
-          addressId:        addressList[selectAddress]?._id,
+          addressId:        selectedAddress?._id,
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           totalAmt:         grandTotal,
@@ -231,7 +220,7 @@ const CheckoutPage = () => {
                   razorpay_payment_id: razorpayResponse.razorpay_payment_id,
                   razorpay_signature:  razorpayResponse.razorpay_signature,
                   list_items:          cartItemsList,
-                  addressId:           addressList[selectAddress]?._id,
+                  addressId:           selectedAddress?._id,
                   subTotalAmt:         totalPrice,
                   delivery_fee:        deliveryFee,
                   totalAmt:            grandTotal,
@@ -249,7 +238,7 @@ const CheckoutPage = () => {
               }
             } catch (err) { toast.dismiss(verificationToast); AxiosToastError(err) }
           },
-          prefill: { name: user?.name || '', contact: addressList[selectAddress]?.mobile || '' },
+          prefill: { name: user?.name || '', contact: selectedAddress?.mobile || '' },
           theme: { color: '#16a34a' }
         }
         const rzp = new RazorpayClass(options)
@@ -262,7 +251,6 @@ const CheckoutPage = () => {
     <section className='bg-blue-50 min-h-screen'>
       <div className='container mx-auto p-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
 
-        {/* Left: Addresses */}
         <div className='w-full'>
           <h3 className='text-lg font-black uppercase text-slate-700 mb-2'>Choose address</h3>
           <div className='bg-white p-2 grid gap-3 rounded-xl shadow-sm'>
@@ -275,6 +263,12 @@ const CheckoutPage = () => {
                     <div className='flex-1'>
                       <p className='font-bold text-slate-800'>{address.address_line}</p>
                       <p className='text-sm text-slate-600'>{address.city}, {address.pincode}</p>
+                      {/* Show warning if address has no coords */}
+                      {!address.lat && (
+                        <p className='text-[10px] text-yellow-600 font-bold mt-0.5'>
+                          📍 Re-save with "Use My Current Location" for accurate delivery fee
+                        </p>
+                      )}
                     </div>
                   </div>
                 </label>
@@ -288,7 +282,7 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          <div className='mx-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
+          <div className='mx-4 mt-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
             <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-1'>Promo Code</p>
             <p className='text-[10px] text-slate-400 mb-2'>
               First-time customer? Use <span className='font-black text-slate-600'>FIRSTUSER</span> on orders ₹149+
