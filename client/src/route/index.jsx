@@ -31,6 +31,7 @@ const Success                = lazy(() => import('../pages/Success'))
 const Cancel                 = lazy(() => import('../pages/Cancel'))
 const RiderTracking          = lazy(() => import('../pages/RiderTracking'))
 const RiderDashboard         = lazy(() => import('../pages/RiderDashboard'))
+const AdminRefunds           = lazy(() => import('../pages/AdminRefunds'))
 const StoreOrders            = lazy(() => import('../pages/StoreOrders'))
 const Wallet                 = lazy(() => import('../pages/Wallet'))
 const AdminSummary           = lazy(() => import('../components/AdminSummary'))
@@ -125,6 +126,8 @@ const router = createHashRouter([
             path: "subcategory",
             element: <S><AdminPermision><SubCategoryPage /></AdminPermision></S>
           },
+          
+         { path: "refunds", element: <S><AdminPermision><AdminRefunds /></AdminPermision></S> },
           {
             path: "product",
             element: <S><AdminPermision><ProductAdmin /></AdminPermision></S>

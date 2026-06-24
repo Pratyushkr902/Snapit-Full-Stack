@@ -327,6 +327,11 @@ const SummaryApi = {
         url: '/api/restaurant/:id',
         method: 'get'
     },
+    submitRefund: { url: '/api/refund/submit', method: 'post' },
+    getMyRefunds:  { url: '/api/refund/my',     method: 'get'  },
+    getAllRefunds:  { url: '/api/refund/all',    method: 'get'  },
+    resolveRefund: { url: '/api/refund/resolve', method: 'post' },
+
     getRestaurantMenu: {
         url: '/api/restaurant/:id/menu',
         method: 'get'

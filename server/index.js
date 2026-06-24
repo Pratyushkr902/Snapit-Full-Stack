@@ -58,6 +58,7 @@ import subscriptionRouter from './route/subscription.route.js'
 import notificationRouter from './route/notification.route.js'
 import restaurantRouter   from './route/restaurant.route.js'
 import scheduledOrderRouter from './route/scheduledOrder.route.js'
+import refundRouter from './route/refund.route.js'
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -343,6 +344,7 @@ app.use('/api/admin',        adminRouter)
 app.use('/api/notification', notificationRouter)
 app.use('/api/restaurant',   restaurantRouter)
 app.use('/api/scheduled-order', scheduledOrderRouter)
+app.use('/api/refund',          refundRouter)
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
