@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 
-// Returns current IST hour (0-23)
 const getISTHour = () => {
   const now   = new Date()
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
@@ -13,27 +12,23 @@ const isStoreOpen = () => {
   return h >= 8 && h < 21
 }
 
-// Countdown to 8 AM IST
 const getCountdown = () => {
   const now    = new Date()
   const utcMs  = now.getTime() + now.getTimezoneOffset() * 60000
   const istNow = new Date(utcMs + 5.5 * 3600000)
-
-  const open = new Date(istNow)
+  const open   = new Date(istNow)
   open.setHours(8, 0, 0, 0)
   if (istNow.getHours() >= 8) open.setDate(open.getDate() + 1)
-
   const diffMs = open - istNow
   const h = Math.floor(diffMs / 3600000)
   const m = Math.floor((diffMs % 3600000) / 60000)
   const s = Math.floor((diffMs % 60000) / 1000)
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+  return { h, m, s }
 }
 
 const StoreClosedOverlay = () => {
-  const [open, setOpen]         = useState(isStoreOpen())
+  const [open, setOpen]           = useState(isStoreOpen())
   const [countdown, setCountdown] = useState(getCountdown())
-  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -43,54 +38,55 @@ const StoreClosedOverlay = () => {
     return () => clearInterval(t)
   }, [])
 
-  // Store is open or user dismissed — don't show
-  if (open || dismissed) return null
+  if (open) return null
+
+  const { h, m, s } = countdown
 
   return (
-    <div className='fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900/95 backdrop-blur-sm px-6'>
-      {/* Moon animation */}
-      <div className='text-7xl mb-4 animate-bounce'>🌙</div>
+    <>
+      <div className='sticky top-0 z-50 w-full bg-[#1C1C2E] border-b border-white/5'>
+        <div className='max-w-2xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3'>
 
-      <h1 className='text-white text-2xl font-bold text-center mb-1'>
-        Snapit is Closed
-      </h1>
-      <p className='text-gray-300 text-sm text-center mb-6'>
-        We're resting for the night. Come back at{' '}
-        <span className='text-yellow-400 font-bold'>8:00 AM</span> — fresh & ready!
-      </p>
+          <div className='flex items-center gap-2.5 min-w-0'>
+            <div className='w-8 h-8 rounded-full bg-yellow-400/10 flex items-center justify-center shrink-0'>
+              <span className='text-base'>🌙</span>
+            </div>
+            <div className='min-w-0'>
+              <p className='text-white text-[13px] font-bold leading-tight'>
+                Snapit is currently closed
+              </p>
+              <p className='text-gray-400 text-[11px] leading-tight truncate'>
+                Opens at <span className='text-yellow-400 font-semibold'>8:00 AM</span> · ordering disabled
+              </p>
+            </div>
+          </div>
 
-      {/* Countdown */}
-      <div className='bg-white/10 border border-white/20 rounded-2xl px-8 py-4 mb-6 text-center'>
-        <p className='text-gray-400 text-xs font-medium mb-1'>Opens in</p>
-        <p className='text-white text-3xl font-mono font-bold tracking-widest'>{countdown}</p>
+          <div className='flex items-center gap-1 shrink-0'>
+            {[
+              { val: String(h).padStart(2,'0'), label: 'hr' },
+              { val: String(m).padStart(2,'0'), label: 'min' },
+              { val: String(s).padStart(2,'0'), label: 'sec' },
+            ].map((unit, i) => (
+              <React.Fragment key={unit.label}>
+                {i > 0 && <span className='text-gray-500 text-xs font-bold'>:</span>}
+                <div className='flex flex-col items-center bg-white/10 rounded-lg px-2 py-1 min-w-[36px]'>
+                  <span className='text-white text-sm font-mono font-bold leading-none'>{unit.val}</span>
+                  <span className='text-gray-500 text-[8px] font-medium uppercase leading-none mt-0.5'>{unit.label}</span>
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+
+        </div>
+
+        <div className='h-[2px] bg-white/5 w-full'>
+          <div
+            className='h-full bg-yellow-400 transition-all duration-1000'
+            style={{ width: `${Math.min(100, 100 - ((h * 3600 + m * 60 + s) / (13 * 3600)) * 100)}%` }}
+          />
+        </div>
       </div>
-
-      {/* Store hours card */}
-      <div className='bg-white/10 border border-white/20 rounded-2xl px-6 py-3 mb-8 flex items-center gap-4'>
-        <div className='text-center'>
-          <p className='text-gray-400 text-[10px] font-medium'>Opens</p>
-          <p className='text-white font-bold text-sm'>8:00 AM</p>
-        </div>
-        <div className='h-8 w-px bg-white/20' />
-        <div className='text-center'>
-          <p className='text-gray-400 text-[10px] font-medium'>Closes</p>
-          <p className='text-white font-bold text-sm'>9:00 PM</p>
-        </div>
-        <div className='h-8 w-px bg-white/20' />
-        <div className='text-center'>
-          <p className='text-gray-400 text-[10px] font-medium'>Days</p>
-          <p className='text-white font-bold text-sm'>Mon–Sun</p>
-        </div>
-      </div>
-
-      {/* Browse anyway */}
-      <button
-        onClick={() => setDismissed(true)}
-        className='text-gray-400 text-sm underline underline-offset-2 active:text-white transition'
-      >
-        Browse products (ordering disabled)
-      </button>
-    </div>
+    </>
   )
 }
 
