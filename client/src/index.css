@@ -19,7 +19,7 @@ body {
   font-style: normal;
   @apply bg-white text-neutral-700 scroll-smooth;
   /* MOBILE: Stop bounce/pull-to-refresh feel */
-  overscroll-behavior: none;
+  overscroll-behavior-x: none;
 }
 
 /* MOBILE: Remove tap highlight (Android blue flash on tap) */
@@ -44,7 +44,7 @@ body {
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
-  scroll-snap-type: x mandatory;
+  
 }
 
 .scrollbarCustom::-webkit-scrollbar {
