@@ -9,9 +9,9 @@ import {
 
 const router = express.Router();
 
-router.post("/submit",  auth(["ADMIN","user"]), submitRefund);
-router.get("/my",       auth(["ADMIN","user"]), getMyRefunds);
-router.get("/all",      auth(["ADMIN"]),        getAllRefunds);
-router.post("/resolve", auth(["ADMIN"]),        resolveRefund);
+router.post("/submit",  auth, submitRefund);
+router.get("/my",       auth, getMyRefunds);
+router.get("/all",      auth, getAllRefunds);
+router.post("/resolve", auth, resolveRefund);
 
 export default router;
