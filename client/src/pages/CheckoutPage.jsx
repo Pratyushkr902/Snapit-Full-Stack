@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
+import { isStoreOpen } from '../components/StoreClosedOverlay'
 
 const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
@@ -106,6 +107,7 @@ const CheckoutPage = () => {
 
   const handleWalletPayment = async () => {
     try {
+      if (!isStoreOpen()) return toast.error('Store is closed. We open at 8 AM!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
       const currentBalance = Number(user?.walletBalance || 0)
@@ -141,6 +143,7 @@ const CheckoutPage = () => {
 
   const handleCashOnDelivery = async () => {
     try {
+      if (!isStoreOpen()) return toast.error('Store is closed. We open at 8 AM!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select an address first')
       if (!checkServiceArea()) return
       const loadingToast = toast.loading('Placing order...')
@@ -172,6 +175,7 @@ const CheckoutPage = () => {
 
   const handleOnlinePayment = async () => {
     try {
+      if (!isStoreOpen()) return toast.error('Store is closed. We open at 8 AM!', { duration: 4000 })
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!selectedAddress) return toast.error('Please select a delivery address')
@@ -263,7 +267,6 @@ const CheckoutPage = () => {
                     <div className='flex-1'>
                       <p className='font-bold text-slate-800'>{address.address_line}</p>
                       <p className='text-sm text-slate-600'>{address.city}, {address.pincode}</p>
-                      {/* Show warning if address has no coords */}
                       {!address.lat && (
                         <p className='text-[10px] text-yellow-600 font-bold mt-0.5'>
                           📍 Re-save with "Use My Current Location" for accurate delivery fee
