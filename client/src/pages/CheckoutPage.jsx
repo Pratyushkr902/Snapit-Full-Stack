@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 
-const STORE_FALLBACK = { lat: 25.33107548756642, lng: 84.80066055528225 }
+const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
 const SERVICEABLE_AREAS = [
   'paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos',

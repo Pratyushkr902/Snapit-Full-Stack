@@ -1,8 +1,8 @@
 // Snapit delivery charge + ETA based on straight-line distance from store
 // Store location: Paliganj, Bihar (25.33107548756642, 84.80066055528225)
 
-const STORE_LAT = 25.33107548756642
-const STORE_LNG = 84.80066055528225
+const STORE_LAT = 25.33121156659458
+const STORE_LNG = 84.8006737574818
 
 // Haversine formula — returns distance in km
 export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
@@ -48,9 +48,9 @@ export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapi
     return { serviceable: false, distanceKm: dist, charge: 0, eta: null, label: 'Outside delivery range' }
   }
 
-  let finalCharge = charge
-  if (dist <= 4 && cartTotal >= 399) finalCharge = 0
-  else if (dist <= 4 && isSnapitPlus && cartTotal >= 149) finalCharge = 0
+let finalCharge = charge
+if (dist <= 5 && cartTotal >= 399) finalCharge = 0
+else if (dist <= 5 && isSnapitPlus && cartTotal >= 149) finalCharge = 0
 
   const eta = getDeliveryETA(dist)
 
