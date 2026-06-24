@@ -9,42 +9,39 @@ import banner1 from '../assets/banner1.webp';
 import banner2 from '../assets/banner2.webp';
 import banner3 from '../assets/banner3.webp';
 
-// ── Banner → category page links (IST-aware) ──
-// banner1 = grocery, banner2 = cold drinks/juices, banner3 = nutrition/health
-const bannerData = [
-  { image: banner1, link: '/grocery' },
-  { image: banner2, link: '/search?q=cold+drinks' },
-  { image: banner3, link: '/pharmacy' },
-]
-
 // Returns current IST hour (0-23)
 const getISTHour = () => {
-  const now = new Date()
-  // IST = UTC + 5:30
+  const now   = new Date()
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
-  const istMs  = utcMs + 5.5 * 3600000
+  const istMs = utcMs + 5.5 * 3600000
   return new Date(istMs).getHours()
 }
 
 const isStoreOpen = () => {
   const h = getISTHour()
-  return h >= 8 && h < 21   // open 8 AM – 9 PM IST
+  return h >= 8 && h < 21
 }
 
 const getOpeningMessage = () => {
   const h = getISTHour()
-  if (h >= 21) return 'We\'ll be back at 8:00 AM tomorrow 🌙'
-  return 'We open at 8:00 AM today 🌅'
+  return h >= 21 ? "We'll be back at 8:00 AM tomorrow 🌙" : 'We open at 8:00 AM today 🌅'
 }
 
+// banner1 = Chicken Meat Fish, banner2 = Cold Drinks Juices, banner3 = Breakfast Instant Food
+const bannerData = [
+  { image: banner1, link: '/search?q=chicken+meat+fish' },
+  { image: banner2, link: '/search?q=cold+drinks+juices' },
+  { image: banner3, link: '/search?q=breakfast+instant+food' },
+]
+
 const HomeBanner = () => {
-  const navigate  = useNavigate()
-  const storeOpen = isStoreOpen()
+  const navigate    = useNavigate()
+  const storeOpen   = isStoreOpen()
 
   return (
     <div className='container mx-auto px-4 mt-2 lg:mt-4'>
 
-      {/* ── Store Closed Banner ── */}
+      {/* Store Closed Strip */}
       {!storeOpen && (
         <div className='mb-3 bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-md'>
           <span className='text-2xl'>🌙</span>
@@ -59,7 +56,7 @@ const HomeBanner = () => {
         </div>
       )}
 
-      {/* ── Swiper Banner ── */}
+      {/* Swiper */}
       <div className='w-full h-44 md:h-64 lg:h-80 rounded-2xl overflow-hidden shadow-sm group bg-slate-50'>
         <Swiper
           spaceBetween={0}
@@ -72,11 +69,7 @@ const HomeBanner = () => {
           className='mySwiper h-full w-full'
         >
           {bannerData.map((item, index) => (
-            <SwiperSlide
-              key={index}
-              onClick={() => navigate(item.link)}
-              className='cursor-pointer'
-            >
+            <SwiperSlide key={index} onClick={() => navigate(item.link)} className='cursor-pointer'>
               <img
                 src={item.image}
                 alt={`Snapit Promo ${index + 1}`}
@@ -91,4 +84,5 @@ const HomeBanner = () => {
   )
 }
 
+export { isStoreOpen }
 export default HomeBanner
