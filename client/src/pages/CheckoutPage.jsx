@@ -16,7 +16,7 @@ const SERVICEABLE_AREAS = [
 ]
 
 // Default store coords fallback (Paliganj)
-const DEFAULT_COORDS = { lat: 25.2200, lng: 84.6800 }
+const DEFAULT_COORDS = null
 
 const CheckoutPage = () => {
   const { fetchCartItem, fetchOrder, totalPrice } = useGlobalContext()
@@ -35,7 +35,7 @@ const CheckoutPage = () => {
 
   // Delivery info state (distance-based)
   const [coords, setCoords]           = useState(DEFAULT_COORDS)
-  const [deliveryInfo, setDeliveryInfo] = useState(null)
+  const [coords, setCoords] = useState(null)
   const [locLoading, setLocLoading]   = useState(false)
 
   const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
@@ -63,11 +63,11 @@ const CheckoutPage = () => {
 
   // Recalculate delivery info whenever coords, cart total, or membership changes
   useEffect(() => {
-    const info = getDeliveryInfo(coords.lat, coords.lng, totalPrice, isSnapitPlus)
+    if (coords) { const info = getDeliveryInfo(coords.lat, coords.lng, totalPrice, isSnapitPlus); setDeliveryInfo(info) }
     setDeliveryInfo(info)
   }, [coords, totalPrice, isSnapitPlus])
 
-  const deliveryFee = deliveryInfo ? deliveryInfo.charge : (isSnapitPlus && totalPrice >= 149 ? 0 : 12)
+  const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
   // ── Coupon ──
