@@ -6,15 +6,27 @@ import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import Loading from './Loading'
 import { useSelector } from 'react-redux'
-import { FaMinus, FaPlus } from "react-icons/fa6";
+import { FaMinus, FaPlus } from "react-icons/fa6"
+
+const STORE_OPEN_HOUR  = 8
+const STORE_CLOSE_HOUR = 21
+
+const isStoreClosed = () => {
+    const now = new Date()
+    const istOffsetMs = (5 * 60 + 30) * 60 * 1000
+    const istTime = new Date(now.getTime() + istOffsetMs)
+    const hour = istTime.getUTCHours()
+    return hour < STORE_OPEN_HOUR || hour >= STORE_CLOSE_HOUR
+}
 
 const AddToCartButton = ({ data }) => {
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext()
-    const [loading, setLoading] = useState(false)
-    const cartItem = useSelector(state => state.cartItem.cart)
-    const [isAvailableCart, setIsAvailableCart] = useState(false)
-    const [qty, setQty] = useState(0)
-    const [cartItemDetails, setCartItemsDetails] = useState()
+    const [loading, setLoading]                             = useState(false)
+    const cartItem                                          = useSelector(state => state.cartItem.cart)
+    const [isAvailableCart, setIsAvailableCart]             = useState(false)
+    const [qty, setQty]                                     = useState(0)
+    const [cartItemDetails, setCartItemsDetails]            = useState()
+    const storeClosed                                       = isStoreClosed()
 
     const handleADDTocart = async (e) => {
         e.preventDefault()
@@ -63,6 +75,18 @@ const AddToCartButton = ({ data }) => {
         }
     }
 
+    if (storeClosed) {
+        return (
+            <div className='w-full'>
+                <div className='border border-gray-200 bg-gray-50 px-1 py-1.5 rounded text-center'>
+                    <p className='text-gray-400 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
+                        Store<br />Closed
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className='w-full'>
             {isAvailableCart ? (
@@ -86,7 +110,7 @@ const AddToCartButton = ({ data }) => {
             ) : (
                 <button
                     onClick={handleADDTocart}
-                    className='bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm font-bold px-3 lg:px-4 py-1.5 rounded w-full'
+                    className='bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm font-bold px=3 lg:px-4 py-1.5 rounded w-full'
                 >
                     {loading ? <Loading /> : "Add"}
                 </button>
