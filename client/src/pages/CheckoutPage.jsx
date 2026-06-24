@@ -67,7 +67,7 @@ const CheckoutPage = () => {
     setDeliveryInfo(info)
   }, [coords, totalPrice, isSnapitPlus])
 
-  const deliveryFee = deliveryInfo?.charge ?? 12
+  const deliveryFee = deliveryInfo ? deliveryInfo.charge : (isSnapitPlus && totalPrice >= 149 ? 0 : 12)
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
   // ── Coupon ──
@@ -289,75 +289,6 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* ── Delivery Info Card ── */}
-          {deliveryInfo && (
-            <div className={`mt-4 rounded-2xl border p-4 ${
-              deliveryInfo.serviceable
-                ? 'bg-green-50 border-green-200'
-                : 'bg-red-50 border-red-200'
-            }`}>
-              {deliveryInfo.serviceable ? (
-                <div className='flex items-center justify-between'>
-                  <div className='flex items-center gap-2'>
-                    <span className='text-xl'>🛵</span>
-                    <div>
-                      <p className='text-xs font-bold text-green-800'>
-                        {locLoading ? 'Detecting location...' : `${deliveryInfo.distanceKm} km away`}
-                      </p>
-                      {deliveryInfo.eta && (
-                        <p className='text-xs text-green-600'>Estimated delivery: <span className='font-bold'>{deliveryInfo.eta}</span></p>
-                      )}
-                    </div>
-                  </div>
-                  <div className='text-right'>
-                    <p className='text-xs text-green-600 font-medium'>Delivery fee</p>
-                    <p className={`font-black text-sm ${deliveryInfo.charge === 0 ? 'text-green-600' : 'text-slate-800'}`}>
-                      {deliveryInfo.label}
-                      {deliveryInfo.charge === 0 && deliveryInfo.originalCharge > 0 && (
-                        <span className='ml-1 line-through text-gray-400 font-normal text-xs'>₹{deliveryInfo.originalCharge}</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className='flex items-center gap-2'>
-                  <span className='text-xl'>❌</span>
-                  <div>
-                    <p className='text-xs font-bold text-red-700'>Outside delivery range</p>
-                    <p className='text-xs text-red-500'>We deliver up to 12 km from Paliganj (Paliganj → Chiksi area)</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Delivery range info strip */}
-          <div className='mt-3 bg-white border border-slate-100 rounded-2xl p-3'>
-            <p className='text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2'>📍 Delivery Charges</p>
-            <div className='grid grid-cols-2 gap-1.5'>
-              {[
-                { range: '0 – 4 km', fee: '₹12', eta: '15 min',     color: 'text-green-600' },
-                { range: '4 – 8 km', fee: '₹19', eta: '20–25 min',  color: 'text-green-600' },
-                { range: '8 – 10 km', fee: '₹49', eta: '30–40 min', color: 'text-amber-600' },
-                { range: '10 – 12 km', fee: '₹59', eta: '30–40 min',color: 'text-amber-600' },
-              ].map(row => (
-                <div key={row.range} className='flex items-center justify-between bg-slate-50 rounded-xl px-2.5 py-1.5'>
-                  <div>
-                    <p className='text-[10px] font-bold text-slate-600'>{row.range}</p>
-                    <p className='text-[9px] text-slate-400'>{row.eta}</p>
-                  </div>
-                  <p className={`text-xs font-black ${row.color}`}>{row.fee}</p>
-                </div>
-              ))}
-            </div>
-            <p className='text-[10px] text-slate-400 mt-2 text-center'>Free delivery on orders ₹399+ (within 4 km only)</p>
-          </div>
-        </div>
-
-        {/* Right: Bill Summary */}
-        <div className='w-full lg:max-w-md bg-white py-4 px-2 h-fit shadow-lg rounded-[2rem] border border-slate-100'>
-
-          {/* Coupon */}
           <div className='mx-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
             <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-1'>Promo Code</p>
             <p className='text-[10px] text-slate-400 mb-2'>
@@ -397,9 +328,6 @@ const CheckoutPage = () => {
             <div className='flex justify-between items-center'>
               <div>
                 <p>Delivery Charge</p>
-                {deliveryInfo?.eta && (
-                  <p className='text-[10px] text-slate-400'>ETA: {deliveryInfo.eta} • {deliveryInfo.distanceKm} km</p>
-                )}
               </div>
               <p className={deliveryFee === 0 ? 'text-green-600 font-bold' : ''}>
                 {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
