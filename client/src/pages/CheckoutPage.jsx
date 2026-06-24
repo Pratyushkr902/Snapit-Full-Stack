@@ -10,65 +10,54 @@ import { useNavigate } from 'react-router-dom'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 
+const STORE_FALLBACK = { lat: 25.33107548756642, lng: 84.80066055528225 }
+
 const SERVICEABLE_AREAS = [
   'paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos',
   'chiksi', 'milki', 'akhtiyarpur', 'balipakar'
 ]
 
-// Default store coords fallback (Paliganj)
-const DEFAULT_COORDS = null
-
 const CheckoutPage = () => {
   const { fetchCartItem, fetchOrder, totalPrice } = useGlobalContext()
-  const [openAddress, setOpenAddress]     = useState(false)
-  const addressList                        = useSelector(state => state.addresses.addressList)
-  const [selectAddress, setSelectAddress] = useState(0)
-  const cartItemsList                      = useSelector(state => state.cartItem.cart)
-  const user                               = useSelector(state => state.user)
-  const navigate                           = useNavigate()
+  const [openAddress, setOpenAddress]       = useState(false)
+  const addressList                          = useSelector(state => state.addresses.addressList)
+  const [selectAddress, setSelectAddress]   = useState(0)
+  const cartItemsList                        = useSelector(state => state.cartItem.cart)
+  const user                                 = useSelector(state => state.user)
+  const navigate                             = useNavigate()
 
-  const [couponCode, setCouponCode]           = useState('')
-  const [discountAmount, setDiscountAmount]   = useState(0)
-  const [discountLabel, setDiscountLabel]     = useState('')
-  const [couponApplied, setCouponApplied]     = useState(false)
+  const [couponCode, setCouponCode]             = useState('')
+  const [discountAmount, setDiscountAmount]     = useState(0)
+  const [discountLabel, setDiscountLabel]       = useState('')
+  const [couponApplied, setCouponApplied]       = useState(false)
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false)
 
-  // Delivery info state (distance-based)
-  const [coords, setCoords]           = useState(DEFAULT_COORDS)
-  const [coords, setCoords] = useState(null)
-  const [locLoading, setLocLoading]   = useState(false)
+  const [coords, setCoords]         = useState(null)
+  const [deliveryInfo, setDeliveryInfo] = useState(null)
 
   const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
 
-  // Fetch geolocation once on mount
+  // Fetch GPS once on mount
   useEffect(() => {
-    setLocLoading(true)
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const c = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-          setCoords(c)
-          setLocLoading(false)
-        },
-        () => {
-          setCoords(DEFAULT_COORDS)
-          setLocLoading(false)
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
-      )
-    } else {
-      setLocLoading(false)
-    }
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      pos => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      ()  => setCoords(null),
+      { enableHighAccuracy: true, timeout: 6000 }
+    )
   }, [])
 
-  // Recalculate delivery info whenever coords, cart total, or membership changes
+  // Recalculate delivery whenever coords, cart total, or membership changes
   useEffect(() => {
-    if (coords) { const info = getDeliveryInfo(coords.lat, coords.lng, totalPrice, isSnapitPlus); setDeliveryInfo(info) }
-    setDeliveryInfo(info)
+    if (!coords) return
+    setDeliveryInfo(getDeliveryInfo(coords.lat, coords.lng, totalPrice, isSnapitPlus))
   }, [coords, totalPrice, isSnapitPlus])
 
   const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
+
+  // Returns coords synchronously — GPS if available, store fallback otherwise
+  const getCoords = () => coords ?? STORE_FALLBACK
 
   // ── Coupon ──
   const handleApplyPromoCoupon = async () => {
@@ -85,7 +74,7 @@ const CheckoutPage = () => {
       })
       toast.dismiss(loadingToast)
       if (response.data.success) {
-        const { discount, newTotal, discount_label } = response.data.data
+        const { discount, discount_label } = response.data.data
         setDiscountAmount(discount)
         setDiscountLabel(discount_label)
         setCouponApplied(true)
@@ -120,17 +109,6 @@ const CheckoutPage = () => {
     return true
   }
 
-  const getCoords = async () => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve(coords)
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(coords),
-        { enableHighAccuracy: true }
-      )
-    })
-  }
-
   const navigateToSuccess = (scratchCards) => {
     const cards = scratchCards || []
     try { sessionStorage.setItem('pending_scratch_cards', JSON.stringify(cards)) } catch (e) {}
@@ -144,16 +122,22 @@ const CheckoutPage = () => {
       const currentBalance = Number(user?.walletBalance || 0)
       if (currentBalance < grandTotal) return toast.error('Insufficient Balance!')
       const loadingToast = toast.loading('Processing Wallet Payment...')
-      const c = await getCoords()
+      const c = getCoords()
       const response = await Axios({
         ...SummaryApi.payWithWallet,
         data: {
-          list_items: cartItemsList, addressId: addressList[selectAddress]?._id,
-          subTotalAmt: totalPrice, delivery_fee: deliveryFee, totalAmt: grandTotal,
-          lat: c.lat, lng: c.lng, amount: grandTotal, orderId: 'SNAP-WLT-' + Date.now(),
+          list_items:       cartItemsList,
+          addressId:        addressList[selectAddress]?._id,
+          subTotalAmt:      totalPrice,
+          delivery_fee:     deliveryFee,
+          totalAmt:         grandTotal,
+          lat:              c.lat,
+          lng:              c.lng,
+          amount:           grandTotal,
+          orderId:          'SNAP-WLT-' + Date.now(),
           deliveryLocation: { lat: c.lat, lng: c.lng },
-          couponCode: couponApplied ? couponCode.trim().toUpperCase() : null,
-          discountAmt: discountAmount
+          couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
+          discountAmt:      discountAmount
         }
       })
       toast.dismiss(loadingToast)
@@ -171,15 +155,20 @@ const CheckoutPage = () => {
       if (!addressList[selectAddress]) return toast.error('Please select an address first')
       if (!checkServiceArea()) return
       const loadingToast = toast.loading('Placing order...')
-      const c = await getCoords()
+      const c = getCoords()
       const response = await Axios({
         ...SummaryApi.CashOnDeliveryOrder,
         data: {
-          list_items: cartItemsList, addressId: addressList[selectAddress]?._id,
-          subTotalAmt: totalPrice, delivery_fee: deliveryFee, totalAmt: grandTotal,
-          lat: c.lat, lng: c.lng, deliveryLocation: { lat: c.lat, lng: c.lng },
-          couponCode: couponApplied ? couponCode.trim().toUpperCase() : null,
-          discountAmt: discountAmount
+          list_items:       cartItemsList,
+          addressId:        addressList[selectAddress]?._id,
+          subTotalAmt:      totalPrice,
+          delivery_fee:     deliveryFee,
+          totalAmt:         grandTotal,
+          lat:              c.lat,
+          lng:              c.lng,
+          deliveryLocation: { lat: c.lat, lng: c.lng },
+          couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
+          discountAmt:      discountAmount
         }
       })
       toast.dismiss(loadingToast)
@@ -207,13 +196,16 @@ const CheckoutPage = () => {
         return
       }
       toast.dismiss(gatewayToast)
-      const c = await getCoords()
+      const c = getCoords()
       const loadingToast = toast.loading('Preparing transaction...')
       const response = await Axios({
         ...SummaryApi.payment_url,
         data: {
-          list_items: cartItemsList, addressId: addressList[selectAddress]?._id,
-          subTotalAmt: totalPrice, delivery_fee: deliveryFee, totalAmt: grandTotal,
+          list_items:       cartItemsList,
+          addressId:        addressList[selectAddress]?._id,
+          subTotalAmt:      totalPrice,
+          delivery_fee:     deliveryFee,
+          totalAmt:         grandTotal,
           deliveryLocation: { lat: c.lat, lng: c.lng }
         }
       })
@@ -221,24 +213,31 @@ const CheckoutPage = () => {
       toast.dismiss(loadingToast)
       if (responseData && responseData.id) {
         const options = {
-          key: RAZORPAY_KEY, amount: responseData.amount, currency: 'INR',
-          name: 'Snapit Grocery', order_id: responseData.id,
+          key:      RAZORPAY_KEY,
+          amount:   responseData.amount,
+          currency: 'INR',
+          name:     'Snapit Grocery',
+          order_id: responseData.id,
           handler: async function (razorpayResponse) {
             const verificationToast = toast.loading('Verifying transaction...')
             try {
               const verifyUrl    = SummaryApi.payment_verification?.url    || '/api/order/verify-payment'
               const verifyMethod = SummaryApi.payment_verification?.method || 'post'
               const verifyRes = await Axios({
-                url: verifyUrl, method: verifyMethod,
+                url:    verifyUrl,
+                method: verifyMethod,
                 data: {
                   razorpay_order_id:   razorpayResponse.razorpay_order_id,
                   razorpay_payment_id: razorpayResponse.razorpay_payment_id,
                   razorpay_signature:  razorpayResponse.razorpay_signature,
-                  list_items: cartItemsList, addressId: addressList[selectAddress]?._id,
-                  subTotalAmt: totalPrice, delivery_fee: deliveryFee, totalAmt: grandTotal,
-                  deliveryLocation: { lat: c.lat, lng: c.lng },
-                  couponCode: couponApplied ? couponCode.trim().toUpperCase() : null,
-                  discountAmt: discountAmount
+                  list_items:          cartItemsList,
+                  addressId:           addressList[selectAddress]?._id,
+                  subTotalAmt:         totalPrice,
+                  delivery_fee:        deliveryFee,
+                  totalAmt:            grandTotal,
+                  deliveryLocation:    { lat: c.lat, lng: c.lng },
+                  couponCode:          couponApplied ? couponCode.trim().toUpperCase() : null,
+                  discountAmt:         discountAmount
                 }
               })
               toast.dismiss(verificationToast)
@@ -326,9 +325,7 @@ const CheckoutPage = () => {
               <p>{DisplayPriceInRupees(totalPrice)}</p>
             </div>
             <div className='flex justify-between items-center'>
-              <div>
-                <p>Delivery Charge</p>
-              </div>
+              <p>Delivery Charge</p>
               <p className={deliveryFee === 0 ? 'text-green-600 font-bold' : ''}>
                 {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
               </p>
