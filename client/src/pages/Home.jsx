@@ -38,7 +38,6 @@ const SUPER_APP_CATEGORIES = [
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     path: '/pharmacy',
-    comingSoon: true,
   },
   {
     id: 'electronics',
