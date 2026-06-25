@@ -1,5 +1,5 @@
 import OrderModel from "../models/order.model.js";
-import { uploadImageClodinary } from "../utils/uploadImageClodinary.js";
+import uploadImageClodinary from "../utils/uploadImageClodinary.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/delivery/mark-delivered
