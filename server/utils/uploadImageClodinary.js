@@ -1,5 +1,4 @@
 import { v2 as cloudinary } from 'cloudinary';
-
 cloudinary.config({
     cloud_name : process.env.CLOUDINARY_CLOUD_NAME,
     api_key : process.env.CLOUDINARY_API_KEY,
@@ -9,9 +8,16 @@ cloudinary.config({
 const uploadImageClodinary = async(image)=>{
     // FIXED: Improved buffer conversion to handle different multer storage engines
     const buffer = image?.buffer || Buffer.from(await image.arrayBuffer())
-
     const uploadImage = await new Promise((resolve,reject)=>{
-        cloudinary.uploader.upload_stream({ folder : "snapit" }, (error, uploadResult) => {
+        cloudinary.uploader.upload_stream({
+            folder : "snapit",
+            // ✅ FIX: cap dimensions + auto-compress on upload to cut storage/bandwidth credits
+            transformation: [
+                { width: 1000, height: 1000, crop: "limit" }, // never store larger than 1000px
+                { quality: "auto:good" },                     // smart compression
+                { fetch_format: "auto" }                      // store as WebP/AVIF when smaller
+            ]
+        }, (error, uploadResult) => {
             // FIXED: Explicitly handle the error case to prevent the server from hanging
             if (error) {
                 console.error("Cloudinary Upload Error:", error);
@@ -21,8 +27,6 @@ const uploadImageClodinary = async(image)=>{
             return resolve(uploadResult);
         }).end(buffer)
     })
-
     return uploadImage
 }
-
 export default uploadImageClodinary
