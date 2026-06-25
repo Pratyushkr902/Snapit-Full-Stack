@@ -66,18 +66,22 @@ const AddToCartButton = ({ data }) => {
     const increaseQty = async (e) => {
         e.preventDefault()
         e.stopPropagation()
+        // ✅ FIX: guard against updateCartItem being undefined if context wasn't ready
+        if (!updateCartItem) return
         const response = await updateCartItem(cartItemDetails?._id, qty + 1)
-        if (response.success) toast.success("Item added")
+        if (response?.success) toast.success("Item added")
     }
 
     const decreaseQty = async (e) => {
         e.preventDefault()
         e.stopPropagation()
+        // ✅ FIX: guard against deleteCartItem/updateCartItem being undefined
+        if (!updateCartItem || !deleteCartItem) return
         if (qty === 1) {
             deleteCartItem(cartItemDetails?._id)
         } else {
             const response = await updateCartItem(cartItemDetails?._id, qty - 1)
-            if (response.success) toast.success("Item removed")
+            if (response?.success) toast.success("Item removed")
         }
     }
 
