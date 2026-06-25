@@ -91,9 +91,9 @@ const orderSchema = new mongoose.Schema(
         cashReceived:      { type: Number,  default: 0 },
 
         // ── Settlement ───────────────────────────────────────────────
-        isSettled:  { type: Boolean, default: false },
-        settledAt:  { type: Date },
-        deliveredAt:{ type: Date },
+        isSettled:   { type: Boolean, default: false },
+        settledAt:   { type: Date },
+        deliveredAt: { type: Date },
 
         // ── Promotions ───────────────────────────────────────────────
         coupon_used:     { type: String, default: null },
@@ -113,6 +113,20 @@ const orderSchema = new mongoose.Schema(
             longitude: { type: Number, default: null },
             updatedAt: { type: Date,   default: null },
         },
+
+        // ── Delivery Proof Photo (like Blinkit / Zepto / Zomato) ─────
+        // Rider MUST upload a photo when marking order as delivered.
+        // This photo is shown to admin when reviewing refund claims
+        // so they can compare: "what was delivered" vs "what customer claims".
+        deliveryProof: {
+            photo:      { type: String,  default: null },  // Cloudinary URL
+            capturedAt: { type: Date,    default: null },  // when photo was taken
+            riderId:    { type: mongoose.Schema.ObjectId, ref: "User", default: null },
+            latitude:   { type: Number,  default: null },  // GPS at moment of delivery
+            longitude:  { type: Number,  default: null },
+            isUploaded: { type: Boolean, default: false }, // false = rider skipped (not allowed)
+        },
+        // ─────────────────────────────────────────────────────────────
     },
     { timestamps: true }
 );

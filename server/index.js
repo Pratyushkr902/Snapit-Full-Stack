@@ -38,27 +38,28 @@ import { startScheduledOrdersCron } from './cron/scheduledOrder.cron.js'
 console.log("RAZORPAY INTEGRITY CHECK:", process.env.RAZORPAY_KEY_ID ? "LOADED" : "NOT LOADED")
 
 // ─── ROUTE IMPORTS ────────────────────────────────────────────────────────────
-import userRouter         from './route/user.route.js'
-import categoryRouter     from './route/category.route.js'
-import uploadRouter       from './route/upload.router.js'
-import subCategoryRouter  from './route/subCategory.route.js'
-import productRouter      from './route/product.route.js'
-import cartRouter         from './route/cart.route.js'
-import addressRouter      from './route/address.route.js'
-import orderRouter        from './route/order.route.js'
-import storeRouter        from './route/store.route.js'
-import walletRouter       from './route/wallet.route.js'
-import flashSaleRouter    from './route/flashSale.route.js'
-import referralRouter     from './route/referral.route.js'
-import reviewRouter       from './route/review.route.js'
-import paymentRouter      from './route/payment.route.js'
-import adminRouter        from './route/admin.route.js'
-import streakRouter       from './route/streak.route.js'
-import subscriptionRouter from './route/subscription.route.js'
-import notificationRouter from './route/notification.route.js'
-import restaurantRouter   from './route/restaurant.route.js'
+import userRouter           from './route/user.route.js'
+import categoryRouter       from './route/category.route.js'
+import uploadRouter         from './route/upload.router.js'
+import subCategoryRouter    from './route/subCategory.route.js'
+import productRouter        from './route/product.route.js'
+import cartRouter           from './route/cart.route.js'
+import addressRouter        from './route/address.route.js'
+import orderRouter          from './route/order.route.js'
+import storeRouter          from './route/store.route.js'
+import walletRouter         from './route/wallet.route.js'
+import flashSaleRouter      from './route/flashSale.route.js'
+import referralRouter       from './route/referral.route.js'
+import reviewRouter         from './route/review.route.js'
+import paymentRouter        from './route/payment.route.js'
+import adminRouter          from './route/admin.route.js'
+import streakRouter         from './route/streak.route.js'
+import subscriptionRouter   from './route/subscription.route.js'
+import notificationRouter   from './route/notification.route.js'
+import restaurantRouter     from './route/restaurant.route.js'
 import scheduledOrderRouter from './route/scheduledOrder.route.js'
-import refundRouter from './route/refund.route.js'
+import refundRouter         from './route/refund.route.js'
+import deliveryRouter       from './route/delivery.routes.js'   // ✅ NEW
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -324,27 +325,28 @@ app.use('/api/coins',                           financialLimiter)
 app.use('/api', apiLimiter)
 
 // ─── API ROUTES ───────────────────────────────────────────────────────────────
-app.use('/api/user',         userRouter)
-app.use('/api/category',     categoryRouter)
-app.use('/api/file',         uploadRouter)
-app.use('/api/subcategory',  subCategoryRouter)
-app.use('/api/product',      productRouter)
-app.use('/api/cart',         cartRouter)
-app.use('/api/address',      addressRouter)
-app.use('/api/order',        orderRouter)
-app.use('/api/store',        storeRouter)
-app.use('/api/wallet',       walletRouter)
-app.use('/api/flash-sale',   flashSaleRouter)
-app.use('/api/referral',     referralRouter)
-app.use('/api/review',       reviewRouter)
-app.use('/api/streak',       streakRouter)
-app.use('/api/subscription', subscriptionRouter)
-app.use('/api/payment',      paymentRouter)
-app.use('/api/admin',        adminRouter)
-app.use('/api/notification', notificationRouter)
-app.use('/api/restaurant',   restaurantRouter)
+app.use('/api/user',            userRouter)
+app.use('/api/category',        categoryRouter)
+app.use('/api/file',            uploadRouter)
+app.use('/api/subcategory',     subCategoryRouter)
+app.use('/api/product',         productRouter)
+app.use('/api/cart',            cartRouter)
+app.use('/api/address',         addressRouter)
+app.use('/api/order',           orderRouter)
+app.use('/api/store',           storeRouter)
+app.use('/api/wallet',          walletRouter)
+app.use('/api/flash-sale',      flashSaleRouter)
+app.use('/api/referral',        referralRouter)
+app.use('/api/review',          reviewRouter)
+app.use('/api/streak',          streakRouter)
+app.use('/api/subscription',    subscriptionRouter)
+app.use('/api/payment',         paymentRouter)
+app.use('/api/admin',           adminRouter)
+app.use('/api/notification',    notificationRouter)
+app.use('/api/restaurant',      restaurantRouter)
 app.use('/api/scheduled-order', scheduledOrderRouter)
 app.use('/api/refund',          refundRouter)
+app.use('/api/delivery',        deliveryRouter)          // ✅ NEW
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
