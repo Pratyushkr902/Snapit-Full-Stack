@@ -1,4 +1,4 @@
-import { createHashRouter } from "react-router-dom";
+import { createHashRouter, useRouteError, useNavigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import App from "../App";
 
@@ -68,10 +68,57 @@ const PageLoader = () => (
 
 const S = ({ children }) => <Suspense fallback={<PageLoader />}>{children}</Suspense>
 
+// Friendly error page shown instead of React Router's default crash screen
+const ErrorPage = () => {
+  const error = useRouteError()
+  const navigate = useNavigate()
+
+  // Auto-recover: if it's the "n is not a function" context timing issue,
+  // navigating home resets the component tree cleanly
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', minHeight: '100vh', padding: '24px',
+      background: '#fff', textAlign: 'center'
+    }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>😕</div>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+        Something went wrong
+      </h1>
+      <p style={{ color: '#64748b', fontSize: 14, marginBottom: 28, maxWidth: 320 }}>
+        The page ran into an unexpected error. Tap below to go back home.
+      </p>
+      <button
+        onClick={() => {
+          navigate('/', { replace: true })
+          window.location.reload()
+        }}
+        style={{
+          background: '#16a34a', color: '#fff', border: 'none',
+          borderRadius: 12, padding: '12px 32px', fontSize: 15,
+          fontWeight: 700, cursor: 'pointer'
+        }}
+      >
+        Go to Home
+      </button>
+      {import.meta.env.DEV && error && (
+        <pre style={{
+          marginTop: 24, padding: 16, background: '#fef2f2', borderRadius: 8,
+          fontSize: 11, color: '#dc2626', textAlign: 'left',
+          maxWidth: 480, overflowX: 'auto', whiteSpace: 'pre-wrap'
+        }}>
+          {error?.message || String(error)}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 const router = createHashRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <ErrorPage />,
     children: [
       { path: "", element: <Home /> },
       { path: "search", element: <S><SearchPage /></S> },
@@ -126,8 +173,7 @@ const router = createHashRouter([
             path: "subcategory",
             element: <S><AdminPermision><SubCategoryPage /></AdminPermision></S>
           },
-          
-         { path: "refunds", element: <S><AdminPermision><AdminRefunds /></AdminPermision></S> },
+          { path: "refunds", element: <S><AdminPermision><AdminRefunds /></AdminPermision></S> },
           {
             path: "product",
             element: <S><AdminPermision><ProductAdmin /></AdminPermision></S>

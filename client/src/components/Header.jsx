@@ -20,13 +20,12 @@ const Header = ({ openCart }) => {
     const [openUserMenu, setOpenUserMenu] = useState(false)
     const menuRef = useRef(null)
 
-    const { totalPrice, totalQty, fetchUser, fetchAddress } = useGlobalContext()
+    const { totalPrice = 0, totalQty = 0, fetchAddress } = useGlobalContext() || {}
     const addressList = useSelector(state => state.addresses.addressList)
     const primaryAddress = addressList?.[0]?.address_line || "Select Address"
 
     useEffect(() => {
         if (user?._id) {
-            if (fetchUser) fetchUser()
             if (fetchAddress) fetchAddress()
         }
     }, [user?._id])
