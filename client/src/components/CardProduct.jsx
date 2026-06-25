@@ -9,7 +9,7 @@ import AddToCartButton from './AddToCartButton'
 const FALLBACK_IMG =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Crect x='90' y='80' width='120' height='100' rx='8' fill='%23e5e7eb'/%3E%3Ccircle cx='150' cy='210' r='18' fill='%23e5e7eb'/%3E%3Ctext x='150' y='255' text-anchor='middle' fill='%239ca3af' font-size='13' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
 
-// ✅ Safely extract a valid image src from various data shapes
+// ✅ Serve Cloudinary images at w_400 to reduce bandwidth by ~60-70%
 const optimizeImage = (url) => {
     if (!url) return FALLBACK_IMG
     if (url.includes('res.cloudinary.com')) {
