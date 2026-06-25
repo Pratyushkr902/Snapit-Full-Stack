@@ -8,6 +8,7 @@ import { useSelector } from 'react-redux'
 import AddToCartButton from './AddToCartButton'
 import imageEmpty from '../assets/empty_cart.webp'
 import toast from 'react-hot-toast'
+import { optimizeImage } from '../utils/optimizeImage'
 
 const PricewithDiscount = (price, discount) => {
     const finalPrice = (Number(price) || 0) - (Number(discount) || 0);
@@ -70,7 +71,7 @@ const DisplayCartItem = ({close}) => {
                                                 <div key={item?._id || index} className='flex w-full gap-4 items-center'>
                                                     <div className='w-14 h-14 min-h-14 min-w-14 bg-white border rounded-lg p-1'>
                                                         <img
-                                                            src={item?.productId?.image?.[0]}
+                                                            src={optimizeImage(item?.productId?.image?.[0], 150)}
                                                             className='object-scale-down w-full h-full'
                                                             alt={item?.productId?.name || 'product'}
                                                         />
