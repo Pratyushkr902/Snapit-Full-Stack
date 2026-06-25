@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import AddAddress from '../components/AddAddress'
 import { MdDelete } from "react-icons/md";
 import { MdEdit } from "react-icons/md";
+import { IoArrowBack } from "react-icons/io5";
 import EditAddressDetails from '../components/EditAddressDetails';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
@@ -11,6 +13,7 @@ import AxiosToastError from '../utils/AxiosToastError';
 import { useGlobalContext } from '../provider/GlobalProvider';
 
 const Address = () => {
+  const navigate = useNavigate()
   const addressList = useSelector(state => state.addresses.addressList)
   const [openAddress,setOpenAddress] = useState(false)
   const [OpenEdit,setOpenEdit] = useState(false)
@@ -38,7 +41,12 @@ const Address = () => {
   return (
     <div className=''>
         <div className='bg-white shadow-lg px-2 py-2 flex justify-between gap-4 items-center '>
-            <h2 className='font-semibold text-ellipsis line-clamp-1'>Address</h2>
+            <div className='flex items-center gap-2'>
+                <button onClick={()=>navigate(-1)} className='p-1.5 rounded-full hover:bg-gray-100'>
+                    <IoArrowBack size={20}/>
+                </button>
+                <h2 className='font-semibold text-ellipsis line-clamp-1'>Address</h2>
+            </div>
             <button onClick={()=>setOpenAddress(true)} className='border border-primary-200 text-primary-200 px-3 hover:bg-primary-200 hover:text-black py-1 rounded-full'>
                 Add Address
             </button>
@@ -47,7 +55,7 @@ const Address = () => {
               {
                 addressList.map((address,index)=>{
                   return(
-                      <div className={`border rounded p-3 flex gap-3 bg-white ${!address.status && 'hidden'}`}>
+                      <div key={address._id || index} className={`border rounded p-3 flex gap-3 bg-white ${!address.status && 'hidden'}`}>
                           <div className='w-full'>
                             <p>{address.address_line}</p>
                             <p>{address.city}</p>

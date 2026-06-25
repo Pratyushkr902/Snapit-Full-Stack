@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import { IoArrowBack } from 'react-icons/io5'
 import NoData from '../components/NoData'
 import OrderInvoice from '../components/OrderInvoice'
 import Axios from '../utils/Axios'
@@ -13,17 +14,14 @@ const MyOrders = () => {
   const orders   = useSelector(state => state.orders.order)
   const navigate = useNavigate()
 
-  const [refundModal, setRefundModal]   = useState(null)   // order object
-  const [myRefunds, setMyRefunds]       = useState([])
+  const [refundModal, setRefundModal]       = useState(null)
+  const [myRefunds, setMyRefunds]           = useState([])
   const [loadingRefunds, setLoadingRefunds] = useState(false)
-  const [submitting, setSubmitting]     = useState(false)
-  const [activeTab, setActiveTab]       = useState('orders') // 'orders' | 'refunds'
-
+  const [submitting, setSubmitting]         = useState(false)
+  const [activeTab, setActiveTab]           = useState('orders')
   const [form, setForm] = useState({ reason: '', description: '', refundAmount: '' })
 
-  useEffect(() => {
-    fetchMyRefunds()
-  }, [])
+  useEffect(() => { fetchMyRefunds() }, [])
 
   const fetchMyRefunds = async () => {
     try {
@@ -68,23 +66,25 @@ const MyOrders = () => {
   }
 
   const statusColor = (s) => ({
-    Pending:      'bg-yellow-100 text-yellow-700',
-    'Under Review':'bg-blue-100 text-blue-700',
-    Approved:     'bg-emerald-100 text-emerald-700',
-    Rejected:     'bg-red-100 text-red-700',
-    Refunded:     'bg-purple-100 text-purple-700',
+    Pending:        'bg-yellow-100 text-yellow-700',
+    'Under Review': 'bg-blue-100 text-blue-700',
+    Approved:       'bg-emerald-100 text-emerald-700',
+    Rejected:       'bg-red-100 text-red-700',
+    Refunded:       'bg-purple-100 text-purple-700',
   }[s] || 'bg-gray-100 text-gray-600')
 
-  const alreadyRefunded = (orderId) => myRefunds.some(r =>
-    (r.orderId?._id || r.orderId)?.toString() === orderId?.toString()
-  )
+  const alreadyRefunded = (orderId) =>
+    myRefunds.some(r => (r.orderId?._id || r.orderId)?.toString() === orderId?.toString())
 
   return (
     <div className='bg-neutral-50 min-h-screen pb-10'>
 
-      {/* Header */}
-      <div className='bg-white shadow-md p-4 font-bold text-xl sticky top-0 z-10 flex items-center justify-between'>
-        <h1>My Orders</h1>
+      {/* Header with Back Button */}
+      <div className='bg-white shadow-md p-4 font-bold text-xl sticky top-0 z-10 flex items-center gap-3'>
+        <button onClick={() => navigate(-1)} className='text-neutral-500 hover:text-neutral-800 transition-colors'>
+          <IoArrowBack size={22} />
+        </button>
+        <h1 className='flex-1'>My Orders</h1>
         <span className='text-sm font-medium text-neutral-400'>{orders?.length || 0} Orders</span>
       </div>
 
@@ -106,7 +106,7 @@ const MyOrders = () => {
 
       <div className='flex flex-col gap-4 p-4 max-w-2xl mx-auto'>
 
-        {/* ── ORDERS TAB ── */}
+        {/* Orders Tab */}
         {activeTab === 'orders' && (
           <>
             {!orders || orders.length === 0 ? (
@@ -175,7 +175,7 @@ const MyOrders = () => {
           </>
         )}
 
-        {/* ── REFUNDS TAB ── */}
+        {/* Refunds Tab */}
         {activeTab === 'refunds' && (
           <>
             {loadingRefunds ? (
@@ -226,7 +226,7 @@ const MyOrders = () => {
         )}
       </div>
 
-      {/* ── REFUND MODAL ── */}
+      {/* Refund Modal */}
       {refundModal && (
         <div className='fixed inset-0 z-50 bg-black/50 flex items-end justify-center p-4'>
           <div className='bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col gap-4'>

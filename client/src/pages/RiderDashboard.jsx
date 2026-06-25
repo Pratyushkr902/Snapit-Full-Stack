@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
 import { FaMapMarkedAlt, FaCheckCircle, FaShoppingBasket, FaPhone, FaMotorcycle, FaStore } from "react-icons/fa";
 import { MdPayment } from "react-icons/md";
+import { IoArrowBack } from "react-icons/io5";
 import { io } from 'socket.io-client';
 import CollectPayment from '../components/CollectPayment';
 
@@ -33,6 +35,7 @@ const fmt = (n) => Number(n).toFixed(2);
 const fmtINR = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const RiderDashboard = () => {
+    const navigate = useNavigate();
     const [orders, setOrders]               = useState([]);
     const [loading, setLoading]             = useState(true);
     const [filter, setFilter]               = useState('Confirmed');
@@ -200,14 +203,21 @@ const RiderDashboard = () => {
             {/* ── TOP HEADER BAR ── */}
             <div className='sticky top-0 z-30 bg-slate-950/90 backdrop-blur border-b border-slate-800 px-4 py-3'>
                 <div className='max-w-5xl mx-auto flex justify-between items-center gap-3'>
-                    <div>
-                        <p className='text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]'>Snapit Logistics · Bihar</p>
-                        <h1 className='text-lg font-black text-white leading-none'>RIDER COMMAND</h1>
-                        {lastSynced && (
-                            <p className='text-[8px] text-slate-600'>
-                                Synced {lastSynced.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </p>
-                        )}
+                    <div className='flex items-center gap-3'>
+                        <button
+                            onClick={() => navigate(-1)}
+                            className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90 flex-shrink-0'>
+                            <IoArrowBack size={16}/>
+                        </button>
+                        <div>
+                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]'>Snapit Logistics · Bihar</p>
+                            <h1 className='text-lg font-black text-white leading-none'>RIDER COMMAND</h1>
+                            {lastSynced && (
+                                <p className='text-[8px] text-slate-600'>
+                                    Synced {lastSynced.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </p>
+                            )}
+                        </div>
                     </div>
                     <div className='flex gap-2 items-center'>
                         <div className='bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-center'>
