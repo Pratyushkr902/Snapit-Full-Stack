@@ -50,9 +50,15 @@ const AddToCartButton = ({ data }) => {
     }
 
     useEffect(() => {
-        const checkingitem = cartItem.some(item => item.productId._id === data._id)
+        // Guard against cart items whose linked product was deleted
+        // (productId comes back as null from the API in that case).
+        const validCartItems = Array.isArray(cartItem)
+            ? cartItem.filter(item => item?.productId)
+            : []
+
+        const checkingitem = validCartItems.some(item => item.productId._id === data?._id)
         setIsAvailableCart(checkingitem)
-        const product = cartItem.find(item => item.productId._id === data._id)
+        const product = validCartItems.find(item => item.productId._id === data?._id)
         setQty(product?.quantity)
         setCartItemsDetails(product)
     }, [data, cartItem])
@@ -110,7 +116,7 @@ const AddToCartButton = ({ data }) => {
             ) : (
                 <button
                     onClick={handleADDTocart}
-                    className='bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm font-bold px=3 lg:px-4 py-1.5 rounded w-full'
+                    className='bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm font-bold px-3 lg:px-4 py-1.5 rounded w-full'
                 >
                     {loading ? <Loading /> : "Add"}
                 </button>
