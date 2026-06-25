@@ -2,15 +2,21 @@ import RefundModel from "../models/refund.model.js";
 import OrderModel  from "../models/order.model.js";
 import UserModel   from "../models/user.model.js";
 
+// Reasons that REQUIRE at least one photo as proof
 const PHOTO_REQUIRED_REASONS = ["damaged_product", "expired_product", "quality_issue", "wrong_product"];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/refund/submit
+// ─────────────────────────────────────────────────────────────────────────────
 export const submitRefund = async (req, res) => {
     try {
         const userId = req.userId;
         const { orderId, reason, description, affectedItems, photos, refundAmount } = req.body;
 
+        // ── 1. Normalize reason: "Other" → "other", "Wrong Product" → "wrong_product"
         const normalizedReason = reason?.trim().toLowerCase().replace(/\s+/g, "_");
 
+        // ── 2. Find order
         const order = await OrderModel.findOne({ _id: orderId, userId });
         if (!order)
             return res.status(404).json({ success: false, message: "Order not found" });
@@ -18,26 +24,95 @@ export const submitRefund = async (req, res) => {
         if (order.delivery_status !== "Delivered")
             return res.status(400).json({ success: false, message: "Refund only allowed on delivered orders" });
 
-        const existing = await RefundModel.findOne({ orderId, userId });
-        if (existing)
-            return res.status(400).json({ success: false, message: "Refund already submitted for this order" });
-
-        if (PHOTO_REQUIRED_REASONS.includes(normalizedReason)) {
-            if (!photos || photos.length === 0) {
+        // ── 3. TIME LIMIT — must raise refund within 2 hours of delivery
+        if (order.deliveredAt) {
+            const hoursSinceDelivery = (Date.now() - new Date(order.deliveredAt)) / (1000 * 60 * 60);
+            if (hoursSinceDelivery > 2) {
                 return res.status(400).json({
                     success: false,
-                    message: `Photos are required as proof for reason: "${normalizedReason}". Please upload at least one photo of the product.`,
+                    message: "Refund window expired. Refunds must be raised within 2 hours of delivery.",
                 });
             }
         }
 
+        // ── 4. No duplicate refund
+        const existing = await RefundModel.findOne({ orderId, userId });
+        if (existing)
+            return res.status(400).json({ success: false, message: "Refund already submitted for this order" });
+
+        // ── 5. FRAUD SCORE — flag users with >30% refund rate (after 5+ orders)
+        const [previousRefunds, totalOrders] = await Promise.all([
+            RefundModel.find({ userId }),
+            OrderModel.countDocuments({ userId, delivery_status: "Delivered" }),
+        ]);
+
+        if (totalOrders >= 5) {
+            const approvedRefunds = previousRefunds.filter(r => r.status === "Approved").length;
+            const refundRate      = approvedRefunds / totalOrders;
+
+            if (refundRate > 0.3) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Your account has been flagged for unusual refund activity. Please contact support.",
+                });
+            }
+        }
+
+        // ── 6. RESTAURANT ORDER — stricter rules (hair/foreign object fraud)
+        if (order.isRestaurantOrder) {
+            if (!photos || photos.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Photo proof is required for restaurant order refunds.",
+                });
+            }
+            if (!description || description.trim().length < 50) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please describe the issue in detail (minimum 50 characters) for restaurant refunds.",
+                });
+            }
+            if (!affectedItems || affectedItems.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please specify which item had the issue.",
+                });
+            }
+        }
+
+        // ── 7. PHOTO PROOF — required for damage/quality/expired/wrong product
+        if (PHOTO_REQUIRED_REASONS.includes(normalizedReason)) {
+            if (!photos || photos.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Photo proof is required for "${normalizedReason}". Please upload at least one photo.`,
+                });
+            }
+        }
+
+        // ── 8. DESCRIPTION — required for "other"
         if (normalizedReason === "other" && (!description || description.trim().length < 10)) {
             return res.status(400).json({
                 success: false,
-                message: "Please provide a description (at least 10 characters) when selecting 'Other'.",
+                message: "Please provide a description (minimum 10 characters) when selecting 'Other'.",
             });
         }
 
+        // ── 9. PARTIAL REFUND ONLY — cap at affected items value, never full order
+        if (affectedItems && affectedItems.length > 0) {
+            const maxAllowedRefund = affectedItems.reduce(
+                (sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)),
+                0
+            );
+            if (Number(refundAmount) > maxAllowedRefund) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Refund amount ₹${refundAmount} exceeds the value of affected items ₹${maxAllowedRefund}. You can only claim refund for affected items.`,
+                });
+            }
+        }
+
+        // ── 10. Create refund
         const refund = await RefundModel.create({
             orderId,
             userId,
@@ -54,6 +129,9 @@ export const submitRefund = async (req, res) => {
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/refund/my  — Customer sees their own refunds
+// ─────────────────────────────────────────────────────────────────────────────
 export const getMyRefunds = async (req, res) => {
     try {
         const refunds = await RefundModel.find({ userId: req.userId })
@@ -65,22 +143,44 @@ export const getMyRefunds = async (req, res) => {
     }
 };
 
-// GET /api/refund/all
-// Returns delivery proof photo alongside refund claim photos so admin can compare both
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/refund/all  — Admin sees all refunds
+// Returns delivery proof photo + customer claim photos side by side
+// Admin can compare: "what rider delivered" vs "what customer is claiming"
+// ─────────────────────────────────────────────────────────────────────────────
 export const getAllRefunds = async (req, res) => {
     try {
         const refunds = await RefundModel.find()
             .populate("userId",  "name email mobile")
-            .populate("orderId", "orderId totalAmt createdAt payment_status cartItems deliveryProof deliveredAt")
+            .populate("orderId", "orderId totalAmt createdAt payment_status cartItems deliveryProof deliveredAt isRestaurantOrder")
             .sort({ createdAt: -1 });
 
-        // Attach delivery proof photo to each refund for easy admin comparison
-        const enriched = refunds.map((refund) => {
-            const r = refund.toObject();
-            r.deliveryProofPhoto = r.orderId?.deliveryProof?.photo || null;
-            r.deliveredAt        = r.orderId?.deliveredAt          || null;
-            return r;
-        });
+        // Enrich each refund with delivery proof + user fraud score for admin
+        const enriched = await Promise.all(
+            refunds.map(async (refund) => {
+                const r = refund.toObject();
+
+                // Attach delivery proof photo for comparison
+                r.deliveryProofPhoto = r.orderId?.deliveryProof?.photo || null;
+                r.deliveredAt        = r.orderId?.deliveredAt          || null;
+
+                // Attach user fraud score so admin knows if this user is a repeat claimer
+                const [userRefunds, userTotalOrders] = await Promise.all([
+                    RefundModel.countDocuments({ userId: r.userId?._id }),
+                    OrderModel.countDocuments({ userId: r.userId?._id, delivery_status: "Delivered" }),
+                ]);
+                r.userFraudScore = {
+                    totalRefundsClaimed: userRefunds,
+                    totalDeliveredOrders: userTotalOrders,
+                    refundRate: userTotalOrders > 0
+                        ? ((userRefunds / userTotalOrders) * 100).toFixed(1) + "%"
+                        : "0%",
+                    isSuspicious: userTotalOrders >= 5 && (userRefunds / userTotalOrders) > 0.3,
+                };
+
+                return r;
+            })
+        );
 
         return res.json({ success: true, data: enriched });
     } catch (err) {
@@ -88,6 +188,9 @@ export const getAllRefunds = async (req, res) => {
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/refund/resolve  — Admin approves / rejects
+// ─────────────────────────────────────────────────────────────────────────────
 export const resolveRefund = async (req, res) => {
     try {
         const { refundId, status, adminNote, refundMethod } = req.body;

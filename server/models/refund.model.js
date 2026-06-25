@@ -20,7 +20,7 @@ const refundSchema = new mongoose.Schema(
 
         description:   { type: String, default: "" },
 
-        // Photos are proof of the issue — required for damage/quality/expired reasons
+        // Photos are proof — required for damage/quality/expired/wrong product
         photos: [{ type: String }],
 
         affectedItems: [
@@ -39,6 +39,15 @@ const refundSchema = new mongoose.Schema(
             enum:    ["Pending", "Under Review", "Approved", "Rejected", "Refunded"],
             default: "Pending",
         },
+
+        // ── Fraud prevention fields ──────────────────────────────────
+        // Was this a restaurant order? (stricter rules apply)
+        isRestaurantOrder: { type: Boolean, default: false },
+
+        // Auto-flag suspicious refunds for manual admin review
+        isFlagged:   { type: Boolean, default: false },
+        flagReason:  { type: String,  default: "" },
+        // ─────────────────────────────────────────────────────────────
 
         adminNote:    { type: String, default: "" },
         refundMethod: { type: String, enum: ["wallet", "original", ""], default: "" },

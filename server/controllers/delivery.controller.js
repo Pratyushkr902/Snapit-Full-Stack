@@ -1,5 +1,5 @@
 import OrderModel from "../models/order.model.js";
-import { uploadImageToCloudinary } from "../utils/cloudinary.js"; // your existing upload util
+import { uploadImageClodinary } from "../utils/uploadImageClodinary.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/delivery/mark-delivered
@@ -27,10 +27,7 @@ export const markDelivered = async (req, res) => {
             return res.status(400).json({ success: false, message: "Order already marked as delivered" });
 
         // 2. Upload photo to Cloudinary (or your storage)
-        const uploadResult = await uploadImageToCloudinary(photo, {
-            folder: `delivery_proofs/${orderId}`,
-            public_id: `proof_${Date.now()}`,
-        });
+        const uploadResult = await uploadImageClodinary(photo, `delivery_proofs/${orderId}`);
 
         // 3. Save delivery proof + mark delivered
         order.delivery_status         = "Delivered";
