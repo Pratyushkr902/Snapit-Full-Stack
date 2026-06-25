@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import Loading from './Loading' 
 import { useSelector } from 'react-redux'
+import { optimizeImage } from '../utils/optimizeImage'
 
 const EditProductAdmin = ({ data, close, fetchProductData }) => {
     const allCategory    = useSelector(state => state.product.allCategory)
@@ -172,7 +173,7 @@ const EditProductAdmin = ({ data, close, fetchProductData }) => {
                         <div className='flex flex-wrap gap-3'>
                             {productData.image.map((img, index) => (
                                 <div key={img + index} className='relative w-20 h-20 bg-blue-50 border rounded p-1 group flex-shrink-0'>
-                                    <img src={img} alt={`product-${index}`} onError={handleImgError} className='w-full h-full object-scale-down'/>
+                                    <img src={optimizeImage(img, 150)} alt={`product-${index}`} onError={handleImgError} className='w-full h-full object-scale-down'/>
                                     <button type="button" onClick={() => handleRemoveImage(index)} className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full cursor-pointer flex items-center justify-center p-0.5'>
                                         <IoClose size={14} />
                                     </button>

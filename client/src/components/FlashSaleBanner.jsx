@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react' // Added useCallback
+import React, { useEffect, useState, useCallback } from 'react'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { Link, useNavigate } from 'react-router-dom'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
+import { optimizeImage } from '../utils/optimizeImage'
 
 const FlashSaleBanner = () => {
     const [sales, setSales] = useState([])
@@ -110,7 +111,7 @@ const FlashSaleBanner = () => {
 
                             <div className='flex justify-center items-center h-28 mb-3 group-hover:scale-105 transition-transform'>
                                 <img
-                                    src={product.image?.[0]}
+                                    src={optimizeImage(product.image?.[0], 300)}
                                     alt={product.name}
                                     className="max-w-full max-h-full object-contain"
                                     onError={(e) => { e.target.src = "https://res.cloudinary.com/daso5ntlt/image/upload/v1773599668/Aashirvaad_Superior_MP_Whole_Wheat_Atta_z8tqsf.jpg" }}
