@@ -20,7 +20,7 @@ const isStoreClosed = () => {
 }
 
 const AddToCartButton = ({ data }) => {
-    const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext()
+    const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext() || {}
     const [loading, setLoading]                             = useState(false)
     const cartItem                                          = useSelector(state => state.cartItem.cart)
     const [isAvailableCart, setIsAvailableCart]             = useState(false)

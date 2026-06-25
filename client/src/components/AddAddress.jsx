@@ -14,7 +14,7 @@ const SERVICEABLE_PINCODES = [
 
 const AddAddress = ({ close }) => {
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm()
-  const { fetchAddress } = useGlobalContext()
+  const { fetchAddress } = useGlobalContext() || {}
   const [locationChecking, setLocationChecking] = useState(false)
   const [locationStatus, setLocationStatus] = useState(null)
   const [detectedLocation, setDetectedLocation] = useState(null)

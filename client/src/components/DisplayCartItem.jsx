@@ -15,7 +15,7 @@ const PricewithDiscount = (price, discount) => {
 }
 
 const DisplayCartItem = ({close}) => {
-    const { notDiscountTotalPrice, totalPrice, totalQty } = useGlobalContext()
+    const { notDiscountTotalPrice = 0, totalPrice = 0, totalQty = 0 } = useGlobalContext() || {}
     const cartItem = useSelector(state => state.cartItem.cart)
     const user = useSelector(state => state.user)
     const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)

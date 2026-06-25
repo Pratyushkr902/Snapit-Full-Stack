@@ -19,7 +19,7 @@ const SERVICEABLE_AREAS = [
 ]
 
 const CheckoutPage = () => {
-  const { fetchCartItem, fetchOrder, totalPrice } = useGlobalContext()
+  const { fetchCartItem, fetchOrder, totalPrice } = useGlobalContext() || {}
   const [openAddress, setOpenAddress]       = useState(false)
   const addressList                          = useSelector(state => state.addresses.addressList)
   const [selectAddress, setSelectAddress]   = useState(0)

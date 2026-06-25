@@ -113,7 +113,7 @@ const Wallet = () => {
   const [isPlusMember, setIsPlusMember] = useState(false)
   const [plusExpiry,   setPlusExpiry]   = useState(null)
 
-  const { fetchUser } = useGlobalContext()
+  const { } = useGlobalContext() || {}
 
   // ── Fetch wallet data ────────────────────────────────────────────────────────
   const fetchWallet = useCallback(async () => {

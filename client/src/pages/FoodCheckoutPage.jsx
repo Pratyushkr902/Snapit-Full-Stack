@@ -51,7 +51,7 @@ const FoodCheckoutPage = () => {
   const location  = useLocation()
   const user      = useSelector(s => s.user)
   const addressList = useSelector(s => s.addresses.addressList)
-  const { fetchAddress } = useGlobalContext()
+  const { fetchAddress } = useGlobalContext() || {}
 
   useEffect(() => { fetchAddress() }, [])
 

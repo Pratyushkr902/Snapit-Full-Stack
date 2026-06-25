@@ -18,7 +18,7 @@ const Address = () => {
   const [openAddress,setOpenAddress] = useState(false)
   const [OpenEdit,setOpenEdit] = useState(false)
   const [editData,setEditData] = useState({})
-  const { fetchAddress} = useGlobalContext()
+  const { fetchAddress } = useGlobalContext() || {}
 
   const handleDisableAddress = async(id)=>{
     try {
