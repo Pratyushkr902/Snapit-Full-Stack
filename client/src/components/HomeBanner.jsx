@@ -26,11 +26,11 @@ const getOpeningMessage = () => {
   return h >= 21 ? "We'll be back at 8:00 AM tomorrow 🌙" : 'We open at 8:00 AM today 🌅'
 }
 
-// ✅ Each banner navigates to its own category
+// ✅ Each banner navigates to its own product search
 const bannerData = [
-  { image: banner1, link: '/search?q=chicken+meat+fish' },
-  { image: banner2, link: '/search?q=cold+drinks+juices' },
-  { image: banner3, link: '/search?q=breakfast+instant+food' },
+  { image: banner1, link: '/search?q=chicken' },
+  { image: banner2, link: '/search?q=drink' },
+  { image: banner3, link: '/search?q=oats' },
 ]
 
 const HomeBanner = () => {
