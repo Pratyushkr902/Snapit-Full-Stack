@@ -31,13 +31,17 @@ const SearchPage = () => {
     }
   }, [searchText])
 
-  const fetchData = useCallback(async () => {
-    const controller = new AbortController()
+  // ✅ FIX: no longer creates/returns an AbortController from inside the
+  // async function — that return value was wrapped in a Promise and never
+  // reached useEffect synchronously, which was the root cause of the
+  // "n is not a function" crash (useEffect was returning a Promise as its
+  // cleanup function instead of an actual function).
+  const fetchData = useCallback(async (signal) => {
     try {
       setLoading(true)
       const response = await Axios({
         ...SummaryApi.searchProduct,
-        signal: controller.signal,
+        signal,
         data: { search: searchText, page, limit: 10 },
       })
       const { data: responseData } = response
@@ -50,12 +54,14 @@ const SearchPage = () => {
     } finally {
       setLoading(false)
     }
-    return () => controller.abort()
   }, [page, searchText])
 
   useEffect(() => {
-    const cleanup = fetchData()
-    return cleanup
+    // ✅ FIX: AbortController now lives here, and the cleanup function
+    // returned is a real synchronous function — exactly what useEffect expects.
+    const controller = new AbortController()
+    fetchData(controller.signal)
+    return () => controller.abort()
   }, [fetchData])
 
   const handleFetchMore = () => {
