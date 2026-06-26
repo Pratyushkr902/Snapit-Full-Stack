@@ -102,7 +102,7 @@ export const getProductByCategory = async (request, response) => {
         if (!mongoose.Types.ObjectId.isValid(id)) return response.status(400).json({ message: "Invalid Category ID", error: true, success: false });
 
         const product = await ProductModel.find({
-            category: { $in: [new mongoose.Types.ObjectId(id)] }
+            category: { $in: [id, new mongoose.Types.ObjectId(id)] }
         }).select(LIST_FIELDS).lean();
 
         return response.json({
@@ -158,8 +158,8 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         const skip = (page - 1) * limit;
         const hasValidSubCategory = subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId);
 
-        let query = { category: { $in: [new mongoose.Types.ObjectId(categoryId)] } };
-        if (hasValidSubCategory) query.subCategory = { $in: [new mongoose.Types.ObjectId(subCategoryId)] };
+        let query = { category: { $in: [categoryId, new mongoose.Types.ObjectId(categoryId)] } };
+        if (hasValidSubCategory) query.subCategory = { $in: [subCategoryId, new mongoose.Types.ObjectId(subCategoryId)] };
 
         let [data, dataCount] = await Promise.all([
             ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
@@ -167,7 +167,7 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         ]);
 
         if (dataCount === 0 && hasValidSubCategory) {
-            const fallbackQuery = { category: { $in: [new mongoose.Types.ObjectId(categoryId)] } };
+            const fallbackQuery = { category: { $in: [categoryId, new mongoose.Types.ObjectId(categoryId)] } };
             const results = await Promise.all([
                 ProductModel.find(fallbackQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
                 ProductModel.countDocuments(fallbackQuery)
