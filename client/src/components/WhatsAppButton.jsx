@@ -45,6 +45,7 @@ const WhatsAppButton = () => {
       ...p,
       x: p.x < window.innerWidth / 2 ? 12 : window.innerWidth - 68
     }))
+    setTimeout(() => { didDragRef.current = false }, 100)
   }
 
   const handleClick = () => {
