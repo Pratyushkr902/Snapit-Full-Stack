@@ -19,6 +19,7 @@ import CartProductModel from '../models/cartproduct.model.js'
 import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
+import sendEmail        from './sendEmail.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -123,6 +124,70 @@ const isObjectId = (id) => /^[a-fA-F0-9]{24}$/.test(String(id))
 // ─────────────────────────────────────────────────────────────────────────────
 // ORDER PLACEMENT — CASH ON DELIVERY
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─── SEND ORDER INVOICE EMAIL ─────────────────────────────────────────────────
+async function sendOrderInvoiceEmail(order, user) {
+    try {
+        if (!user?.email) return
+        const items = (order.cartItems || []).map(item => `
+            <tr>
+                <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;">${item.productId?.name || item.name || 'Product'}</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:center;">${item.quantity}</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:right;">₹${item.productId?.price || item.price || 0}</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:right;">₹${(item.quantity * (item.productId?.price || item.price || 0))}</td>
+            </tr>`).join('')
+
+        const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Snapit Invoice</title></head>
+<body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#1e293b;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="background:#16a34a;padding:32px;text-align:center;">
+    <div style="font-size:36px;font-weight:900;color:#fff;letter-spacing:-1px;">snap<span style="color:#bbf7d0;">it</span></div>
+    <div style="color:#bbf7d0;font-size:13px;margin-top:4px;">Your order is confirmed! 🎉</div>
+  </div>
+  <div style="padding:32px;">
+    <p style="font-size:15px;color:#334155;">Hi <strong>${user.name || 'Customer'}</strong>,</p>
+    <p style="font-size:14px;color:#64748b;margin-top:8px;">Thank you for your order. Here's your invoice:</p>
+    <div style="background:#f0fdf4;border-radius:10px;padding:16px;margin:20px 0;display:flex;justify-content:space-between;">
+      <div><div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;">Order ID</div><div style="font-size:15px;font-weight:800;font-family:monospace;">#${order.orderId}</div></div>
+      <div><div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;">Date</div><div style="font-size:14px;font-weight:600;">${new Date(order.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</div></div>
+      <div><div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;">Payment</div><div style="font-size:13px;font-weight:700;color:#16a34a;">${order.payment_status}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead><tr style="background:#1e293b;color:#fff;">
+        <th style="padding:10px 16px;text-align:left;font-size:12px;">Item</th>
+        <th style="padding:10px 16px;text-align:center;font-size:12px;">Qty</th>
+        <th style="padding:10px 16px;text-align:right;font-size:12px;">Price</th>
+        <th style="padding:10px 16px;text-align:right;font-size:12px;">Total</th>
+      </tr></thead>
+      <tbody>${items}</tbody>
+      <tfoot>
+        ${order.discount_amount > 0 ? `<tr><td colspan="3" style="padding:10px 16px;text-align:right;color:#64748b;">Discount</td><td style="padding:10px 16px;text-align:right;color:#16a34a;">-₹${order.discount_amount}</td></tr>` : ''}
+        <tr><td colspan="3" style="padding:10px 16px;text-align:right;color:#64748b;">Delivery Fee</td><td style="padding:10px 16px;text-align:right;">₹${order.delivery_fee}</td></tr>
+        <tr style="background:#f0fdf4;"><td colspan="3" style="padding:12px 16px;text-align:right;font-weight:800;font-size:15px;color:#16a34a;">Total</td><td style="padding:12px 16px;text-align:right;font-weight:800;font-size:15px;color:#16a34a;">₹${order.totalAmt}</td></tr>
+      </tfoot>
+    </table>
+    <div style="text-align:center;margin-top:24px;">
+      <a href="https://snapit.pages.dev/order-details/${order.orderId}" style="background:#16a34a;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;">Track My Order</a>
+    </div>
+  </div>
+  <div style="background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#94a3b8;">
+    Snapit • Paliganj, Bihar • <a href="https://snapit.pages.dev" style="color:#16a34a;">snapit.pages.dev</a><br>
+    Need help? WhatsApp us at +91 91223 35358
+  </div>
+</div>
+</body></html>`
+
+        await sendEmail({
+            sendTo: user.email,
+            subject: `Order Confirmed! #${order.orderId} - Snapit`,
+            html
+        })
+    } catch(e) {
+        console.error('[Invoice Email Error]', e.message)
+    }
+}
+
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId
@@ -182,6 +247,7 @@ export async function CashOnDeliveryOrderController(request, response) {
 
         const generatedOrder = new OrderModel(payload)
         await generatedOrder.save()
+        sendOrderInvoiceEmail(generatedOrder, currentUser).catch(()=>{})
         await updateStreak(userId)
         await CartProductModel.deleteMany({ userId })
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] })
@@ -299,6 +365,7 @@ export async function WalletPaymentOrderController(request, response) {
 
         const newOrder = new OrderModel(payload)
         await newOrder.save()
+        sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
         await CartProductModel.deleteMany({ userId })
@@ -428,6 +495,7 @@ export async function verifyPaymentController(request, response) {
 
         const newOrder = new OrderModel(payload)
         await newOrder.save()
+        sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
 
