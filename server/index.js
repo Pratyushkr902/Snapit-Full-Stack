@@ -139,6 +139,8 @@ app.use(helmet({
                 "https://*.openstreetmap.org",
                 "https://res.cloudinary.com",
                 "https://*.cloudinary.com",
+                "https://*.r2.dev",
+                "https://pub-af292132196c4b93bf56272675b82149.r2.dev",
                 "https://*.googleapis.com",
                 "https://*.gstatic.com",
                 "https://api.qrserver.com",
