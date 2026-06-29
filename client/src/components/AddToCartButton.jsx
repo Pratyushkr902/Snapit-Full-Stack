@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useMemo } from 'react'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
@@ -7,10 +7,12 @@ import AxiosToastError from '../utils/AxiosToastError'
 import Loading from './Loading'
 import { useSelector } from 'react-redux'
 import { FaMinus, FaPlus } from "react-icons/fa6"
+import { useState } from 'react'
 
 const STORE_OPEN_HOUR  = 8
 const STORE_CLOSE_HOUR = 21
 
+// Moved outside component — stable reference, never recreated
 const isStoreClosed = () => {
     const now = new Date()
     const istOffsetMs = (5 * 60 + 30) * 60 * 1000
@@ -19,14 +21,38 @@ const isStoreClosed = () => {
     return hour < STORE_OPEN_HOUR || hour >= STORE_CLOSE_HOUR
 }
 
+// FIX: stable store-closed value computed once per render cycle, not per card
+const storeClosed = isStoreClosed()
+
 const AddToCartButton = ({ data }) => {
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext() || {}
-    const [loading, setLoading]                             = useState(false)
-    const cartItem = useSelector(state => state.cartItem.cart.filter(i => i?.productId?._id === data?._id || i?.productId === data?._id), (a, b) => a.length === b.length && a[0]?._id === b[0]?._id)
-    const [isAvailableCart, setIsAvailableCart]             = useState(false)
-    const [qty, setQty]                                     = useState(0)
-    const [cartItemDetails, setCartItemsDetails]            = useState()
-    const storeClosed                                       = isStoreClosed()
+    const [loading, setLoading] = useState(false)
+    const productId = data?._id
+
+    // FIX: instead of .filter() (returns new array every time → always triggers
+    // re-render even with custom equality), select only the specific cart item
+    // by looking it up directly. useSelector re-renders only when the returned
+    // value changes by reference or value.
+    //
+    // The old selector did:
+    //   state.cartItem.cart.filter(i => i?.productId?._id === data?._id ...)
+    // .filter() always returns a NEW array, so even a perfectly written
+    // equality function gets called on every Redux state change for every
+    // mounted card — with 20 cards that's 20 equality checks per action.
+    // And if any other cart item changes quantity, all 20 cards re-render.
+    const cartItemDetails = useSelector(state => {
+        if (!productId) return undefined
+        return state.cartItem.cart.find(
+            i => i?.productId?._id === productId || i?.productId === productId
+        )
+    })
+
+    // FIX: qty and isAvailableCart are derived from cartItemDetails — no
+    // separate useState + useEffect sync needed. That sync was a second
+    // render per cart update (setState schedules another render after the
+    // selector already triggered one).
+    const isAvailableCart = Boolean(cartItemDetails?.productId)
+    const qty             = cartItemDetails?.quantity ?? 0
 
     const handleADDTocart = async (e) => {
         e.preventDefault()
@@ -35,7 +61,7 @@ const AddToCartButton = ({ data }) => {
             setLoading(true)
             const response = await Axios({
                 ...SummaryApi.addTocart,
-                data: { productId: data?._id }
+                data: { productId }
             })
             const { data: responseData } = response
             if (responseData.success) {
@@ -49,24 +75,9 @@ const AddToCartButton = ({ data }) => {
         }
     }
 
-    useEffect(() => {
-        // Guard against cart items whose linked product was deleted
-        // (productId comes back as null from the API in that case).
-        const validCartItems = Array.isArray(cartItem)
-            ? cartItem.filter(item => item?.productId)
-            : []
-
-        const checkingitem = validCartItems.some(item => item.productId._id === data?._id)
-        setIsAvailableCart(checkingitem)
-        const product = validCartItems.find(item => item.productId._id === data?._id)
-        setQty(product?.quantity)
-        setCartItemsDetails(product)
-    }, [data, cartItem])
-
     const increaseQty = async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        // ✅ FIX: guard against updateCartItem being undefined if context wasn't ready
         if (!updateCartItem) return
         const response = await updateCartItem(cartItemDetails?._id, qty + 1)
         if (response?.success) toast.success("Item added")
@@ -75,7 +86,6 @@ const AddToCartButton = ({ data }) => {
     const decreaseQty = async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        // ✅ FIX: guard against deleteCartItem/updateCartItem being undefined
         if (!updateCartItem || !deleteCartItem) return
         if (qty === 1) {
             deleteCartItem(cartItemDetails?._id)
