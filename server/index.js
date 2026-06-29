@@ -90,6 +90,8 @@ const allowedOrigins = [
     "https://snapit-full-stack.vercel.app",
     "https://snapit-full-stack-pratyushkr902s-projects.vercel.app",
     "https://snapit-backend-production.up.railway.app",
+                "https://snapit-api-production.up.railway.app",
+                "wss://snapit-api-production.up.railway.app",
 ]
 
 app.use(cors({
@@ -167,6 +169,8 @@ app.use(helmet({
                 "https://snapit-ashy.vercel.app",
                 "https://snapit-full-stack.vercel.app",
                 "https://snapit-backend-production.up.railway.app",
+                "https://snapit-api-production.up.railway.app",
+                "wss://snapit-api-production.up.railway.app",
                 "http://localhost:5173", "https://localhost:5173",
                 "ws://localhost:5173",   "wss://localhost:5173",
                 "http://localhost:8080", "ws://localhost:8080",
@@ -367,7 +371,7 @@ app.get('/{*splat}', (req, res) => {
 })
 
 // ─── KEEP-ALIVE ───────────────────────────────────────────────────────────────
-const SELF_URL = process.env.RENDER_EXTERNAL_URL
+const SELF_URL = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL
 if (SELF_URL) {
     setInterval(() => {
         fetch(`${SELF_URL}/health`).catch(() => {})
