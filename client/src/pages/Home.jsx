@@ -7,52 +7,21 @@ import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay
 import TodayDeals from '../components/TodayDeals'
 import FoodCategoryCard from '../components/FoodCategoryCard'
 
-// ✅ Inline SVG fallback — no network request, never fails
 const FALLBACK_IMG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='80' text-anchor='middle' fill='%239ca3af' font-size='11' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
-// Super-app category definitions
 const SUPER_APP_CATEGORIES = [
-  {
-    id: 'grocery',
-    label: 'Grocery',
-    emoji: '🛒',
-    bg: 'bg-green-50',
-    border: 'border-green-200',
-    path: '/grocery',
-  },
-  {
-    id: 'food',
-    label: 'Food',
-    emoji: '🍔',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    path: '/food',
-  },
-  {
-    id: 'pharmacy',
-    label: 'Pharmacy',
-    emoji: '💊',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    path: '/pharmacy',
-  },
-  {
-    id: 'electronics',
-    label: 'Electronics',
-    emoji: '📱',
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    path: '/electronics',
-    comingSoon: true,
-  },
+  { id: 'grocery',     label: 'Grocery',     emoji: '🛒', bg: 'bg-green-50',  border: 'border-green-200',  path: '/grocery' },
+  { id: 'food',        label: 'Food',        emoji: '🍔', bg: 'bg-orange-50', border: 'border-orange-200', path: '/food' },
+  { id: 'pharmacy',    label: 'Pharmacy',    emoji: '💊', bg: 'bg-blue-50',   border: 'border-blue-200',   path: '/pharmacy' },
+  { id: 'electronics', label: 'Electronics', emoji: '📱', bg: 'bg-purple-50', border: 'border-purple-200', path: '/electronics', comingSoon: true },
 ]
 
 const Home = () => {
   const loadingCategory = useSelector(state => state.product.loadingCategory)
-  const categoryData = useSelector(state => state.product.allCategory)
+  const categoryData    = useSelector(state => state.product.allCategory)
   const subCategoryData = useSelector(state => state.product.allSubCategory)
   const navigate = useNavigate()
 
@@ -105,65 +74,71 @@ const Home = () => {
         <div className='grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-2 lg:gap-4'>
           {loadingCategory
             ? new Array(12).fill(null).map((_, i) => (
-                <div key={i + "load"} className='flex flex-col items-center gap-2'>
+                <div key={i + "load"} className='flex flex-col items-center gap-2 min-h-[80px]'>
                   <div className='bg-slate-100 w-full aspect-square rounded-xl animate-pulse' />
                   <div className='bg-slate-100 h-2.5 w-3/4 rounded animate-pulse' />
                 </div>
               ))
-            : Array.isArray(categoryData) && categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase())).map((cat) => {
-                if (!cat) return null;
+            : Array.isArray(categoryData) && categoryData
+                .filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase()))
+                .map((cat) => {
+                  if (!cat) return null
 
-                const rawImg = cat?.icon || cat?.image || cat?.imageUrl || '';
-                let finalSrc = FALLBACK_IMG;
+                  const rawImg = cat?.icon || cat?.image || cat?.imageUrl || ''
+                  let finalSrc = FALLBACK_IMG
 
-                if (typeof rawImg === 'string' && rawImg.trim().length > 0) {
-                  const cleanPath = rawImg.trim();
-                  if (cleanPath.startsWith('//')) {
-                    finalSrc = `https:${cleanPath}`;
-                  } else if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-                    finalSrc = cleanPath;
-                  } else if (cleanPath.startsWith('/')) {
-                    finalSrc = `${BACKEND_URL}${cleanPath}`;
-                  } else {
-                    finalSrc = cleanPath;
+                  if (typeof rawImg === 'string' && rawImg.trim().length > 0) {
+                    const cleanPath = rawImg.trim()
+                    if (cleanPath.startsWith('//')) {
+                      finalSrc = `https:${cleanPath}`
+                    } else if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+                      finalSrc = cleanPath
+                    } else if (cleanPath.startsWith('/')) {
+                      finalSrc = `${BACKEND_URL}${cleanPath}`
+                    } else {
+                      finalSrc = cleanPath
+                    }
+                  } else if (Array.isArray(rawImg) && rawImg.length > 0) {
+                    const arrayPath = typeof rawImg[0] === 'string' ? rawImg[0].trim() : ''
+                    if (arrayPath.startsWith('//')) {
+                      finalSrc = `https:${arrayPath}`
+                    } else if (arrayPath.startsWith('http://') || arrayPath.startsWith('https://')) {
+                      finalSrc = arrayPath
+                    } else if (arrayPath.startsWith('/')) {
+                      finalSrc = `${BACKEND_URL}${arrayPath}`
+                    } else {
+                      finalSrc = arrayPath || FALLBACK_IMG
+                    }
                   }
-                } else if (Array.isArray(rawImg) && rawImg.length > 0) {
-                  const arrayPath = typeof rawImg[0] === 'string' ? rawImg[0].trim() : '';
-                  if (arrayPath.startsWith('//')) {
-                    finalSrc = `https:${arrayPath}`;
-                  } else if (arrayPath.startsWith('http://') || arrayPath.startsWith('https://')) {
-                    finalSrc = arrayPath;
-                  } else if (arrayPath.startsWith('/')) {
-                    finalSrc = `${BACKEND_URL}${arrayPath}`;
-                  } else {
-                    finalSrc = arrayPath || FALLBACK_IMG;
-                  }
-                }
 
-                return (
-                  <div
-                    key={cat._id + "homeGrid"}
-                    className='group cursor-pointer flex flex-col items-center gap-1.5'
-                    onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
-                  >
-                    <div className='bg-white border border-slate-100 rounded-xl p-2 w-full aspect-square flex items-center justify-center transition-all duration-200 active:scale-90 group-hover:border-green-200 group-hover:bg-green-50'>
-                      <img
-                        src={finalSrc}
-                        alt={cat?.name || "Category"}
-                        className='w-full h-full object-scale-down group-hover:scale-105 transition-transform duration-200'
-                        loading="eager"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = FALLBACK_IMG;
-                        }}
-                      />
+                  return (
+                    <div
+                      key={cat._id + "homeGrid"}
+                      className='group cursor-pointer flex flex-col items-center gap-1.5 min-h-[80px]'
+                      onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
+                    >
+                      {/* Fixed-size wrapper prevents layout shift when image loads */}
+                      <div className='bg-slate-50 border border-slate-100 rounded-xl p-2 w-full aspect-square flex items-center justify-center transition-all duration-200 active:scale-90 group-hover:border-green-200 group-hover:bg-green-50 overflow-hidden'>
+                        <img
+                          src={finalSrc}
+                          alt={cat?.name || "Category"}
+                          width={60}
+                          height={60}
+                          className='w-full h-full object-scale-down group-hover:scale-105 transition-transform duration-200'
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            e.target.onerror = null
+                            e.target.src = FALLBACK_IMG
+                          }}
+                        />
+                      </div>
+                      <p className='text-center text-[10px] lg:text-xs font-medium text-slate-600 line-clamp-1 w-full'>
+                        {cat?.name || ""}
+                      </p>
                     </div>
-                    <p className='text-center text-[10px] lg:text-xs font-medium text-slate-600 line-clamp-1 w-full'>
-                      {cat?.name || ""}
-                    </p>
-                  </div>
-                );
-              })
+                  )
+                })
           }
         </div>
       </div>
@@ -193,9 +168,9 @@ const Home = () => {
                   <div key={c._id + "homeDisplay"} className='w-full border-b border-slate-100 last:border-0'>
                     <CategoryWiseProductDisplay id={c._id} name={c.name} />
                   </div>
-                );
+                )
               }
-              return null;
+              return null
             })
         }
       </div>
@@ -204,4 +179,4 @@ const Home = () => {
   )
 }
 
-export default Home;
+export default Home
