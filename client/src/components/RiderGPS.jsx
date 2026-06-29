@@ -14,7 +14,7 @@ const RiderGPS = ({ orderId = "SNAP-ORDER-9921" }) => {
     // ✅ FIX: Socket initialized INSIDE useEffect — prevents stale closure
     //         and avoids module-level socket that never gets cleaned up
     const socket = io(
-      import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com",
+      import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app",
       {
         path: "/socket.io/",
         transports: ["websocket", "polling"],

@@ -6,7 +6,7 @@ import SummaryApi from '../common/SummaryApi'
 import CardProduct from '../components/CardProduct'
 import CardLoading from '../components/CardLoading'
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://snapit-backend-bn8r.onrender.com'
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://snapit-full-stack-production.up.railway.app'
 
 // Hardcoded IDs — exact MongoDB _id values
 const PHARMA_ID = '69b57215a8b9adccd30c61c5'

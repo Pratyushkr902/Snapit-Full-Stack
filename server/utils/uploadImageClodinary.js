@@ -1,32 +1,34 @@
-import { v2 as cloudinary } from 'cloudinary';
-cloudinary.config({
-    cloud_name : process.env.CLOUDINARY_CLOUD_NAME,
-    api_key : process.env.CLOUDINARY_API_KEY,
-    api_secret : process.env.CLOUDINARY_API_SECRET
-})
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { randomUUID } from 'crypto';
 
-const uploadImageClodinary = async(image)=>{
-    // FIXED: Improved buffer conversion to handle different multer storage engines
-    const buffer = image?.buffer || Buffer.from(await image.arrayBuffer())
-    const uploadImage = await new Promise((resolve,reject)=>{
-        cloudinary.uploader.upload_stream({
-            folder : "snapit",
-            // ✅ FIX: cap dimensions + auto-compress on upload to cut storage/bandwidth credits
-            transformation: [
-                { width: 1000, height: 1000, crop: "limit" }, // never store larger than 1000px
-                { quality: "auto:good" },                     // smart compression
-                { fetch_format: "auto" }                      // store as WebP/AVIF when smaller
-            ]
-        }, (error, uploadResult) => {
-            // FIXED: Explicitly handle the error case to prevent the server from hanging
-            if (error) {
-                console.error("Cloudinary Upload Error:", error);
-                return reject(error);
-            }
-            // FIXED: Returns the full result object (including secure_url)
-            return resolve(uploadResult);
-        }).end(buffer)
-    })
-    return uploadImage
-}
-export default uploadImageClodinary
+const s3 = new S3Client({
+    region: 'auto',
+    endpoint: process.env.R2_ENDPOINT,
+    credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+});
+
+const uploadImageClodinary = async (image) => {
+    const buffer = image?.buffer || Buffer.from(await image.arrayBuffer());
+    const mimeType = image?.mimetype || 'image/jpeg';
+    const extension = mimeType.split('/')[1] || 'jpg';
+    const fileName = `snapit/${randomUUID()}.${extension}`;
+
+    await s3.send(new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: fileName,
+        Body: buffer,
+        ContentType: mimeType,
+    }));
+
+    const publicUrl = `${process.env.R2_PUBLIC_URL}/${fileName}`;
+
+    return {
+        secure_url: publicUrl,
+        public_id: fileName,
+    };
+};
+
+export default uploadImageClodinary;
