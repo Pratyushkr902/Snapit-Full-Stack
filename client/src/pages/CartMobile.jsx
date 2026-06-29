@@ -61,7 +61,7 @@ const CartMobilePage = () => {
 
                             <div className='bg-white rounded-xl p-4 grid gap-5 shadow-sm'>
                                 {
-                                    cartItem.map((item, index) => {
+                                    cartItem.filter(item => item?.productId).map((item, index) => {
                                         return (
                                             <div key={item?._id || index} className='flex w-full gap-4 items-center border-b border-neutral-50 pb-3 last:border-0 last:pb-0'>
                                                 <div className='w-14 h-14 min-h-14 min-w-14 bg-white border rounded-lg p-1'>
