@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import Axios from "../utils/Axios";
 import SummaryApi from "../common/SummaryApi";
 import { useDispatch, useSelector } from "react-redux";
@@ -125,20 +125,18 @@ const GlobalProvider = ({ children }) => {
         }
     }, [user?._id])
 
-    const contextValue = useMemo(() => ({
-        fetchCartItem,
-        updateCartItem,
-        deleteCartItem,
-        fetchAddress,
-        handleLogoutOut,
-        totalPrice,
-        totalQty,
-        notDiscountTotalPrice,
-        fetchOrder
-    }), [totalPrice, totalQty, notDiscountTotalPrice])
-
     return (
-        <GlobalContext.Provider value={contextValue}>
+        <GlobalContext.Provider value={{
+            fetchCartItem,
+            updateCartItem,
+            deleteCartItem,
+            fetchAddress,
+            handleLogoutOut,
+            totalPrice,
+            totalQty,
+            notDiscountTotalPrice,
+            fetchOrder
+        }}>
             {children}
         </GlobalContext.Provider>
     )
