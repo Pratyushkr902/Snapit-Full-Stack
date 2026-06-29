@@ -135,7 +135,7 @@ app.use(helmet({
                 "https://www.gstatic.com",
                 "https://*.firebaseapp.com",
             ],
-            workerSrc: ["'self'", "blob:", "https://*.gstatic.com", "https://www.gstatic.com"],
+            workerSrc: ["'self'", "blob:", "https://*.gstatic.com", "https://www.gstatic.com", "https://www.gstatic.com/firebasejs/*"],
             imgSrc: [
                 "'self'", "data:", "blob:",
                 "https://*.openstreetmap.org",
