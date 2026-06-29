@@ -129,4 +129,4 @@ const AddToCartButton = ({ data }) => {
     )
 }
 
-export default AddToCartButton
+export default React.memo(AddToCartButton)

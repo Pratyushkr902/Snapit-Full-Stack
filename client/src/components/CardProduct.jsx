@@ -161,4 +161,4 @@ const CardProduct = ({ data }) => {
     )
 }
 
-export default CardProduct
+export default React.memo(CardProduct)
