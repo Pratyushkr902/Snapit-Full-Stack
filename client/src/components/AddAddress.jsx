@@ -72,7 +72,7 @@ const AddAddress = ({ close }) => {
 
   return (
     <section className='bg-black fixed inset-0 z-50 bg-opacity-70 overflow-auto flex items-start justify-center p-4'>
-      <div className='bg-white w-full max-w-lg mt-8 rounded-2xl overflow-hidden shadow-2xl'>
+      <div className='bg-white w-full max-w-lg mt-8 rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto'>
 
         {/* Header */}
         <div className='flex justify-between items-center p-5 border-b'>
