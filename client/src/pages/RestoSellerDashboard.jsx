@@ -29,7 +29,6 @@ export default function RestoSellerDashboard() {
   const [loading, setLoading]             = useState(true)
   const [uploadingImage, setUploadingImage] = useState(false)
 
-  // NEW: inline photo-edit-from-list state (tracks which item's photo is uploading)
   const [uploadingPhotoItemId, setUploadingPhotoItemId] = useState(null)
 
   // Orders
@@ -62,7 +61,6 @@ export default function RestoSellerDashboard() {
     } catch { toast.error('Failed to load menu') }
   }
 
-  // ── Orders: filter by restaurant name since store_details has no restaurantId ──
   const loadOrders = useCallback(async () => {
     if (!restaurant) return
     setOrdersLoading(true)
@@ -78,7 +76,6 @@ export default function RestoSellerDashboard() {
     finally { setOrdersLoading(false) }
   }, [restaurant])
 
-  // Re-run loadOrders once restaurant is loaded and tab is already 'orders'
   useEffect(() => {
     if (tab === 'orders' && restaurant) loadOrders()
   }, [restaurant])
@@ -91,6 +88,7 @@ export default function RestoSellerDashboard() {
     } catch { toast.error('Failed to update') }
   }
 
+  // FIXED: now uploads to R2 instead of Cloudinary
   const handleImageUpload = async (e, field) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -98,7 +96,7 @@ export default function RestoSellerDashboard() {
     try {
       const fd = new FormData()
       fd.append('image', file)
-      const res = await Axios({ method: 'POST', url: '/api/file/upload', data: fd })
+      const res = await Axios({ method: 'POST', url: '/api/file/upload-r2', data: fd })
       const url = res.data?.data?.url || res.data?.url
       if (url) setItemForm(p => ({ ...p, [field]: url }))
       else toast.error('Upload failed — no URL returned')
@@ -106,7 +104,7 @@ export default function RestoSellerDashboard() {
     finally { setUploadingImage(false) }
   }
 
-  // ── NEW: inline photo update directly from the menu list (no need to open edit form) ──
+  // FIXED: now uploads to R2 instead of Cloudinary
   const handleInlineItemPhotoUpload = async (item, e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -114,7 +112,7 @@ export default function RestoSellerDashboard() {
     try {
       const fd = new FormData()
       fd.append('image', file)
-      const uploadRes = await Axios({ method: 'POST', url: '/api/file/upload', data: fd })
+      const uploadRes = await Axios({ method: 'POST', url: '/api/file/upload-r2', data: fd })
       const url = uploadRes.data?.data?.url || uploadRes.data?.url
       if (!url) { toast.error('Upload failed — no URL returned'); return }
 
@@ -125,7 +123,7 @@ export default function RestoSellerDashboard() {
       toast.error('Failed to update photo')
     } finally {
       setUploadingPhotoItemId(null)
-      e.target.value = '' // allow re-selecting the same file again later
+      e.target.value = ''
     }
   }
 
@@ -183,7 +181,6 @@ export default function RestoSellerDashboard() {
     } catch { toast.error('Failed to update status') }
   }
 
-  // ── Derived: group menu by category ──
   const grouped = menuItems.reduce((acc, item) => {
     const cat = item.category || 'Other'
     if (!acc[cat]) acc[cat] = []
@@ -191,7 +188,6 @@ export default function RestoSellerDashboard() {
     return acc
   }, {})
 
-  // ── Earnings calculation ──
   const deliveredOrders = orders.filter(o => o.delivery_status === 'Delivered')
   const totalRevenue    = deliveredOrders.reduce((s, o) => s + (o.totalAmount || 0), 0)
   const totalSnapitCut  = deliveredOrders.reduce((s, o) => {
@@ -310,7 +306,6 @@ export default function RestoSellerDashboard() {
                           item.isAvailable ? 'border-slate-800' : 'border-slate-700 opacity-50'
                         }`}>
                         <div className='flex items-start gap-3'>
-                          {/* Image — now with inline photo-edit overlay (tap/hover the thumbnail) */}
                           <label className='relative w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 cursor-pointer group'>
                             {item.image
                               ? <img src={item.image} alt={item.name} className='w-full h-full object-cover'/>
@@ -328,7 +323,6 @@ export default function RestoSellerDashboard() {
                               onChange={(e) => handleInlineItemPhotoUpload(item, e)}
                             />
                           </label>
-                          {/* Info */}
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center gap-1.5 mb-0.5'>
                               <span className={`w-3 h-3 border-2 rounded-sm flex-shrink-0 inline-flex items-center justify-center ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>
@@ -544,7 +538,6 @@ export default function RestoSellerDashboard() {
                     </span>
                   </div>
 
-                  {/* Items */}
                   <div className='mb-3 flex flex-col gap-1'>
                     {(order.cartItems || []).map((ci, i) => (
                       <div key={i} className='flex justify-between text-xs text-slate-400'>
@@ -574,13 +567,12 @@ export default function RestoSellerDashboard() {
           <div className='flex flex-col gap-4'>
             <p className='text-sm font-black text-white'>Earnings Overview</p>
 
-            {/* Summary cards */}
             <div className='grid grid-cols-2 gap-3'>
               {[
-                { label: 'Total Orders',     value: orders.length,                         color: 'text-white' },
-                { label: 'Delivered',        value: deliveredOrders.length,                color: 'text-green-400' },
-                { label: 'Gross Revenue',    value: `₹${totalRevenue.toLocaleString('en-IN')}`,    color: 'text-sky-400' },
-                { label: 'Snapit Cut',       value: `₹${totalSnapitCut.toLocaleString('en-IN')}`,  color: 'text-amber-400' },
+                { label: 'Total Orders',     value: orders.length,                                          color: 'text-white' },
+                { label: 'Delivered',        value: deliveredOrders.length,                                 color: 'text-green-400' },
+                { label: 'Gross Revenue',    value: `₹${totalRevenue.toLocaleString('en-IN')}`,             color: 'text-sky-400' },
+                { label: 'Snapit Cut',       value: `₹${totalSnapitCut.toLocaleString('en-IN')}`,           color: 'text-amber-400' },
               ].map(c => (
                 <div key={c.label} className='bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center'>
                   <p className={`text-xl font-black ${c.color}`}>{c.value}</p>
@@ -589,14 +581,12 @@ export default function RestoSellerDashboard() {
               ))}
             </div>
 
-            {/* Net earnings highlight */}
             <div className='bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6 text-center'>
               <p className='text-[11px] text-emerald-400/70 uppercase font-black mb-1'>Your Net Earnings</p>
               <p className='text-4xl font-black text-emerald-400'>₹{totalEarnings.toLocaleString('en-IN')}</p>
               <p className='text-[10px] text-slate-500 mt-2'>From {deliveredOrders.length} delivered orders</p>
             </div>
 
-            {/* Per-order breakdown */}
             {deliveredOrders.length > 0 && (
               <div>
                 <p className='text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-l-2 border-orange-500 pl-2'>Delivered Orders Breakdown</p>

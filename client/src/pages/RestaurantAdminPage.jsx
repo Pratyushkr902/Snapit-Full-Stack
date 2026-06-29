@@ -134,7 +134,6 @@ export default function RestaurantAdminPage() {
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [togglingRestoId, setTogglingRestoId] = useState(null)
   const [uploadingPhotoItemId, setUploadingPhotoItemId] = useState(null)
-  // ── NEW: search state ──
   const [menuSearch, setMenuSearch] = useState('')
 
   const inp   = 'w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-500 placeholder-slate-500'
@@ -167,12 +166,13 @@ export default function RestaurantAdminPage() {
     finally { setOrdersLoading(false) }
   }
 
+  // FIXED: all image uploads now go to R2 instead of Cloudinary
   const uploadImage = async (file, setUploading) => {
     if (setUploading) setUploading(true)
     try {
       const fd = new FormData()
       fd.append('image', file)
-      const res = await Axios({ method: 'POST', url: '/api/file/upload', data: fd })
+      const res = await Axios({ method: 'POST', url: '/api/file/upload-r2', data: fd })
       return res.data?.data?.url || res.data?.url || null
     } catch { toast.error('Image upload failed'); return null }
     finally { if (setUploading) setUploading(false) }
@@ -246,9 +246,6 @@ export default function RestaurantAdminPage() {
     finally { setSaving(false) }
   }
 
-  // ── FIXED: Save Menu Item ──
-  // Bug was: discountedPrice used `|| price` fallback which overwrote intentional 0/empty
-  // Fix: send discountedPrice as-is (0 if blank), backend treats 0 as "no discount"
   const handleSaveItem = async () => {
     if (!itemForm.name || !itemForm.price || !itemForm.category) return
     setSaving(true)
@@ -264,7 +261,6 @@ export default function RestaurantAdminPage() {
       }
       if (editingItem) {
         const res = await Axios({ method: 'PUT', url: `/api/restaurant/menu/${editingItem._id}`, data: body })
-        // Use server response if available, otherwise merge locally
         const updated = res.data?.data || { ...editingItem, ...body }
         setMenuItems(prev => prev.map(i => i._id === editingItem._id ? updated : i))
         toast.success('Item updated')
@@ -326,7 +322,6 @@ export default function RestaurantAdminPage() {
     return (order.cartItems || []).reduce((sum, ci) => sum + getItemNet(ci), 0)
   }, [getItemNet])
 
-  // ── Menu grouping with search filter ──
   const filteredMenuItems = menuSearch.trim()
     ? menuItems.filter(item =>
         item.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
@@ -559,7 +554,6 @@ export default function RestaurantAdminPage() {
               )}
             </div>
 
-            {/* Search results count */}
             {menuSearch && (
               <p className='text-xs text-slate-500 mb-3'>
                 {filteredMenuItems.length} result{filteredMenuItems.length !== 1 ? 's' : ''} for "{menuSearch}"
