@@ -62,7 +62,7 @@ const CardProduct = ({ data }) => {
         <Link
             to={url}
             onClick={() => window.scrollTo(0, 0)}
-            className='border flex flex-col rounded-xl cursor-pointer bg-white dark:bg-[#0F0F0F] border-slate-100 dark:border-zinc-800 transition-all hover:shadow-lg hover:border-green-200 group relative overflow-hidden p-1.5 lg:p-2'
+            className='border flex flex-col rounded-xl cursor-pointer bg-white dark:bg-[#0F0F0F] border-slate-100 dark:border-zinc-800 transition-all hover:shadow-lg hover:border-green-200 group relative overflow-hidden p-1.5 lg:p-2' style={{contentVisibility:'auto',containIntrinsicSize:'0 280px'}}
         >
             {/* Product Label */}
             {label && (

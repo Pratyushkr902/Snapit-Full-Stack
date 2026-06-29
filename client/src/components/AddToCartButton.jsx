@@ -22,7 +22,7 @@ const isStoreClosed = () => {
 const AddToCartButton = ({ data }) => {
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext() || {}
     const [loading, setLoading]                             = useState(false)
-    const cartItem                                          = useSelector(state => state.cartItem.cart)
+    const cartItem = useSelector(state => state.cartItem.cart.filter(i => i?.productId?._id === data?._id || i?.productId === data?._id), (a, b) => a.length === b.length && a[0]?._id === b[0]?._id)
     const [isAvailableCart, setIsAvailableCart]             = useState(false)
     const [qty, setQty]                                     = useState(0)
     const [cartItemDetails, setCartItemsDetails]            = useState()
