@@ -65,15 +65,18 @@ function App() {
       return
     }
     try {
-      const userData = await fetchUserDetails()
+      const userData = await Promise.race([
+        fetchUserDetails(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Session check timed out')), 8000))
+      ])
       if (userData?.success) {
-        const profileData = userData.data; 
+        const profileData = userData.data;
         if (profileData?._id) {
           dispatch(setUserDetails(profileData))
         }
       }
     } catch (error) {
-      console.log("Session Check: No active user found.")
+      console.log("Session Check: No active user found or timed out.", error?.message)
     } finally {
       setIsAuthResolving(false)
       SplashScreen.hide({ fadeOutDuration: 300 })
