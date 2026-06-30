@@ -1,36 +1,34 @@
 // ============================================================
-// server/utils/firebaseNotify.js — FULL REPLACEMENT FOR TOP SECTION
+// server/utils/firebaseNotify.js — FULL REPLACEMENT
 // ============================================================
 //
-// firebase-admin is fundamentally a CommonJS package. Its ESM wrapper
-// has been inconsistent across versions (v12-v14) in how it exposes
-// the default export and named exports under Node's native ESM loader.
-// Both `import admin from 'firebase-admin'` and
-// `import * as admin from 'firebase-admin'` have known issues depending
-// on the exact subpath Node resolves to.
+// firebase-admin v14 restructured its API:
+//   - admin.apps            → admin.getApps()
+//   - admin.credential.cert → admin.cert()
+//   - admin.messaging()     → getMessaging() from 'firebase-admin/messaging'
 //
-// The bulletproof fix: use createRequire to load it as CommonJS
-// directly, bypassing the ESM interop layer entirely. This is the
-// approach Firebase's own GitHub issues recommend for Node ESM projects.
+// This version uses the correct v14 modular API throughout.
 
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
-const admin = require('firebase-admin')
 
-// ─── everything below this line is UNCHANGED from your existing file ───
+const admin = require('firebase-admin')
+const { getMessaging } = require('firebase-admin/messaging')
 
 // Initialize Firebase Admin only once
-if (!admin.apps.length) {
+if (admin.getApps().length === 0) {
     try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
         admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
+            credential: admin.cert(serviceAccount)
         })
         console.log('✅ Firebase Admin initialized')
     } catch (error) {
         console.error('❌ Firebase Admin init failed:', error.message)
     }
 }
+
+const messaging = getMessaging()
 
 // Send notification to a single device token
 export async function sendPushNotification({ token, title, body, data = {} }) {
@@ -49,7 +47,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                 fcmOptions: { link: '/rider-panel' }
             }
         }
-        const result = await admin.messaging().send(message)
+        const result = await messaging.send(message)
         console.log('📱 Notification sent:', result)
         return result
     } catch (error) {
