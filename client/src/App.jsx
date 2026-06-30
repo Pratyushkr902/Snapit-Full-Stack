@@ -76,6 +76,7 @@ function App() {
       console.log("Session Check: No active user found.")
     } finally {
       setIsAuthResolving(false)
+      SplashScreen.hide({ fadeOutDuration: 300 })
     }
   }, [dispatch])
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
@@ -37,6 +37,10 @@ const HomeBanner = () => {
   const navigate  = useNavigate()
   const storeOpen = isStoreOpen()
 
+  // Once Swiper has mounted and painted its own first slide,
+  // we hide the instant static image so they don't double-stack.
+  const [swiperReady, setSwiperReady] = useState(false)
+
   return (
     <div className='container mx-auto px-4 mt-2 lg:mt-4'>
 
@@ -54,7 +58,22 @@ const HomeBanner = () => {
         </div>
       )}
 
-      <div className='w-full h-44 md:h-64 lg:h-80 rounded-2xl overflow-hidden shadow-sm group bg-slate-50'>
+      <div className='relative w-full h-44 md:h-64 lg:h-80 rounded-2xl overflow-hidden shadow-sm group bg-slate-50'>
+
+        {/* INSTANT PAINT LAYER — plain img, no library, no JS init required.
+            This is what becomes your LCP element. It paints as soon as the
+            browser has the image bytes, independent of Swiper mounting. */}
+        {!swiperReady && (
+          <img
+            src={banner1}
+            alt='Snapit Promo 1'
+            className='absolute inset-0 w-full h-full object-fill lg:object-cover'
+            fetchPriority='high'
+            loading='eager'
+            decoding='async'
+          />
+        )}
+
         <Swiper
           spaceBetween={0}
           centeredSlides={true}
@@ -64,6 +83,7 @@ const HomeBanner = () => {
           navigation={true}
           modules={[Autoplay, Pagination, Navigation]}
           className='mySwiper h-full w-full'
+          onSwiper={() => setSwiperReady(true)}
         >
           {bannerData.map((item, index) => (
             <SwiperSlide
@@ -75,7 +95,9 @@ const HomeBanner = () => {
                 src={item.image}
                 alt={`Snapit Promo ${index + 1}`}
                 className='w-full h-full object-fill lg:object-cover'
-                loading='eager'
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchPriority={index === 0 ? 'high' : 'auto'}
+                decoding='async'
               />
             </SwiperSlide>
           ))}

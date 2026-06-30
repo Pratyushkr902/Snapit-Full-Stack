@@ -6,8 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Snapit - Hyperlocal Grocery</title>
 
+    <!-- Preconnect to your image host (replace with your actual R2/Cloudflare domain) -->
+    <link rel="preconnect" href="https://your-r2-domain.r2.dev" crossorigin>
+
+    <!-- Preconnect to your Railway backend API -->
+    <link rel="preconnect" href="https://your-backend.up.railway.app" crossorigin>
 
     <link rel="manifest" href="/manifest.json">
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -16,8 +22,10 @@
         });
       }
     </script>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-</head>
+
+    <!-- Deferred: was blocking initial render before -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
