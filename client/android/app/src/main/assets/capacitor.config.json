@@ -7,7 +7,7 @@
 		"hostname": "snapit.grocery",
 		"cleartext": true,
 		"allowNavigation": [
-			"snapit-full-stack-2.onrender.com"
+			"snapit-full-stack-production.up.railway.app"
 		]
 	},
 	"android": {

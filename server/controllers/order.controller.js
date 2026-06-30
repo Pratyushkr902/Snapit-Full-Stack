@@ -20,7 +20,7 @@ import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
 import sendEmail        from './sendEmail.js'
-
+import { sendPushNotification, notifyAllRiders } from '../utils/firebaseNotify.js'
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -248,6 +248,11 @@ export async function CashOnDeliveryOrderController(request, response) {
         const generatedOrder = new OrderModel(payload)
         await generatedOrder.save()
         sendOrderInvoiceEmail(generatedOrder, currentUser).catch(()=>{})
+        notifyAllRiders({
+            title: '🛵 New Order!',
+            body:  `Order ${generatedOrder.orderId} is ready for pickup — ₹${generatedOrder.totalAmt}`,
+            data:  { orderId: generatedOrder.orderId, type: 'NEW_ORDER' }
+        }).catch(() => {})
         await updateStreak(userId)
         await CartProductModel.deleteMany({ userId })
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] })
@@ -599,6 +604,24 @@ export const updateOrderStatusController = async (request, response) => {
             },
             { new: true }
         )
+
+        try {
+            const customer = await UserModel.findById(updatedOrder.userId).select('fcmToken')
+            if (customer?.fcmToken) {
+                const statusMessages = {
+                    'Confirmed':        { title: '✅ Order Confirmed',  body: `Your order ${orderId} has been confirmed and is being prepared.` },
+                    'Out for Delivery': { title: '🛵 Out for Delivery', body: `Your order ${orderId} is on its way!` },
+                    'Delivered':        { title: '📦 Order Delivered',  body: `Your order ${orderId} has been delivered. Enjoy!` },
+                    'Cancelled':        { title: '❌ Order Cancelled',  body: `Your order ${orderId} has been cancelled.` },
+                }
+                const msg = statusMessages[status]
+                if (msg) {
+                    sendPushNotification({ token: customer.fcmToken, title: msg.title, body: msg.body, data: { orderId, status, type: 'ORDER_STATUS' } }).catch(() => {})
+                }
+            }
+        } catch (e) {
+            console.error('Order status notify failed (non-fatal):', e.message)
+        }
 
         return response.json({ message: `Order status updated to ${status}`, success: true, error: false, data: updatedOrder })
     } catch (error) {
