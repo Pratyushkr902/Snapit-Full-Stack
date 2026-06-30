@@ -1,158 +1,205 @@
-import React, { useMemo } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native'
-import { useSelector } from 'react-redux'
-import { useRouter } from 'expo-router'
-import { valideURLConvert } from '../../utils/valideURLConvert'
-import HomeBanner from '../../components/HomeBanner'
-import TodayDeals from '../../components/TodayDeals'
-import FoodCategoryCard from '../../components/FoodCategoryCard'
-import CategoryWiseProductDisplay from '../../components/CategoryWiseProductDisplay'
+import { createHashRouter, useRouteError, useNavigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import App from "../App";
 
-const { width: SW } = Dimensions.get('window')
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'https://snapit-full-stack-production.up.railway.app'
+// Eager load only the most critical pages
+import Home from "../pages/Home";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
 
-const SUPER_APP_CATEGORIES = [
-  { id: 'grocery',     label: 'Grocery',     emoji: '🛒', bg: '#f0fdf4', border: '#bbf7d0', path: '/grocery' },
-  { id: 'food',        label: 'Food',        emoji: '🍔', bg: '#fff7ed', border: '#fed7aa', path: '/food' },
-  { id: 'pharmacy',    label: 'Pharmacy',    emoji: '💊', bg: '#eff6ff', border: '#bfdbfe', path: '/pharmacy' },
-  { id: 'electronics', label: 'Electronics', emoji: '📱', bg: '#faf5ff', border: '#e9d5ff', path: '/electronics', comingSoon: true },
-]
+// Lazy load everything else
+const SearchPage             = lazy(() => import('../pages/Searchpage'))
+const ForgotPassword         = lazy(() => import('../pages/ForgotPassword'))
+const OtpVerification        = lazy(() => import('../pages/OtpVerification'))
+const ResetPassword          = lazy(() => import('../pages/ResetPassword'))
+const UserMenuMobile         = lazy(() => import('../pages/UserMenuMobile'))
+const Dashboard              = lazy(() => import('../layouts/Dashboard'))
+const Profile                = lazy(() => import('../pages/Profile'))
+const MyOrders               = lazy(() => import('../pages/MyOrders'))
+const Address                = lazy(() => import('../pages/Address'))
+const CategoryPage           = lazy(() => import('../pages/CategoryPage'))
+const SubCategoryPage        = lazy(() => import('../pages/SubCategoryPage'))
+const UploadProduct          = lazy(() => import('../pages/UploadProduct'))
+const ProductAdmin           = lazy(() => import('../pages/ProductAdmin'))
+const AdminPermision         = lazy(() => import('../layouts/AdminPermision'))
+const SellerPermission       = lazy(() => import('../layouts/SellerPermission'))
+const ProductListPage        = lazy(() => import('../pages/ProductListPage'))
+const ProductDisplayPage     = lazy(() => import('../pages/ProductDisplayPage'))
+const CartMobile             = lazy(() => import('../pages/CartMobile'))
+const CheckoutPage           = lazy(() => import('../pages/CheckoutPage'))
+const Success                = lazy(() => import('../pages/Success'))
+const Cancel                 = lazy(() => import('../pages/Cancel'))
+const RiderTracking          = lazy(() => import('../pages/RiderTracking'))
+const RiderDashboard         = lazy(() => import('../pages/RiderDashboard'))
+const AdminRefunds           = lazy(() => import('../pages/AdminRefunds'))
+const StoreOrders            = lazy(() => import('../pages/StoreOrders'))
+const Wallet                 = lazy(() => import('../pages/Wallet'))
+const AdminSummary           = lazy(() => import('../components/AdminSummary'))
+const ReferAndEarn           = lazy(() => import('../pages/ReferAndEarn'))
+const WishlistPage           = lazy(() => import('../pages/WishlistPage'))
+const TrackingPage           = lazy(() => import('../pages/TrackingPage'))
+const AllDealsPage           = lazy(() => import('../pages/AllDealsPage'))
+const SnapitPlus             = lazy(() => import('../components/SnapitPlus'))
+const StreakTracker          = lazy(() => import('../components/StreakTracker'))
+const MySubscriptions        = lazy(() => import('../pages/MySubscriptions'))
+const SellerDashboard        = lazy(() => import('../pages/SellerDashboard'))
+const FoodHomePage           = lazy(() => import('../pages/FoodHomePage'))
+const RestaurantDetailPage   = lazy(() => import('../pages/RestaurantDetailPage'))
+const RestaurantAdminPage    = lazy(() => import('../pages/RestaurantAdminPage'))
+const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'))
+const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
+const PharmacyPage           = lazy(() => import('../pages/PharmacyPage'))
+const FoodCheckoutPage       = lazy(() => import('../pages/FoodCheckoutPage'))
 
-const resolveImageUrl = (rawImg) => {
-  const src = Array.isArray(rawImg) ? rawImg[0] : rawImg
-  if (typeof src !== 'string' || !src.trim()) return null
-  const c = src.trim()
-  if (c.startsWith('//'))   return `https:${c}`
-  if (c.startsWith('http')) return c
-  if (c.startsWith('/'))    return `${BACKEND_URL}${c}`
-  return c
-}
-
-const NUM_COLS  = 4
-const PAD       = 16
-const GAP       = 8
-const ITEM_SIZE = (SW - PAD * 2 - GAP * (NUM_COLS - 1)) / NUM_COLS
-
-const CategoryGridItem = React.memo(({ cat, onPress }) => {
-  const url = resolveImageUrl(cat?.icon || cat?.image || cat?.imageUrl)
-  return (
-    <TouchableOpacity style={styles.catItem} onPress={() => onPress(cat._id, cat.name)} activeOpacity={0.7}>
-      <View style={styles.catImageBox}>
-        {url
-          ? <Image source={{ uri: url }} style={styles.catImage} resizeMode="contain" />
-          : <Text style={{ fontSize: 20 }}>🛒</Text>
-        }
-      </View>
-      <Text style={styles.catLabel} numberOfLines={1}>{cat?.name || ''}</Text>
-    </TouchableOpacity>
-  )
-})
-
-const Skeleton = ({ w, h, r = 8 }) => (
-  <View style={{ width: w, height: h, borderRadius: r, backgroundColor: '#f1f5f9' }} />
+// Spinner shown while lazy chunks load
+const PageLoader = () => (
+  <div style={{
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    height: '60vh', width: '100%'
+  }}>
+    <div style={{
+      width: 36, height: 36, border: '3px solid #e5e7eb',
+      borderTop: '3px solid #16a34a', borderRadius: '50%',
+      animation: 'spin 0.7s linear infinite'
+    }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+  </div>
 )
 
-export default function Home() {
-  const router          = useRouter()
-  const loadingCategory = useSelector(s => s.product.loadingCategory)
-  const categoryData    = useSelector(s => s.product.allCategory)
-  const subCategoryData = useSelector(s => s.product.allSubCategory)
+const S = ({ children }) => <Suspense fallback={<PageLoader />}>{children}</Suspense>
 
-  const prioritized = useMemo(() => {
-    if (!Array.isArray(categoryData)) return []
-    const kw = ['atta', 'masala', 'oil', 'dal']
-    return [...categoryData].sort((a, b) => {
-      const aP = kw.some(k => (a?.name || '').toLowerCase().includes(k))
-      const bP = kw.some(k => (b?.name || '').toLowerCase().includes(k))
-      return aP === bP ? 0 : aP ? -1 : 1
-    })
-  }, [categoryData])
+// Friendly error page shown instead of React Router's default crash screen
+const ErrorPage = () => {
+  const error = useRouteError()
+  const navigate = useNavigate()
 
-  const filtered = useMemo(() => {
-    if (!Array.isArray(categoryData)) return []
-    return categoryData.filter(c => !['grocery', 'pharmacy'].includes((c?.name || '').toLowerCase()))
-  }, [categoryData])
-
-  const handleCategoryPress = (id, catName) => {
-    const sub = Array.isArray(subCategoryData)
-      ? subCategoryData.find(s => Array.isArray(s?.category) && s.category.some(c => c?._id == id))
-      : null
-    if (sub) {
-      router.push(`/${valideURLConvert(catName)}-${id}/${valideURLConvert(sub.name)}-${sub._id}`)
-    } else {
-      router.push(`/${valideURLConvert(catName)}-${id}`)
-    }
-  }
-
+  // Auto-recover: if it's the "n is not a function" context timing issue,
+  // navigating home resets the component tree cleanly
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} decelerationRate="normal">
-
-      {/* Banner */}
-      <HomeBanner />
-
-      {/* Super-app cards */}
-      <View style={styles.superRow}>
-        {SUPER_APP_CATEGORIES.map(cat => <FoodCategoryCard key={cat.id} category={cat} />)}
-      </View>
-
-      {/* Shop by Category */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>SHOP BY CATEGORY</Text>
-        <View style={styles.catGrid}>
-          {loadingCategory
-            ? new Array(12).fill(null).map((_, i) => (
-                <View key={i} style={styles.catItem}>
-                  <Skeleton w={ITEM_SIZE} h={ITEM_SIZE} />
-                  <Skeleton w={ITEM_SIZE * 0.7} h={10} r={4} />
-                </View>
-              ))
-            : filtered.map(cat => cat
-                ? <CategoryGridItem key={cat._id} cat={cat} onPress={handleCategoryPress} />
-                : null
-              )
-          }
-        </View>
-      </View>
-
-      {/* Today's Deals */}
-      <TodayDeals />
-
-      {/* Category product rows */}
-      <View style={{ gap: 4 }}>
-        {loadingCategory
-          ? [1,2,3].map(i => (
-              <View key={i} style={styles.sectionSkeletonWrap}>
-                <View style={styles.skeletonRow}>
-                  <Skeleton w={120} h={18} />
-                  <Skeleton w={60} h={18} />
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {[1,2,3,4].map(j => <Skeleton key={j} w={150} h={220} r={16} />)}
-                </ScrollView>
-              </View>
-            ))
-          : prioritized.map(c => c?._id
-              ? <CategoryWiseProductDisplay key={c._id} id={c._id} name={c.name} />
-              : null
-            )
-        }
-      </View>
-
-      <View style={{ height: 100 }} />
-    </ScrollView>
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', minHeight: '100vh', padding: '24px',
+      background: '#fff', textAlign: 'center'
+    }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>😕</div>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+        Something went wrong
+      </h1>
+      <p style={{ color: '#64748b', fontSize: 14, marginBottom: 28, maxWidth: 320 }}>
+        The page ran into an unexpected error. Tap below to go back home.
+      </p>
+      <button
+        onClick={() => {
+          navigate('/', { replace: true })
+          window.location.reload()
+        }}
+        style={{
+          background: '#16a34a', color: '#fff', border: 'none',
+          borderRadius: 12, padding: '12px 32px', fontSize: 15,
+          fontWeight: 700, cursor: 'pointer'
+        }}
+      >
+        Go to Home
+      </button>
+      {import.meta.env.DEV && error && (
+        <pre style={{
+          marginTop: 24, padding: 16, background: '#fef2f2', borderRadius: 8,
+          fontSize: 11, color: '#dc2626', textAlign: 'left',
+          maxWidth: 480, overflowX: 'auto', whiteSpace: 'pre-wrap'
+        }}>
+          {error?.message || String(error)}
+        </pre>
+      )}
+    </div>
   )
 }
 
-const styles = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: '#fff' },
-  superRow:    { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 20, gap: 12 },
-  section:     { paddingHorizontal: 16, marginBottom: 24 },
-  sectionLabel:{ fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1.5, marginBottom: 12 },
-  catGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
-  catItem:     { width: ITEM_SIZE, alignItems: 'center', gap: 4 },
-  catImageBox: { width: ITEM_SIZE, height: ITEM_SIZE, backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', padding: 6, overflow: 'hidden' },
-  catImage:    { width: '100%', height: '100%' },
-  catLabel:    { fontSize: 10, fontWeight: '500', color: '#475569', textAlign: 'center', width: '100%' },
-  sectionSkeletonWrap: { paddingHorizontal: 16, paddingVertical: 16, gap: 12 },
-  skeletonRow: { flexDirection: 'row', justifyContent: 'space-between' },
-})
+const router = createHashRouter([
+  {
+    path: "/",
+    element: <App />,
+    errorElement: <ErrorPage />,
+    children: [
+      { path: "", element: <Home /> },
+      { path: "search", element: <S><SearchPage /></S> },
+      { path: "login", element: <Login /> },
+      { path: "register", element: <Register /> },
+      { path: "forgot-password", element: <S><ForgotPassword /></S> },
+      { path: "verification-otp", element: <S><OtpVerification /></S> },
+      { path: "reset-password", element: <S><ResetPassword /></S> },
+      { path: "user", element: <S><UserMenuMobile /></S> },
+      { path: "wallet", element: <S><Wallet /></S> },
+      { path: "refer", element: <S><ReferAndEarn /></S> },
+      { path: "wishlist", element: <S><WishlistPage /></S> },
+      { path: "deals", element: <S><AllDealsPage /></S> },
+      { path: "snapit-plus", element: <S><SnapitPlus /></S> },
+      { path: "streak", element: <S><StreakTracker /></S> },
+      { path: "subscriptions", element: <S><MySubscriptions /></S> },
+      { path: "rider-panel", element: <S><RiderDashboard /></S> },
+      {
+        path: "dashboard",
+        element: <S><Dashboard /></S>,
+        children: [
+          { path: "profile", element: <S><Profile /></S> },
+          {
+            path: "admin-summary",
+            element: <S><AdminPermision><AdminSummary /></AdminPermision></S>
+          },
+          { path: "myorders", element: <S><MyOrders /></S> },
+          { path: "address", element: <S><Address /></S> },
+          { path: "store-orders", element: <S><StoreOrders /></S> },
+          {
+            path: "seller-dashboard",
+            element: <S><SellerPermission><SellerDashboard /></SellerPermission></S>
+          },
+          {
+            path: "restaurant-admin",
+            element: <S><AdminPermision><RestaurantAdminPage /></AdminPermision></S>
+          },
+          {
+            path: "resto-dashboard",
+            element: <S><RestoSellerDashboard /></S>
+          },
+          {
+            path: "upload-product",
+            element: <S><SellerPermission><UploadProduct /></SellerPermission></S>
+          },
+          { path: "order-tracking/:id", element: <S><RiderTracking /></S> },
+          {
+            path: "category",
+            element: <S><AdminPermision><CategoryPage /></AdminPermision></S>
+          },
+          {
+            path: "subcategory",
+            element: <S><AdminPermision><SubCategoryPage /></AdminPermision></S>
+          },
+          { path: "refunds", element: <S><AdminPermision><AdminRefunds /></AdminPermision></S> },
+          {
+            path: "product",
+            element: <S><AdminPermision><ProductAdmin /></AdminPermision></S>
+          },
+        ]
+      },
+      { path: "track/:orderId", element: <S><TrackingPage /></S> },
+      {
+        path: ":category",
+        children: [
+          { index: true, element: <S><ProductListPage /></S> },
+          { path: ":subCategory", element: <S><ProductListPage /></S> }
+        ]
+      },
+      { path: "product/:product", element: <S><ProductDisplayPage /></S> },
+      { path: "cart", element: <S><CartMobile /></S> },
+      { path: "checkout", element: <S><CheckoutPage /></S> },
+      { path: "food-checkout", element: <S><FoodCheckoutPage /></S> },
+      { path: "success", element: <S><Success /></S> },
+      { path: "cancel", element: <S><Cancel /></S> },
+      { path: "food", element: <S><FoodHomePage /></S> },
+      { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
+      { path: "grocery", element: <S><GroceryPage /></S> },
+      { path: "pharmacy", element: <S><PharmacyPage /></S> },
+    ]
+  }
+])
+
+export default router;
