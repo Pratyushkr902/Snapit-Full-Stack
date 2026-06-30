@@ -173,7 +173,7 @@ export default function RestaurantAdminPage() {
       const fd = new FormData()
       fd.append('image', file)
       const res = await Axios({ method: 'POST', url: '/api/file/upload-r2', data: fd })
-      return res.data?.data?.url || res.data?.url || null
+      return res.data?.data?.secure_url || res.data?.secure_url || null
     } catch { toast.error('Image upload failed'); return null }
     finally { if (setUploading) setUploading(false) }
   }
