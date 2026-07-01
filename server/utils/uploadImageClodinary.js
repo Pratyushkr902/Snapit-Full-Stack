@@ -26,6 +26,7 @@ const uploadImageClodinary = async (image) => {
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${fileName}`;
 
     return {
+        url: publicUrl,
         secure_url: publicUrl,
         public_id: fileName,
     };
