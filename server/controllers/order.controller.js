@@ -19,12 +19,24 @@ import CartProductModel from '../models/cartproduct.model.js'
 import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
+// ── Scratch card generator ────────────────────────────────────────────────────
+const SCRATCH_BRANDS = [
+    { brand: 'Mamaearth', discount: '₹20 OFF', code: 'MAMA20', bg: '#84cc16', emoji: '🌿', minOrder: '₹199' },
+    { brand: 'boAt',      discount: '₹30 OFF', code: 'BOAT30', bg: '#3b82f6', emoji: '🎧', minOrder: '₹299' },
+    { brand: 'Amul',      discount: '₹15 OFF', code: 'AMUL15', bg: '#f59e0b', emoji: '🧈', minOrder: '₹149' },
+    { brand: 'Himalaya',  discount: '₹25 OFF', code: 'HIMA25', bg: '#06b6d4', emoji: '🌱', minOrder: '₹199' },
+    { brand: 'Garnier',   discount: '₹20 OFF', code: 'GARN20', bg: '#ec4899', emoji: '✨', minOrder: '₹199' },
+]
+const generateScratchCards = () => {
+    const count = Math.random() < 0.5 ? 1 : 2
+    return [...SCRATCH_BRANDS].sort(() => Math.random() - 0.5).slice(0, count)
+}
+
 import sendEmail        from './sendEmail.js'
 import { sendPushNotification, notifyAllRiders } from '../utils/firebaseNotify.js'
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
-
 const populateOrder = (query) =>
     query
         .populate('delivery_address')
@@ -261,7 +273,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             message: 'Order placed successfully.',
             error: false,
             success: true,
-            data: generatedOrder
+            data: generatedOrder,
+            scratch_cards: generateScratchCards()
         })
     } catch (error) {
         console.error('CashOnDeliveryOrderController:', error.message)
@@ -379,7 +392,8 @@ export async function WalletPaymentOrderController(request, response) {
             message: 'Order placed via Snapit Wallet!',
             error: false,
             success: true,
-            data: newOrder
+            data: newOrder,
+            scratch_cards: generateScratchCards()
         })
     } catch (error) {
         console.error('WalletPaymentOrderController:', error.message)
@@ -514,7 +528,8 @@ export async function verifyPaymentController(request, response) {
             message: 'Order placed successfully!',
             error: false,
             success: true,
-            data: newOrder
+            data: newOrder,
+            scratch_cards: generateScratchCards()
         })
     } catch (error) {
         console.error('verifyPaymentController:', error.message)
