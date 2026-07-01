@@ -10,7 +10,6 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   /* MOBILE: Disable pinch-zoom on the page (PWA should feel native) */
-  touch-action: pan-x pan-y;
 }
 
 body {
@@ -95,3 +94,5 @@ body {
 /* iOS safe area padding — use pb-safe on bottom bars and overlays */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe  { padding-top:    env(safe-area-inset-top);    }
+html, body { overscroll-behavior: none; }
+

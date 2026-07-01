@@ -72,7 +72,15 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
           }
         },
         redirect: false,
-        theme: { color: "#1B5E20" }
+        theme: { color: "#1B5E20" },
+        modal: {
+          ondismiss: () => {
+            document.body.style.overflow = "";
+            document.body.style.touchAction = "";
+            document.documentElement.style.overflow = "";
+            document.documentElement.style.touchAction = "";
+          }
+        }
       };
 
       const gatewaySheet = new window.Razorpay(options);

@@ -211,6 +211,28 @@ const CheckoutPage = () => {
           currency: 'INR',
           name:     'Snapit Grocery',
           order_id: responseData.id,
+          prefill: {
+            name:    userData?.name    || '',
+            email:   userData?.email   || '',
+            contact: userData?.mobile  || '',
+          },
+          method: {
+            upi:        true,
+            card:       true,
+            netbanking: true,
+            wallet:     true,
+          },
+          theme: { color: '#16a34a' },
+          config: {
+            display: {
+              blocks: {
+                upi: { name: 'UPI', instruments: [{ method: 'upi' }] },
+                other: { name: 'Other Methods', instruments: [{ method: 'card' }, { method: 'netbanking' }, { method: 'wallet' }] }
+              },
+              sequence: ['block.upi', 'block.other'],
+              preferences: { show_default_blocks: false }
+            }
+          },
           handler: async function (razorpayResponse) {
             const verificationToast = toast.loading('Verifying transaction...')
             try {
@@ -243,7 +265,15 @@ const CheckoutPage = () => {
             } catch (err) { toast.dismiss(verificationToast); AxiosToastError(err) }
           },
           prefill: { name: user?.name || '', contact: selectedAddress?.mobile || '' },
-          theme: { color: '#16a34a' }
+          theme: { color: "#16a34a" },
+          modal: {
+            ondismiss: () => {
+              document.body.style.overflow = "";
+              document.body.style.touchAction = "";
+              document.documentElement.style.overflow = "";
+              document.documentElement.style.touchAction = "";
+            }
+          }
         }
         const rzp = new RazorpayClass(options)
         rzp.open()

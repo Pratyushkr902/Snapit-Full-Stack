@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "404894201207",
+    "project_id": "snapit-da080",
+    "storage_bucket": "snapit-da080.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:404894201207:android:b375b3cddccdffa64e9d72",
+        "android_client_info": {
+          "package_name": "com.snapit.grocery"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "404894201207-ga9u9set5hinsic12voq6ocua5ecn8g4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgwBo2Xfx3wEWKvwiCjfGQgrBrVkffqn4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "404894201207-ga9u9set5hinsic12voq6ocua5ecn8g4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

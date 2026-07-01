@@ -4,7 +4,6 @@
 	"webDir": "dist",
 	"server": {
 		"androidScheme": "https",
-		"hostname": "snapit.grocery",
 		"cleartext": true,
 		"allowNavigation": [
 			"snapit-full-stack-production.up.railway.app"
@@ -13,15 +12,15 @@
 	"android": {
 		"allowMixedContent": true,
 		"captureInput": true,
-		"webContentsDebuggingEnabled": false,
+		"webContentsDebuggingEnabled": true,
 		"hardwareAccelerated": true,
 		"backgroundColor": "#FFFFFF",
 		"initialFocus": true
 	},
 	"plugins": {
 		"SplashScreen": {
-			"launchShowDuration": 3000,
-			"launchAutoHide": false,
+			"launchShowDuration": 2000,
+			"launchAutoHide": true,
 			"backgroundColor": "#FFFFFF",
 			"androidSplashResourceName": "splash",
 			"androidScaleType": "CENTER_INSIDE",

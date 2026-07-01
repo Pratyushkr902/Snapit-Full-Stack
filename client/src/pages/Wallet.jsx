@@ -226,6 +226,10 @@ const Wallet = () => {
 
         modal: {
           ondismiss: () => {
+            document.body.style.overflow = "";
+            document.body.style.touchAction = "";
+            document.documentElement.style.overflow = "";
+            document.documentElement.style.touchAction = "";
             toast('Payment cancelled')
             setLoading(false)
           }
@@ -332,6 +336,10 @@ const Wallet = () => {
 
         modal: {
           ondismiss: () => {
+            document.body.style.overflow = "";
+            document.body.style.touchAction = "";
+            document.documentElement.style.overflow = "";
+            document.documentElement.style.touchAction = "";
             toast('Subscription cancelled')
             setPlusLoading(false)
           }

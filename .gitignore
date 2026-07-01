@@ -32,3 +32,5 @@ server/node_modules/
 client/dist/
 server/*.cjs
 server/seed*.mjs
+**/.DS_Store
+client/.gradle/

@@ -292,6 +292,14 @@ const FoodCheckoutPage = () => {
           contact: addressList[selectAddress]?.mobile || '',
         },
         theme: { color: '#e84339' },
+        modal: {
+          ondismiss: () => {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            document.documentElement.style.overflow = '';
+            document.documentElement.style.touchAction = '';
+          }
+        },
       }
       new RazorpayClass(options).open()
     } catch (e) { toast.dismiss(lt); AxiosToastError(e) }

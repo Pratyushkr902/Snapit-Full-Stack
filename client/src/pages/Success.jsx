@@ -19,6 +19,9 @@ const BRAND_COLORS = {
   'Plum':       { bg: '#E6F1FB', text: '#0C447C' },
   'Minimalist': { bg: '#F1EFE8', text: '#444441' },
   'Beardo':     { bg: '#EAF3DE', text: '#27500A' },
+  'Amul':       { bg: '#FFF8E1', text: '#E65100' },
+  'Himalaya':   { bg: '#E8F5E9', text: '#1B5E20' },
+  'Garnier':    { bg: '#FCE4EC', text: '#880E4F' },
 }
 
 // ── Single scratch card component ──────────────────────────────────────────────
