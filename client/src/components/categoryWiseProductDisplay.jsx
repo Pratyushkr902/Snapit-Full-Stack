@@ -45,12 +45,12 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     observer.disconnect()
                 }
             },
-            { rootMargin: '600px', threshold: 0 }
+            { rootMargin: '150px', threshold: 0 }
         )
 
         if (sectionRef.current) observer.observe(sectionRef.current)
 
-        const timer = setTimeout(() => setVisible(true), 2000)
+        const timer = setTimeout(() => setVisible(true), 8000)
 
         return () => {
             observer.disconnect()
