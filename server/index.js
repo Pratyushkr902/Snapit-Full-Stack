@@ -96,6 +96,7 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
+        console.log('[CORS CHECK] Incoming origin:', origin)
         if (!origin) return callback(null, true)
         const lowerOrigin = origin.toLowerCase().trim()
         if (
