@@ -7,13 +7,16 @@ const getISTHour = () => {
   return new Date(istMs).getHours()
 }
 
+const ADMIN_LIKE_ROLES = ['ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER']
+
 const isAdminOrDashboardRoute = () => {
   const path = window.location.hash.toLowerCase()
   return path.includes('dashboard') || path.includes('rider-panel')
 }
 
-const isStoreOpen = () => {
+const isStoreOpen = (userRole) => {
   if (isAdminOrDashboardRoute()) return true
+  if (userRole && ADMIN_LIKE_ROLES.includes(userRole)) return true
 
   const h = getISTHour()
   return h >= 8 && h < 21
