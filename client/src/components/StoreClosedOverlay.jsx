@@ -7,7 +7,14 @@ const getISTHour = () => {
   return new Date(istMs).getHours()
 }
 
+const isAdminOrDashboardRoute = () => {
+  const path = window.location.hash.toLowerCase()
+  return path.includes('dashboard') || path.includes('rider-panel')
+}
+
 const isStoreOpen = () => {
+  if (isAdminOrDashboardRoute()) return true
+
   const h = getISTHour()
   return h >= 8 && h < 21
 }

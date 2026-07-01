@@ -212,9 +212,9 @@ const CheckoutPage = () => {
           name:     'Snapit Grocery',
           order_id: responseData.id,
           prefill: {
-            name:    userData?.name    || '',
-            email:   userData?.email   || '',
-            contact: userData?.mobile  || '',
+            name:    user?.name || '',
+            email:   user?.email || '',
+            contact: selectedAddress?.mobile || user?.mobile || '',
           },
           method: {
             upi:        true,
@@ -264,8 +264,6 @@ const CheckoutPage = () => {
               }
             } catch (err) { toast.dismiss(verificationToast); AxiosToastError(err) }
           },
-          prefill: { name: user?.name || '', contact: selectedAddress?.mobile || '' },
-          theme: { color: "#16a34a" },
           modal: {
             ondismiss: () => {
               document.body.style.overflow = "";

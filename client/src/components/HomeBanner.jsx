@@ -16,10 +16,7 @@ const getISTHour = () => {
   return new Date(istMs).getHours()
 }
 
-const isStoreOpen = () => {
-  const h = getISTHour()
-  return h >= 8 && h < 21
-}
+import { isStoreOpen } from './StoreClosedOverlay';
 
 const getOpeningMessage = () => {
   const h = getISTHour()
@@ -107,5 +104,4 @@ const HomeBanner = () => {
   )
 }
 
-export { isStoreOpen }
 export default HomeBanner
