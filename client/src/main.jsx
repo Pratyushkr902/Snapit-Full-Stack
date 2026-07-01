@@ -6,6 +6,9 @@ import router from './route/index'
 import { Provider } from 'react-redux'
 import { store, persistor } from './store/store.js'
 import { PersistGate } from 'redux-persist/integration/react'
+import { SplashScreen } from '@capacitor/splash-screen'
+
+SplashScreen.hide()
 
 createRoot(document.getElementById('root')).render(
   <Provider store={store}>
@@ -13,4 +16,4 @@ createRoot(document.getElementById('root')).render(
       <RouterProvider router={router}/>
     </PersistGate>
   </Provider>
-) 
+)

@@ -1,39 +1,38 @@
 {
-  "appId": "com.snapit.grocery",
-  "appName": "Snapit",
-  "webDir": "dist",
-  "server": {
-    "androidScheme": "https",
-    "hostname": "snapit.grocery",
-    "cleartext": true,
-    "allowNavigation": [
-      "snapit-full-stack-production.up.railway.app"
-    ]
-  },
-  "android": {
-    "allowMixedContent": true,
-    "captureInput": true,
-    "webContentsDebuggingEnabled": false,
-    "hardwareAccelerated": true,
-    "backgroundColor": "#FFFFFF",
-    "initialFocus": true
-  },
-  "plugins": {
-    "SplashScreen": {
-      "launchShowDuration": 3000,
-      "launchAutoHide": true,
-      "backgroundColor": "#FFFFFF",
-      "androidSplashResourceName": "splash",
-      "androidScaleType": "CENTER_INSIDE",
-      "showSpinner": false,
-      "splashFullScreen": true,
-      "splashImmersive": true
-    },
-    "CapacitorCookies": {
-      "enabled": true
-    },
-    "CapacitorHttp": {
-      "enabled": true
-    }
-  }
+	"appId": "com.snapit.grocery",
+	"appName": "Snapit",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https",
+		"cleartext": true,
+		"allowNavigation": [
+			"snapit-full-stack-production.up.railway.app"
+		]
+	},
+	"android": {
+		"allowMixedContent": true,
+		"captureInput": true,
+		"webContentsDebuggingEnabled": true,
+		"hardwareAccelerated": true,
+		"backgroundColor": "#FFFFFF",
+		"initialFocus": true
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 2000,
+			"launchAutoHide": true,
+			"backgroundColor": "#FFFFFF",
+			"androidSplashResourceName": "splash",
+			"androidScaleType": "CENTER_INSIDE",
+			"showSpinner": false,
+			"splashFullScreen": true,
+			"splashImmersive": true
+		},
+		"CapacitorCookies": {
+			"enabled": true
+		},
+		"CapacitorHttp": {
+			"enabled": true
+		}
+	}
 }
