@@ -107,6 +107,19 @@ const AddToCartButton = ({ data }) => {
         )
     }
 
+    // ADDED: out-of-stock guard, centralized here so every caller is protected
+    if (!data?.stock || data.stock <= 0) {
+        return (
+            <div className='w-full'>
+                <div className='border border-red-100 bg-red-50 px-1 py-1.5 rounded text-center'>
+                    <p className='text-red-500 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
+                        Out of<br />stock
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className='w-full'>
             {isAvailableCart ? (

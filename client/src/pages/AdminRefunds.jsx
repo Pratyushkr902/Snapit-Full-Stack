@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { IoArrowBack } from 'react-icons/io5'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
@@ -21,6 +23,7 @@ const REASON_LABEL = {
 }
 
 const AdminRefunds = () => {
+    const navigate = useNavigate()
     const [refunds,    setRefunds]    = useState([])
     const [loading,    setLoading]    = useState(true)
     const [resolving,  setResolving]  = useState(null)
@@ -62,7 +65,15 @@ const AdminRefunds = () => {
     return (
         <section className='min-h-screen bg-gray-50 p-4'>
             <div className='max-w-4xl mx-auto'>
-                <h1 className='text-xl font-black text-gray-900 mb-1'>Refund Requests</h1>
+                <div className='flex items-center gap-3 mb-1'>
+                    <button
+                        onClick={() => navigate(-1)}
+                        className='text-neutral-500 hover:text-neutral-800 transition-colors'
+                    >
+                        <IoArrowBack size={22} />
+                    </button>
+                    <h1 className='text-xl font-black text-gray-900'>Refund Requests</h1>
+                </div>
                 <p className='text-sm text-gray-400 mb-5'>{refunds.length} total · {refunds.filter(r => r.status === 'Pending').length} pending</p>
 
                 <div className='flex gap-2 flex-wrap mb-5'>
