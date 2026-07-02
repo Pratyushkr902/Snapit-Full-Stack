@@ -13,8 +13,22 @@ export const submitRefund = async (req, res) => {
         const userId = req.userId;
         const { orderId, reason, description, affectedItems, photos, refundAmount } = req.body;
 
-        // ── 1. Normalize reason: "Other" → "other", "Wrong Product" → "wrong_product"
-        const normalizedReason = reason?.trim().toLowerCase().replace(/\s+/g, "_");
+        // ── 1. Map frontend label to the schema's actual enum value.
+        // FIX: generic slugify (lowercase + underscore) silently broke 4 of 5
+        // reasons — e.g. "Item damaged" → "item_damaged", but the schema enum
+        // is "damaged_product". Only "Other" ever happened to match. Explicit
+        // map avoids relying on label wording matching the schema by coincidence.
+        const REASON_LABEL_TO_ENUM = {
+            "wrong item delivered": "wrong_product",
+            "item damaged":         "damaged_product",
+            "item missing":         "missing_item",
+            "poor quality":         "quality_issue",
+            "other":                "other",
+        };
+        const normalizedReason = REASON_LABEL_TO_ENUM[reason?.trim().toLowerCase()];
+        if (!normalizedReason) {
+            return res.status(400).json({ success: false, message: "Invalid refund reason." });
+        }
 
         // ── 2. Find order
         const order = await OrderModel.findOne({ _id: orderId, userId });
