@@ -131,7 +131,7 @@ function QtyControl({ qty, onAdd, onIncrease, onDecrease }) {
 
 // ── Solo Food Item Card ───────────────────────────────────────────────────────
 function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
-  const [imgSrc, setImgSrc] = useState(item.image ? `${item.image}&fm=webp&q=70` : FALLBACK_IMG)
+  const [imgSrc, setImgSrc] = useState(item.image ? item.image : FALLBACK_IMG)
   const effectivePrice = item.discountedPrice > 0 ? item.discountedPrice : item.price
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
@@ -172,7 +172,7 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
 
 // ── FIX 2: Inline Variant Card (for pizza sizes via item.variants array) ──────
 function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
-  const [imgSrc, setImgSrc] = useState(item.image ? `${item.image}&fm=webp&q=70` : FALLBACK_IMG)
+  const [imgSrc, setImgSrc] = useState(item.image ? item.image : FALLBACK_IMG)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = item.variants[selectedIdx]
   // Use the variant's price; fall back to item.price for the base
@@ -235,7 +235,7 @@ function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
 
 // ── Grouped Variant Card (Half/Full suffix style) ─────────────────────────────
 function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
-  const [imgSrc, setImgSrc] = useState(group.image ? `${group.image}&fm=webp&q=70` : FALLBACK_IMG)
+  const [imgSrc, setImgSrc] = useState(group.image ? group.image : FALLBACK_IMG)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = group.variants[selectedIdx]
   const selectedItem = selectedVariant.item

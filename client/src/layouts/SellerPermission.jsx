@@ -1,12 +1,11 @@
 import React from 'react'
 import { useSelector } from 'react-redux'
-
 const SellerPermission = ({ children }) => {
     const user = useSelector(state => state.user)
     const role = user?.role
-
-    const hasAccess = role === 'SELLER' || role === 'ADMIN'
-
+    // ✅ RESTO_SELLER included so accounts operating both a grocery store
+    // and a restaurant (e.g. Monginis) can access the grocery dashboard too.
+    const hasAccess = role === 'SELLER' || role === 'ADMIN' || role === 'RESTO_SELLER'
     return (
         <>
             {hasAccess ? (
@@ -21,5 +20,4 @@ const SellerPermission = ({ children }) => {
         </>
     )
 }
-
 export default SellerPermission

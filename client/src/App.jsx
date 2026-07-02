@@ -23,6 +23,7 @@ import socket from './utils/socket.js';
 
 import { ACCESS_TOKEN_KEY } from './constants/storageKeys';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { App as CapacitorApp } from '@capacitor/app';
 
 import './App.css'
 
@@ -31,6 +32,7 @@ export { socket };
 function App() {
   const dispatch = useDispatch()
   const location = useLocation()
+  const navigate = useNavigate()
   const user = useSelector(state => state.user)
   
   useNotifications() 
@@ -149,6 +151,27 @@ function App() {
       socket.off('connect_error');
     };
   }, []);
+
+  // ─── Android hardware back button ─────────────────────────────
+  useEffect(() => {
+    let listenerHandle;
+
+    const setupBackButton = async () => {
+      listenerHandle = await CapacitorApp.addListener('backButton', () => {
+        if (window.history.state && window.history.state.idx > 0) {
+          navigate(-1)
+        } else {
+          CapacitorApp.exitApp()
+        }
+      })
+    }
+
+    setupBackButton()
+
+    return () => {
+      listenerHandle?.remove()
+    }
+  }, [navigate])
 
   if (isAuthResolving) {
     return (

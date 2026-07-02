@@ -46,6 +46,7 @@ const SellerDashboard        = lazy(() => import('../pages/SellerDashboard'))
 const FoodHomePage           = lazy(() => import('../pages/FoodHomePage'))
 const RestaurantDetailPage   = lazy(() => import('../pages/RestaurantDetailPage'))
 const RestaurantAdminPage    = lazy(() => import('../pages/RestaurantAdminPage'))
+const AdminSellerStorePanel  = lazy(() => import('../pages/AdminSellerStorePanel'))
 const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'))
 const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
 const PharmacyPage           = lazy(() => import('../pages/PharmacyPage'))
@@ -155,6 +156,10 @@ const router = createHashRouter([
           {
             path: "restaurant-admin",
             element: <S><AdminPermision><RestaurantAdminPage /></AdminPermision></S>
+          },
+          {
+            path: "store-sellers",
+            element: <S><AdminPermision><AdminSellerStorePanel /></AdminPermision></S>
           },
           {
             path: "resto-dashboard",
