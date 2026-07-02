@@ -56,6 +56,7 @@ export const createProductController = async (request, response) => {
             publish: true,
             store_inventory: [{
                 store_name:  storeName,   // FIX: was hardcoded "Snapit Main Store - Paliganj"
+                sellerId:    request.user._id,   // FIX: was never set — broke seller dashboard + earnings aggregation
                 stock:       Number(stock) || 0,
                 isAvailable: true
             }]

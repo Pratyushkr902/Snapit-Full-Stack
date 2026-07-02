@@ -89,9 +89,19 @@ const resolveStore = async (lat, lng) => {
 }
 
 const buildTaggedCartItems = async (list_items, storeName) => {
-    return list_items.map(item => ({
-        ...item,
-        seller_store_name: storeName
+    // FIX: sellerId was never attached to cartItems, which silently broke
+    // getSellerEarningsController's aggregation (it matches on cartItems.sellerId).
+    // Resolved server-side from the authoritative product record — never trust
+    // a sellerId sent by the client for something tied to payouts.
+    return Promise.all(list_items.map(async (item) => {
+        const productId = item.productId?._id || item.productId
+        const product = await ProductModel.findById(productId).select('store_inventory').lean()
+        const inventoryEntry = product?.store_inventory?.find(inv => inv.store_name === storeName)
+        return {
+            ...item,
+            seller_store_name: storeName,
+            sellerId: inventoryEntry?.sellerId || null
+        }
     }))
 }
 
