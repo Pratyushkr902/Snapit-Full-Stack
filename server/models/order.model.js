@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema(
                 quantity:  { type: Number, default: 1 },
                 name:      { type: String, default: "" },
                 image:     { type: String, default: "" },
-
+                 sellerId: { type: mongoose.Schema.ObjectId, ref: "User", default: null },
                 // price the CUSTOMER pays per unit  (sellerPrice + snapitMargin)
                 price: { type: Number, default: 0 },
 

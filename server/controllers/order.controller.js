@@ -9,6 +9,23 @@
  * - Weekly Surprise Box (₹10-30 random, 7-day cooldown) — replaces empty stub
  * - GST Invoice generation per order
  * - Express delivery surcharge support (isExpress flag on checkout)
+ *
+ * NOTIFICATION FIX (this patch):
+ * - updateOrderStatusController no longer builds its own inline statusMessages
+ *   map / calls sendPushNotification directly. It now routes through the real
+ *   shayari-based notificationService.js, same as everything else should.
+ * - Order creation (COD, Wallet, Razorpay) previously sent ZERO user-facing
+ *   notification on placement — now calls notifyUserOrderPlaced in all three.
+ * - Added ORDER_CONFIRMED shayari template + notifyUserOrderConfirmed export
+ *   in notificationService.js (see that file's patch).
+ * - No real "seller" entity exists yet (resolveStore() is a stub — one hardcoded
+ *   store, no seller fcmToken to notify). Seller-side shayari notifications are
+ *   intentionally NOT wired here until a real seller/store model exists.
+ * - No refund field exists on the order model. Refund shown to the user on
+ *   cancellation is derived as: PAID ? totalAmt : 0. Update if partial refunds
+ *   are ever introduced.
+ * - No live ETA field exists. RIDER_ETA_DEFAULT_MIN below is a placeholder —
+ *   change that one constant when real ETA data is available.
  */
 
 import mongoose         from 'mongoose'
@@ -19,6 +36,18 @@ import CartProductModel from '../models/cartproduct.model.js'
 import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
+import { sendPushNotification, notifyAllRiders } from '../utils/firebaseNotify.js'
+import {
+    notifyUserOrderPlaced,
+    notifyUserOrderConfirmed,
+    notifyUserOutForDelivery,
+    notifyUserOrderDelivered,
+    notifyUserOrderCancelled,
+} from '../utils/notificationService.js'
+import sendEmail        from './sendEmail.js'
+
+const RIDER_ETA_DEFAULT_MIN = 20 // no live ETA field yet — placeholder
+
 // ── Scratch card generator ────────────────────────────────────────────────────
 const SCRATCH_BRANDS = [
     { brand: 'Mamaearth', discount: '₹20 OFF', code: 'MAMA20', bg: '#84cc16', emoji: '🌿', minOrder: '₹199' },
@@ -32,8 +61,6 @@ const generateScratchCards = () => {
     return [...SCRATCH_BRANDS].sort(() => Math.random() - 0.5).slice(0, count)
 }
 
-import sendEmail        from './sendEmail.js'
-import { sendPushNotification, notifyAllRiders } from '../utils/firebaseNotify.js'
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -260,6 +287,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         const generatedOrder = new OrderModel(payload)
         await generatedOrder.save()
         sendOrderInvoiceEmail(generatedOrder, currentUser).catch(()=>{})
+        notifyUserOrderPlaced(userId, generatedOrder.orderId, currentUser?.fcmToken).catch(() => {})
         notifyAllRiders({
             title: '🛵 New Order!',
             body:  `Order ${generatedOrder.orderId} is ready for pickup — ₹${generatedOrder.totalAmt}`,
@@ -384,6 +412,7 @@ export async function WalletPaymentOrderController(request, response) {
         const newOrder = new OrderModel(payload)
         await newOrder.save()
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
+        notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
         await CartProductModel.deleteMany({ userId })
@@ -515,6 +544,7 @@ export async function verifyPaymentController(request, response) {
         const newOrder = new OrderModel(payload)
         await newOrder.save()
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
+        notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
 
@@ -622,16 +652,22 @@ export const updateOrderStatusController = async (request, response) => {
 
         try {
             const customer = await UserModel.findById(updatedOrder.userId).select('fcmToken')
-            if (customer?.fcmToken) {
-                const statusMessages = {
-                    'Confirmed':        { title: '✅ Order Confirmed',  body: `Your order ${orderId} has been confirmed and is being prepared.` },
-                    'Out for Delivery': { title: '🛵 Out for Delivery', body: `Your order ${orderId} is on its way!` },
-                    'Delivered':        { title: '📦 Order Delivered',  body: `Your order ${orderId} has been delivered. Enjoy!` },
-                    'Cancelled':        { title: '❌ Order Cancelled',  body: `Your order ${orderId} has been cancelled.` },
-                }
-                const msg = statusMessages[status]
-                if (msg) {
-                    sendPushNotification({ token: customer.fcmToken, title: msg.title, body: msg.body, data: { orderId, status, type: 'ORDER_STATUS' } }).catch(() => {})
+            const token = customer?.fcmToken
+            if (token) {
+                if (status === 'Confirmed') {
+                    notifyUserOrderConfirmed(updatedOrder.userId, orderId, token).catch(() => {})
+                } else if (status === 'Out for Delivery') {
+                    notifyUserOutForDelivery(
+                        updatedOrder.userId,
+                        updatedOrder.rider_name || 'Your rider',
+                        RIDER_ETA_DEFAULT_MIN,
+                        token
+                    ).catch(() => {})
+                } else if (status === 'Delivered') {
+                    notifyUserOrderDelivered(updatedOrder.userId, orderId, token).catch(() => {})
+                } else if (status === 'Cancelled') {
+                    const refund = updatedOrder.payment_status === 'PAID' ? updatedOrder.totalAmt : 0
+                    notifyUserOrderCancelled(updatedOrder.userId, orderId, refund, token).catch(() => {})
                 }
             }
         } catch (e) {

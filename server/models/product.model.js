@@ -50,12 +50,13 @@ const productSchema = new mongoose.Schema({
         trim : true,
     },
     store_inventory: [
-        {
-            store_name: { type: String, required: true }, 
-            stock: { type: Number, default: 0 },
-            isAvailable: { type: Boolean, default: true }
-        }
-    ],
+    {
+        store_name: { type: String, required: true },
+        sellerId: { type: mongoose.Schema.ObjectId, ref: "User", default: null },
+        stock: { type: Number, default: 0 },
+        isAvailable: { type: Boolean, default: true }
+    }
+],
     stock : {
         type : Number,
         default : 0 

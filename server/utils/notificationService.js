@@ -13,26 +13,30 @@
 //    FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nXXX\n-----END PRIVATE KEY-----\n"
 //
 // ============================================================
-
 import mongoose from "mongoose";
-import admin from "firebase-admin";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const admin = require("firebase-admin");
 
 // ─────────────────────────────────────────────
 //  FIREBASE INIT  (runs once, safe to import anywhere)
+//  Reuses the app already initialized in firebaseNotify.js if present.
 // ─────────────────────────────────────────────
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId:   process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Newlines must be real — JSON.stringify escapes them
-      privateKey:  process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
+let fcm = null;
+try {
+  if (admin.apps.length === 0) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId:   process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey:  process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      }),
+    });
+  }
+  fcm = admin.messaging();
+} catch (error) {
+  console.error("❌ notificationService Firebase init failed — push disabled:", error.message);
 }
-
-const fcm = admin.messaging();
 
 // ─────────────────────────────────────────────
 //  MONGODB SCHEMA
@@ -97,6 +101,11 @@ const SHAYARI = {
   }),
 
   // ── USER ────────────────────────────────────
+   ORDER_CONFIRMED: (orderId) => ({
+    title:   `✅ Order confirm ho gaya! #${orderId}`,
+    shayari: `"Tayyari shuru, packing ka waqt,\n#${orderId} ab surakshit haathon mein rakht!" 📦`,
+    body:    `Your order #${orderId} has been confirmed and is being prepared.`,
+  }),
   ORDER_PLACED: (orderId) => ({
     title:   `✅ Order place ho gaya! #${orderId}`,
     shayari: `"Tumne kaha, humne suna,\nOrder #${orderId} ki kahani shuru ho gayi!" 🚀`,
@@ -317,7 +326,12 @@ export const notifyUserOrderPlaced = (userId, orderId, fcmToken) =>
     payload: SHAYARI.ORDER_PLACED(orderId),
     metadata: { orderId }, fcmToken,
   });
-
+export const notifyUserOrderConfirmed = (userId, orderId, fcmToken) =>
+  saveAndSend({
+    recipientId: userId, recipientType: "user", type: "ORDER_CONFIRMED",
+    payload: SHAYARI.ORDER_CONFIRMED(orderId),
+    metadata: { orderId }, fcmToken,
+  });
 export const notifyUserOrderPacked = (userId, orderId, fcmToken) =>
   saveAndSend({
     recipientId: userId, recipientType: "user", type: "ORDER_PACKED",

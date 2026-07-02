@@ -60,6 +60,7 @@ import restaurantRouter     from './route/restaurant.route.js'
 import scheduledOrderRouter from './route/scheduledOrder.route.js'
 import refundRouter         from './route/refund.route.js'
 import deliveryRouter       from './route/delivery.routes.js'   // ✅ NEW
+import sellerAdminRouter    from './route/sellerAdmin.routes.js' // ✅ NEW
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -349,6 +350,7 @@ app.use('/api/streak',          streakRouter)
 app.use('/api/subscription',    subscriptionRouter)
 app.use('/api/payment',         paymentRouter)
 app.use('/api/admin',           adminRouter)
+app.use('/api/admin',           sellerAdminRouter)
 app.use('/api/notification',    notificationRouter)
 app.use('/api/restaurant',      restaurantRouter)
 app.use('/api/scheduled-order', scheduledOrderRouter)

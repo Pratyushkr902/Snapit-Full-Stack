@@ -8,6 +8,10 @@
 //   - admin.messaging()     → getMessaging() from 'firebase-admin/messaging'
 //
 // This version uses the correct v14 modular API throughout.
+// Builds credentials from FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL /
+// FIREBASE_PRIVATE_KEY instead of a single JSON blob env var, and never
+// crashes server boot if Firebase config is missing/broken — push
+// notifications just get silently disabled with a warning instead.
 
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
@@ -16,23 +20,39 @@ const admin = require('firebase-admin')
 const { getMessaging } = require('firebase-admin/messaging')
 
 // Initialize Firebase Admin only once
+let messaging = null
+
 if (admin.getApps().length === 0) {
     try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+        const serviceAccount = {
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }
+
+        if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+            throw new Error('Missing FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY in .env')
+        }
+
         admin.initializeApp({
             credential: admin.cert(serviceAccount)
         })
         console.log('✅ Firebase Admin initialized')
+        messaging = getMessaging()
     } catch (error) {
-        console.error('❌ Firebase Admin init failed:', error.message)
+        console.error('❌ Firebase Admin init failed — push notifications disabled:', error.message)
     }
+} else {
+    messaging = getMessaging()
 }
-
-const messaging = getMessaging()
 
 // Send notification to a single device token
 export async function sendPushNotification({ token, title, body, data = {} }) {
     try {
+        if (!messaging) {
+            console.warn('[Push] Firebase not initialized, skipping notification')
+            return
+        }
         if (!token) return
         const message = {
             token,
