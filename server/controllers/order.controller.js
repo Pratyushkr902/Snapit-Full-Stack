@@ -68,6 +68,7 @@ const populateOrder = (query) =>
     query
         .populate('delivery_address')
         .populate('cartItems.productId')
+        .populate('userId', 'name mobile')   // FIX: was never populated — rider dashboard always fell back to "Snapit User"
         .lean()
 
 const toSafeOrder = (o) => ({

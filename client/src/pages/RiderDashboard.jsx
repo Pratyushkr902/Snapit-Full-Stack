@@ -154,10 +154,13 @@ const RiderDashboard = () => {
     // ── Earnings ──────────────────────────────────────────────
     const now = new Date();
     const filterByDate = (list) => list.filter(o => {
-        const created = new Date(o.createdAt);
-        if (earningFilter === 'today') return created.toDateString() === now.toDateString();
-        if (earningFilter === 'week')  { const w = new Date(now); w.setDate(now.getDate()-7); return created >= w; }
-        if (earningFilter === 'month') return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+        // FIX: was filtering by createdAt (order placement time) instead of
+        // deliveredAt (when the rider actually completed it) — an order placed
+        // yesterday but delivered today never counted toward "Today's earnings".
+        const deliveryTime = new Date(o.deliveredAt || o.createdAt);
+        if (earningFilter === 'today') return deliveryTime.toDateString() === now.toDateString();
+        if (earningFilter === 'week')  { const w = new Date(now); w.setDate(now.getDate()-7); return deliveryTime >= w; }
+        if (earningFilter === 'month') return deliveryTime.getMonth() === now.getMonth() && deliveryTime.getFullYear() === now.getFullYear();
         return true; // 'all'
     });
 
@@ -168,7 +171,7 @@ const RiderDashboard = () => {
     const avgFee           = totalDelivered > 0 ? totalEarned / totalDelivered : 0;
 
     const earningsByDate = filteredEarnings.reduce((acc, o) => {
-        const date = new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const date = new Date(o.deliveredAt || o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
         if (!acc[date]) acc[date] = { total: 0, count: 0 };
         acc[date].total += getDeliveryFee(o);
         acc[date].count += 1;
@@ -332,7 +335,11 @@ const RiderDashboard = () => {
                                                         className='p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white transition-all'>
                                                         <FaPhone size={15}/>
                                                     </a>
-                                                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`}
+                                                    <a href={
+                                                        order.delivery_address?.lat && order.delivery_address?.lng
+                                                            ? `https://www.google.com/maps?q=${order.delivery_address.lat},${order.delivery_address.lng}`
+                                                            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`
+                                                    }
                                                         target="_blank" rel="noreferrer"
                                                         className='p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500 hover:text-white transition-all'>
                                                         <FaMapMarkedAlt size={15}/>
@@ -384,8 +391,16 @@ const RiderDashboard = () => {
                                                                 ? <span className='text-purple-400'>{storeEmoji(item.seller_store_name)} </span>
                                                                 : null}
                                                             {item.productId?.name || item.name}
+                                                            {item.productId?.unit && (
+                                                                <span className='text-slate-500 font-normal'> ({item.productId.unit})</span>
+                                                            )}
                                                         </span>
-                                                        <span className='text-blue-400 flex-shrink-0'>×{item.quantity}</span>
+                                                        <span className='text-blue-400 flex-shrink-0'>
+                                                            ×{item.quantity}
+                                                            {item.productId?.price != null && (
+                                                                <span className='text-slate-500 ml-1'>· {fmtINR(item.productId.price)}</span>
+                                                            )}
+                                                        </span>
                                                     </div>
                                                 ))}
                                             </div>
