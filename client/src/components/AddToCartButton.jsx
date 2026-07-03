@@ -54,6 +54,10 @@ const AddToCartButton = ({ data }) => {
     const isAvailableCart = Boolean(cartItemDetails?.productId)
     const qty             = cartItemDetails?.quantity ?? 0
 
+    // FIX: compute out-of-stock as a plain flag instead of an early return,
+    // so we can decide the UI *after* we know whether it's already in cart.
+    const isOutOfStock = !data?.stock || data.stock <= 0
+
     const handleADDTocart = async (e) => {
         e.preventDefault()
         e.stopPropagation()
@@ -78,6 +82,10 @@ const AddToCartButton = ({ data }) => {
     const increaseQty = async (e) => {
         e.preventDefault()
         e.stopPropagation()
+        // FIX: block increasing quantity on an out-of-stock item, but this
+        // button only renders when the item is already in the cart, so
+        // decrease/remove is never blocked.
+        if (isOutOfStock) return
         if (!updateCartItem) return
         const response = await updateCartItem(cartItemDetails?._id, qty + 1)
         if (response?.success) toast.success("Item added")
@@ -107,8 +115,11 @@ const AddToCartButton = ({ data }) => {
         )
     }
 
-    // ADDED: out-of-stock guard, centralized here so every caller is protected
-    if (!data?.stock || data.stock <= 0) {
+    // FIX: only show the blocking "Out of stock" badge (no controls at all)
+    // when the item is NOT already in the cart. If it IS in the cart, fall
+    // through to the stepper below so the '−' button stays available to
+    // remove it — that's the only way out once stock hits 0 after add.
+    if (isOutOfStock && !isAvailableCart) {
         return (
             <div className='w-full'>
                 <div className='border border-red-100 bg-red-50 px-1 py-1.5 rounded text-center'>
@@ -123,22 +134,34 @@ const AddToCartButton = ({ data }) => {
     return (
         <div className='w-full'>
             {isAvailableCart ? (
-                <div className='flex w-full h-7 lg:h-8'>
-                    <button
-                        onClick={decreaseQty}
-                        className='bg-green-600 hover:bg-green-700 text-white w-7 lg:w-8 h-full rounded flex items-center justify-center flex-shrink-0'
-                    >
-                        <FaMinus size={10} />
-                    </button>
-                    <p className='flex-1 font-semibold text-xs lg:text-sm flex items-center justify-center'>
-                        {qty}
-                    </p>
-                    <button
-                        onClick={increaseQty}
-                        className='bg-green-600 hover:bg-green-700 text-white w-7 lg:w-8 h-full rounded flex items-center justify-center flex-shrink-0'
-                    >
-                        <FaPlus size={10} />
-                    </button>
+                <div className='flex flex-col w-full gap-0.5'>
+                    <div className='flex w-full h-7 lg:h-8'>
+                        <button
+                            onClick={decreaseQty}
+                            className='bg-green-600 hover:bg-green-700 text-white w-7 lg:w-8 h-full rounded flex items-center justify-center flex-shrink-0'
+                        >
+                            <FaMinus size={10} />
+                        </button>
+                        <p className='flex-1 font-semibold text-xs lg:text-sm flex items-center justify-center'>
+                            {qty}
+                        </p>
+                        <button
+                            onClick={increaseQty}
+                            disabled={isOutOfStock}
+                            className={`text-white w-7 lg:w-8 h-full rounded flex items-center justify-center flex-shrink-0 ${
+                                isOutOfStock
+                                    ? 'bg-gray-300 cursor-not-allowed'
+                                    : 'bg-green-600 hover:bg-green-700'
+                            }`}
+                        >
+                            <FaPlus size={10} />
+                        </button>
+                    </div>
+                    {isOutOfStock && (
+                        <p className='text-red-500 text-[7px] lg:text-[8px] font-black uppercase text-center leading-none'>
+                            Out of stock
+                        </p>
+                    )}
                 </div>
             ) : (
                 <button
