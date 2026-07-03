@@ -122,18 +122,37 @@ const resolveStore = async (lat, lng) => {
 }
 
 const buildTaggedCartItems = async (list_items, storeName) => {
-    // FIX: sellerId was never attached to cartItems, which silently broke
-    // getSellerEarningsController's aggregation (it matches on cartItems.sellerId).
-    // Resolved server-side from the authoritative product record — never trust
-    // a sellerId sent by the client for something tied to payouts.
     return Promise.all(list_items.map(async (item) => {
         const productId = item.productId?._id || item.productId
-        const product = await ProductModel.findById(productId).select('store_inventory').lean()
-        const inventoryEntry = product?.store_inventory?.find(inv => inv.store_name === storeName)
+
+        const product = await ProductModel.findById(productId)
+            .select('name price discount stock unit image store_inventory')
+            .lean()
+
+        if (!product) {
+            return { ...item, _invalid: true, _reason: 'A product in your cart no longer exists.' }
+        }
+
+        if (!product.stock || product.stock <= 0) {
+            return { ...item, _invalid: true, _reason: `${product.name} is out of stock.` }
+        }
+
+        const requestedQty = Number(item.quantity) || 1
+        if (requestedQty > product.stock) {
+            return { ...item, _invalid: true, _reason: `Only ${product.stock} left of ${product.name}.` }
+        }
+
+        const inventoryEntry = product.store_inventory?.find(inv => inv.store_name === storeName)
+
         return {
             ...item,
+            productId,
+            price:      product.price,
+            discount:   product.discount || 0,
+            quantity:   requestedQty,
             seller_store_name: storeName,
-            sellerId: inventoryEntry?.sellerId || null
+            sellerId: inventoryEntry?.sellerId || null,
+            _invalid: false
         }
     }))
 }
@@ -304,6 +323,14 @@ export async function CashOnDeliveryOrderController(request, response) {
     const delivery_fee   = calcDeliveryFee(subTotalAmt, lat, lng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
         const assignedStore  = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
+        const invalidItems = taggedCartItems.filter(i => i._invalid)
+   if (invalidItems.length > 0) {
+       return response.status(400).json({
+           message: invalidItems.map(i => i._reason).join(' '),
+           error: true,
+           success: false
+       })
+   }
 
         const assignedRider = await UserModel.findOne({ role: 'RIDER', status: 'Active' })
             .select('name mobile _id').lean()
@@ -423,6 +450,14 @@ export async function WalletPaymentOrderController(request, response) {
       const delivery_fee    = calcDeliveryFee(subTotalAmt, lat, lng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
         const assignedStore   = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
+        const invalidItems = taggedCartItems.filter(i => i._invalid)
+   if (invalidItems.length > 0) {
+       return response.status(400).json({
+           message: invalidItems.map(i => i._reason).join(' '),
+           error: true,
+           success: false
+       })
+   }
         const transactionId   = `WAL-ORD-${new mongoose.Types.ObjectId()}`
 
         const assignedRider = await UserModel.findOne({ role: 'RIDER', status: 'Active' })
@@ -577,7 +612,14 @@ export async function verifyPaymentController(request, response) {
 
         const assignedStore   = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
-
+         const invalidItems = taggedCartItems.filter(i => i._invalid)
+   if (invalidItems.length > 0) {
+       return response.status(400).json({
+           message: invalidItems.map(i => i._reason).join(' '),
+           error: true,
+           success: false
+       })
+   }
         const assignedRider = await UserModel.findOne({ role: 'RIDER', status: 'Active' })
             .select('name mobile _id').lean()
 
