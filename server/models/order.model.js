@@ -56,6 +56,10 @@ const orderSchema = new mongoose.Schema(
         // ── Delivery fee — ✅ REQUIRED for rider & seller earnings ──
         delivery_fee: { type: Number, default: 0 },
 
+        // ── Actual checkout-time coords — used for rider Maps link (NOT the saved Address doc, which can go stale) ──
+        delivery_lat: { type: Number, default: null },
+        delivery_lng: { type: Number, default: null },
+
         invoice_receipt: { type: String, default: "" },
 
         seller_status: {

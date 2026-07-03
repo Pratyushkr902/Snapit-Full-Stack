@@ -45,10 +45,14 @@ const CheckoutPage = () => {
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
   // Coords for backend — from address or store fallback
+  // NOTE: if address has no lat/lng, this silently falls back to STORE coords,
+  // which makes distance = 0 and charges the lowest slab. This masks bad data
+  // instead of fixing it. We warn the user below so they re-save their address.
   const getCoords = () => ({
     lat: selectedAddress?.lat || STORE_FALLBACK.lat,
     lng: selectedAddress?.lng || STORE_FALLBACK.lng,
   })
+  const addressMissingCoords = !!selectedAddress && (!selectedAddress?.lat || !selectedAddress?.lng)
 
   // ── Coupon ──
   const handleApplyPromoCoupon = async () => {
@@ -109,6 +113,7 @@ const CheckoutPage = () => {
     try {
       if (!isStoreOpen(user?.role)) return toast.error('Store is closed. We open at 8 AM!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select a delivery address')
+      if (addressMissingCoords) return toast.error('This address has no location pin. Please delete and re-add it so delivery charge is calculated correctly.', { duration: 5000 })
       if (!checkServiceArea()) return
       const currentBalance = Number(user?.walletBalance || 0)
       if (currentBalance < grandTotal) return toast.error('Insufficient Balance!')
@@ -179,6 +184,7 @@ const CheckoutPage = () => {
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!selectedAddress) return toast.error('Please select a delivery address')
+      if (addressMissingCoords) return toast.error('This address has no location pin. Please delete and re-add it so delivery charge is calculated correctly.', { duration: 5000 })
       if (!checkServiceArea()) return
       const gatewayToast = toast.loading('Loading payment gateway...')
       let RazorpayClass

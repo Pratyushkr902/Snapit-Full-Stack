@@ -165,11 +165,16 @@ const FoodCheckoutPage = () => {
   }
 
   // ── GPS ─────────────────────────────────────────────────────────────────────
+  // NOTE: fallback used to be Patna city center (25.2921, 84.8170), ~9km from
+  // the store — that silently pushed denied/failed-GPS customers into the
+  // 8-10km delivery slab even if they were standing next to the store.
+  // Fallback is now the store's own coords, which is the safest neutral default.
+  const STORE_COORDS_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
   const getCoordinates = () => new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve({ lat: 25.2921, lng: 84.8170 })
+    if (!navigator.geolocation) return resolve(STORE_COORDS_FALLBACK)
     navigator.geolocation.getCurrentPosition(
       pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      ()  => resolve({ lat: 25.2921, lng: 84.8170 }),
+      ()  => resolve(STORE_COORDS_FALLBACK),
       { enableHighAccuracy: true }
     )
   })
