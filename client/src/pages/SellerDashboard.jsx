@@ -156,7 +156,7 @@ const SellerDashboard = () => {
         try {
             const res = await Axios({
                 ...SummaryApi.getSellerProducts,
-                data: { page: 1, limit: 100 }
+                data: { page: 1, limit: 1000 }
             });
             if (res.data.success) setProducts(Array.isArray(res.data.data) ? res.data.data : []);
         } catch { toast.error('Failed to fetch products'); }
