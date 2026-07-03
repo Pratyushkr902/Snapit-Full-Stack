@@ -76,13 +76,42 @@ const toSafeOrder = (o) => ({
     __v: undefined
 })
 
-const calcDeliveryFee = (subTotal, user) => {
-    const isPlus = user?.isSnapitPlusMember &&
-        user?.snapitPlusExpiresAt &&
-        new Date() < new Date(user.snapitPlusExpiresAt)
+// Snapit Main Store — Paliganj, Bihar (fixed single-store coords)
+const STORE_COORDS = { lat: 25.2200, lng: 84.6800 }
 
-    const freeThreshold = isPlus ? 149 : 399
-    return Number(subTotal) >= freeThreshold ? 0 : 12
+const haversineKm = (lat1, lng1, lat2, lng2) => {
+    const R = 6371 // Earth radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) ** 2
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+const MAX_DELIVERY_RADIUS_KM = 13
+
+// Distance-based delivery fee for grocery orders only.
+// 0-999 subtotal → slab by distance from store. 999+ → always free.
+// Beyond MAX_DELIVERY_RADIUS_KM, delivery is not offered at all — see
+// isOutOfDeliveryRange(), called separately before order creation.
+const calcDeliveryFee = (subTotal, lat, lng) => {
+    if (Number(subTotal) >= 999) return 0
+
+    if (lat == null || lng == null) return 12 // no coords — fall back to lowest slab
+
+    const distanceKm = haversineKm(STORE_COORDS.lat, STORE_COORDS.lng, Number(lat), Number(lng))
+
+    if (distanceKm <= 4)  return 12
+    if (distanceKm <= 6)  return 19
+    if (distanceKm <= 10) return 29
+    return 59 // 10-13km
+}
+
+const isOutOfDeliveryRange = (lat, lng) => {
+    if (lat == null || lng == null) return false // no coords — can't determine, allow through
+    const distanceKm = haversineKm(STORE_COORDS.lat, STORE_COORDS.lng, Number(lat), Number(lng))
+    return distanceKm > MAX_DELIVERY_RADIUS_KM
 }
 
 const resolveStore = async (lat, lng) => {
@@ -260,8 +289,16 @@ export async function CashOnDeliveryOrderController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
+        if (isOutOfDeliveryRange(lat, lng)) {
+            return response.status(400).json({
+                message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
+                error: true,
+                success: false
+            })
+        }
+
         const currentUser    = await UserModel.findById(userId)
-        const delivery_fee   = calcDeliveryFee(subTotalAmt, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+        const delivery_fee   = calcDeliveryFee(subTotalAmt, lat, lng) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
         const assignedStore  = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
 
@@ -346,6 +383,14 @@ export async function WalletPaymentOrderController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
+        if (isOutOfDeliveryRange(lat, lng)) {
+            return response.status(400).json({
+                message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
+                error: true,
+                success: false
+            })
+        }
+
         const user = await UserModel.findById(userId)
         if (!user) return response.status(404).json({ message: 'User not found.', error: true, success: false })
 
@@ -372,7 +417,7 @@ export async function WalletPaymentOrderController(request, response) {
             await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } })
         }
 
-        const delivery_fee    = calcDeliveryFee(subTotalAmt, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+        const delivery_fee    = calcDeliveryFee(subTotalAmt, lat, lng) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
         const assignedStore   = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
         const transactionId   = `WAL-ORD-${new mongoose.Types.ObjectId()}`
@@ -510,8 +555,16 @@ export async function verifyPaymentController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
+        if (isOutOfDeliveryRange(lat, lng)) {
+            return response.status(400).json({
+                message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
+                error: true,
+                success: false
+            })
+        }
+
         const user         = await UserModel.findById(userId)
-        const delivery_fee = calcDeliveryFee(subTotalAmt, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+        const delivery_fee = calcDeliveryFee(subTotalAmt, lat, lng) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
 
         const serverTotal = Number(subTotalAmt) + delivery_fee - (Number(discountAmt) || 0)
         if (Math.abs(Number(totalAmt) - serverTotal) > 1) {
