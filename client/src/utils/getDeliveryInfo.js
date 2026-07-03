@@ -47,10 +47,16 @@ export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapi
   if (charge === null) {
     return { serviceable: false, distanceKm: dist, charge: 0, eta: null, label: 'Outside delivery range' }
   }
-
+ 
 let finalCharge = charge
-if (dist <= 5 && cartTotal >= 399) finalCharge = 0
-else if (dist <= 5 && isSnapitPlus && cartTotal >= 149) finalCharge = 0
+if (dist <= 4) {
+  if (isSnapitPlus ? cartTotal >= 149 : cartTotal >= 399) finalCharge = 0
+} else if (dist <= 8) {
+  if (isSnapitPlus ? cartTotal >= 399 : cartTotal >= 999) finalCharge = 0
+} else {
+  // 8-12km
+  if (isSnapitPlus ? cartTotal >= 699 : cartTotal >= 999) finalCharge = 0
+}
 
   const eta = getDeliveryETA(dist)
 
