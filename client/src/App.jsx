@@ -157,9 +157,9 @@ function App() {
     let listenerHandle;
 
     const setupBackButton = async () => {
-      listenerHandle = await CapacitorApp.addListener('backButton', () => {
-        if (window.history.state && window.history.state.idx > 0) {
-          navigate(-1)
+      listenerHandle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        if (canGoBack) {
+          window.history.back()
         } else {
           CapacitorApp.exitApp()
         }
@@ -171,7 +171,7 @@ function App() {
     return () => {
       listenerHandle?.remove()
     }
-  }, [navigate])
+  }, [])
 
   if (isAuthResolving) {
     return (
