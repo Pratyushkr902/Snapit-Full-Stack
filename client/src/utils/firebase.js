@@ -123,7 +123,7 @@ export async function requestNotificationPermission() {
         // If it's already registered, this just returns the existing
         // registration — safe to call every time.
         const swRegistration = await navigator.serviceWorker.register(
-            '/firebase-messaging-sw.js'
+            '/sw.js'
         )
 
         const token = await getToken(messaging, {
