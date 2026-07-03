@@ -173,6 +173,39 @@ function App() {
     }
   }, [])
 
+  // ─── Force refresh after long background suspension ───────────
+  // After ~15-20 min backgrounded, Android reclaims WebView memory and the
+  // JS context can come back stale — lazy-loaded chunks/closures throw
+  // "n is not a function" style errors on resume. Rather than let the user
+  // hit the error screen, do a controlled reload once resume-gap crosses
+  // a threshold, while state is still simple (app just became active).
+  useEffect(() => {
+    let backgroundedAt = null
+    let stateListenerHandle
+
+    const setupStateListener = async () => {
+      stateListenerHandle = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) {
+          backgroundedAt = Date.now()
+        } else if (backgroundedAt) {
+          const awayMs = Date.now() - backgroundedAt
+          backgroundedAt = null
+          // 10 min threshold — long enough to avoid reloading on quick
+          // app-switches, short enough to catch the WebView-reclaim window.
+          if (awayMs > 10 * 60 * 1000) {
+            window.location.reload()
+          }
+        }
+      })
+    }
+
+    setupStateListener()
+
+    return () => {
+      stateListenerHandle?.remove()
+    }
+  }, [])
+
   if (isAuthResolving) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white">
