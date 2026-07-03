@@ -89,14 +89,14 @@ export const updateCartItemQtyController = async(request,response)=>{
     try {
         const userId = request.userId 
         const { _id,qty } = request.body
-        if(!_id ||  !qty){
+        if(!_id || qty === undefined || qty === null){
             return response.status(400).json({
                 message : "provide _id, qty"
             })
         }
 
-        // ADDED: cap requested qty at available stock
-        const cartItemDoc = await CartProductModel.findOne({ _id, userId }).select("productId").lean()
+        // fetch current quantity so we know the direction of the change
+        const cartItemDoc = await CartProductModel.findOne({ _id, userId }).select("productId quantity").lean()
         if(!cartItemDoc){
             return response.status(404).json({
                 message : "Cart item not found",
@@ -104,15 +104,20 @@ export const updateCartItemQtyController = async(request,response)=>{
                 success : false
             })
         }
+        const isIncreasing = qty > cartItemDoc.quantity
+
         const product = await ProductModel.findById(cartItemDoc.productId).select("stock publish").lean()
-        if(!product || !product.publish || !product.stock || product.stock <= 0){
+
+        // Only block on out-of-stock/unpublished if the user is INCREASING qty.
+        // Decreasing (or removing) an out-of-stock item must always be allowed.
+        if(isIncreasing && (!product || !product.publish || !product.stock || product.stock <= 0)){
             return response.status(400).json({
                 message : "Product is out of stock",
                 error : true,
                 success : false
             })
         }
-        if(qty > product.stock){
+        if(isIncreasing && qty > product.stock){
             return response.status(400).json({
                 message : `Only ${product.stock} left in stock`,
                 error : true,

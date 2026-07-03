@@ -3,6 +3,7 @@ import SubscriptionModel from '../models/subscription.model.js';
 import OrderModel from '../models/order.model.js';
 import WalletModel from '../models/wallet.model.js';
 import ProductModel from '../models/product.model.js';
+import UserModel from '../models/user.model.js';
 import mongoose from 'mongoose';
 
 // Default fallback parameters matching your Paliganj operations setup
@@ -104,6 +105,7 @@ export const initSubscriptionCron = () => {
 
                     // 6. Generate the standard active shipping receipt inside OrderModel
                     const orderTrackingId = `SUB-ORD-${new mongoose.Types.ObjectId()}`;
+                    const assignedRider = await UserModel.findOne({ role: 'RIDER', status: 'Active' });
                     const deliveryOrder = new OrderModel({
                         userId: sub.userId,
                         orderId: orderTrackingId,
@@ -121,8 +123,9 @@ export const initSubscriptionCron = () => {
                         seller_status: "Pending",
                         store_details: DEFAULT_STORE,
                         involved_stores: [DEFAULT_STORE.name],
-                        rider_name: "Pratyush Sharma",
-                        rider_contact: "9472026580",
+                        riderId:       assignedRider?._id   || null,
+                        rider_name:    assignedRider?.name   || "Unassigned",
+                        rider_contact: assignedRider?.mobile || "",
                         payment_collected: sub.payment_method === 'WALLET'
                     });
 
