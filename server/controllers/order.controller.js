@@ -125,33 +125,29 @@ const resolveStore = async (lat, lng) => {
 const buildTaggedCartItems = async (list_items, storeName) => {
     return Promise.all(list_items.map(async (item) => {
         const productId = item.productId?._id || item.productId
-
         const product = await ProductModel.findById(productId)
             .select('name price discount stock unit image store_inventory')
             .lean()
-
         if (!product) {
             return { ...item, _invalid: true, _reason: 'A product in your cart no longer exists.' }
         }
-
         if (!product.stock || product.stock <= 0) {
             return { ...item, _invalid: true, _reason: `${product.name} is out of stock.` }
         }
-
         const requestedQty = Number(item.quantity) || 1
         if (requestedQty > product.stock) {
             return { ...item, _invalid: true, _reason: `Only ${product.stock} left of ${product.name}.` }
         }
-
-        const inventoryEntry = product.store_inventory?.find(inv => inv.store_name === storeName)
-
+        // FIX: use the product's OWN store, not a single order-wide hardcoded storeName.
+        const inventoryEntry = product.store_inventory?.find(inv => inv.isAvailable !== false)
+            || product.store_inventory?.[0]
         return {
             ...item,
             productId,
             price:      product.price,
             discount:   product.discount || 0,
             quantity:   requestedQty,
-            seller_store_name: storeName,
+            seller_store_name: inventoryEntry?.store_name || storeName,
             sellerId: inventoryEntry?.sellerId || null,
             _invalid: false
         }
@@ -324,6 +320,7 @@ export async function CashOnDeliveryOrderController(request, response) {
     const delivery_fee   = calcDeliveryFee(subTotalAmt, lat, lng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
         const assignedStore  = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
+        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
         const invalidItems = taggedCartItems.filter(i => i._invalid)
    if (invalidItems.length > 0) {
        return response.status(400).json({
@@ -355,8 +352,12 @@ export async function CashOnDeliveryOrderController(request, response) {
             is_express:       !!isExpress,
             delivery_status:  'Pending',
             seller_status:    'Pending',
-            store_details:    assignedStore,
-            involved_stores:  [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
+            store_details:    {
+                name: involvedStores.length === 1 ? involvedStores[0] : (involvedStores[0] || assignedStore.name),
+                lat:  assignedStore.lat,
+                lng:  assignedStore.lng
+            },
+            involved_stores:  involvedStores,
             riderId:          assignedRider?._id   || null,
             rider_name:       assignedRider?.name   || 'Unassigned',
             rider_contact:    assignedRider?.mobile || '',
@@ -454,6 +455,7 @@ export async function WalletPaymentOrderController(request, response) {
       const delivery_fee    = calcDeliveryFee(subTotalAmt, lat, lng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
         const assignedStore   = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
+        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
         const invalidItems = taggedCartItems.filter(i => i._invalid)
    if (invalidItems.length > 0) {
        return response.status(400).json({
@@ -499,8 +501,12 @@ export async function WalletPaymentOrderController(request, response) {
             is_express:       !!isExpress,
             delivery_status:  'Pending',
             seller_status:    'Pending',
-            store_details:    assignedStore,
-            involved_stores:  [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
+            store_details:    {
+                name: involvedStores.length === 1 ? involvedStores[0] : (involvedStores[0] || assignedStore.name),
+                lat:  assignedStore.lat,
+                lng:  assignedStore.lng
+            },
+            involved_stores:  involvedStores,
             riderId:          assignedRider?._id   || null,
             rider_name:       assignedRider?.name   || 'Unassigned',
             rider_contact:    assignedRider?.mobile || '',
@@ -624,7 +630,8 @@ export async function verifyPaymentController(request, response) {
 
         const assignedStore   = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
-         const invalidItems = taggedCartItems.filter(i => i._invalid)
+        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
+        const invalidItems = taggedCartItems.filter(i => i._invalid)
    if (invalidItems.length > 0) {
        return response.status(400).json({
            message: invalidItems.map(i => i._reason).join(' '),
@@ -654,8 +661,12 @@ export async function verifyPaymentController(request, response) {
             is_express:       !!isExpress,
             delivery_status:  'Pending',
             seller_status:    'Pending',
-            store_details:    assignedStore,
-            involved_stores:  [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))],
+            store_details:    {
+                name: involvedStores.length === 1 ? involvedStores[0] : (involvedStores[0] || assignedStore.name),
+                lat:  assignedStore.lat,
+                lng:  assignedStore.lng
+            },
+            involved_stores:  involvedStores,
             riderId:          assignedRider?._id   || null,
             rider_name:       assignedRider?.name   || 'Unassigned',
             rider_contact:    assignedRider?.mobile || '',
