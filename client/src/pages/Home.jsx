@@ -110,10 +110,10 @@ const Home = () => {
                   <div className='bg-slate-100 h-2.5 w-3/4 rounded animate-pulse' />
                 </div>
               ))
-            : Array.isArray(categoryData) && categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase())).map((cat) => {
+            : Array.isArray(categoryData) && categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase())).map((cat, catIndex) => {
                 if (!cat) return null;
 
-                const rawImg = cat?.icon || cat?.image || cat?.imageUrl || '';
+                const rawImg = cat?.imageThumbnail || cat?.icon || cat?.image || cat?.imageUrl || '';
                 let finalSrc = FALLBACK_IMG;
 
                 if (typeof rawImg === 'string' && rawImg.trim().length > 0) {
@@ -151,7 +151,7 @@ const Home = () => {
                         src={finalSrc}
                         alt={cat?.name || "Category"}
                         className='w-full h-full object-scale-down group-hover:scale-105 transition-transform duration-200'
-                        loading="eager"
+                        loading={catIndex < 8 ? "eager" : "lazy"}
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = FALLBACK_IMG;

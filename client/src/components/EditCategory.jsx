@@ -61,7 +61,8 @@ const EditCategory = ({close, fetchData,data : CategoryData}) => {
         setData((preve)=>{
             return{
                 ...preve,
-                image : ImageResponse.data.url
+                image : ImageResponse.data.url,
+                imageThumbnail : ImageResponse.data.thumbnail_url || ImageResponse.data.url
             }
         })
     }

@@ -205,16 +205,16 @@ const RiderDashboard = () => {
 
             {/* ── TOP HEADER BAR ── */}
             <div className='sticky top-0 z-30 bg-slate-950/90 backdrop-blur border-b border-slate-800 px-4 py-3'>
-                <div className='max-w-5xl mx-auto flex justify-between items-center gap-3'>
-                    <div className='flex items-center gap-3'>
+                <div className='max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-3'>
+                    <div className='flex items-center gap-3 min-w-0'>
                         <button
                             onClick={() => navigate(-1)}
                             className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90 flex-shrink-0'>
                             <IoArrowBack size={16}/>
                         </button>
-                        <div>
-                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]'>Snapit Logistics · Bihar</p>
-                            <h1 className='text-lg font-black text-white leading-none'>RIDER COMMAND</h1>
+                        <div className='min-w-0'>
+                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] truncate'>Snapit Logistics · Bihar</p>
+                            <h1 className='text-lg font-black text-white leading-none truncate'>RIDER COMMAND</h1>
                             {lastSynced && (
                                 <p className='text-[8px] text-slate-600'>
                                     Synced {lastSynced.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -222,7 +222,7 @@ const RiderDashboard = () => {
                             )}
                         </div>
                     </div>
-                    <div className='flex gap-2 items-center'>
+                    <div className='flex gap-2 items-center flex-shrink-0'>
                         <div className='bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-center'>
                             <p className='text-[8px] font-black text-slate-400 uppercase'>Cash in Hand</p>
                             <p className='text-base font-black text-amber-400'>{fmtINR(totalInHand)}</p>

@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
+import sharp from 'sharp';
 
 const s3 = new S3Client({
     region: 'auto',
@@ -14,7 +15,8 @@ const uploadImageClodinary = async (image) => {
     const buffer = image?.buffer || Buffer.from(await image.arrayBuffer());
     const mimeType = image?.mimetype || 'image/jpeg';
     const extension = mimeType.split('/')[1] || 'jpg';
-    const fileName = `snapit/${randomUUID()}.${extension}`;
+    const id = randomUUID();
+    const fileName = `snapit/${id}.${extension}`;
 
     await s3.send(new PutObjectCommand({
         Bucket: process.env.R2_BUCKET_NAME,
@@ -25,10 +27,33 @@ const uploadImageClodinary = async (image) => {
 
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${fileName}`;
 
+    // Thumbnail — NEW upload only, never touches any existing image.
+    // Wrapped in try/catch: if this fails for any reason, we swallow it
+    // and return no thumbnail — the original upload above already
+    // succeeded and must not be affected by a thumbnail failure.
+    let thumbnailUrl = null;
+    try {
+        const thumbBuffer = await sharp(buffer)
+            .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 75 })
+            .toBuffer();
+        const thumbFileName = `snapit/thumb_${id}.webp`;
+        await s3.send(new PutObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME,
+            Key: thumbFileName,
+            Body: thumbBuffer,
+            ContentType: 'image/webp',
+        }));
+        thumbnailUrl = `${process.env.R2_PUBLIC_URL}/${thumbFileName}`;
+    } catch (thumbErr) {
+        console.error('THUMBNAIL_GENERATION_FAILED (non-fatal, original upload still succeeded):', thumbErr.message);
+    }
+
     return {
         url: publicUrl,
         secure_url: publicUrl,
         public_id: fileName,
+        thumbnail_url: thumbnailUrl,
     };
 };
 

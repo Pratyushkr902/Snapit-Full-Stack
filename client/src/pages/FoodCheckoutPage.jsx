@@ -172,10 +172,18 @@ const FoodCheckoutPage = () => {
   const STORE_COORDS_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
   const getCoordinates = () => new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(STORE_COORDS_FALLBACK)
+    // NOTE: no timeout here used to mean getCurrentPosition could hang
+    // indefinitely on the Capacitor Android WebView, which stalled the
+    // entire checkout on "Preparing transaction..." since buildPayload()
+    // awaits this before the Razorpay/COD/wallet request is even sent.
+    // 8s timeout + fallback mirrors the fix already applied in serviceArea.js.
+    let settled = false
+    const finish = (coords) => { if (!settled) { settled = true; resolve(coords) } }
+    const timer = setTimeout(() => finish(STORE_COORDS_FALLBACK), 8000)
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      ()  => resolve(STORE_COORDS_FALLBACK),
-      { enableHighAccuracy: true }
+      pos => { clearTimeout(timer); finish({ lat: pos.coords.latitude, lng: pos.coords.longitude }) },
+      ()  => { clearTimeout(timer); finish(STORE_COORDS_FALLBACK) },
+      { enableHighAccuracy: true, timeout: 8000 }
     )
   })
 
@@ -539,7 +547,7 @@ const FoodCheckoutPage = () => {
                   value={couponCode}
                   onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
                  placeholder='Try SNAPIT, FIRSTUSER, FIRSTFREE, FIRST50'
-                  className='flex-1 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
+                  className='flex-1 min-w-0 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
                 />
                 <button
                   onClick={applyCoupon}

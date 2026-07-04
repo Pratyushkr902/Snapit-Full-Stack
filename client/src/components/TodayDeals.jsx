@@ -52,12 +52,12 @@ function DealCard({ product, isComboCard }) {
     >
       <div className="w-full h-28 bg-slate-100 flex items-center justify-center p-2">
         <img
-          src={product.image?.[0]}
+          src={product.imageThumbnail?.[0] || product.image?.[0]}
           alt={product.name}
           width={100}
           height={100}
           className="w-full h-full object-contain"
-          loading="eager"
+          loading="lazy"
           decoding="async"
           onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }}
         />

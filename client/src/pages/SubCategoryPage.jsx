@@ -70,7 +70,7 @@ const SubCategoryPage = () => {
               src={src}
               alt={row.original.name}
               className='w-8 h-8 cursor-pointer object-contain'
-              loading="eager"
+              loading="lazy"
               onClick={() => setImageURL(src)}
               onError={(e) => {
                 e.target.onerror = null

@@ -16,7 +16,13 @@ const FALLBACK_IMG =
 const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
 // ✅ Safely resolve any image value (string, array, relative, absolute)
-const resolveImage = (image) => {
+const resolveImage = (image, imageThumbnail) => {
+  // Prefer the small pre-generated thumbnail for the grid — falls back to
+  // the full image for older categories that don't have one yet.
+  const rawThumb = Array.isArray(imageThumbnail) ? imageThumbnail[0] : imageThumbnail
+  if (rawThumb && typeof rawThumb === 'string' && (rawThumb.startsWith('http://') || rawThumb.startsWith('https://'))) {
+    return rawThumb
+  }
   const raw = Array.isArray(image) ? image[0] : image
   if (!raw || typeof raw !== 'string') return FALLBACK_IMG
   if (raw.startsWith('http://') || raw.startsWith('https://')) return raw
@@ -114,9 +120,9 @@ const CategoryPage = () => {
               <div className='w-full aspect-square bg-slate-50 flex items-center justify-center p-3'>
                 <img
                   alt={category.name}
-                  src={resolveImage(category.image)}
+                  src={resolveImage(category.image, category.imageThumbnail)}
                   className='w-full h-full object-contain'
-                  loading="eager"
+                  loading="lazy"
                   onError={(e) => {
                     e.target.onerror = null
                     e.target.src = FALLBACK_IMG

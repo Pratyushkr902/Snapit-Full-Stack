@@ -20,7 +20,12 @@ const optimizeImage = (url) => {
     return url
 }
 
-const getImageSrc = (image) => {
+const getImageSrc = (image, imageThumbnail) => {
+    // Prefer the small pre-generated thumbnail for grid/list cards — falls
+    // back to the full image for older products that don't have one yet.
+    if (Array.isArray(imageThumbnail) && imageThumbnail.length > 0 && typeof imageThumbnail[0] === 'string' && imageThumbnail[0].startsWith('http')) {
+        return optimizeImage(imageThumbnail[0])
+    }
     if (Array.isArray(image) && image.length > 0 && typeof image[0] === 'string' && image[0].startsWith('http')) {
         return optimizeImage(image[0])
     }
@@ -52,7 +57,7 @@ const CardProduct = ({ data }) => {
     // event, which fires for all visible cards simultaneously mid-scroll.
     // The skeleton shimmer is handled purely in CSS via the img background
     // trick below — zero JS involved.
-    const imgSrc = getImageSrc(data?.image)
+    const imgSrc = getImageSrc(data?.image, data?.imageThumbnail)
     const label  = getProductLabel(data)
     const url    = `/product/${valideURLConvert(data?.name || "")}-${data?._id}`
 

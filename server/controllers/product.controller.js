@@ -2,7 +2,7 @@ import ProductModel from "../models/product.model.js";
 import mongoose from "mongoose";
 
 // Fields returned in list queries (not full details)
-const LIST_FIELDS = 'name image category subCategory unit stock price sellerPrice snapitMargin sellingPrice discount publish flashSale store_inventory';
+const LIST_FIELDS = 'name image imageThumbnail category subCategory unit stock price sellerPrice snapitMargin sellingPrice discount publish flashSale store_inventory';
 
 // Secure images helper — ensures all image URLs use https
 const secureImages = (images) => {
@@ -42,6 +42,10 @@ export const createProductController = async (request, response) => {
         const product = new ProductModel({
             name,
             image: secureImages(image),
+            // Optional — only present if the upload step generated one.
+            // Missing on older/manual creates, which is fine: it just
+            // stays an empty array and the frontend falls back to `image`.
+            imageThumbnail: secureImages(imageThumbnail) || [],
             category,
             subCategory,
             unit,
@@ -82,14 +86,14 @@ export const getProductController = async (request, response) => {
         const query = search ? { $text: { $search: search } } : {};
         const skip  = (page - 1) * limit;
         const [data, totalCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
+            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
             ProductModel.countDocuments(query)
         ]);
         return response.json({
             message: "Product data", error: false, success: true,
             totalCount,
             totalNoPage: Math.ceil(totalCount / limit),
-            data: data.map(prod => ({ ...prod._doc, image: secureImages(prod.image) }))
+            data: data.map(prod => ({ ...prod, image: secureImages(prod.image) }))
         });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -163,14 +167,14 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         if (hasValidSubCategory) query.subCategory = { $in: [subCategoryId, new mongoose.Types.ObjectId(subCategoryId)] };
 
         let [data, dataCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
+            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
             ProductModel.countDocuments(query)
         ]);
 
         if (dataCount === 0 && hasValidSubCategory) {
             const fallbackQuery = { category: { $in: [categoryId, new mongoose.Types.ObjectId(categoryId)] } };
             const results = await Promise.all([
-                ProductModel.find(fallbackQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
+                ProductModel.find(fallbackQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
                 ProductModel.countDocuments(fallbackQuery)
             ]);
             data      = results[0];
@@ -179,7 +183,7 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
 
         return response.json({
             message: "Product list", success: true, error: false,
-            data: data.map(prod => ({ ...prod._doc, image: secureImages(prod.image) })),
+            data: data.map(prod => ({ ...prod, image: secureImages(prod.image) })),
             totalCount: dataCount, page, limit
         });
     } catch (error) {
@@ -220,6 +224,7 @@ export const updateProductDetails = async (request, response) => {
         }
 
         if (updateFields.image) updateFields.image = secureImages(updateFields.image);
+        if (updateFields.imageThumbnail) updateFields.imageThumbnail = secureImages(updateFields.imageThumbnail);
 
         if (updateFields.sellerPrice != null || updateFields.snapitMargin != null) {
             const existing = await ProductModel.findById(_id).lean();
@@ -276,12 +281,12 @@ export const searchProduct = async (request, response) => {
             : {};
         const skip = (page - 1) * limit;
         const [data, dataCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
+            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
             ProductModel.countDocuments(query)
         ]);
         return response.json({
             message: "Product data", error: false, success: true,
-            data: data.map(prod => ({ ...prod._doc, image: secureImages(prod.image) })),
+            data: data.map(prod => ({ ...prod, image: secureImages(prod.image) })),
             totalCount: dataCount,
             totalPage: Math.ceil(dataCount / limit),
             page, limit
@@ -399,14 +404,14 @@ export const getSellerProductsController = async (request, response) => {
         }
 
         const [data, totalCount] = await Promise.all([
-            ProductModel.find(baseQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
+            ProductModel.find(baseQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
             ProductModel.countDocuments(baseQuery)
         ]);
 
         return response.json({
             message: "Seller product data", error: false, success: true,
             totalCount, totalNoPage: Math.ceil(totalCount / limit),
-            data: data.map(prod => ({ ...prod._doc, image: secureImages(prod.image) }))
+            data: data.map(prod => ({ ...prod, image: secureImages(prod.image) }))
         });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
