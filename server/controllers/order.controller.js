@@ -43,6 +43,7 @@ import {
     notifyUserOutForDelivery,
     notifyUserOrderDelivered,
     notifyUserOrderCancelled,
+    notifySellersOfNewOrder,
 } from '../utils/notificationService.js'
 import sendEmail        from './sendEmail.js'
 
@@ -368,6 +369,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         await generatedOrder.save()
         sendOrderInvoiceEmail(generatedOrder, currentUser).catch(()=>{})
         notifyUserOrderPlaced(userId, generatedOrder.orderId, currentUser?.fcmToken).catch(() => {})
+        notifySellersOfNewOrder(generatedOrder).catch(() => {})
         notifyAllRiders({
             title: '🛵 New Order!',
             body:  `Order ${generatedOrder.orderId} is ready for pickup — ₹${generatedOrder.totalAmt}`,
@@ -511,6 +513,7 @@ export async function WalletPaymentOrderController(request, response) {
         await newOrder.save()
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
+        notifySellersOfNewOrder(newOrder).catch(() => {})
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
         await CartProductModel.deleteMany({ userId })
@@ -660,6 +663,7 @@ export async function verifyPaymentController(request, response) {
         await newOrder.save()
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
+        notifySellersOfNewOrder(newOrder).catch(() => {})
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
 
