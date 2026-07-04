@@ -332,35 +332,6 @@ export const notifySellersOfNewOrder = async (order) => {
   }
 };
 
-// Looks up every SELLER whose store_name is one of the order's
-// involved_stores and fires notifySellerNewOrder() for each of them.
-// Fire-and-forget from the caller's side (wrap in .catch(() => {})).
-export const notifySellersOfNewOrder = async (order) => {
-  try {
-    const { default: UserModel } = await import("../models/user.model.js");
-    const storeNames = order?.involved_stores || [];
-    if (storeNames.length === 0) return;
-
-    const sellers = await UserModel.find({
-      role: "SELLER",
-      store_name: { $in: storeNames },
-      fcmToken: { $exists: true, $ne: null, $ne: "" },
-    }).select("fcmToken store_name").lean();
-
-    if (sellers.length === 0) {
-      console.log(`[notifySellersOfNewOrder] No sellers with fcmToken for stores: ${storeNames.join(", ")}`);
-      return;
-    }
-
-    await Promise.allSettled(
-      sellers.map(seller =>
-        notifySellerNewOrder(seller._id, order.orderId, order.totalAmt, seller.fcmToken)
-      )
-    );
-  } catch (error) {
-    console.error("[notifySellersOfNewOrder] failed:", error.message);
-  }
-};
 
 export const notifySellerPayment = (sellerId, amount, fcmToken) =>
   saveAndSend({
