@@ -20,7 +20,7 @@ const getStoreName = (user) =>
 export const createProductController = async (request, response) => {
     try {
         const {
-            name, image, category, subCategory, unit,
+            name, image, imageThumbnail, category, subCategory, unit,
             stock, price, sellerPrice, snapitMargin,
             discount, description, more_details
         } = request.body;
