@@ -9,7 +9,16 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
 
-    <queries>
+    <!-- GPS hardware is not required to install or use the app; we already
+         fall back to store coordinates when location is unavailable or
+         denied. Without this override, the @capacitor/geolocation plugin's
+         merged manifest marks GPS as required="true" by default, which
+         excludes devices without a GPS chip from installing the app. -->
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+
+<queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
