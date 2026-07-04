@@ -201,8 +201,10 @@ const ProductDisplayPage = () => {
 
   // ── Swipe/drag state for Zepto/Blinkit-style image carousel ──
   const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
   const touchDeltaX = useRef(0)
   const isDragging = useRef(false)
+  const directionLocked = useRef(null) // 'x' | 'y' | null
   const [dragOffset, setDragOffset] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
 
@@ -276,15 +278,35 @@ const ProductDisplayPage = () => {
     if (imageCount <= 1) return
     isDragging.current = true
     touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
     touchDeltaX.current = 0
+    directionLocked.current = null
     setIsAnimating(false)
   }
 
   const handleTouchMove = (e) => {
     if (!isDragging.current || imageCount <= 1) return
     const currentX = e.touches[0].clientX
-    touchDeltaX.current = currentX - touchStartX.current
-    setDragOffset(touchDeltaX.current)
+    const currentY = e.touches[0].clientY
+    const deltaX = currentX - touchStartX.current
+    const deltaY = currentY - touchStartY.current
+
+    // Lock the gesture direction once movement is clearly one axis —
+    // prevents a vertical scroll attempt from being hijacked as a
+    // horizontal image drag (the Android "stuck scroll" bug).
+    if (!directionLocked.current) {
+      if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return // too small to decide yet
+      directionLocked.current = Math.abs(deltaX) > Math.abs(deltaY) ? 'x' : 'y'
+    }
+
+    if (directionLocked.current === 'y') {
+      // Let the page handle vertical scroll natively — don't treat as drag.
+      isDragging.current = false
+      return
+    }
+
+    touchDeltaX.current = deltaX
+    setDragOffset(deltaX)
   }
 
   const handleTouchEnd = () => {
@@ -360,6 +382,7 @@ const ProductDisplayPage = () => {
         <div className='space-y-3'>
           <div
             className='bg-white w-full aspect-[4/3] max-h-[240px] sm:max-h-[320px] lg:max-h-[420px] rounded-2xl overflow-hidden border border-gray-100/70 shadow-sm relative select-none'
+            style={{ touchAction: 'pan-y' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
