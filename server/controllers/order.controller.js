@@ -514,6 +514,11 @@ export async function WalletPaymentOrderController(request, response) {
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
         notifySellersOfNewOrder(newOrder).catch(() => {})
+        notifyAllRiders({
+            title: '🛵 New Order!',
+            body:  `Order ${newOrder.orderId} is ready for pickup — ₹${newOrder.totalAmt}`,
+            data:  { orderId: newOrder.orderId, type: 'NEW_ORDER' }
+        }).catch(() => {})
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
         await CartProductModel.deleteMany({ userId })
@@ -664,6 +669,11 @@ export async function verifyPaymentController(request, response) {
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
         notifySellersOfNewOrder(newOrder).catch(() => {})
+        notifyAllRiders({
+            title: '🛵 New Order!',
+            body:  `Order ${newOrder.orderId} is ready for pickup — ₹${newOrder.totalAmt}`,
+            data:  { orderId: newOrder.orderId, type: 'NEW_ORDER' }
+        }).catch(() => {})
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
 
