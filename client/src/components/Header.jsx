@@ -65,10 +65,10 @@ const Header = ({ openCart }) => {
                             </h2>
                             <span className='text-lg'>⚡</span>
                         </div>
-                        <div className='flex items-center gap-0.5 text-xs text-slate-500 font-semibold cursor-pointer'>
+                        <Link to='/dashboard/address' className='flex items-center gap-0.5 text-xs text-slate-500 font-semibold cursor-pointer active:opacity-60'>
                             <span className='truncate max-w-[150px]'>📍 {primaryAddress}</span>
                             <GoTriangleDown size={12} />
-                        </div>
+                        </Link>
                     </div>
                 </div>
 
@@ -139,10 +139,10 @@ const Header = ({ openCart }) => {
                                     in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
                                 </span>
                             </div>
-                            <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0'>
+                            <Link to='/dashboard/address' className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0 active:opacity-60'>
                                 <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
                                 <GoTriangleDown size={10} className='flex-shrink-0' />
-                            </div>
+                            </Link>
                         </div>
                     </div>
 
