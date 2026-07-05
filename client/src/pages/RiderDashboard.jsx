@@ -34,6 +34,16 @@ const getDeliveryFee = (o) => {
 const fmt = (n) => Number(n).toFixed(2);
 const fmtINR = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// e.g. "5 Jul at 12:58 PM" — same format used in the admin History view
+const fmtOrderTime = (dateVal) => {
+    if (!dateVal) return null;
+    const d = new Date(dateVal);
+    if (isNaN(d)) return null;
+    const datePart = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    const timePart = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${datePart} at ${timePart}`;
+};
+
 const RiderDashboard = () => {
     const navigate = useNavigate();
     const [orders, setOrders]               = useState([]);
@@ -323,6 +333,11 @@ const RiderDashboard = () => {
                                                     <span className='text-[9px] font-black bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full uppercase tracking-wider'>
                                                         {order.orderId}
                                                     </span>
+                                                    {fmtOrderTime(order.createdAt) && (
+                                                        <p className='text-[9px] text-slate-500 font-bold mt-1'>
+                                                            🕒 {fmtOrderTime(order.createdAt)}
+                                                        </p>
+                                                    )}
                                                     <h2 className='text-sm font-bold text-white mt-2.5 leading-tight'>
                                                         {order.delivery_address?.address_line || "📍 Address not provided"}
                                                     </h2>
@@ -540,7 +555,7 @@ const RiderDashboard = () => {
                                             <div className='text-right'>
                                                 <p className='font-black text-emerald-400'>{fmtINR(getDeliveryFee(order))}</p>
                                                 <p className='text-[10px] text-slate-500'>
-                                                    {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                    {fmtOrderTime(order.deliveredAt || order.createdAt)}
                                                 </p>
                                             </div>
                                         </div>
