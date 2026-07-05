@@ -146,8 +146,14 @@ const SellerDashboard = () => {
             if (res.data.success) {
                 setAllOrders(Array.isArray(res.data.data) ? res.data.data : []);
                 setLastRefreshed(new Date());
+                if (silent) toast.success('Orders refreshed', { id: 'refresh-orders' });
             }
-        } catch { toast.error('Failed to fetch orders'); }
+        } catch (e) {
+            // FIX: this used to fire even on silent calls, but was easy to miss
+            // amid other toasts. Now it always shows on manual refresh failures
+            // so a failed refresh is never mistaken for a dead button.
+            toast.error(e?.response?.data?.message || 'Failed to fetch orders', { id: 'refresh-orders' });
+        }
         finally { setLoading(false); }
     }, []); // no deps — Axios and SummaryApi are module-level constants
 
