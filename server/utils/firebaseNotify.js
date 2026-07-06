@@ -24,15 +24,10 @@ let messaging = null
 
 if (admin.getApps().length === 0) {
     try {
-        const serviceAccount = {
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+            throw new Error('Missing FIREBASE_SERVICE_ACCOUNT in .env')
         }
-
-        if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-            throw new Error('Missing FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY in .env')
-        }
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
 
         admin.initializeApp({
             credential: admin.cert(serviceAccount)
