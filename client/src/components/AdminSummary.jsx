@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import AdminPermision from '../components/AdminPermision'
+import AdminPermision from '../layouts/AdminPermision'
 import AdminRiderSimulator from '../components/AdminRiderSimulator'
 import AddStore from '../components/AddStore'
 import DailyReport from '../components/DailyReport'
