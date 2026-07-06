@@ -17,6 +17,7 @@ import mongoose from "mongoose";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const admin = require("firebase-admin");
+const { getMessaging } = require("firebase-admin/messaging");
 
 // ─────────────────────────────────────────────
 //  FIREBASE INIT  (runs once, safe to import anywhere)
@@ -30,7 +31,7 @@ try {
       credential: admin.credential.cert(serviceAccount),
     });
   }
-  fcm = admin.messaging();
+  fcm = getMessaging();
 } catch (error) {
   console.error("❌ notificationService Firebase init failed — push disabled:", error.message);
 }
