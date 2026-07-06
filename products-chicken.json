@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Fresh Chicken",
+    "price": 220,
+    "stock": 15,
+    "unit": "kg",
+    "category": "Meat",
+    "image": "",
+    "variantGroup": "chicken-fresh",
+    "variantType": "cut",
+    "variantLabel": "Leg Piece",
+    "store_name": "Pali Mega Mart"
+  },
+  {
+    "name": "Fresh Chicken",
+    "price": 250,
+    "stock": 10,
+    "unit": "kg",
+    "category": "Meat",
+    "image": "",
+    "variantGroup": "chicken-fresh",
+    "variantType": "cut",
+    "variantLabel": "Breast",
+    "store_name": "Pali Mega Mart"
+  },
+  {
+    "name": "Fresh Chicken",
+    "price": 200,
+    "stock": 12,
+    "unit": "kg",
+    "category": "Meat",
+    "image": "",
+    "variantGroup": "chicken-fresh",
+    "variantType": "cut",
+    "variantLabel": "Whole",
+    "store_name": "Pali Mega Mart"
+  },
+  {
+    "name": "Fresh Chicken",
+    "price": 180,
+    "stock": 8,
+    "unit": "kg",
+    "category": "Meat",
+    "image": "",
+    "variantGroup": "chicken-fresh",
+    "variantType": "cut",
+    "variantLabel": "Curry Cut",
+    "store_name": "Pali Mega Mart"
+  },
+  {
+    "name": "Fresh Chicken",
+    "price": 260,
+    "stock": 6,
+    "unit": "kg",
+    "category": "Meat",
+    "image": "",
+    "variantGroup": "chicken-fresh",
+    "variantType": "cut",
+    "variantLabel": "Wings",
+    "store_name": "Pali Mega Mart"
+  },
+  {
+    "name": "Fresh Chicken",
+    "price": 280,
+    "stock": 5,
+    "unit": "kg",
+    "category": "Meat",
+    "image": "",
+    "variantGroup": "chicken-fresh",
+    "variantType": "cut",
+    "variantLabel": "Boneless",
+    "store_name": "Pali Mega Mart"
+  }
+]

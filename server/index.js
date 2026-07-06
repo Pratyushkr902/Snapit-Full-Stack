@@ -31,6 +31,7 @@ import './models/notification.model.js'
 import './models/restaurant.model.js'
 import './models/MenuItem.model.js'
 import './models/scheduledOrder.model.js'
+import './models/dailyAccount.model.js' // ✅ NEW
 
 import { startAutoConfirmCron } from './utils/autoConfirmOrders.js'
 import { startScheduledOrdersCron } from './cron/scheduledOrder.cron.js'
@@ -61,6 +62,7 @@ import scheduledOrderRouter from './route/scheduledOrder.route.js'
 import refundRouter         from './route/refund.route.js'
 import deliveryRouter       from './route/delivery.routes.js'   // ✅ NEW
 import sellerAdminRouter    from './route/sellerAdmin.routes.js' // ✅ NEW
+import dailyAccountRouter   from './route/dailyAccount.route.js' // ✅ NEW
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -328,6 +330,7 @@ app.use('/api/user/reset-password',             authLimiter)
 app.use('/api/wallet',                          financialLimiter)
 app.use('/api/order',                           financialLimiter)
 app.use('/api/coins',                           financialLimiter)
+app.use('/api/admin/accounts',                  financialLimiter) // ✅ NEW
 
 // General API limiter on everything else
 app.use('/api', apiLimiter)
@@ -356,6 +359,7 @@ app.use('/api/restaurant',      restaurantRouter)
 app.use('/api/scheduled-order', scheduledOrderRouter)
 app.use('/api/refund',          refundRouter)
 app.use('/api/delivery',        deliveryRouter)          // ✅ NEW
+app.use('/api/admin/accounts',  dailyAccountRouter)       // ✅ NEW
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
