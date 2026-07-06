@@ -76,8 +76,8 @@ const RiderTracking = () => {
     const [arrived, setArrived] = useState(false);
     const socketRef = useRef(null);
     const [riderData, setRiderData] = useState({
-        name: 'Nitish Kumar',
-        contact: '9576467701',
+        name: 'Pratyush Kumar',
+        contact: '9472026580',
     });
 
     // ─── Fetch rider info + last known GPS position ───────────────────────────
@@ -92,8 +92,8 @@ const RiderTracking = () => {
                 const { rider_name, rider_contact, riderLocation } = response.data.data;
 
                 setRiderData({
-                    name:    rider_name    || 'Nitish Kumar',
-                    contact: rider_contact || '9576467701',
+                    name:    rider_name    || 'Pratyush Kumar',
+                    contact: rider_contact || '9472026580',
                 });
 
                 if (riderLocation?.latitude && riderLocation?.longitude) {

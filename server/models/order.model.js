@@ -86,8 +86,8 @@ const orderSchema = new mongoose.Schema(
             default: "Pending",
         },
 
-        rider_name:    { type: String, default: "Nitish Kumar" },
-        rider_contact: { type: String, default: "9576467701" },
+        rider_name:    { type: String, default: "Pratyush Kumar" },
+        rider_contact: { type: String, default: "9472026580" },
 
         // ── Assigned rider for this order (top-level, used for rider dashboard
         // filtering, pickup/delivery ownership checks, and tracking) ──
