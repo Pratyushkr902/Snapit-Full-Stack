@@ -126,7 +126,7 @@ const buildTaggedCartItems = async (list_items, storeName) => {
     return Promise.all(list_items.map(async (item) => {
         const productId = item.productId?._id || item.productId
         const product = await ProductModel.findById(productId)
-            .select('name price discount stock unit image store_inventory')
+            .select('name price sellerPrice snapitMargin discount stock unit image store_inventory')
             .lean()
         if (!product) {
             return { ...item, _invalid: true, _reason: 'A product in your cart no longer exists.' }
@@ -144,9 +144,14 @@ const buildTaggedCartItems = async (list_items, storeName) => {
         return {
             ...item,
             productId,
-            price:      product.price,
-            discount:   product.discount || 0,
-            quantity:   requestedQty,
+            price:        product.price,
+            // FIX: snapshot seller price + snapit margin onto the order item —
+            // previously missing, causing seller/admin dashboards to show ₹0.00
+            // and Snapit's platform cut to silently compute as ₹0 on every order.
+            sellerPrice:  product.sellerPrice ?? product.price ?? 0,
+            snapitMargin: product.snapitMargin ?? 0,
+            discount:     product.discount || 0,
+            quantity:     requestedQty,
             seller_store_name: inventoryEntry?.store_name || storeName,
             sellerId: inventoryEntry?.sellerId || null,
             _invalid: false
