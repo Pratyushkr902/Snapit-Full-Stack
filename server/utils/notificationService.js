@@ -312,7 +312,7 @@ export const notifySellersOfNewOrder = async (order) => {
     if (storeNames.length === 0) return;
 
     const sellers = await UserModel.find({
-      role: "SELLER",
+      role: { $in: ["SELLER", "RESTO_SELLER"] },
       store_name: { $in: storeNames },
       fcmToken: { $exists: true, $ne: null, $ne: "" },
     }).select("fcmToken store_name").lean();
