@@ -1088,22 +1088,33 @@ export const getDailySalesReport = async (req, res) => {
     try {
         const today    = new Date(); today.setHours(0, 0, 0, 0)
         const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1)
-        const orders   = await OrderModel.find({
-            createdAt: { $gte: today, $lt: tomorrow },
-            delivery_status: { $ne: 'Cancelled' }
-        })
-        const totalRevenue  = orders.reduce((acc, o) => acc + Number(o.totalAmt     || 0), 0)
-        const totalDelivery = orders.reduce((acc, o) => acc + Number(o.delivery_fee || 0), 0)
+
+        const report = await OrderModel.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: today, $lt: tomorrow },
+                    delivery_status: { $ne: 'Cancelled' }
+                }
+            },
+            { $unwind: '$involved_stores' },
+            {
+                $group: {
+                    _id: '$involved_stores',
+                    totalOrders: { $sum: 1 },
+                    totalRevenue: { $sum: { $ifNull: ['$totalAmt', 0] } },
+                    codCollected: {
+                        $sum: {
+                            $cond: [{ $eq: ['$payment_status', 'CASH ON DELIVERY'] }, { $ifNull: ['$totalAmt', 0] }, 0]
+                        }
+                    }
+                }
+            },
+            { $sort: { totalRevenue: -1 } }
+        ])
+
         return res.json({
             message: 'Daily report', error: false, success: true,
-            data: {
-                totalOrders:       orders.length,
-                totalRevenue:      Number(totalRevenue.toFixed(2)),
-                totalDeliveryFees: Number(totalDelivery.toFixed(2)),
-                deliveredOrders:   orders.filter(o => o.delivery_status === 'Delivered').length,
-                pendingOrders:     orders.filter(o => o.delivery_status !== 'Delivered').length,
-                orders,
-            },
+            data: report,
         })
     } catch (error) {
         console.error('getDailySalesReport:', error.message)
