@@ -21,7 +21,7 @@ const DELIVERY_ZONES = [
   { name: 'Fatehpur',          lat: 25.344837251618888, lng: 84.78541480320204, radiusKm: 1.0 },
   { name: 'Kalyanpuri Paipura',lat: 25.35483228778216,  lng: 84.79708175239959, radiusKm: 1.0 },
   { name: 'Chikasi',           lat: 25.28091606583264,  lng: 84.87069734970407, radiusKm: 1.78 }, // NOTE: ~9km east of existing 'Chiksi' — different location, verify name isn't a duplicate/typo
-  { name: 'Lalganj Nehra',     lat: 25.292485478533443, lng: 84.82586927749715, radiusKm: 1.0 },
+  { name: 'Lalganj Sehra',     lat: 25.292485478533443, lng: 84.82586927749715, radiusKm: 1.0 },
 ]
 // radiusKm = half the distance to each zone's nearest neighboring zone (min 1km, max 3km).
 // This guarantees zone circles never overlap, so a GPS point can only ever match ONE
