@@ -111,7 +111,7 @@ const calcDeliveryFee = (subTotal, lat, lng, user) => {
     }
     // 10-12km
     if (isPlus ? Number(subTotal) >= 699 : Number(subTotal) >= 999) return 0
-    return 59
+    return 49
 }
 const isOutOfDeliveryRange = (lat, lng) => {
     if (lat == null || lng == null) return false // no coords — can't determine, allow through

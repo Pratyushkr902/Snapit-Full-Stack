@@ -23,13 +23,13 @@ export const getDistanceFromStore = (customerLat, customerLng) =>
 // 0–4 km   → ₹12
 // 4–8 km   → ₹19
 // 8–10 km  → ₹49
-// 10–12 km → ₹59
+// 10–12 km → ₹49
 // >12 km   → not serviceable
 export const getDeliveryCharge = (distanceKm) => {
   if (distanceKm <= 4)  return 12
   if (distanceKm <= 8)  return 19
   if (distanceKm <= 10) return 49
-  if (distanceKm <= 12) return 59
+  if (distanceKm <= 12) return 49
   return null
 }
 
