@@ -1,6 +1,7 @@
 import { body, validationResult } from 'express-validator'
 import AddressModel from "../models/address.model.js"
 import UserModel    from "../models/user.model.js"
+import { isInDeliveryZone } from '../utils/serviceArea.js'
 
 // ─── GEOCODE FALLBACK ─────────────────────────────────────────────────────────
 // Called when user saves address without clicking "Use My Current Location"
@@ -122,6 +123,24 @@ export const addAddressController = async (request, response) => {
                 finalLng = geocoded.lng
                 console.log(`[addAddress] Geocoded "${city}" → ${finalLat}, ${finalLng}`)
             }
+        }
+
+        const zoneCheck = isInDeliveryZone(finalLat, finalLng)
+        if (!zoneCheck.serviceable) {
+            return response.status(400).json({
+                message: "Sorry, we don't deliver to this location yet.",
+                error:   true,
+                success: false,
+            })
+        }
+
+        const zoneCheck = isInDeliveryZone(finalLat, finalLng)
+        if (!zoneCheck.serviceable) {
+            return response.status(400).json({
+                message: "Sorry, we don't deliver to this location yet.",
+                error:   true,
+                success: false,
+            })
         }
 
         const createAddress = new AddressModel({

@@ -234,10 +234,20 @@ const AddAddress = ({ close }) => {
 
           <button
             type='submit'
-            className='w-full bg-green-600 hover:bg-green-700 text-white font-black py-3.5 rounded-xl mt-2 transition-all active:scale-95 shadow-lg shadow-green-100'
+            disabled={locationStatus !== 'ok'}
+            className={`w-full font-black py-3.5 rounded-xl mt-2 transition-all active:scale-95 shadow-lg ${
+              locationStatus === 'ok'
+                ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-100'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+            }`}
           >
-            Save Address
+            {locationStatus === 'ok' ? 'Save Address' : 'Verify Location First'}
           </button>
+          {locationStatus !== 'ok' && (
+            <p className='text-xs text-center text-slate-400 -mt-1'>
+              Tap "Use My Current Location" above to confirm we deliver to you.
+            </p>
+          )}
         </form>
       </div>
     </section>
