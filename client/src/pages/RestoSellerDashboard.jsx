@@ -65,7 +65,7 @@ export default function RestoSellerDashboard() {
     if (!restaurant) return
     setOrdersLoading(true)
     try {
-      const res = await Axios({ method: 'GET', url: '/api/order/admin/restaurant-orders' })
+      const res = await Axios({ method: 'GET', url: '/api/order/resto-seller/orders' })
       if (res.data?.success) {
         const mine = res.data.data.filter(
           o => o.store_details?.name === restaurant.name

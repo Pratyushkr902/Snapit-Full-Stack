@@ -1,6 +1,6 @@
 import { Router } from "express"
 import auth             from "../middleware/auth.js"
-import { admin, seller, rider } from "../middleware/Admin.js"
+import { admin, seller, rider, restoSeller } from "../middleware/Admin.js"
 import {
     CashOnDeliveryOrderController,
     WalletPaymentOrderController,
@@ -53,7 +53,7 @@ orderRouter.post("/rider-location/:orderId", auth, rider,  updateRiderLocationCo
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 orderRouter.get( "/admin/restaurant-orders", auth, admin, getRestaurantOrdersController)
-orderRouter.get( "/resto-seller/orders", auth, getRestoSellerOrdersController)
+orderRouter.get( "/resto-seller/orders", auth, restoSeller, getRestoSellerOrdersController)
 orderRouter.put( "/update-status/:id",       auth, admin, updateFoodOrderStatusController)
 orderRouter.get( "/daily-report",            auth, admin, getDailySalesReport)
 orderRouter.post("/settle-cash",             auth, admin, settleRiderCashController)
