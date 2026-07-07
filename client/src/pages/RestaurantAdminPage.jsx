@@ -100,7 +100,7 @@ function OrderRow({ order, onUpdateStatus, getOrderNetEarnings }) {
       </div>
       <div className='flex items-center justify-between border-t border-slate-800 pt-3'>
         <div>
-          <p className='text-sm font-black text-white'>₹{order.totalAmount}</p>
+          <p className='text-sm font-black text-white'>₹{order.totalAmt}</p>
           {!isCancelled && (
             <p className='text-[10px] font-black text-emerald-400'>You earn ₹{net.toFixed(0)}</p>
           )}
@@ -344,7 +344,7 @@ export default function RestaurantAdminPage() {
   const restoOrders = orders.filter(o => o.store_details?.name === selectedResto?.name)
   const deliveredOrders = restoOrders.filter(o => o.delivery_status === 'Delivered')
   const cancelledCount = restoOrders.filter(o => o.delivery_status === 'Cancelled').length
-  const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
+  const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.totalAmt || 0), 0)
   const totalNetEarnings = restoOrders.reduce((sum, o) => sum + getOrderNetEarnings(o), 0)
   const totalSnapitCut = Math.max(0, totalRevenue - totalNetEarnings)
 

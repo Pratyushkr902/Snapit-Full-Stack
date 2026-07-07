@@ -189,7 +189,7 @@ export default function RestoSellerDashboard() {
   }, {})
 
   const deliveredOrders = orders.filter(o => o.delivery_status === 'Delivered')
-  const totalRevenue    = deliveredOrders.reduce((s, o) => s + (o.totalAmount || 0), 0)
+  const totalRevenue    = deliveredOrders.reduce((s, o) => s + (o.totalAmt || 0), 0)
   const totalSnapitCut  = deliveredOrders.reduce((s, o) => {
     const cut = (o.cartItems || []).reduce((a, i) => a + ((i.snapitMargin || 0) * (i.quantity || 1)), 0)
     return s + cut
@@ -593,7 +593,7 @@ export default function RestoSellerDashboard() {
                 <div className='flex flex-col gap-2'>
                   {deliveredOrders.map(order => {
                     const snapCut = (order.cartItems || []).reduce((a, i) => a + ((i.snapitMargin || 0) * (i.quantity || 1)), 0)
-                    const earned  = (order.totalAmount || 0) - snapCut
+                    const earned  = (order.totalAmt || 0) - snapCut
                     return (
                       <div key={order._id} className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex justify-between items-center'>
                         <div>
