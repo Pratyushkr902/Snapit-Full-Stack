@@ -54,6 +54,9 @@ const RiderDashboard = () => {
     const [activeTab, setActiveTab]         = useState('orders');
     const [earningFilter, setEarningFilter] = useState('all');
     const [lastSynced, setLastSynced]       = useState(null);
+    // ✅ NEW: tracks which order's cancel request is currently in flight, so we
+    // can disable that button and block duplicate taps while it resolves.
+    const [cancellingId, setCancellingId]   = useState(null);
 
     // ✅ FIX: socket now lives in a ref, created once inside a useEffect on
     // mount (not at module scope). Module-level sockets connect immediately
@@ -158,6 +161,36 @@ const RiderDashboard = () => {
             }
         } catch {
             toast.error("Update failed");
+        }
+    };
+
+    // Cancel an order still waiting for pickup (Confirmed) or still stuck
+    // awaiting seller response (Pending + delayed). Confirms first to avoid
+    // accidental taps, guards against duplicate submits while a request is
+    // in flight, and routes through the same updateOrderStatus endpoint the
+    // backend already supports ('Cancelled' is a valid enum value and the
+    // controller already handles refund calc + customer notification for
+    // this status). `cancelledBy: 'rider'` is included so the backend can
+    // distinguish rider-initiated cancels from admin/customer ones — this
+    // only has effect if the controller reads and persists that field.
+    const handleCancel = async (order) => {
+        if (cancellingId) return; // a cancel is already in flight — ignore extra taps
+        const confirmed = window.confirm(`Cancel order ${order.orderId}? This cannot be undone.`);
+        if (!confirmed) return;
+        setCancellingId(order.orderId);
+        try {
+            const response = await Axios({
+                ...SummaryApi.updateOrderStatus,
+                data: { orderId: order.orderId, status: 'Cancelled', cancelledBy: 'rider' }
+            });
+            if (response.data.success) {
+                toast.success('Order cancelled');
+                fetchRiderOrders(true);
+            }
+        } catch {
+            toast.error("Cancel failed");
+        } finally {
+            setCancellingId(null);
         }
     };
 
@@ -310,6 +343,12 @@ const RiderDashboard = () => {
                                     const hasMultiStores = order.involved_stores?.length > 1;
                                     const ageMinutes     = (Date.now() - new Date(order.createdAt)) / 60000;
                                     const isSellerDelayed = order.delivery_status === 'Pending' && ageMinutes >= 3;
+                                    // ✅ NEW: a rider can cancel a duplicate/mistaken order either while
+                                    // it's Confirmed (ready for pickup) or while it's still stuck awaiting
+                                    // seller response (isSellerDelayed) — previously only the former showed
+                                    // a cancel option, leaving delayed-pending duplicates uncancellable.
+                                    const canCancel      = order.delivery_status === 'Confirmed' || isSellerDelayed;
+                                    const isCancelling   = cancellingId === order.orderId;
 
                                     return (
                                         <div key={order._id}
@@ -450,6 +489,14 @@ const RiderDashboard = () => {
                                                 <button onClick={() => handlePickup(order)}
                                                     className='w-full py-3.5 rounded-2xl font-black text-sm text-white bg-orange-500 hover:bg-orange-400 shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
                                                     <FaCheckCircle/> PICKUP ANYWAY (Seller Delayed)
+                                                </button>
+                                            )}
+                                            {canCancel && (
+                                                <button
+                                                    onClick={() => handleCancel(order)}
+                                                    disabled={isCancelling}
+                                                    className='w-full py-2.5 rounded-2xl font-black text-xs text-red-400 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 active:scale-95'>
+                                                    {isCancelling ? '⏳ CANCELLING…' : '✕ CANCEL ORDER'}
                                                 </button>
                                             )}
                                             {order.delivery_status === 'Out for Delivery' && (
