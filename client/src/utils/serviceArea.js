@@ -10,7 +10,6 @@ const DELIVERY_ZONES = [
   { name: 'Kurkuri',   lat: 25.2780, lng: 84.8050, radiusKm: 1.0 },
   { name: 'Acchua',    lat: 25.3120, lng: 84.7980, radiusKm: 1.0 },
   { name: 'Chandos',   lat: 25.2650, lng: 84.8400, radiusKm: 1.0 },
-  { name: 'Chiksi',    lat: 25.2850, lng: 84.7850, radiusKm: 1.0 },
   { name: 'Milki',     lat: 25.3200, lng: 84.8100, radiusKm: 1.0 },
   { name: 'Akhtiyarpur', lat: 25.2750, lng: 84.8280, radiusKm: 1.0 },
   { name: 'Balipakar',   lat: 25.3010, lng: 84.7920, radiusKm: 1.0 },
