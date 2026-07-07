@@ -28,6 +28,8 @@ const DELIVERY_ZONES = [
 // zone name unambiguously. Tradeoff: gaps now exist between villages — a point that falls
 // between two circles will be "not serviceable" even if it's genuinely close to town.
 
+export const SERVICEABLE_VILLAGES = DELIVERY_ZONES.map(z => z.name)
+
 // Haversine formula — distance between 2 coords in km
 function getDistanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371

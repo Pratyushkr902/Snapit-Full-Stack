@@ -112,17 +112,19 @@ export const addAddressController = async (request, response) => {
             country, mobile, lat, lng
         } = request.body
 
-        // Use GPS coords if provided, otherwise geocode from city name
-        let finalLat = lat != null ? Number(lat) : null
-        let finalLng = lng != null ? Number(lng) : null
+        // GPS is now MANDATORY for zone enforcement. Typed city names are no
+        // longer trusted for delivery-zone verification — misspelled or
+        // fuzzy-matched village names were letting users outside the service
+        // area slip through via the old geocodeCityFallback() text-match path.
+        const finalLat = lat != null ? Number(lat) : null
+        const finalLng = lng != null ? Number(lng) : null
 
-        if (!finalLat || !finalLng) {
-            const geocoded = await geocodeCityFallback(city)
-            if (geocoded) {
-                finalLat = geocoded.lat
-                finalLng = geocoded.lng
-                console.log(`[addAddress] Geocoded "${city}" → ${finalLat}, ${finalLng}`)
-            }
+        if (finalLat == null || finalLng == null || Number.isNaN(finalLat) || Number.isNaN(finalLng)) {
+            return response.status(400).json({
+                message: "Please enable location access and tap 'Use My Current Location' to add an address.",
+                error:   true,
+                success: false,
+            })
         }
 
         const zoneCheck = isInDeliveryZone(finalLat, finalLng)

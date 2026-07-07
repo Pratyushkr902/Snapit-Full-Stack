@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import { IoClose, IoLocationSharp } from "react-icons/io5"
 import { useGlobalContext } from '../provider/GlobalProvider'
-import { isInDeliveryZone, getUserLocation } from '../utils/serviceArea'
+import { isInDeliveryZone, getUserLocation, SERVICEABLE_VILLAGES } from '../utils/serviceArea'
 
 const SERVICEABLE_PINCODES = [
   '801110', '801108', '801105', '801113', '801116'
@@ -153,16 +153,16 @@ const AddAddress = ({ close }) => {
             {/* City */}
             <div className='grid gap-1'>
               <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>City / Village</label>
-              <input
-                type='text'
-                placeholder='Paliganj'
+              <select
                 className={inputClass(errors.city)}
-                {...register("city", {
-                  required: "City is required",
-                  pattern: { value: /^[a-zA-Z\u0900-\u097F\s]+$/, message: "City name cannot contain numbers" },
-                  minLength: { value: 2, message: "Too short" }
-                })}
-              />
+                defaultValue=""
+                {...register("city", { required: "Please select your village" })}
+              >
+                <option value="" disabled>Select village</option>
+                {SERVICEABLE_VILLAGES.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
               {errors.city && <p className='text-xs text-red-500 mt-0.5'>⚠ {errors.city.message}</p>}
             </div>
 
