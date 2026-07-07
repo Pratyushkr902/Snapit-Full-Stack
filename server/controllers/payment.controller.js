@@ -2,6 +2,7 @@ import Razorpay from 'razorpay'
 import crypto from 'crypto'
 import UserModel from '../models/user.model.js'
 import SubscriptionModel from '../models/subscription.model.js'
+import WalletModel from '../models/wallet.model.js'
 
 // ── Razorpay instance with full validation ─────────────────────────────────
 const getRazorpayInstance = () => {
@@ -89,6 +90,7 @@ export const verifyPayment = async (req, res) => {
             description: bonus > 0
                 ? `Wallet recharge ₹${numAmount} + ₹${bonus} bonus`
                 : `Wallet recharge ₹${numAmount}`,
+            referenceId: razorpay_payment_id,
             date: new Date()
         }
 
@@ -102,6 +104,24 @@ export const verifyPayment = async (req, res) => {
         )
 
         if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+
+        // ── Dual-write: keep the standalone Wallet collection in sync ──────
+        // upsert: creates a Wallet doc for this user if one doesn't exist yet
+        try {
+            await WalletModel.findOneAndUpdate(
+                { userId },
+                {
+                    $inc: { balance: totalCredit },
+                    $push: { transactions: { $each: [transaction], $position: 0 } }
+                },
+                { new: true, upsert: true, setDefaultsOnInsert: true }
+            )
+        } catch (walletErr) {
+            // Don't fail the whole request if the Wallet-collection mirror write
+            // has a problem — the User doc (source of truth for balance) already
+            // succeeded. Just log it so it can be investigated / backfilled.
+            console.error('[verifyPayment] ⚠️ WalletModel sync failed:', walletErr.message)
+        }
 
         console.log(`[verifyPayment] ✅ ₹${totalCredit} credited. New balance: ₹${user.walletBalance}`)
         return res.json({

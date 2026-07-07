@@ -212,7 +212,6 @@ const Wallet = () => {
             if (verifyRes.data.success) {
               toast.success(verifyRes.data.message || `₹${finalAmount} added! 🎉`)
               setAmount('')
-              if (fetchUser) fetchUser()
               fetchWallet()
             } else {
               toast.error('Payment verification failed. Contact support.')
@@ -323,7 +322,6 @@ const Wallet = () => {
               toast.success(verifyRes.data.message || 'Welcome to Snapit Plus! ✨')
               setIsPlusMember(true)
               setPlusExpiry(verifyRes.data.data?.expiresAt)
-              if (fetchUser) fetchUser()
             } else {
               toast.error('Subscription verification failed. Contact support.')
             }
