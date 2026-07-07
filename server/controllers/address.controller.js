@@ -132,14 +132,6 @@ export const addAddressController = async (request, response) => {
                 error:   true,
                 success: false,
             })
-        }
-
-        const zoneCheck = isInDeliveryZone(finalLat, finalLng)
-        if (!zoneCheck.serviceable) {
-            return response.status(400).json({
-                message: "Sorry, we don't deliver to this location yet.",
-                error:   true,
-                success: false,
             })
         }
 
