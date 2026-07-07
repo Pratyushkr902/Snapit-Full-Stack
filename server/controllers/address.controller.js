@@ -132,7 +132,6 @@ export const addAddressController = async (request, response) => {
                 error:   true,
                 success: false,
             })
-            })
         }
 
         const createAddress = new AddressModel({
