@@ -35,3 +35,4 @@ server/seed*.mjs
 **/.DS_Store
 client/.gradle/
 client/android/app/google-services.json
+snapit-apk/.gradle/
