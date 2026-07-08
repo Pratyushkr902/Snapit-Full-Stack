@@ -7,7 +7,6 @@ const VerifyEmail = () => {
     const [searchParams] = useSearchParams()
     const code = searchParams.get('code')
 
-    // status: "verifying" | "success" | "error"
     const [status, setStatus] = useState('verifying')
     const [message, setMessage] = useState('Verifying your email, please wait...')
 

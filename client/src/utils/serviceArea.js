@@ -21,6 +21,11 @@ const DELIVERY_ZONES = [
   { name: 'Kalyanpuri Paipura',lat: 25.35483228778216,  lng: 84.79708175239959, radiusKm: 1.0 },
   { name: 'Chikasi',           lat: 25.28091606583264,  lng: 84.87069734970407, radiusKm: 1.78 }, // NOTE: ~9km east of existing 'Chiksi' — different location, verify name isn't a duplicate/typo
   { name: 'Lalganj Sehra',     lat: 25.292485478533443, lng: 84.82586927749715, radiusKm: 1.0 },
+  // Himalaya Medical College & Hospital (HMCH), Chiksi, SH-69, Paliganj — 900-bed hospital + college campus.
+  // Falls in the gap between Chandos (1.47km away, radius 1.0) and Chikasi (2.49km away, radius 1.78),
+  // so it was unserviceable despite being a real delivery hotspot. Given its own zone instead of
+  // stretching a neighbor. Radius kept to 0.45km (< the 0.47km gap to Chandos) to guarantee no overlap.
+  { name: 'Himalaya Medical College', lat: 25.2639198, lng: 84.8545598, radiusKm: 0.45 },
 ]
 // radiusKm = half the distance to each zone's nearest neighboring zone (min 1km, max 3km).
 // This guarantees zone circles never overlap, so a GPS point can only ever match ONE
