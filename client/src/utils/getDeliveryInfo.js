@@ -40,16 +40,27 @@ export const getDeliveryETA = (distanceKm) => {
   return null
 }
 
+// Chikasi zone spans two distance brackets (~7.2km–10.8km from store), which
+// would otherwise cause different Chikasi addresses to get charged different
+// fees (₹19 vs ₹49). Override to a flat ₹49 for the whole zone instead.
+const CHIKASI_LAT = 25.28091606583264
+const CHIKASI_LNG = 84.87069734970407
+const CHIKASI_RADIUS_KM = 1.78
+
 export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapitPlus = false) => {
   const dist   = getDistanceFromStore(customerLat, customerLng)
-  const charge = getDeliveryCharge(dist)
+  const chikasiDist = getDistanceKm(CHIKASI_LAT, CHIKASI_LNG, customerLat, customerLng)
+  const isChikasi = chikasiDist <= CHIKASI_RADIUS_KM
+  const charge = isChikasi ? 49 : getDeliveryCharge(dist)
 
   if (charge === null) {
     return { serviceable: false, distanceKm: dist, charge: 0, eta: null, label: 'Outside delivery range' }
   }
- 
+
 let finalCharge = charge
-if (dist <= 4) {
+if (isChikasi) {
+  if (isSnapitPlus ? cartTotal >= 699 : cartTotal >= 999) finalCharge = 0
+} else if (dist <= 4) {
   if (isSnapitPlus ? cartTotal >= 149 : cartTotal >= 399) finalCharge = 0
 } else if (dist <= 8) {
   if (isSnapitPlus ? cartTotal >= 399 : cartTotal >= 999) finalCharge = 0

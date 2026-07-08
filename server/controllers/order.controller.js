@@ -91,12 +91,21 @@ const haversineKm = (lat1, lng1, lat2, lng2) => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 const MAX_DELIVERY_RADIUS_KM = 12
+// Chikasi zone spans two distance brackets (~7.2km–10.8km from store), which
+// would otherwise cause different Chikasi addresses to get charged different
+// fees (₹19 vs ₹49). Override to a flat ₹49 for the whole zone instead.
+const CHIKASI_ZONE = { lat: 25.28091606583264, lng: 84.87069734970407, radiusKm: 1.78 }
 const calcDeliveryFee = (subTotal, lat, lng, user) => {
     if (lat == null || lng == null) return 12 // no coords — fall back to lowest slab
     const distanceKm = haversineKm(STORE_COORDS.lat, STORE_COORDS.lng, Number(lat), Number(lng))
     const isPlus = user?.isSnapitPlusMember &&
         user?.snapitPlusExpiresAt &&
         new Date() < new Date(user.snapitPlusExpiresAt)
+    const chikasiDistanceKm = haversineKm(CHIKASI_ZONE.lat, CHIKASI_ZONE.lng, Number(lat), Number(lng))
+    if (chikasiDistanceKm <= CHIKASI_ZONE.radiusKm) {
+        if (isPlus ? Number(subTotal) >= 699 : Number(subTotal) >= 999) return 0
+        return 49
+    }
     if (distanceKm <= 4) {
         if (isPlus ? Number(subTotal) >= 149 : Number(subTotal) >= 399) return 0
         return 12
