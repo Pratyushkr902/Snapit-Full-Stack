@@ -6,7 +6,6 @@ import { Toaster } from 'react-hot-toast';
 import Header from './components/Header'
 import Footer from './components/Footer'
 import CartMobileLink from './components/CartMobile'
-import OfferStrip from './components/OfferStrip';
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
 
@@ -218,7 +217,6 @@ function App() {
     <RemoteConfigProvider>
       <GlobalProvider>
         <div className="App">
-          {!isDashboard && <OfferStrip />}
           {!isDashboard && <Header openCart={() => setShowCart(true)} />}
           
           <main className={isDashboard ? '' : 'min-h-[78vh]'}>
