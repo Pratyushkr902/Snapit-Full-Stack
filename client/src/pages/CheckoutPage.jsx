@@ -13,10 +13,10 @@ import { isStoreOpen } from '../components/StoreClosedOverlay'
 
 const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
-const SERVICEABLE_AREAS = [
-  'paliganj', 'sarsi', 'kurkuri', 'acchua', 'chandos',
-  'chiksi', 'milki', 'akhtiyarpur', 'balipakar'
-]
+// NOTE: Serviceability is determined by real distance from store via
+// getDeliveryInfo() / deliveryInfo.serviceable (see checkServiceArea below).
+// Do not reintroduce a hardcoded area-name list here — it will drift out of
+// sync with server/utils/serviceArea.js and silently block valid zones.
 
 const CheckoutPage = () => {
   const { fetchCartItem, fetchOrder, totalPrice } = useGlobalContext() || {}
@@ -87,15 +87,6 @@ const CheckoutPage = () => {
 
   const checkServiceArea = () => {
     if (!selectedAddress) return true
-    const cityLower = (selectedAddress.city || '').toLowerCase()
-    const lineLower = (selectedAddress.address_line || '').toLowerCase()
-    const isServiceable = SERVICEABLE_AREAS.some(
-      area => cityLower.includes(area) || lineLower.includes(area)
-    )
-    if (!isServiceable) {
-      toast.error('Location not serviceable by Snapit at this moment.', { duration: 5000 })
-      return false
-    }
     if (deliveryInfo && !deliveryInfo.serviceable) {
       toast.error('Your location is outside our 12 km delivery range.', { duration: 5000 })
       return false
