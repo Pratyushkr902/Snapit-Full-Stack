@@ -11,7 +11,6 @@ import Register from "../pages/Register";
 const SearchPage             = lazy(() => import('../pages/Searchpage'))
 const ForgotPassword         = lazy(() => import('../pages/ForgotPassword'))
 const VerifyEmail            = lazy(() => import('../pages/VerifyEmail'))
-const VerifyEmail            = lazy(() => import('../pages/VerifyEmail'))
 const OtpVerification        = lazy(() => import('../pages/OtpVerification'))
 const ResetPassword          = lazy(() => import('../pages/ResetPassword'))
 const UserMenuMobile         = lazy(() => import('../pages/UserMenuMobile'))
@@ -146,7 +145,6 @@ const router = createHashRouter([
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       { path: "forgot-password", element: <S><ForgotPassword /></S> },
-      { path: "verify-email", element: <S><VerifyEmail /></S> },
       { path: "verify-email", element: <S><VerifyEmail /></S> },
       { path: "verification-otp", element: <S><OtpVerification /></S> },
       { path: "reset-password", element: <S><ResetPassword /></S> },
