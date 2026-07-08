@@ -80,53 +80,12 @@ const toSafeOrder = (o) => ({
 // Snapit Main Store — Paliganj, Bihar (fixed single-store coords)
 // Must stay in sync with client/src/utils/getDeliveryInfo.js — same coords,
 // same tiers, same free thresholds (Plus: 149/399/699, Normal: 399/999/999).
-const STORE_COORDS = { lat: 25.33121156659458, lng: 84.8006737574818 }
-const haversineKm = (lat1, lng1, lat2, lng2) => {
-    const R = 6371 // Earth radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180
-    const dLng = (lng2 - lng1) * Math.PI / 180
-    const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLng / 2) ** 2
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-const MAX_DELIVERY_RADIUS_KM = 12
-// Chikasi zone spans two distance brackets (~7.2km–10.8km from store), which
-// would otherwise cause different Chikasi addresses to get charged different
-// fees (₹19 vs ₹49). Override to a flat ₹49 for the whole zone instead.
-const CHIKASI_ZONE = { lat: 25.28091606583264, lng: 84.87069734970407, radiusKm: 1.78 }
-const calcDeliveryFee = (subTotal, lat, lng, user) => {
-    if (lat == null || lng == null) return 12 // no coords — fall back to lowest slab
-    const distanceKm = haversineKm(STORE_COORDS.lat, STORE_COORDS.lng, Number(lat), Number(lng))
-    const isPlus = user?.isSnapitPlusMember &&
-        user?.snapitPlusExpiresAt &&
-        new Date() < new Date(user.snapitPlusExpiresAt)
-    const chikasiDistanceKm = haversineKm(CHIKASI_ZONE.lat, CHIKASI_ZONE.lng, Number(lat), Number(lng))
-    if (chikasiDistanceKm <= CHIKASI_ZONE.radiusKm) {
-        if (isPlus ? Number(subTotal) >= 699 : Number(subTotal) >= 999) return 0
-        return 49
-    }
-    if (distanceKm <= 4) {
-        if (isPlus ? Number(subTotal) >= 149 : Number(subTotal) >= 399) return 0
-        return 12
-    }
-    if (distanceKm <= 8) {
-        if (isPlus ? Number(subTotal) >= 399 : Number(subTotal) >= 999) return 0
-        return 19
-    }
-    if (distanceKm <= 10) {
-        if (isPlus ? Number(subTotal) >= 699 : Number(subTotal) >= 999) return 0
-        return 49
-    }
-    // 10-12km
-    if (isPlus ? Number(subTotal) >= 699 : Number(subTotal) >= 999) return 0
-    return 49
-}
-const isOutOfDeliveryRange = (lat, lng) => {
-    if (lat == null || lng == null) return false // no coords — can't determine, allow through
-    const distanceKm = haversineKm(STORE_COORDS.lat, STORE_COORDS.lng, Number(lat), Number(lng))
-    return distanceKm > MAX_DELIVERY_RADIUS_KM
-}
+import {
+  calcDeliveryFee,
+  isOutOfDeliveryRange,
+  MAX_DELIVERY_RADIUS_KM,
+  EXPRESS_DELIVERY_FEE,
+} from '../utils/deliveryFee.js'
 const resolveStore = async (lat, lng) => {
     return { name: 'Snapit Main Store', lat, lng }
 }
@@ -182,7 +141,7 @@ const BIRTHDAY_BONUS_AMOUNT      = 50    // reduced from 200
 const SURPRISE_BOX_MIN           = 10
 const SURPRISE_BOX_MAX           = 30
 const SURPRISE_BOX_COOLDOWN_DAYS = 7
-const EXPRESS_DELIVERY_FEE       = 25    // flat surcharge over normal delivery fee
+// EXPRESS_DELIVERY_FEE now imported from ../utils/deliveryFee.js
 const GST_RATE                   = 0.18  // assumes prices are GST-inclusive
 
 const giveSnapitPlusCashback = async (userId, orderSubTotal) => {

@@ -35,7 +35,7 @@ const CartMobilePage = () => {
     // marked "Estimated" in the UI so it's not read as a locked-in price.
     const deliveryFee = deliveryInfo
         ? deliveryInfo.charge
-        : (totalPrice >= 399 ? 0 : (isSnapitPlus && totalPrice >= 149) ? 0 : 12)
+        : (isSnapitPlus ? 0 : 12)
     const isEstimate = !deliveryInfo
     const grandTotal = totalPrice + deliveryFee;
 
@@ -132,11 +132,13 @@ const CartMobilePage = () => {
                                     </p>
                                 </div>
                                 {deliveryFee > 0 && !isEstimate && (
-                                    <div className='bg-orange-50 p-2 rounded-lg border border-orange-100'>
-                                        <p className='text-[10px] text-orange-600 text-center font-bold uppercase tracking-tight'>
-                                            Add {DisplayPriceInRupees((isSnapitPlus ? 149 : 399) - totalPrice)} more for FREE DELIVERY
-                                        </p>
-                                    </div>
+                                    {isSnapitPlus ? null : (
+                                        <div className='bg-purple-50 p-2 rounded-lg border border-purple-100'>
+                                            <p className='text-[10px] text-purple-600 text-center font-bold uppercase tracking-tight'>
+                                                Join Snapit Plus for FREE DELIVERY on every order
+                                            </p>
+                                        </div>
+                                    )}
                                 )}
                                 {isEstimate && (
                                     <p className='text-[10px] text-slate-400 text-center'>

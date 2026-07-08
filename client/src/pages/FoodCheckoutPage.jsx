@@ -112,8 +112,12 @@ const FoodCheckoutPage = () => {
     return acc + basePrice * (quantities[key] || 1)
   }, 0)
 
-  const FREE_DELIVERY_THRESHOLD = 399
-  const deliveryFee = subTotal >= FREE_DELIVERY_THRESHOLD ? 0 : restaurantDeliveryFee
+  const isSnapitPlus = Boolean(
+    user?.isSnapitPlusMember &&
+    user?.snapitPlusExpiresAt &&
+    new Date() < new Date(user.snapitPlusExpiresAt)
+  )
+  const deliveryFee = isSnapitPlus ? 0 : restaurantDeliveryFee
   const walletBal   = Number(user?.walletBalance || 0)
   const preWallet   = subTotal - couponDiscount + deliveryFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0

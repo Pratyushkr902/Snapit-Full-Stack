@@ -3,6 +3,7 @@ import UserModel  from '../models/user.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
 import crypto     from 'crypto'
+import { calcDeliveryFee } from '../utils/deliveryFee.js'
 
 const getRazorpay = () => new Razorpay({
   key_id:     process.env.RAZORPAY_KEY_ID,
@@ -96,6 +97,27 @@ const extractBody = (body) => {
   }
 }
 
+// ── Recompute delivery_fee & totalAmt server-side; client values are never trusted ──
+const applyServerPricing = (fields, user) => {
+  const { lat, lng } = fields.deliveryLocation || {}
+  const serverDeliveryFee = calcDeliveryFee(fields.subTotalAmt, lat, lng, user)
+  const serverTotal = fields.subTotalAmt + serverDeliveryFee
+    + fields.tip - fields.couponDiscount - fields.walletAmountUsed
+
+  if (Math.abs(fields.delivery_fee - serverDeliveryFee) > 1 ||
+      Math.abs(fields.totalAmt - serverTotal) > 1) {
+    console.warn(
+      `PRICE_TAMPER | food-order | user=${user._id} | ` +
+      `clientFee=${fields.delivery_fee} serverFee=${serverDeliveryFee} | ` +
+      `clientTotal=${fields.totalAmt} serverTotal=${serverTotal}`
+    )
+  }
+
+  fields.delivery_fee = serverDeliveryFee
+  fields.totalAmt = serverTotal
+  return fields
+}
+
 // ── Shared order fields ─────────────────────────────────────────────────────
 // NOTE: now async because buildCartItems looks up the DB — every caller must await this.
 const buildOrderFields = async (userId, fields, extra = {}) => {
@@ -161,8 +183,11 @@ export async function foodOrderCOD(req, res) {
     const fields = extractBody(req.body)
     if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
-
     // ✅ FIX: auth middleware sets req.userId (not req.user._id) — req.user does not exist
+    const user = await UserModel.findById(req.userId)
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+    applyServerPricing(fields, user)
+
     const order = new OrderModel(await buildOrderFields(req.userId, fields, {
       payment_status:  'CASH ON DELIVERY',
       payment_mode:    'COD',
@@ -187,13 +212,14 @@ export async function foodOrderWallet(req, res) {
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
 
     // ✅ FIX: req.userId, not req.user._id
+    // ✅ FIX: req.userId, not req.user._id
     const user = await UserModel.findById(req.userId)
     if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+    applyServerPricing(fields, user)   // ← must run before balance check / deduction below
 
     const walletBal = Number(user.walletBalance || 0)
     // ✅ deduct only what the frontend says was used from wallet (grandTotal when paying 100% via wallet)
     const deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : fields.totalAmt
-
     if (walletBal < deductAmt)
       return res.status(400).json({
         success: false,
@@ -224,25 +250,29 @@ export async function foodOrderWallet(req, res) {
 // ── POST /api/restaurant/food-order/create-payment ────────────────────────
 export async function foodOrderCreatePayment(req, res) {
   try {
-    const { totalAmt } = req.body
-    if (!totalAmt || Number(totalAmt) <= 0)
+    const fields = extractBody(req.body)
+    if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
+    if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
+
+    const user = await UserModel.findById(req.userId)
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+    applyServerPricing(fields, user)
+
+    if (fields.totalAmt <= 0)
       return res.status(400).json({ success: false, message: 'Invalid amount' })
 
     const rzpOrder = await getRazorpay().orders.create({
-      amount:   Math.round(Number(totalAmt) * 100),
+      amount:   Math.round(fields.totalAmt * 100),
       currency: 'INR',
       receipt:  genOrderId(),
     })
-
-    console.log(`[foodOrderCreatePayment] ✅ rzpOrderId=${rzpOrder.id} amount=₹${totalAmt}`)
+    console.log(`[foodOrderCreatePayment] ✅ rzpOrderId=${rzpOrder.id} amount=₹${fields.totalAmt}`)
     return res.json(rzpOrder)
-
   } catch (err) {
     console.error('[foodOrderCreatePayment] ❌', err.message)
     return res.status(500).json({ success: false, message: err.message })
   }
 }
-
 // ── POST /api/restaurant/food-order/verify-payment ────────────────────────
 export async function foodOrderVerifyPayment(req, res) {
   try {
@@ -270,6 +300,10 @@ export async function foodOrderVerifyPayment(req, res) {
     const fields = extractBody(rest)
     if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
     if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
+
+    const user = await UserModel.findById(req.userId)
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+    applyServerPricing(fields, user)
 
     // ✅ FIX: req.userId, not req.user._id — deduct partial wallet if used alongside online payment
     await deductWallet(req.userId, fields.walletAmountUsed, fields.restaurantName)
