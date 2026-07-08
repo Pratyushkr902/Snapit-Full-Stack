@@ -1,7 +1,7 @@
-// Snapit delivery zones — center coordinates + radius in km
-// Villages: Paliganj, Sarsi, Kurkuri, Acchua, Chandos, Chiksi, Milki
+// Client-side mirror of server/utils/serviceArea.js — MUST be kept in sync
+// with the server zones. This is for UX (instant feedback); the server
+// check is the source of truth that actually enforces it.
 
-// Actual store location — used for the "X km from our store" distance shown to users
 const STORE_LOCATION = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
 const DELIVERY_ZONES = [
@@ -19,22 +19,12 @@ const DELIVERY_ZONES = [
   { name: 'Dariyapur',         lat: 25.332830390539364, lng: 84.79224964406752, radiusKm: 1.0 },
   { name: 'Fatehpur',          lat: 25.344837251618888, lng: 84.78541480320204, radiusKm: 1.0 },
   { name: 'Kalyanpuri Paipura',lat: 25.35483228778216,  lng: 84.79708175239959, radiusKm: 1.0 },
-  { name: 'Chikasi',           lat: 25.28091606583264,  lng: 84.87069734970407, radiusKm: 1.78 }, // NOTE: ~9km east of existing 'Chiksi' — different location, verify name isn't a duplicate/typo
+  { name: 'Chikasi',           lat: 25.28091606583264,  lng: 84.87069734970407, radiusKm: 1.78 },
   { name: 'Lalganj Sehra',     lat: 25.292485478533443, lng: 84.82586927749715, radiusKm: 1.0 },
-  // Himalaya Medical College & Hospital (HMCH), Chiksi, SH-69, Paliganj — 900-bed hospital + college campus.
-  // Falls in the gap between Chandos (1.47km away, radius 1.0) and Chikasi (2.49km away, radius 1.78),
-  // so it was unserviceable despite being a real delivery hotspot. Given its own zone instead of
-  // stretching a neighbor. Radius kept to 0.45km (< the 0.47km gap to Chandos) to guarantee no overlap.
-  { name: 'Himalaya Medical College', lat: 25.2639198, lng: 84.8545598, radiusKm: 0.45 },
 ]
-// radiusKm = half the distance to each zone's nearest neighboring zone (min 1km, max 3km).
-// This guarantees zone circles never overlap, so a GPS point can only ever match ONE
-// zone name unambiguously. Tradeoff: gaps now exist between villages — a point that falls
-// between two circles will be "not serviceable" even if it's genuinely close to town.
 
 export const SERVICEABLE_VILLAGES = DELIVERY_ZONES.map(z => z.name)
 
-// Haversine formula — distance between 2 coords in km
 function getDistanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371
   const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -48,73 +38,34 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   return R * c
 }
 
-// Check if a lat/lng is within any delivery zone — picks the NEAREST matching zone,
-// not just the first one in the array. Zone circles overlap (radii 3-4km, centers
-// often <5km apart), so a point can fall inside multiple circles at once. Previously
-// this returned the first array match regardless of actual distance, which is why
-// points near Indira Nagar were getting labeled "Acchua" instead of whichever zone
-// center is truly closest.
-//
-// distanceKm returned here is the REAL distance from the user to the store
-// (STORE_LOCATION), not the distance to the matched village's center. Those are
-// two different numbers — zone matching decides "which village name to show",
-// store distance decides "how far is delivery actually coming from" — and the
-// UI label "X km from our store" should always use the latter.
 export function isInDeliveryZone(lat, lng) {
-  let best = null
+  if (lat == null || lng == null) return { serviceable: false, zone: null }
 
+  let best = null
   for (const zone of DELIVERY_ZONES) {
     const dist = getDistanceKm(lat, lng, zone.lat, zone.lng)
     if (dist <= zone.radiusKm) {
-      if (!best || dist < best.dist) {
-        best = { zone: zone.name, dist }
-      }
+      if (!best || dist < best.dist) best = { zone: zone.name, dist }
     }
   }
 
   if (best) {
     const storeDistanceKm = getDistanceKm(lat, lng, STORE_LOCATION.lat, STORE_LOCATION.lng)
-    return { serviceable: true, zone: best.zone, distanceKm: storeDistanceKm.toFixed(1) }
+    return { serviceable: true, zone: best.zone, distanceKm: Number(storeDistanceKm.toFixed(1)) }
   }
   return { serviceable: false, zone: null }
 }
 
-// Get user's current location
-// Uses the Capacitor Geolocation plugin on native (Android/iOS) so the OS
-// permission dialog actually fires — raw navigator.geolocation inside a
-// Capacitor WebView often fails silently without it, which is why location
-// detection was unreliable specifically in the APK (worked fine on web).
-// Falls back to navigator.geolocation when running in a plain browser tab.
-export async function getUserLocation() {
-  try {
-    const { Capacitor } = await import('@capacitor/core')
-    if (Capacitor.isNativePlatform()) {
-      const { Geolocation } = await import('@capacitor/geolocation')
-      const permStatus = await Geolocation.checkPermissions()
-      if (permStatus.location !== 'granted' && permStatus.coarseLocation !== 'granted') {
-        const requested = await Geolocation.requestPermissions()
-        if (requested.location !== 'granted' && requested.coarseLocation !== 'granted') {
-          throw new Error('Location permission denied')
-        }
-      }
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 })
-      return { lat: pos.coords.latitude, lng: pos.coords.longitude }
-    }
-  } catch (nativeErr) {
-    // Native path failed (plugin missing, permission denied, etc) — fall
-    // through to the browser API below rather than failing outright.
-    console.log('Native geolocation failed, falling back to browser API:', nativeErr?.message)
-  }
-
+export function getUserLocation() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Geolocation not supported'))
       return
     }
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      err => reject(err),
-      { enableHighAccuracy: true, timeout: 8000 }
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   })
 }
