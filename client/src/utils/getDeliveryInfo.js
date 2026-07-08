@@ -12,62 +12,64 @@ export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 export const getDistanceFromStore = (customerLat, customerLng) =>
   getDistanceKm(STORE_LAT, STORE_LNG, customerLat, customerLng)
 
-// 0–4 km   → ₹12
-// 4–8 km   → ₹19
-// 8–10 km  → ₹49
-// 10–12 km → ₹49
-// >12 km   → not serviceable
+// 0–3 km   → ₹12   ┐
+// 3–6 km   → ₹19   ┘  0–6km zone
+// 6–14 km  → ₹49       flat zone
+// >14 km   → not serviceable
 export const getDeliveryCharge = (distanceKm) => {
-  if (distanceKm <= 4)  return 12
-  if (distanceKm <= 8)  return 19
-  if (distanceKm <= 10) return 49
-  if (distanceKm <= 12) return 49
+  if (distanceKm <= 3)  return 12
+  if (distanceKm <= 6)  return 19
+  if (distanceKm <= 14) return 49
   return null
 }
 
 export const getDeliveryETA = (distanceKm) => {
   if (distanceKm <= 5)  return '15 min'
   if (distanceKm <= 7)  return '20–25 min'
-  if (distanceKm <= 12) return '30–40 min'
+  if (distanceKm <= 14) return '30–40 min'
   return null
 }
 
-// Chikasi zone spans two distance brackets (~7.2km–10.8km from store), which
-// would otherwise cause different Chikasi addresses to get charged different
-// fees (₹19 vs ₹49). Override to a flat ₹49 for the whole zone instead.
+// Chikasi zone spans across the 6km boundary, which would otherwise cause
+// different Chikasi addresses to get charged different fees. Override to a
+// flat ₹49 for the whole zone instead (same treatment as 6–14km bracket).
 const CHIKASI_LAT = 25.28091606583264
 const CHIKASI_LNG = 84.87069734970407
 const CHIKASI_RADIUS_KM = 1.78
 
+// ── Snapit Plus free-delivery rules ─────────────────────────────────────────
+// 0–6 km  : non-Plus always pays ₹12/₹19 (distance fee) | Plus free if cart >= ₹149, else pays distance fee
+// 6–14 km : non-Plus always pays ₹49                    | Plus free if cart >= ₹399, else pays ₹49
+// Chikasi : non-Plus always pays ₹49                    | Plus free if cart >= ₹399, else pays ₹49
+// >14 km  : not serviceable
 export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapitPlus = false) => {
-  const dist   = getDistanceFromStore(customerLat, customerLng)
+  const dist = getDistanceFromStore(customerLat, customerLng)
   const chikasiDist = getDistanceKm(CHIKASI_LAT, CHIKASI_LNG, customerLat, customerLng)
   const isChikasi = chikasiDist <= CHIKASI_RADIUS_KM
-  const charge = isChikasi ? 49 : getDeliveryCharge(dist)
 
-  if (charge === null) {
+  if (!isChikasi && dist > 14) {
     return { serviceable: false, distanceKm: dist, charge: 0, eta: null, label: 'Outside delivery range' }
   }
 
-let finalCharge = charge
-if (isChikasi) {
-  if (isSnapitPlus ? cartTotal >= 699 : cartTotal >= 999) finalCharge = 0
-} else if (dist <= 4) {
-  if (isSnapitPlus) finalCharge = 0
-} else if (dist <= 8) {
-  if (isSnapitPlus) finalCharge = 0
-} else {
-  // 8-12km
-  if (isSnapitPlus ? cartTotal >= 699 : cartTotal >= 999) finalCharge = 0
-}
+  const charge = isChikasi ? 49 : getDeliveryCharge(dist)
+
+  let finalCharge = charge
+  if (isSnapitPlus) {
+    if (isChikasi || dist > 6) {
+      if (cartTotal >= 399) finalCharge = 0
+    } else {
+      if (cartTotal >= 149) finalCharge = 0
+    }
+  }
 
   const eta = getDeliveryETA(dist)
 

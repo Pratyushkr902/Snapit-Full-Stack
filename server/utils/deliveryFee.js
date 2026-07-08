@@ -7,11 +7,11 @@
 const STORE_LAT = 25.33121156659458
 const STORE_LNG = 84.8006737574818
 
-export const MAX_DELIVERY_RADIUS_KM = 12
+export const MAX_DELIVERY_RADIUS_KM = 14
 export const EXPRESS_DELIVERY_FEE = 25
 
-// Chikasi zone override — spans two distance brackets (~7.2km–10.8km from store),
-// which would otherwise charge different fees for different Chikasi addresses.
+// Chikasi zone override — spans across the 6km boundary, which would otherwise
+// charge different fees for different Chikasi addresses.
 // Flat ₹49 for the whole zone instead.
 const CHIKASI_LAT = 25.28091606583264
 const CHIKASI_LNG = 84.87069734970407
@@ -33,15 +33,14 @@ export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
 export const getDistanceFromStore = (customerLat, customerLng) =>
   getDistanceKm(STORE_LAT, STORE_LNG, customerLat, customerLng)
 
-// 0–4 km   → ₹12
-// 4–8 km   → ₹19
-// 8–10 km  → ₹49
-// 10–12 km → ₹49
-// >12 km   → not serviceable
+// 0–3 km   → ₹12
+// 3–6 km   → ₹19
+// 6–14 km  → ₹49
+// >14 km   → not serviceable
 const getDeliveryChargeByDistance = (distanceKm) => {
-  if (distanceKm <= 4) return 12
-  if (distanceKm <= 8) return 19
-  if (distanceKm <= 12) return 49
+  if (distanceKm <= 3) return 12
+  if (distanceKm <= 6) return 19
+  if (distanceKm <= 14) return 49
   return null
 }
 
