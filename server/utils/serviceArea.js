@@ -1,63 +1,25 @@
 // server/utils/serviceArea.js
-// Server-side mirror of client/src/utils/serviceArea.js — MUST be kept in sync
-// with the client zones. This is the source of truth: the client check is for
-// UX (instant feedback), this one actually enforces it.
+// Server-side mirror of client/src/utils/serviceArea.js — MUST be kept in sync with the client zones.
 
 const STORE_LOCATION = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
 const DELIVERY_ZONES = [
-  { name: 'Paliganj',  lat: 25.2921, lng: 84.8170, radiusKm: 1.0 },
-  { name: 'Sarsi',     lat: 25.3050, lng: 84.8320, radiusKm: 1.0 },
-  { name: 'Kurkuri',   lat: 25.2780, lng: 84.8050, radiusKm: 1.0 },
-  { name: 'Acchua',    lat: 25.3120, lng: 84.7980, radiusKm: 1.0 },
-  { name: 'Chandos',   lat: 25.2650, lng: 84.8400, radiusKm: 1.0 },
-  { name: 'Milki',     lat: 25.3200, lng: 84.8100, radiusKm: 1.0 },
+  { name: 'Paliganj', lat: 25.2921, lng: 84.8170, radiusKm: 1.0 },
+  { name: 'Sarsi', lat: 25.3050, lng: 84.8320, radiusKm: 1.0 },
+  { name: 'Kurkuri', lat: 25.2780, lng: 84.8050, radiusKm: 1.0 },
+  { name: 'Acchua', lat: 25.3120, lng: 84.7980, radiusKm: 1.0 },
+  { name: 'Chandos', lat: 25.2650, lng: 84.8400, radiusKm: 1.0 },
+  { name: 'Milki', lat: 25.3200, lng: 84.8100, radiusKm: 1.0 },
   { name: 'Akhtiyarpur', lat: 25.2750, lng: 84.8280, radiusKm: 1.0 },
-  { name: 'Balipakar',   lat: 25.3010, lng: 84.7920, radiusKm: 1.0 },
-  { name: 'Ular More',         lat: 25.361971450391845, lng: 84.83978080090998, radiusKm: 2.18 },
-  { name: 'Rampur Nagawa',     lat: 25.298481843473738, lng: 84.7537306481682,  radiusKm: 1.0 },
-  { name: 'Nirakhpur Pali',    lat: 25.30966360261287,  lng: 84.76346494046578, radiusKm: 1.0 },
-  { name: 'Dariyapur',         lat: 25.332830390539364, lng: 84.79224964406752, radiusKm: 1.0 },
-  { name: 'Fatehpur',          lat: 25.344837251618888, lng: 84.78541480320204, radiusKm: 1.0 },
-  { name: 'Kalyanpuri Paipura',lat: 25.35483228778216,  lng: 84.79708175239959, radiusKm: 1.0 },
-  { name: 'Chikasi',           lat: 25.28091606583264,  lng: 84.87069734970407, radiusKm: 1.78 },
-  { name: 'Lalganj Sehra',     lat: 25.292485478533443, lng: 84.82586927749715, radiusKm: 1.0 },
-  // Himalaya Medical College & Hospital (HMCH), Chiksi, SH-69, Paliganj — 900-bed hospital + college campus.
-  // Falls in the gap between Chandos and Chikasi, so it was unserviceable despite being a real
-  // delivery hotspot. Given its own zone instead of stretching a neighbor. Radius kept tight
-  // to guarantee no overlap with Chandos.
-  { name: 'Himalaya Medical
-cd ~/Snapit-Full-Stack
-
-cat > server/utils/serviceArea.js << 'EOF'
-// server/utils/serviceArea.js
-// Server-side mirror of client/src/utils/serviceArea.js — MUST be kept in sync
-// with the client zones. This is the source of truth: the client check is for
-// UX (instant feedback), this one actually enforces it.
-
-const STORE_LOCATION = { lat: 25.33121156659458, lng: 84.8006737574818 }
-
-const DELIVERY_ZONES = [
-  { name: 'Paliganj',  lat: 25.2921, lng: 84.8170, radiusKm: 1.0 },
-  { name: 'Sarsi',     lat: 25.3050, lng: 84.8320, radiusKm: 1.0 },
-  { name: 'Kurkuri',   lat: 25.2780, lng: 84.8050, radiusKm: 1.0 },
-  { name: 'Acchua',    lat: 25.3120, lng: 84.7980, radiusKm: 1.0 },
-  { name: 'Chandos',   lat: 25.2650, lng: 84.8400, radiusKm: 1.0 },
-  { name: 'Milki',     lat: 25.3200, lng: 84.8100, radiusKm: 1.0 },
-  { name: 'Akhtiyarpur', lat: 25.2750, lng: 84.8280, radiusKm: 1.0 },
-  { name: 'Balipakar',   lat: 25.3010, lng: 84.7920, radiusKm: 1.0 },
-  { name: 'Ular More',         lat: 25.361971450391845, lng: 84.83978080090998, radiusKm: 2.18 },
-  { name: 'Rampur Nagawa',     lat: 25.298481843473738, lng: 84.7537306481682,  radiusKm: 1.0 },
-  { name: 'Nirakhpur Pali',    lat: 25.30966360261287,  lng: 84.76346494046578, radiusKm: 1.0 },
-  { name: 'Dariyapur',         lat: 25.332830390539364, lng: 84.79224964406752, radiusKm: 1.0 },
-  { name: 'Fatehpur',          lat: 25.344837251618888, lng: 84.78541480320204, radiusKm: 1.0 },
-  { name: 'Kalyanpuri Paipura',lat: 25.35483228778216,  lng: 84.79708175239959, radiusKm: 1.0 },
-  { name: 'Chikasi',           lat: 25.28091606583264,  lng: 84.87069734970407, radiusKm: 1.78 },
-  { name: 'Lalganj Sehra',     lat: 25.292485478533443, lng: 84.82586927749715, radiusKm: 1.0 },
-  // Himalaya Medical College & Hospital (HMCH), Chiksi, SH-69, Paliganj — 900-bed hospital + college campus.
-  // Falls in the gap between Chandos and Chikasi, so it was unserviceable despite being a real
-  // delivery hotspot. Given its own zone instead of stretching a neighbor. Radius kept tight
-  // to guarantee no overlap with Chandos.
+  { name: 'Balipakar', lat: 25.3010, lng: 84.7920, radiusKm: 1.0 },
+  { name: 'Ular More', lat: 25.361971450391845, lng: 84.83978080090998, radiusKm: 2.18 },
+  { name: 'Rampur Nagawa', lat: 25.298481843473738, lng: 84.7537306481682, radiusKm: 1.0 },
+  { name: 'Nirakhpur Pali', lat: 25.30966360261287, lng: 84.76346494046578, radiusKm: 1.0 },
+  { name: 'Dariyapur', lat: 25.332830390539364, lng: 84.79224964406752, radiusKm: 1.0 },
+  { name: 'Fatehpur', lat: 25.344837251618888, lng: 84.78541480320204, radiusKm: 1.0 },
+  { name: 'Kalyanpuri Paipura', lat: 25.35483228778216, lng: 84.79708175239959, radiusKm: 1.0 },
+  { name: 'Chikasi', lat: 25.28091606583264, lng: 84.87069734970407, radiusKm: 1.78 },
+  { name: 'Lalganj Sehra', lat: 25.292485478533443, lng: 84.82586927749715, radiusKm: 1.0 },
   { name: 'Himalaya Medical College', lat: 25.2639198, lng: 84.8545598, radiusKm: 0.45 },
 ]
 
