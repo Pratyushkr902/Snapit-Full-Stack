@@ -136,14 +136,12 @@ const DisplayCartItem = ({close}) => {
                                             {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
                                         </p>
                                     </div>
-                                    {deliveryFee > 0 && !isEstimate && (
-                                        {isSnapitPlus ? null : (
-                                            <div className='bg-purple-50 p-2 rounded-lg border border-purple-100'>
-                                                <p className='text-[10px] text-purple-600 text-center font-bold uppercase tracking-tight'>
-                                                    Join Snapit Plus for FREE DELIVERY on every order
-                                                </p>
-                                            </div>
-                                        )}
+                                    {deliveryFee > 0 && !isEstimate && !isSnapitPlus && (
+                                        <div className='bg-purple-50 p-2 rounded-lg border border-purple-100'>
+                                            <p className='text-[10px] text-purple-600 text-center font-bold uppercase tracking-tight'>
+                                                Join Snapit Plus for FREE DELIVERY on every order
+                                            </p>
+                                        </div>
                                     )}
                                     {isEstimate && (
                                         <p className='text-[10px] text-slate-400 text-center'>
