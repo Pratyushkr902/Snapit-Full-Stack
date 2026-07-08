@@ -1,4 +1,4 @@
-const VerifyEmailTemplate = (name, url) => {
+const VerifyEmailTemplate = ({ name, url }) => {
     return `
     <p> Dear ${name},</p>
     <p>Thank you for registering Snapit.</p>
