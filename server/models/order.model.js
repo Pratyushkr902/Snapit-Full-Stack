@@ -155,9 +155,10 @@ orderSchema.post('save', async function (doc) {
                 userId: doc.userId,
                 _id: { $ne: doc._id }
             })
-            const inc = { 'campusAmbassador.referralStats.totalOrders': 1 }
+            const inc = { 'campusAmbassador.referralStats.totalOrders': 1, 'campusAmbassador.performance.points': 2 }
             if (priorOrderCount === 0) {
                 inc['campusAmbassador.referralStats.firstOrders'] = 1
+                inc['campusAmbassador.performance.points'] += 10
             }
             await UserModel.updateOne({ _id: buyer.referredByAmbassador }, { $inc: inc })
         }
@@ -165,7 +166,7 @@ orderSchema.post('save', async function (doc) {
         if (doc.delivery_status === 'Delivered' && doc.wasModifiedDeliveryStatus) {
             await UserModel.updateOne(
                 { _id: buyer.referredByAmbassador },
-                { $inc: { 'campusAmbassador.referralStats.completedOrders': 1 } }
+                { $inc: { 'campusAmbassador.referralStats.completedOrders': 1, 'campusAmbassador.performance.points': 15 } }
             )
         }
     } catch (err) {

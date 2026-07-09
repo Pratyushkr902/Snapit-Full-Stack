@@ -127,7 +127,10 @@ export async function registerUserController(request, response) {
             payload.referredByAmbassador = ambassadorReferrer._id
             await UserModel.updateOne(
                 { _id: ambassadorReferrer._id },
-                { $inc: { 'campusAmbassador.referralStats.signUps': 1 } }
+                { $inc: {
+                    'campusAmbassador.referralStats.signUps': 1,
+                    'campusAmbassador.performance.points': 5
+                } }
             )
         }
 
