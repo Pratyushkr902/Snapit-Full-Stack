@@ -265,7 +265,7 @@ export default function RestaurantAdminPage() {
         setMenuItems(prev => prev.map(i => i._id === editingItem._id ? updated : i))
         toast.success('Item updated')
       } else {
-        const res = await Axios({ method: 'POST', url: '/api/restaurant/menu/add', data: body })
+        const res = await Axios({ method: 'POST', url: `/api/restaurant/${selectedResto._id}/menu`, data: body })
         if (res.data?.success) setMenuItems(prev => [...prev, res.data.data])
         toast.success('Item added')
       }
