@@ -133,6 +133,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    // Set once at signup if a valid Campus Ambassador referralCode was submitted.
+    // Separate from referredBy (general referral system) — used to attribute
+    // order activity back to the ambassador via the OrderModel hook.
+    referredByAmbassador: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User',
+        default: null
+    },
     referralCount: {
         type: Number,
         default: 0

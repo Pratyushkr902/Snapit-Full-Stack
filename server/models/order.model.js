@@ -139,5 +139,46 @@ const orderSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// ── Campus Ambassador referral tracking ─────────────────────────────────────
+// On order creation: bump totalOrders (and firstOrders if this is the buyer's
+// very first order ever) for whichever ambassador referred this buyer, if any.
+// On delivery: bump completedOrders. Both are no-ops if the buyer wasn't
+// referred by an ambassador (referredByAmbassador is null for most users).
+orderSchema.post('save', async function (doc) {
+    try {
+        const UserModel = mongoose.model('User')
+        const buyer = await UserModel.findById(doc.userId).select('referredByAmbassador')
+        if (!buyer || !buyer.referredByAmbassador) return
+
+        if (doc.wasNew) {
+            const priorOrderCount = await mongoose.model('order').countDocuments({
+                userId: doc.userId,
+                _id: { $ne: doc._id }
+            })
+            const inc = { 'campusAmbassador.referralStats.totalOrders': 1 }
+            if (priorOrderCount === 0) {
+                inc['campusAmbassador.referralStats.firstOrders'] = 1
+            }
+            await UserModel.updateOne({ _id: buyer.referredByAmbassador }, { $inc: inc })
+        }
+
+        if (doc.delivery_status === 'Delivered' && doc.wasModifiedDeliveryStatus) {
+            await UserModel.updateOne(
+                { _id: buyer.referredByAmbassador },
+                { $inc: { 'campusAmbassador.referralStats.completedOrders': 1 } }
+            )
+        }
+    } catch (err) {
+        console.error('[ambassador referral tracking] failed:', err.message)
+    }
+})
+
+// Track isNew / isModified state BEFORE save completes, since post('save')
+// runs after Mongoose has already reset these flags to false.
+orderSchema.pre('save', function () {
+    this.wasNew = this.isNew
+    this.wasModifiedDeliveryStatus = this.isModified('delivery_status')
+})
+
 const OrderModel = mongoose.model("order", orderSchema);
 export default OrderModel;

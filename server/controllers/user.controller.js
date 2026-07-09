@@ -114,6 +114,23 @@ export async function registerUserController(request, response) {
             referralCode: newReferralCode
         }
 
+        
+        // Check if incomingReferralCode matches a Campus Ambassador's code
+        // (separate namespace from the general referralCode system below).
+        const ambassadorReferrer = incomingReferralCode
+            ? await UserModel.findOne({
+                role: 'CAMPUS_AMBASSADOR',
+                'campusAmbassador.referralCode': incomingReferralCode
+              })
+            : null
+        if (ambassadorReferrer) {
+            payload.referredByAmbassador = ambassadorReferrer._id
+            await UserModel.updateOne(
+                { _id: ambassadorReferrer._id },
+                { $inc: { 'campusAmbassador.referralStats.signUps': 1 } }
+            )
+        }
+
         if (incomingReferralCode) {
             const referrer = await UserModel.findOne({
                 referralCode: incomingReferralCode
