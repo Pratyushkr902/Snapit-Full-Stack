@@ -28,6 +28,9 @@ const DELIVERY_ZONES = [
   // so it was unserviceable despite being a real delivery hotspot. Given its own zone instead of
   // stretching a neighbor. Radius kept to 0.45km (< the 0.47km gap to Chandos) to guarantee no overlap.
   { name: 'Himalaya Medical College', lat: 25.2639198, lng: 84.8545598, radiusKm: 0.45 },
+  { name: 'Purani Bazar', lat: 25.3273174, lng: 84.8008332, radiusKm: 1.0 },
+  { name: 'Indira Nagar', lat: 25.3334727, lng: 84.8003608, radiusKm: 1.0 },
+  { name: 'Dharhara',     lat: 25.3375327, lng: 84.8117994, radiusKm: 1.0 },
 ]
 
 function getDistanceKm(lat1, lng1, lat2, lng2) {
