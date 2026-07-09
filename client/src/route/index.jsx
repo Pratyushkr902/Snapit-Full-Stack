@@ -48,6 +48,7 @@ const FoodHomePage           = lazy(() => import('../pages/FoodHomePage'))
 const RestaurantDetailPage   = lazy(() => import('../pages/RestaurantDetailPage'))
 const RestaurantAdminPage    = lazy(() => import('../pages/RestaurantAdminPage'))
 const AdminSellerStorePanel  = lazy(() => import('../pages/AdminSellerStorePanel'))
+const AdminCampusAmbassadors = lazy(() => import('../pages/AdminCampusAmbassadors'))
 const SellerEarnings         = lazy(() => import('../pages/SellerEarnings'))
 const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'))
 const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
@@ -180,6 +181,10 @@ const router = createHashRouter([
           {
             path: "store-sellers",
             element: <S><AdminPermision><AdminSellerStorePanel /></AdminPermision></S>
+          },
+          {
+            path: "campus-ambassadors",
+            element: <S><AdminPermision><AdminCampusAmbassadors /></AdminPermision></S>
           },
           {
             path: "store-earnings",

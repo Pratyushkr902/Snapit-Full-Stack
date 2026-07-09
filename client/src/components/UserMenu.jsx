@@ -74,6 +74,10 @@ const UserMenu = ({close}) => {
                   className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
                   🏆 Store Rankings
                 </Link>
+                <Link onClick={handleClose} to={"/dashboard/campus-ambassadors"}
+                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  🎓 Campus Ambassadors
+                </Link>
                 <Link onClick={handleClose} to={"/dashboard/store-earnings"}
                   className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
                   💰 Store Earnings

@@ -53,6 +53,14 @@ const SummaryApi = {
         url : '/api/user/all-riders',
         method : 'get'
     },
+    getAllAmbassadors : {
+        url : '/api/user/all-ambassadors',
+        method : 'get'
+    },
+    createAmbassador : {
+        url : '/api/user/create-ambassador',
+        method : 'post'
+    },
     saveFcmToken: {
         url: '/api/user/save-fcm-token',
         method: 'post'
