@@ -46,6 +46,10 @@ const CHIKASI_LAT = 25.28091606583264
 const CHIKASI_LNG = 84.87069734970407
 const CHIKASI_RADIUS_KM = 1.78
 
+// Minimum order value required for deliveries in the 6–14km bracket.
+// Does NOT apply to the Chikasi flat-fee zone or the 0–6km zone.
+const MIN_ORDER_ABOVE_6KM = 499
+
 // ── Snapit Plus free-delivery rules ─────────────────────────────────────────
 // 0–6 km  : non-Plus always pays ₹12/₹19 (distance fee) | Plus free if cart >= ₹149, else pays distance fee
 // 6–14 km : non-Plus always pays ₹49                    | Plus free if cart >= ₹399, else pays ₹49
@@ -57,7 +61,7 @@ export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapi
   const isChikasi = chikasiDist <= CHIKASI_RADIUS_KM
 
   if (!isChikasi && dist > 14) {
-    return { serviceable: false, distanceKm: dist, charge: 0, eta: null, label: 'Outside delivery range' }
+    return { serviceable: false, distanceKm: dist, charge: 0, eta: null, label: 'Outside delivery range', isChikasi: false, minOrder: 0 }
   }
 
   const charge = isChikasi ? 49 : getDeliveryCharge(dist)
@@ -73,6 +77,9 @@ export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapi
 
   const eta = getDeliveryETA(dist)
 
+  // Min order applies only to the distance-based 6–14km bracket, not Chikasi.
+  const minOrder = (dist > 6) ? MIN_ORDER_ABOVE_6KM : 0
+
   return {
     serviceable:    true,
     distanceKm:     Math.round(dist * 10) / 10,
@@ -80,5 +87,7 @@ export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapi
     originalCharge: charge,
     eta,
     label: finalCharge === 0 ? 'FREE' : `₹${finalCharge}`,
+    isChikasi,
+    minOrder,
   }
 }

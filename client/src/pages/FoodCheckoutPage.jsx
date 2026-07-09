@@ -7,6 +7,7 @@ import AxiosToastError from '../utils/AxiosToastError'
 import toast from 'react-hot-toast'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { useGlobalContext } from '../provider/GlobalProvider'
+import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -124,6 +125,19 @@ const FoodCheckoutPage = () => {
   const grandTotal  = Math.max(0, preWallet - walletDeduct)
   const totalSaved  = 48 + couponDiscount + walletDeduct
 
+  const selectedAddr = addressList[selectAddress]
+  const deliveryInfo = (selectedAddr?.lat && selectedAddr?.lng)
+    ? getDeliveryInfo(selectedAddr.lat, selectedAddr.lng, subTotal, isSnapitPlus)
+    : null
+
+  const checkMinOrder = () => {
+    if (deliveryInfo && deliveryInfo.minOrder > 0 && subTotal < deliveryInfo.minOrder) {
+      toast.error(`Minimum order of ₹${deliveryInfo.minOrder} required for delivery beyond 6km.`, { duration: 5000 })
+      return false
+    }
+    return true
+  }
+
   // ── Handlers ────────────────────────────────────────────────────────────────
   const changeQty = (key, delta) => {
     setQuantities(prev => ({ ...prev, [key]: Math.max(1, (prev[key] || 1) + delta) }))
@@ -231,6 +245,7 @@ const FoodCheckoutPage = () => {
   // ── Payment handlers ─────────────────────────────────────────────────────────
   const handleCOD = async () => {
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
+    if (!checkMinOrder()) return
     setPlacing(true)
     const t = toast.loading('Placing order...')
     try {
@@ -247,6 +262,7 @@ const FoodCheckoutPage = () => {
 
   const handleWalletPay = async () => {
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
+    if (!checkMinOrder()) return
     if (walletBal < grandTotal) return toast.error(`Insufficient wallet balance. Need ₹${grandTotal}, have ₹${walletBal.toFixed(0)}`)
     setPlacing(true)
     const t = toast.loading('Processing wallet payment...')
@@ -266,6 +282,7 @@ const FoodCheckoutPage = () => {
     const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
     if (!RAZORPAY_KEY) return toast.error('Razorpay key missing')
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
+    if (!checkMinOrder()) return
 
     let RazorpayClass
     const gt = toast.loading('Loading payment gateway...')

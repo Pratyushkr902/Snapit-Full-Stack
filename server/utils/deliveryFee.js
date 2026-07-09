@@ -49,6 +49,17 @@ const isChikasiZone = (lat, lng) => {
   return chikasiDist <= CHIKASI_RADIUS_KM
 }
 
+// Minimum order value required for deliveries in the 6–14km bracket.
+// Does NOT apply to the Chikasi flat-fee zone or the 0–6km zone.
+const MIN_ORDER_ABOVE_6KM = 499
+
+// Returns the minimum cart subtotal required to place an order at this
+// location. 0 means no extra minimum beyond normal checkout rules.
+export const getMinOrderAmount = (lat, lng) => {
+  const dist = getDistanceFromStore(lat, lng)
+  return dist > 6 ? MIN_ORDER_ABOVE_6KM : 0
+}
+
 // Returns true if the coordinates fall outside the serviceable delivery radius.
 export const isOutOfDeliveryRange = (lat, lng) => {
   const dist = getDistanceFromStore(lat, lng)

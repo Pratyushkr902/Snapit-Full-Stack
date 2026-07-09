@@ -91,6 +91,10 @@ const CheckoutPage = () => {
       toast.error('Your location is outside our 12 km delivery range.', { duration: 5000 })
       return false
     }
+    if (deliveryInfo && deliveryInfo.minOrder > 0 && totalPrice < deliveryInfo.minOrder) {
+      toast.error(`Minimum order of ₹${deliveryInfo.minOrder} required for delivery beyond 6km.`, { duration: 5000 })
+      return false
+    }
     return true
   }
 
