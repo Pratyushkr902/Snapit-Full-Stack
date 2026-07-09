@@ -5,6 +5,7 @@ import {
     logoutController,
     refreshToken,
     registerUserController,
+    createCampusAmbassadorController,
     resetpassword,
     updateUserDetails,
     uploadAvatar,
@@ -42,5 +43,6 @@ userRouter.put('/update-dob',                 auth, updateDobController)
 
 // ── Admin only ───────────────────────────────────────────────
 userRouter.get('/all-riders',                 auth, admin, getAllRiders)  // ✅ added admin guard
+userRouter.post('/create-ambassador',         auth, admin, createCampusAmbassadorController)
 
 export default userRouter

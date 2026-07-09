@@ -16,6 +16,69 @@ const cookiesOption = {
     path: "/"
 }
 
+export async function createCampusAmbassadorController(request, response) {
+    try {
+        const {
+            name, email, password,
+            college, course, year, campus, instagram
+        } = request.body
+
+        if (!name || !email || !password || !college) {
+            return response.status(400).json({
+                message: "provide name, email, password, college",
+                error: true,
+                success: false
+            })
+        }
+
+        const existing = await UserModel.findOne({ email })
+        if (existing) {
+            return response.status(400).json({
+                message: "Email already registered",
+                error: true,
+                success: false
+            })
+        }
+
+        const salt = await bcryptjs.genSalt(10)
+        const hashPassword = await bcryptjs.hash(password, salt)
+
+        const newUser = new UserModel({
+            name,
+            email,
+            password: hashPassword,
+            role: 'CAMPUS_AMBASSADOR',
+            campusAmbassador: {
+                college,
+                course: course || '',
+                year: year || '',
+                campus: campus || '',
+                status: 'active',
+                social: { instagram: instagram || '' }
+            }
+        })
+
+        await newUser.save()
+
+        const safeUser = newUser.toObject()
+        delete safeUser.password
+
+        return response.status(201).json({
+            message: "Campus Ambassador created successfully",
+            error: false,
+            success: true,
+            data: safeUser
+        })
+    } catch (error) {
+        console.error("createCampusAmbassadorController:", error.message)
+        return response.status(500).json({
+            message: error.message || "Failed to create Campus Ambassador",
+            error: true,
+            success: false
+        })
+    }
+}
+
 export async function registerUserController(request, response) {
     try {
         const { name, email, password, referralCode: incomingReferralCode } = request.body
