@@ -86,6 +86,41 @@ import {
   MAX_DELIVERY_RADIUS_KM,
   EXPRESS_DELIVERY_FEE,
 } from '../utils/deliveryFee.js'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RIDER ASSIGNMENT — picks the active rider with the fewest current live orders
+// ─────────────────────────────────────────────────────────────────────────────
+async function assignAvailableRider() {
+    const activeRiders = await UserModel.find({ role: 'RIDER', status: 'Active' })
+        .select('name mobile _id').lean()
+
+    if (activeRiders.length === 0) return null
+    if (activeRiders.length === 1) return activeRiders[0]
+
+    const riderIds = activeRiders.map(r => r._id)
+
+    const loadCounts = await OrderModel.aggregate([
+        { $match: { riderId: { $in: riderIds }, delivery_status: { $nin: ['Delivered', 'Cancelled'] } } },
+        { $group: { _id: '$riderId', count: { $sum: 1 } } }
+    ])
+
+    const countMap = new Map(loadCounts.map(c => [c._id.toString(), c.count]))
+
+    let chosen = activeRiders[0]
+    let lowest = countMap.get(chosen._id.toString()) || 0
+
+    for (const rider of activeRiders) {
+        const count = countMap.get(rider._id.toString()) || 0
+        if (count < lowest) {
+            chosen = rider
+            lowest = count
+        }
+    }
+
+    return chosen
+}
+
+
 const resolveStore = async (lat, lng) => {
     return { name: 'Snapit Main Store', lat, lng }
 }
@@ -303,8 +338,7 @@ export async function CashOnDeliveryOrderController(request, response) {
        })
    }
 
-        const assignedRider = await UserModel.findOne({ role: 'RIDER', status: 'Active' })
-            .select('name mobile _id').lean()
+        const assignedRider = await assignAvailableRider()
 
         const payload = {
             userId,
@@ -439,8 +473,7 @@ export async function WalletPaymentOrderController(request, response) {
    }
         const transactionId   = `WAL-ORD-${new mongoose.Types.ObjectId()}`
 
-        const assignedRider = await UserModel.findOne({ role: 'RIDER', status: 'Active' })
-            .select('name mobile _id').lean()
+        const assignedRider = await assignAvailableRider()
 
         await UserModel.findByIdAndUpdate(userId, {
             $inc:  { walletBalance: -exactRequiredTotal },
@@ -612,8 +645,7 @@ export async function verifyPaymentController(request, response) {
            success: false
        })
    }
-        const assignedRider = await UserModel.findOne({ role: 'RIDER', status: 'Active' })
-            .select('name mobile _id').lean()
+        const assignedRider = await assignAvailableRider()
 
         const payload = {
             userId,
