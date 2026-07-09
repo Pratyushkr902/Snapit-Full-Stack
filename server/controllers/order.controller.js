@@ -36,6 +36,7 @@ import CartProductModel from '../models/cartproduct.model.js'
 import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
+import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
 import { sendPushNotification, notifyAllRiders } from '../utils/firebaseNotify.js'
 import {
     notifyUserOrderPlaced,
@@ -313,6 +314,14 @@ export async function CashOnDeliveryOrderController(request, response) {
             }
         }
 
+        const currentUser = await UserModel.findById(userId)
+
+        try {
+            await assertStoreOpenForOrder({ list_items, userRole: currentUser?.role })
+        } catch (guardErr) {
+            return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
+        }
+
         if (lat !== undefined && lng !== undefined && !isValidCoord(Number(lat), Number(lng))) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
@@ -334,7 +343,6 @@ export async function CashOnDeliveryOrderController(request, response) {
             })
         }
 
-        const currentUser    = await UserModel.findById(userId)
     const delivery_fee   = calcDeliveryFee(subTotalAmt, lat, lng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
         const assignedStore  = await resolveStore(lat, lng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
@@ -431,6 +439,15 @@ export async function WalletPaymentOrderController(request, response) {
             }
         }
 
+        const user = await UserModel.findById(userId)
+        if (!user) return response.status(404).json({ message: 'User not found.', error: true, success: false })
+
+        try {
+            await assertStoreOpenForOrder({ list_items, userRole: user?.role })
+        } catch (guardErr) {
+            return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
+        }
+
         if (lat !== undefined && lng !== undefined && !isValidCoord(Number(lat), Number(lng))) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
@@ -451,9 +468,6 @@ export async function WalletPaymentOrderController(request, response) {
                 success: false
             })
         }
-
-        const user = await UserModel.findById(userId)
-        if (!user) return response.status(404).json({ message: 'User not found.', error: true, success: false })
 
         const exactRequiredTotal = Number(totalAmt)
         if ((user.walletBalance || 0) < exactRequiredTotal) {
@@ -632,6 +646,14 @@ export async function verifyPaymentController(request, response) {
             }
         }
 
+        const user = await UserModel.findById(userId)
+
+        try {
+            await assertStoreOpenForOrder({ list_items, userRole: user?.role })
+        } catch (guardErr) {
+            return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
+        }
+
         if (lat !== undefined && lng !== undefined && !isValidCoord(Number(lat), Number(lng))) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
@@ -653,7 +675,6 @@ export async function verifyPaymentController(request, response) {
             })
         }
 
-        const user         = await UserModel.findById(userId)
          const delivery_fee = calcDeliveryFee(subTotalAmt, lat, lng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
 
         const serverTotal = Number(subTotalAmt) + delivery_fee - (Number(discountAmt) || 0)

@@ -4,6 +4,7 @@ import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
 import crypto     from 'crypto'
 import { calcDeliveryFee } from '../utils/deliveryFee.js'
+import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
 
 const getRazorpay = () => new Razorpay({
   key_id:     process.env.RAZORPAY_KEY_ID,
@@ -186,6 +187,13 @@ export async function foodOrderCOD(req, res) {
     // ✅ FIX: auth middleware sets req.userId (not req.user._id) — req.user does not exist
     const user = await UserModel.findById(req.userId)
     if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+
+    try {
+      await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
+    } catch (guardErr) {
+      return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
+    }
+
     applyServerPricing(fields, user)
 
     const order = new OrderModel(await buildOrderFields(req.userId, fields, {
@@ -215,6 +223,13 @@ export async function foodOrderWallet(req, res) {
     // ✅ FIX: req.userId, not req.user._id
     const user = await UserModel.findById(req.userId)
     if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+
+    try {
+      await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
+    } catch (guardErr) {
+      return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
+    }
+
     applyServerPricing(fields, user)   // ← must run before balance check / deduction below
 
     const walletBal = Number(user.walletBalance || 0)
@@ -256,6 +271,13 @@ export async function foodOrderCreatePayment(req, res) {
 
     const user = await UserModel.findById(req.userId)
     if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+
+    try {
+      await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
+    } catch (guardErr) {
+      return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
+    }
+
     applyServerPricing(fields, user)
 
     if (fields.totalAmt <= 0)
@@ -303,6 +325,13 @@ export async function foodOrderVerifyPayment(req, res) {
 
     const user = await UserModel.findById(req.userId)
     if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+
+    try {
+      await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
+    } catch (guardErr) {
+      return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
+    }
+
     applyServerPricing(fields, user)
 
     // ✅ FIX: req.userId, not req.user._id — deduct partial wallet if used alongside online payment
