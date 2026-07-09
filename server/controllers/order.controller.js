@@ -83,6 +83,7 @@ const toSafeOrder = (o) => ({
 import {
   calcDeliveryFee,
   isOutOfDeliveryRange,
+  getMinOrderAmount,
   MAX_DELIVERY_RADIUS_KM,
   EXPRESS_DELIVERY_FEE,
 } from '../utils/deliveryFee.js'
@@ -324,6 +325,15 @@ export async function CashOnDeliveryOrderController(request, response) {
             })
         }
 
+        const minOrderRequired = getMinOrderAmount(lat, lng)
+        if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
+            return response.status(400).json({
+                message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,
+                error: true,
+                success: false
+            })
+        }
+
         const currentUser    = await UserModel.findById(userId)
     const delivery_fee   = calcDeliveryFee(subTotalAmt, lat, lng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
         const assignedStore  = await resolveStore(lat, lng)
@@ -428,6 +438,15 @@ export async function WalletPaymentOrderController(request, response) {
         if (isOutOfDeliveryRange(lat, lng)) {
             return response.status(400).json({
                 message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
+                error: true,
+                success: false
+            })
+        }
+
+        const minOrderRequired = getMinOrderAmount(lat, lng)
+        if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
+            return response.status(400).json({
+                message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,
                 error: true,
                 success: false
             })
@@ -620,6 +639,15 @@ export async function verifyPaymentController(request, response) {
         if (isOutOfDeliveryRange(lat, lng)) {
             return response.status(400).json({
                 message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
+                error: true,
+                success: false
+            })
+        }
+
+        const minOrderRequired = getMinOrderAmount(lat, lng)
+        if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
+            return response.status(400).json({
+                message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,
                 error: true,
                 success: false
             })
