@@ -16,6 +16,28 @@ const cookiesOption = {
     path: "/"
 }
 
+export async function getAllAmbassadorsController(request, response) {
+    try {
+        const ambassadors = await UserModel.find({ role: 'CAMPUS_AMBASSADOR' })
+            .select('name email campusAmbassador createdAt')
+            .sort({ 'campusAmbassador.performance.points': -1, createdAt: -1 })
+
+        return response.json({
+            message: "Campus Ambassadors fetched successfully",
+            error: false,
+            success: true,
+            data: ambassadors
+        })
+    } catch (error) {
+        console.error("getAllAmbassadorsController:", error.message)
+        return response.status(500).json({
+            message: error.message || "Failed to fetch Campus Ambassadors",
+            error: true,
+            success: false
+        })
+    }
+}
+
 export async function createCampusAmbassadorController(request, response) {
     try {
         const {
