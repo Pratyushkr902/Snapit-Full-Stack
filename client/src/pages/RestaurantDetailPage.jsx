@@ -537,9 +537,7 @@ export default function RestaurantDetailPage() {
                   <span className="font-semibold">{restaurant.deliveryTimeMin}–{restaurant.deliveryTimeMax} mins</span>
                 </div>
                 <div className="text-sm">
-                  {restaurant.deliveryFee === 0
-                    ? <span className="text-green-600 font-semibold">Free Delivery</span>
-                    : <span className="text-gray-600">₹{restaurant.deliveryFee} delivery</span>}
+                  <span className="text-gray-600">₹{restaurant.deliveryFee} delivery</span>
                 </div>
                 {restaurant.minOrderValue > 0 && (
                   <span className="text-xs text-gray-400">Min ₹{restaurant.minOrderValue}</span>

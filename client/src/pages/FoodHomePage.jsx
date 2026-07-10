@@ -25,7 +25,6 @@ const FILTERS = [
   { id: 'open',   label: '🟢 Open Now',          test: (r) => r.isOpen },
   { id: 'fast',   label: '⚡ Fast Delivery',     test: (r) => r.deliveryTimeMax <= 30 },
   { id: 'rating', label: '⭐ Rating 4.0+',       test: (r) => (r.rating || 0) >= 4.0 },
-  { id: 'free',   label: '🛵 Free Delivery',     test: (r) => r.deliveryFee === 0 },
 ]
 
 const FoodHomePage = () => {
@@ -245,7 +244,7 @@ const FoodHomePage = () => {
               <div className='flex items-center gap-3 text-xs text-gray-500 border-t border-gray-100 pt-2'>
                 <span>🕐 {r.deliveryTimeMin}–{r.deliveryTimeMax} min</span>
                 <span>·</span>
-                <span>{r.deliveryFee === 0 ? '🛵 Free delivery' : `🛵 ₹${r.deliveryFee}`}</span>
+                <span>🛵 ₹{r.deliveryFee}</span>
                 {r.minOrderValue > 0 && <><span>·</span><span>Min ₹{r.minOrderValue}</span></>}
               </div>
               {r.offers?.length > 0 && (
