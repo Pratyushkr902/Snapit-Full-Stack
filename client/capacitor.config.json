@@ -1,38 +1,39 @@
 {
-	"appId": "com.snapit.grocery",
-	"appName": "Snapit",
-	"webDir": "dist",
-	"server": {
-		"androidScheme": "https",
-		"cleartext": true,
-		"allowNavigation": [
-			"snapit-full-stack-production.up.railway.app"
-		]
-	},
-	"android": {
-		"allowMixedContent": true,
-		"captureInput": true,
-		"webContentsDebuggingEnabled": true,
-		"hardwareAccelerated": true,
-		"backgroundColor": "#FFFFFF",
-		"initialFocus": true
-	},
-	"plugins": {
-		"SplashScreen": {
-			"launchShowDuration": 2000,
-			"launchAutoHide": true,
-			"backgroundColor": "#FFFFFF",
-			"androidSplashResourceName": "splash",
-			"androidScaleType": "CENTER_INSIDE",
-			"showSpinner": false,
-			"splashFullScreen": true,
-			"splashImmersive": true
-		},
-		"CapacitorCookies": {
-			"enabled": true
-		},
-		"CapacitorHttp": {
-			"enabled": false
-		}
-	}
+        "appId": "com.snapit.grocery",
+        "appName": "Snapit",
+        "webDir": "dist",
+        "server": {
+                "androidScheme": "https",
+                "cleartext": true,
+                "allowNavigation": [
+                        "snapit-full-stack-production.up.railway.app"
+                ]
+        },
+        "android": {
+                "allowMixedContent": true,
+                "captureInput": true,
+                "webContentsDebuggingEnabled": true,
+                "hardwareAccelerated": true,
+                "backgroundColor": "#FFFFFF",
+                "initialFocus": true,
+                "overrideUserAgent": "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+        },
+        "plugins": {
+                "SplashScreen": {
+                        "launchShowDuration": 2000,
+                        "launchAutoHide": true,
+                        "backgroundColor": "#FFFFFF",
+                        "androidSplashResourceName": "splash",
+                        "androidScaleType": "CENTER_INSIDE",
+                        "showSpinner": false,
+                        "splashFullScreen": true,
+                        "splashImmersive": true
+                },
+                "CapacitorCookies": {
+                        "enabled": true
+                },
+                "CapacitorHttp": {
+                        "enabled": false
+                }
+        }
 }
