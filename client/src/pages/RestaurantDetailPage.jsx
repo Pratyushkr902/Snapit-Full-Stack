@@ -536,9 +536,6 @@ export default function RestaurantDetailPage() {
                   </svg>
                   <span className="font-semibold">{restaurant.deliveryTimeMin}–{restaurant.deliveryTimeMax} mins</span>
                 </div>
-                <div className="text-sm">
-                  <span className="text-gray-600">₹{restaurant.deliveryFee} delivery</span>
-                </div>
                 {restaurant.minOrderValue > 0 && (
                   <span className="text-xs text-gray-400">Min ₹{restaurant.minOrderValue}</span>
                 )}
@@ -558,7 +555,6 @@ export default function RestaurantDetailPage() {
             {/* ── Distance + Address bar (Zomato-style) ── */}
             <LocationBar restaurant={restaurant} userLocation={userLocation} />
 
-            <OfferStrip offers={restaurant.offers} />
           </div>
 
           {/* ── Category Tabs ── */}

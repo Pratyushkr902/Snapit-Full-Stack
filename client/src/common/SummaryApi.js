@@ -205,6 +205,10 @@ const SummaryApi = {
         url: '/api/order/update-status',
         method: 'put'
     },
+    verifyDeliveryOtp: {
+        url: '/api/order/verify-delivery-otp',
+        method: 'post'
+    },
     updateSellerStatus: {
         url: '/api/order/update-seller-status',
         method: 'post'

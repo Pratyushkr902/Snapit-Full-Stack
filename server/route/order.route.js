@@ -11,6 +11,7 @@ import {
     verifyPaymentController,
     webhookStripe,
     updateOrderStatusController,
+    verifyDeliveryOtpController,
     getRiderLocationController,
     updateRiderLocationController,
     getDailySalesReport,
@@ -66,6 +67,7 @@ orderRouter.post("/update-seller-status",  auth, seller, updateSellerOrderStatus
 // ── Rider ─────────────────────────────────────────────────────────────────────
 orderRouter.get( "/order-items",           auth, rider,  getOrderItems)
 orderRouter.put( "/update-status",         auth, rider,  updateOrderStatusController)
+orderRouter.post("/verify-delivery-otp",   auth, rider,  verifyDeliveryOtpController)
 orderRouter.post("/collect-payment",       auth, rider,  collectPaymentController)
 
 export default orderRouter

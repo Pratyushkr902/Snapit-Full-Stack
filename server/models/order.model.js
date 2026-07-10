@@ -98,6 +98,13 @@ const orderSchema = new mongoose.Schema(
         payment_mode:      { type: String,  default: null },
         cashReceived:      { type: Number,  default: 0 },
 
+        // ── Delivery OTP verification ──────────────────────────────
+        deliveryOtp:        { type: String, default: null },
+        otpAttempts:        { type: Number, default: 0 },
+        otpLockedUntil:     { type: Date,   default: null },
+        deliveryProofPhoto: { type: String, default: null },
+        otpVerifiedAt:      { type: Date,   default: null },
+
         // ── Settlement ───────────────────────────────────────────────
         isSettled:   { type: Boolean, default: false },
         settledAt:   { type: Date },
