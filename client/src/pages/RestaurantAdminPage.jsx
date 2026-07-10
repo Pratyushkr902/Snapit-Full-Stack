@@ -231,6 +231,10 @@ export default function RestaurantAdminPage() {
         ...restoForm,
         cuisineTypes: restoForm.cuisineTypes.split(',').map(s => s.trim()).filter(Boolean),
         offers: restoForm.offers.split('\n').map(s => s.trim()).filter(Boolean),
+        deliveryTimeMin: Number(restoForm.deliveryTimeMin) || 0,
+        deliveryTimeMax: Number(restoForm.deliveryTimeMax) || 0,
+        deliveryFee:     Number(restoForm.deliveryFee) || 0,
+        minOrderValue:   Number(restoForm.minOrderValue) || 0,
       }
       if (editingResto) {
         await Axios({ method: 'PATCH', url: `/api/restaurant/update/${editingResto._id}`, data: body })
