@@ -33,6 +33,11 @@ export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
 export const getDistanceFromStore = (customerLat, customerLng) =>
   getDistanceKm(STORE_LAT, STORE_LNG, customerLat, customerLng)
 
+// Generalized origin-aware distance — used for restaurant orders where the
+// "store" is the restaurant's own location instead of the fixed Snapit store.
+export const getDistanceFromOrigin = (originLat, originLng, customerLat, customerLng) =>
+  getDistanceKm(originLat, originLng, customerLat, customerLng)
+
 // 0–3 km   → ₹12
 // 3–6 km   → ₹19
 // 6–14 km  → ₹49
@@ -79,4 +84,22 @@ export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
   // isOutOfDeliveryRange first), but fall back to the max-tier fee
   // rather than silently returning a falsy/undefined charge.
   return charge === null ? 49 : charge
+}
+
+// Restaurant/food orders — same tier logic, but measured from the
+// restaurant's own location instead of the fixed grocery store.
+export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, customerLng) => {
+  if (isChikasiZone(customerLat, customerLng)) return 49
+
+  const dist = getDistanceFromOrigin(originLat, originLng, customerLat, customerLng)
+  const charge = getDeliveryChargeByDistance(dist)
+
+  return charge === null ? 49 : charge
+}
+
+// Restaurant/food orders — is this customer within serviceable range of
+// this specific restaurant (not the grocery store)?
+export const isOutOfDeliveryRangeFromOrigin = (originLat, originLng, customerLat, customerLng) => {
+  const dist = getDistanceFromOrigin(originLat, originLng, customerLat, customerLng)
+  return dist > MAX_DELIVERY_RADIUS_KM
 }
