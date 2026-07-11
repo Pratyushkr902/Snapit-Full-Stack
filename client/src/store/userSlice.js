@@ -39,6 +39,7 @@ const emptyUser = {
     shopping_cart:        [],
     orderHistory:         [],
     role:                 "",   // in-memory only — never written to localStorage
+    campusAmbassador:     null, // in-memory only — never written to localStorage
     store_name:           "",
     restaurantId:         null,
     isSnapitPlusMember:   false, // in-memory only — never written to localStorage
@@ -93,6 +94,7 @@ const userSlice = createSlice({
             state.shopping_cart        = p.shopping_cart
             state.orderHistory         = p.orderHistory
             state.role                 = p.role   // in Redux memory only
+            state.campusAmbassador     = p.campusAmbassador ?? null   // in Redux memory only
             state.store_name           = p.store_name
             state.restaurantId         = p.restaurantId ?? null
             state.isSnapitPlusMember   = p.isSnapitPlusMember ?? false   // in Redux memory only

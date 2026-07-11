@@ -10,6 +10,7 @@ import AxiosToastError from '../utils/AxiosToastError';
 import toast from 'react-hot-toast';
 import { setUserDetails } from '../store/userSlice';
 import fetchUserDetails from '../utils/fetchUserDetails';
+import CampusAmbassadorCard from '../components/CampusAmbassadorCard';
 
 const Profile = () => {
     const user     = useSelector(state => state.user)
@@ -80,7 +81,10 @@ const Profile = () => {
 
             {openProfileAvatarEdit && (
                 <UserProfileAvatarEdit close={() => setProfileAvatarEdit(false)} />
+
             )}
+
+            <CampusAmbassadorCard campusAmbassador={user.campusAmbassador} />
 
             {/* Form */}
             <form className='my-4 grid gap-4' onSubmit={handleSubmit}>
