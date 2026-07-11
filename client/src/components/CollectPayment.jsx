@@ -13,9 +13,8 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
     const [confirming, setConfirming] = useState(false)
     const [upiConfirmed, setUpiConfirmed] = useState(false)
 
-    // ── OTP step state ──────────────────────────────
+    // ── Delivery confirmation step state ────────────
     const [showOtpStep, setShowOtpStep] = useState(false)
-    const [otp, setOtp] = useState('')
     const [otpError, setOtpError] = useState('')
     const [verifyingOtp, setVerifyingOtp] = useState(false)
 
@@ -85,14 +84,10 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
         }
     }
 
-    // Step 2: verify OTP, only this marks Delivered
+    // Step 2: mark Delivered (photo proof only, no OTP)
     const handleVerifyOtp = async () => {
         if (!proofPhoto) {
             setOtpError('Take a delivery photo first.')
-            return
-        }
-        if (!otp || otp.trim().length < 4) {
-            setOtpError('Enter the code the customer gives you.')
             return
         }
         try {
@@ -100,16 +95,16 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
             setOtpError('')
             const response = await Axios({
                 ...SummaryApi.verifyDeliveryOtp,
-                data: { orderId: order.orderId, otp: otp.trim(), deliveryProofPhoto: proofPhoto }
+                data: { orderId: order.orderId, deliveryProofPhoto: proofPhoto }
             })
             if (response.data.success) {
                 toast.success('✅ Delivered! Proof saved.')
                 if (onSuccess) onSuccess()
             } else {
-                setOtpError(response.data.message || 'Incorrect OTP')
+                setOtpError(response.data.message || 'Could not mark delivered')
             }
         } catch (error) {
-            setOtpError(error?.response?.data?.message || 'Verification failed. Try again.')
+            setOtpError(error?.response?.data?.message || 'Marking delivered failed. Try again.')
         } finally {
             setVerifyingOtp(false)
         }
@@ -187,7 +182,7 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                     <div className='p-5 flex flex-col gap-4'>
                         <div className='bg-blue-50 border-2 border-blue-100 rounded-2xl p-4 text-center'>
                             <p className='text-sm font-bold text-blue-700'>Payment recorded ✅</p>
-                            <p className='text-xs text-blue-500 mt-1'>Take a photo of the order at the doorstep, then enter the OTP.</p>
+                            <p className='text-xs text-blue-500 mt-1'>Take a photo of the order at the doorstep to confirm delivery.</p>
                         </div>
 
                         {!proofPhoto ? (
@@ -217,24 +212,14 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                             </div>
                         )}
 
-                        <input
-                            type='text'
-                            inputMode='numeric'
-                            value={otp}
-                            onChange={e => { setOtp(e.target.value); setOtpError('') }}
-                            placeholder='Enter 6-digit OTP'
-                            maxLength={6}
-                            disabled={!proofPhoto}
-                            className='w-full border-2 border-slate-200 rounded-xl px-4 py-4 text-2xl font-black text-center tracking-[0.5em] text-slate-800 outline-none focus:border-green-400 disabled:bg-slate-50 disabled:text-slate-300'
-                        />
                         {otpError && <p className='text-sm font-bold text-red-600 text-center'>{otpError}</p>}
 
                         <button
                             onClick={handleVerifyOtp}
-                            disabled={verifyingOtp || !proofPhoto || !otp}
+                            disabled={verifyingOtp || !proofPhoto}
                             className='w-full bg-green-600 disabled:bg-slate-200 text-white font-black py-4 rounded-2xl text-sm active:scale-95'
                         >
-                            {verifyingOtp ? 'Verifying...' : '✅ Verify & Mark Delivered'}
+                            {verifyingOtp ? 'Marking Delivered...' : '✅ Mark Delivered'}
                         </button>
                         <button onClick={() => setShowDispute(true)} className='text-sm text-red-500 font-bold text-center'>
                             🚩 Customer says they didn&apos;t order this
