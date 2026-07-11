@@ -73,7 +73,7 @@ const userSchema = new mongoose.Schema({
     // Set only when role === 'CAMPUS_AMBASSADOR'. ambassadorId and referralCode
     // are auto-generated in the pre('save') hook below — never set them manually.
     campusAmbassador : {
-        ambassadorId : { type : String, default : null, unique : true, sparse : true },
+        ambassadorId : { type : String, unique : true, sparse : true },
         status       : { type : String, enum : ['active', 'inactive', 'pending'], default : 'pending' },
         college      : { type : String, default : "" },
         course       : { type : String, default : "" },
