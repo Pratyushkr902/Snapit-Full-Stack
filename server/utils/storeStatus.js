@@ -30,15 +30,17 @@ async function assertGroceryItemsAvailable(list_items) {
     .filter(Boolean)
   if (productIds.length === 0) return
 
-  const products = await ProductModel.find({ _id: { $in: productIds } }).select('name store_inventory publish')
+  const products = await ProductModel.find({ _id: { $in: productIds } }).select('name store_inventory publish stock')
   for (const p of products) {
     if (p.publish === false) {
       const err = new Error(`${p.name} is no longer available.`)
       err.statusCode = 400
       throw err
     }
-    const hasAvailableStore = Array.isArray(p.store_inventory) &&
-      p.store_inventory.some(s => s.isAvailable && (s.stock || 0) > 0)
+    const hasStoreInventory = Array.isArray(p.store_inventory) && p.store_inventory.length > 0
+    const hasAvailableStore = hasStoreInventory
+      ? p.store_inventory.some(s => s.isAvailable && (s.stock || 0) > 0)
+      : (p.stock || 0) > 0
     if (!hasAvailableStore) {
       const err = new Error(`${p.name} is currently out of stock. Please remove it from your cart.`)
       err.statusCode = 400
