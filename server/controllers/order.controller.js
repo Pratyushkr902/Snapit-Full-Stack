@@ -308,6 +308,15 @@ export async function CashOnDeliveryOrderController(request, response) {
         const address = await AddressModel.findOne({ _id: addressId, userId })
         if (!address) return response.status(404).json({ message: 'Address not found.', error: true, success: false })
 
+        // Use the address's own saved, geocoded coordinates for delivery fee /
+        // zone / minimum-order logic. Client-sent lat/lng must never drive pricing
+        // (device GPS can be stale, cached, or spoofed).
+        const verifiedLat = address.lat
+        const verifiedLng = address.lng
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
+            return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
+        }
+
         for (const item of list_items) {
             if (!isObjectId(item.productId?._id)) {
                 return response.status(400).json({ message: 'Invalid product reference.', error: true, success: false })
@@ -326,7 +335,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
-        if (isOutOfDeliveryRange(lat, lng)) {
+        if (isOutOfDeliveryRange(verifiedLat, verifiedLng)) {
             return response.status(400).json({
                 message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
                 error: true,
@@ -335,7 +344,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         }
 
         const isPlusForMinOrder = Boolean(currentUser?.isSnapitPlusMember && currentUser?.snapitPlusExpiresAt && new Date() < new Date(currentUser.snapitPlusExpiresAt))
-        const minOrderRequired = getMinOrderAmount(lat, lng, isPlusForMinOrder)
+        const minOrderRequired = getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder)
         if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
             return response.status(400).json({
                 message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,
@@ -344,8 +353,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             })
         }
 
-    const delivery_fee   = calcDeliveryFee(subTotalAmt, lat, lng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
-        const assignedStore  = await resolveStore(lat, lng)
+    const delivery_fee   = calcDeliveryFee(subTotalAmt, verifiedLat, verifiedLng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+        const assignedStore  = await resolveStore(verifiedLat, verifiedLng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
         const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
         const invalidItems = taggedCartItems.filter(i => i._invalid)
@@ -434,6 +443,15 @@ export async function WalletPaymentOrderController(request, response) {
         const address = await AddressModel.findOne({ _id: addressId, userId })
         if (!address) return response.status(404).json({ message: 'Address not found.', error: true, success: false })
 
+        // Use the address's own saved, geocoded coordinates for delivery fee /
+        // zone / minimum-order logic. Client-sent lat/lng must never drive pricing
+        // (device GPS can be stale, cached, or spoofed).
+        const verifiedLat = address.lat
+        const verifiedLng = address.lng
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
+            return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
+        }
+
         for (const item of list_items) {
             if (!isObjectId(item.productId?._id)) {
                 return response.status(400).json({ message: 'Invalid product reference.', error: true, success: false })
@@ -453,7 +471,7 @@ export async function WalletPaymentOrderController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
-        if (isOutOfDeliveryRange(lat, lng)) {
+        if (isOutOfDeliveryRange(verifiedLat, verifiedLng)) {
             return response.status(400).json({
                 message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
                 error: true,
@@ -462,7 +480,7 @@ export async function WalletPaymentOrderController(request, response) {
         }
 
         const isPlusForMinOrder = Boolean(user?.isSnapitPlusMember && user?.snapitPlusExpiresAt && new Date() < new Date(user.snapitPlusExpiresAt))
-        const minOrderRequired = getMinOrderAmount(lat, lng, isPlusForMinOrder)
+        const minOrderRequired = getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder)
         if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
             return response.status(400).json({
                 message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,
@@ -494,8 +512,8 @@ export async function WalletPaymentOrderController(request, response) {
             await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } })
         }
 
-      const delivery_fee    = calcDeliveryFee(subTotalAmt, lat, lng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
-        const assignedStore   = await resolveStore(lat, lng)
+      const delivery_fee    = calcDeliveryFee(subTotalAmt, verifiedLat, verifiedLng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+        const assignedStore   = await resolveStore(verifiedLat, verifiedLng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
         const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
         const invalidItems = taggedCartItems.filter(i => i._invalid)
@@ -642,6 +660,15 @@ export async function verifyPaymentController(request, response) {
         const address = await AddressModel.findOne({ _id: addressId, userId })
         if (!address) return response.status(404).json({ message: 'Address not found.', error: true, success: false })
 
+        // Use the address's own saved, geocoded coordinates for delivery fee /
+        // zone / minimum-order logic. Client-sent lat/lng must never drive pricing
+        // (device GPS can be stale, cached, or spoofed).
+        const verifiedLat = address.lat
+        const verifiedLng = address.lng
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
+            return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
+        }
+
         for (const item of list_items) {
             if (!isObjectId(item.productId?._id)) {
                 return response.status(400).json({ message: 'Invalid product reference.', error: true, success: false })
@@ -660,7 +687,7 @@ export async function verifyPaymentController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
-        if (isOutOfDeliveryRange(lat, lng)) {
+        if (isOutOfDeliveryRange(verifiedLat, verifiedLng)) {
             return response.status(400).json({
                 message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
                 error: true,
@@ -669,7 +696,7 @@ export async function verifyPaymentController(request, response) {
         }
 
         const isPlusForMinOrder = Boolean(user?.isSnapitPlusMember && user?.snapitPlusExpiresAt && new Date() < new Date(user.snapitPlusExpiresAt))
-        const minOrderRequired = getMinOrderAmount(lat, lng, isPlusForMinOrder)
+        const minOrderRequired = getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder)
         if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
             return response.status(400).json({
                 message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,
@@ -678,7 +705,7 @@ export async function verifyPaymentController(request, response) {
             })
         }
 
-         const delivery_fee = calcDeliveryFee(subTotalAmt, lat, lng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+         const delivery_fee = calcDeliveryFee(subTotalAmt, verifiedLat, verifiedLng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
 
         const serverTotal = Number(subTotalAmt) + delivery_fee - (Number(discountAmt) || 0)
         if (Math.abs(Number(totalAmt) - serverTotal) > 1) {
@@ -686,7 +713,7 @@ export async function verifyPaymentController(request, response) {
             return response.status(422).json({ message: 'Order total mismatch. Please try again.', error: true, success: false })
         }
 
-        const assignedStore   = await resolveStore(lat, lng)
+        const assignedStore   = await resolveStore(verifiedLat, verifiedLng)
         const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
         const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
         const invalidItems = taggedCartItems.filter(i => i._invalid)
