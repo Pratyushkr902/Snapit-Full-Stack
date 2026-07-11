@@ -31,6 +31,7 @@ const DELIVERY_ZONES = [
   { name: 'Purani Bazar', lat: 25.3273174, lng: 84.8008332, radiusKm: 1.0 },
   { name: 'Indira Nagar', lat: 25.3334727, lng: 84.8003608, radiusKm: 1.0 },
   { name: 'Dharhara',     lat: 25.3375327, lng: 84.8117994, radiusKm: 1.0 },
+  { name: 'Rakasiya',     lat: 25.357181306430718, lng: 84.83059257743433, radiusKm: 1.5 },
 ]
 
 function getDistanceKm(lat1, lng1, lat2, lng2) {
