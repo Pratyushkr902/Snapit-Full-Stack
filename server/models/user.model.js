@@ -81,7 +81,7 @@ const userSchema = new mongoose.Schema({
         campus       : { type : String, default : "" },
         joinedAt     : { type : Date, default : null },
 
-        referralCode : { type : String, default : null, unique : true, sparse : true },
+        referralCode : { type : String, unique : true, sparse : true },
         referralStats : {
             appDownloads    : { type : Number, default : 0 },
             signUps         : { type : Number, default : 0 },
