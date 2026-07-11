@@ -3,7 +3,7 @@ import UserModel  from '../models/user.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
 import crypto     from 'crypto'
-import { calcDeliveryFeeFromOrigin } from '../utils/deliveryFee.js'
+import { calcDeliveryFeeFromOrigin, getMinOrderAmountFromOrigin } from '../utils/deliveryFee.js'
 import RestaurantModel from '../models/restaurant.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
 
@@ -115,6 +115,18 @@ const applyServerPricing = async (fields, user) => {
   const serverDeliveryFee = calcDeliveryFeeFromOrigin(
     restaurant.location.lat, restaurant.location.lng, lat, lng
   )
+
+  const isPlusForMinOrder = Boolean(
+    user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
+    new Date() < new Date(user.snapitPlusExpiresAt)
+  )
+  const minOrderRequired = getMinOrderAmountFromOrigin(lat, lng, isPlusForMinOrder)
+  if (minOrderRequired > 0 && fields.subTotalAmt < minOrderRequired) {
+    const err = new Error(`Minimum order of ₹${minOrderRequired} required for this location.`)
+    err.statusCode = 400
+    throw err
+  }
+
   const serverTotal = fields.subTotalAmt + serverDeliveryFee
     + fields.tip - fields.couponDiscount - fields.walletAmountUsed
 

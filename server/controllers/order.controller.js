@@ -334,7 +334,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             })
         }
 
-        const minOrderRequired = getMinOrderAmount(lat, lng)
+        const isPlusForMinOrder = Boolean(currentUser?.isSnapitPlusMember && currentUser?.snapitPlusExpiresAt && new Date() < new Date(currentUser.snapitPlusExpiresAt))
+        const minOrderRequired = getMinOrderAmount(lat, lng, isPlusForMinOrder)
         if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
             return response.status(400).json({
                 message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,
@@ -460,7 +461,8 @@ export async function WalletPaymentOrderController(request, response) {
             })
         }
 
-        const minOrderRequired = getMinOrderAmount(lat, lng)
+        const isPlusForMinOrder = Boolean(user?.isSnapitPlusMember && user?.snapitPlusExpiresAt && new Date() < new Date(user.snapitPlusExpiresAt))
+        const minOrderRequired = getMinOrderAmount(lat, lng, isPlusForMinOrder)
         if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
             return response.status(400).json({
                 message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,
@@ -666,7 +668,8 @@ export async function verifyPaymentController(request, response) {
             })
         }
 
-        const minOrderRequired = getMinOrderAmount(lat, lng)
+        const isPlusForMinOrder = Boolean(user?.isSnapitPlusMember && user?.snapitPlusExpiresAt && new Date() < new Date(user.snapitPlusExpiresAt))
+        const minOrderRequired = getMinOrderAmount(lat, lng, isPlusForMinOrder)
         if (minOrderRequired > 0 && Number(subTotalAmt) < minOrderRequired) {
             return response.status(400).json({
                 message: `Minimum order of ₹${minOrderRequired} required for delivery beyond 6km.`,

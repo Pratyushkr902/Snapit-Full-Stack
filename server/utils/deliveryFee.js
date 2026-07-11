@@ -17,6 +17,15 @@ const CHIKASI_LAT = 25.28091606583264
 const CHIKASI_LNG = 84.87069734970407
 const CHIKASI_RADIUS_KM = 1.78
 
+// Himalaya Medical College & Hospital — own flat-fee zone (same treatment
+// as Chikasi) with its own, lower minimum order. Must stay in sync with
+// client/src/utils/getDeliveryInfo.js.
+const HIMALAYA_LAT = 25.2639198
+const HIMALAYA_LNG = 84.8545598
+const HIMALAYA_RADIUS_KM = 0.45
+const HIMALAYA_FLAT_FEE = 49
+const HIMALAYA_MIN_ORDER = 299
+
 // Haversine formula — returns distance in km
 export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
   const R = 6371
@@ -54,13 +63,21 @@ const isChikasiZone = (lat, lng) => {
   return chikasiDist <= CHIKASI_RADIUS_KM
 }
 
+const isHimalayaZone = (lat, lng) => {
+  const himalayaDist = getDistanceKm(HIMALAYA_LAT, HIMALAYA_LNG, lat, lng)
+  return himalayaDist <= HIMALAYA_RADIUS_KM
+}
+
 // Minimum order value required for deliveries in the 6–14km bracket.
 // Does NOT apply to the Chikasi flat-fee zone or the 0–6km zone.
 const MIN_ORDER_ABOVE_6KM = 499
 
 // Returns the minimum cart subtotal required to place an order at this
 // location. 0 means no extra minimum beyond normal checkout rules.
-export const getMinOrderAmount = (lat, lng) => {
+// isSnapitPlus exempts the customer from both the 6-14km and Himalaya minimums.
+export const getMinOrderAmount = (lat, lng, isSnapitPlus = false) => {
+  if (isSnapitPlus) return 0
+  if (isHimalayaZone(lat, lng)) return HIMALAYA_MIN_ORDER
   const dist = getDistanceFromStore(lat, lng)
   return dist > 6 ? MIN_ORDER_ABOVE_6KM : 0
 }
@@ -76,6 +93,7 @@ export const isOutOfDeliveryRange = (lat, lng) => {
 // currently used to waive the fee — see note at top of file.
 export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
   if (isChikasiZone(lat, lng)) return 49
+  if (isHimalayaZone(lat, lng)) return HIMALAYA_FLAT_FEE
 
   const dist = getDistanceFromStore(lat, lng)
   const charge = getDeliveryChargeByDistance(dist)
@@ -90,11 +108,22 @@ export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
 // restaurant's own location instead of the fixed grocery store.
 export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, customerLng) => {
   if (isChikasiZone(customerLat, customerLng)) return 49
+  if (isHimalayaZone(customerLat, customerLng)) return HIMALAYA_FLAT_FEE
 
   const dist = getDistanceFromOrigin(originLat, originLng, customerLat, customerLng)
   const charge = getDeliveryChargeByDistance(dist)
 
   return charge === null ? 49 : charge
+}
+
+// Restaurant/food orders — minimum order amount for the Himalaya zone.
+// (Chikasi and the general 6-14km bracket have no minimum for food orders,
+// only for grocery orders measured from the fixed store — see getMinOrderAmount.)
+// isSnapitPlus exempts the customer from this minimum.
+export const getMinOrderAmountFromOrigin = (customerLat, customerLng, isSnapitPlus = false) => {
+  if (isSnapitPlus) return 0
+  if (isHimalayaZone(customerLat, customerLng)) return HIMALAYA_MIN_ORDER
+  return 0
 }
 
 // Restaurant/food orders — is this customer within serviceable range of
