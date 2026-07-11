@@ -662,7 +662,8 @@ export default function RestaurantDetailPage() {
             allItems,
             restaurantId: id,
             restaurantName: restaurant?.name,
-            restaurantDeliveryFee: restaurant?.deliveryFee || 0,
+            restaurantLat: restaurant?.location?.lat,
+            restaurantLng: restaurant?.location?.lng,
           }
         })}
       />

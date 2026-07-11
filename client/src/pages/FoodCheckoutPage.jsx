@@ -7,7 +7,7 @@ import AxiosToastError from '../utils/AxiosToastError'
 import toast from 'react-hot-toast'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { useGlobalContext } from '../provider/GlobalProvider'
-import { getDeliveryInfo } from '../utils/getDeliveryInfo'
+import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -61,7 +61,8 @@ const FoodCheckoutPage = () => {
     allItems = [],
     restaurantId,
     restaurantName,
-    restaurantDeliveryFee = 0,
+    restaurantLat,
+    restaurantLng,
   } = location.state || {}
 
   // ── Resolve cart items ──────────────────────────────────────────────────────
@@ -118,17 +119,26 @@ const FoodCheckoutPage = () => {
     user?.snapitPlusExpiresAt &&
     new Date() < new Date(user.snapitPlusExpiresAt)
   )
-  const deliveryFee = isSnapitPlus ? 0 : restaurantDeliveryFee
+  const selectedAddr = addressList[selectAddress]
+
+  // Fallback ₹30 flat fee only for restaurants missing location data —
+  // remove once every restaurant has lat/lng set in the DB.
+  const hasRestaurantLocation = Boolean(restaurantLat && restaurantLng)
+
+  const deliveryInfo = (selectedAddr?.lat && selectedAddr?.lng && hasRestaurantLocation)
+    ? getDeliveryInfoFromOrigin(restaurantLat, restaurantLng, selectedAddr.lat, selectedAddr.lng, subTotal, isSnapitPlus)
+    : null
+
+  const FALLBACK_DELIVERY_FEE = 30 // only used when restaurant has no location data yet
+  const deliveryFee = hasRestaurantLocation
+    ? (deliveryInfo?.charge ?? FALLBACK_DELIVERY_FEE)
+    : (isSnapitPlus ? 0 : FALLBACK_DELIVERY_FEE)
+
   const walletBal   = Number(user?.walletBalance || 0)
   const preWallet   = subTotal - couponDiscount + deliveryFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
   const grandTotal  = Math.max(0, preWallet - walletDeduct)
   const totalSaved  = 48 + couponDiscount + walletDeduct
-
-  const selectedAddr = addressList[selectAddress]
-  const deliveryInfo = (selectedAddr?.lat && selectedAddr?.lng)
-    ? getDeliveryInfo(selectedAddr.lat, selectedAddr.lng, subTotal, isSnapitPlus)
-    : null
 
   const checkMinOrder = () => {
     if (deliveryInfo && deliveryInfo.minOrder > 0 && subTotal < deliveryInfo.minOrder) {
