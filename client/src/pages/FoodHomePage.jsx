@@ -243,15 +243,8 @@ const FoodHomePage = () => {
 
               <div className='flex items-center gap-3 text-xs text-gray-500 border-t border-gray-100 pt-2'>
                 <span>🕐 {r.deliveryTimeMin}–{r.deliveryTimeMax} min</span>
-                <span>·</span>
-                <span>🛵 ₹{r.deliveryFee}</span>
                 {r.minOrderValue > 0 && <><span>·</span><span>Min ₹{r.minOrderValue}</span></>}
               </div>
-              {r.offers?.length > 0 && (
-                <div className='mt-2 bg-orange-50 rounded-lg px-2.5 py-1.5'>
-                  <p className='text-xs text-orange-600 font-semibold truncate'>🏷️ {r.offers[0]}</p>
-                </div>
-              )}
             </div>
           </div>
         ))}
