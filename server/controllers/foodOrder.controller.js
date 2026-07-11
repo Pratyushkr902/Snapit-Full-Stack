@@ -3,7 +3,8 @@ import UserModel  from '../models/user.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
 import crypto     from 'crypto'
-import { calcDeliveryFee } from '../utils/deliveryFee.js'
+import { calcDeliveryFeeFromOrigin } from '../utils/deliveryFee.js'
+import RestaurantModel from '../models/restaurant.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
 
 const getRazorpay = () => new Razorpay({
@@ -99,9 +100,21 @@ const extractBody = (body) => {
 }
 
 // ── Recompute delivery_fee & totalAmt server-side; client values are never trusted ──
-const applyServerPricing = (fields, user) => {
+const applyServerPricing = async (fields, user) => {
   const { lat, lng } = fields.deliveryLocation || {}
-  const serverDeliveryFee = calcDeliveryFee(fields.subTotalAmt, lat, lng, user)
+
+  const restaurant = await RestaurantModel.findById(fields.restaurantId).select('location name')
+  if (!restaurant?.location?.lat || !restaurant?.location?.lng) {
+    console.warn(`PRICE_TAMPER | food-order | restaurant=${fields.restaurantId} missing location, cannot verify delivery fee server-side`)
+    // Fail safe: reject rather than silently trust the client-sent fee
+    const err = new Error('Restaurant delivery info unavailable. Please try again shortly.')
+    err.statusCode = 400
+    throw err
+  }
+
+  const serverDeliveryFee = calcDeliveryFeeFromOrigin(
+    restaurant.location.lat, restaurant.location.lng, lat, lng
+  )
   const serverTotal = fields.subTotalAmt + serverDeliveryFee
     + fields.tip - fields.couponDiscount - fields.walletAmountUsed
 
@@ -194,7 +207,7 @@ export async function foodOrderCOD(req, res) {
       return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
     }
 
-    applyServerPricing(fields, user)
+    await applyServerPricing(fields, user)
 
     const order = new OrderModel(await buildOrderFields(req.userId, fields, {
       payment_status:  'CASH ON DELIVERY',
@@ -230,7 +243,7 @@ export async function foodOrderWallet(req, res) {
       return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
     }
 
-    applyServerPricing(fields, user)   // ← must run before balance check / deduction below
+    await applyServerPricing(fields, user)   // ← must run before balance check / deduction below
 
     const walletBal = Number(user.walletBalance || 0)
     // ✅ deduct only what the frontend says was used from wallet (grandTotal when paying 100% via wallet)
@@ -278,7 +291,7 @@ export async function foodOrderCreatePayment(req, res) {
       return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
     }
 
-    applyServerPricing(fields, user)
+    await applyServerPricing(fields, user)
 
     if (fields.totalAmt <= 0)
       return res.status(400).json({ success: false, message: 'Invalid amount' })
@@ -332,7 +345,7 @@ export async function foodOrderVerifyPayment(req, res) {
       return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
     }
 
-    applyServerPricing(fields, user)
+    await applyServerPricing(fields, user)
 
     // ✅ FIX: req.userId, not req.user._id — deduct partial wallet if used alongside online payment
     await deductWallet(req.userId, fields.walletAmountUsed, fields.restaurantName)
