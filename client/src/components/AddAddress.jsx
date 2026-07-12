@@ -23,9 +23,15 @@ const AddAddress = ({ close }) => {
     setLocationChecking(true)
     setLocationStatus(null)
     try {
-      const { lat, lng } = await getUserLocation()
+      const { lat, lng, accuracy } = await getUserLocation()
+      if (accuracy != null && accuracy > 150) {
+        toast.error(`Location signal is weak (±${Math.round(accuracy)}m). Move near a window or outdoors and try again.`)
+        setLocationStatus('out')
+        setLocationChecking(false)
+        return
+      }
       const result = isInDeliveryZone(lat, lng)
-      setDetectedLocation({ lat, lng, ...result })
+      setDetectedLocation({ lat, lng, accuracy, ...result })
       if (result.serviceable) {
         setLocationStatus('ok')
         toast.success(`✅ We deliver to ${result.zone}!`)

@@ -110,7 +110,7 @@ export async function getUserLocation() {
         }
       }
       const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 })
-      return { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? null }
     }
   } catch (nativeErr) {
     // Native path failed (plugin missing, permission denied, etc) — fall
@@ -124,7 +124,7 @@ export async function getUserLocation() {
       return
     }
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? null }),
       err => reject(err),
       { enableHighAccuracy: true, timeout: 8000 }
     )
