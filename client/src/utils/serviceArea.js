@@ -4,6 +4,13 @@
 // Actual store location — used for the "X km from our store" distance shown to users
 const STORE_LOCATION = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
+// Must match MAX_DELIVERY_RADIUS_KM in server/utils/deliveryFee.js — this is
+// the real deliverable range. Village circles below are ONLY used to guess a
+// friendly display name; they must never be the pass/fail gate, or customers
+// who fall between two circles (e.g. Acchua residents outside the 2km pin)
+// get wrongly told "not serviceable" even though we can actually deliver to them.
+const MAX_DELIVERY_RADIUS_KM = 14
+
 const DELIVERY_ZONES = [
   { name: 'Paliganj',  lat: 25.2921, lng: 84.8170, radiusKm: 2.0 },
   { name: 'Sarsi',     lat: 25.3050, lng: 84.8320, radiusKm: 2.0 },
@@ -66,22 +73,22 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
 // store distance decides "how far is delivery actually coming from" — and the
 // UI label "X km from our store" should always use the latter.
 export function isInDeliveryZone(lat, lng) {
-  let best = null
+  const storeDistanceKm = getDistanceKm(lat, lng, STORE_LOCATION.lat, STORE_LOCATION.lng)
+  const serviceable = storeDistanceKm <= MAX_DELIVERY_RADIUS_KM
 
+  let nearest = null
   for (const zone of DELIVERY_ZONES) {
     const dist = getDistanceKm(lat, lng, zone.lat, zone.lng)
-    if (dist <= zone.radiusKm) {
-      if (!best || dist < best.dist) {
-        best = { zone: zone.name, dist }
-      }
+    if (!nearest || dist < nearest.dist) {
+      nearest = { zone: zone.name, dist }
     }
   }
 
-  if (best) {
-    const storeDistanceKm = getDistanceKm(lat, lng, STORE_LOCATION.lat, STORE_LOCATION.lng)
-    return { serviceable: true, zone: best.zone, distanceKm: Number(storeDistanceKm.toFixed(1)) }
+  return {
+    serviceable,
+    zone: nearest ? nearest.zone : 'your area',
+    distanceKm: Number(storeDistanceKm.toFixed(1)),
   }
-  return { serviceable: false, zone: null }
 }
 
 // Get user's current location
