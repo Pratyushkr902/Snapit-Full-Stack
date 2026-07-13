@@ -149,6 +149,8 @@ const buildTaggedCartItems = async (list_items, storeName) => {
         return {
             ...item,
             productId,
+            name:         product.name,
+            image:        product.image,
             price:        product.price,
             // FIX: snapshot seller price + snapit margin onto the order item —
             // previously missing, causing seller/admin dashboards to show ₹0.00
