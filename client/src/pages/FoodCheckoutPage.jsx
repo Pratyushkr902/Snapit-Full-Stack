@@ -100,6 +100,7 @@ const FoodCheckoutPage = () => {
   const [couponDiscount,   setCouponDiscount]   = useState(0)
   const [appliedCouponCode, setAppliedCouponCode] = useState('')
   const [couponError,      setCouponError]      = useState('')
+  const [couponLoading,    setCouponLoading]    = useState(false)
 
   const [walletApplied, setWalletApplied]   = useState(false)
 
@@ -169,17 +170,32 @@ const FoodCheckoutPage = () => {
     setTipAmt(isNaN(n) || n < 0 ? 0 : Math.min(500, n))
   }
 
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase()
     if (!code) { setCouponError('Please enter a coupon code'); return }
     if (!VALID_COUPONS.includes(code)) {
       setCouponError('Invalid coupon code')
       return
     }
-    const randomDiscount = Math.floor(Math.random() * 8) + 1
-    setCouponDiscount(randomDiscount)
-    setAppliedCouponCode(code)
     setCouponError('')
+    setCouponLoading(true)
+    try {
+      const res = await Axios({
+        method: 'POST',
+        url: '/api/order/coupon/apply',
+        data: { couponCode: code, totalAmt: subTotal }
+      })
+      if (res.data?.success) {
+        setCouponDiscount(res.data.data.discount)
+        setAppliedCouponCode(res.data.data.couponCode)
+      } else {
+        setCouponError(res.data?.message || 'Coupon could not be applied')
+      }
+    } catch (e) {
+      setCouponError(e?.response?.data?.message || 'Coupon could not be applied')
+    } finally {
+      setCouponLoading(false)
+    }
   }
 
   const removeCoupon = () => {
@@ -581,7 +597,7 @@ const FoodCheckoutPage = () => {
       </div>
 
       <div className='bg-white mt-2 px-4 py-4'>
-        {/* Flat coupon — random ₹1–8 */}
+        {/* Flat coupon — random ₹1–5, one use per user per calendar month, validated server-side */}
         <div className='mt-4'>
           <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2'>Coupon code</p>
           {!appliedCouponCode ? (
@@ -592,12 +608,14 @@ const FoodCheckoutPage = () => {
                   onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
                  placeholder='Try SNAPIT, FIRSTUSER, FIRSTFREE, FIRST50'
                   className='flex-1 min-w-0 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
+                  disabled={couponLoading}
                 />
                 <button
                   onClick={applyCoupon}
-                  className='px-5 h-10 bg-red-500 text-white text-sm font-semibold rounded-xl'
+                  disabled={couponLoading}
+                  className='px-5 h-10 bg-red-500 text-white text-sm font-semibold rounded-xl disabled:opacity-60'
                 >
-                  Apply
+                  {couponLoading ? '...' : 'Apply'}
                 </button>
               </div>
               {couponError && <p className='text-xs text-red-500 mt-2'>{couponError}</p>}

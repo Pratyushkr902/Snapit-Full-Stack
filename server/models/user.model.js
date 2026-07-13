@@ -200,7 +200,11 @@ const userSchema = new mongoose.Schema({
         default: []
     },
     usedPromoCodes: {
-        type: [String],
+        // Each entry: { code: 'SNAPIT', usedAt: <Date> } — one use per calendar month per code
+        type: [{
+            code: { type: String },
+            usedAt: { type: Date }
+        }],
         default: []
     },
     // ── New: Birthday Bonus / Surprise Box / Express fields ─────────────────
