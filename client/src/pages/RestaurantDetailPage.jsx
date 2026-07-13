@@ -6,12 +6,18 @@
  * Supports grouped variant cards (Half/Full, Per Piece/Half Kg/Full Kg, etc.)
  * and inline variant cards (pizza sizes via item.variants array).
  * Shows distance + address below banner, requests location on mount.
+ *
+ * Cart is now persistent and cross-restaurant (see utils/foodCartStore.js):
+ * items added here stay in the cart even if the customer browses to a
+ * different restaurant, and checkout can charge multiple restaurants in
+ * one payment.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
+import { useRestaurantCart } from '../utils/foodCartStore'
 
 // ── Fallbacks ─────────────────────────────────────────────────────────────────
 const FALLBACK_IMG =
@@ -31,11 +37,6 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-function formatDistance(km) {
-  if (km < 1) return `${Math.round(km * 1000)} m`
-  return `${km.toFixed(1)} km`
-}
-
 // ── Variant suffix extraction ─────────────────────────────────────────────────
 function parseVariant(name) {
   const match = name.match(/^(.+?)\s*\(([^)]+)\)\s*$/)
@@ -49,11 +50,10 @@ function variantSortKey(label) {
   return idx === -1 ? 99 : idx
 }
 
-// ── FIX 2: groupItems now handles item.variants array (e.g. pizza sizes) ─────
+// ── groupItems handles item.variants array (e.g. pizza sizes) ────────────────
 function groupItems(items) {
   const groups = new Map()
   items.forEach((item) => {
-    // If item has its own variants array (e.g. pizza sizes), treat as inline variant group
     if (item.variants?.length > 1) {
       groups.set(`__inline__${item._id}`, [{ type: 'inline', item }])
       return
@@ -170,12 +170,11 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
   )
 }
 
-// ── FIX 2: Inline Variant Card (for pizza sizes via item.variants array) ──────
+// ── Inline Variant Card (for pizza sizes via item.variants array) ────────────
 function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(item.image ? item.image : FALLBACK_IMG)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = item.variants[selectedIdx]
-  // Use the variant's price; fall back to item.price for the base
   const price = selectedVariant.price ?? item.price
   // Cart key = itemId + variantLabel so each size is an independent cart slot
   const cartKey = `${item._id}_${selectedVariant.label}`
@@ -197,7 +196,6 @@ function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
         {item.description && (
           <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{item.description}</p>
         )}
-        {/* Size selector pills */}
         <div className="flex gap-1.5 mt-2 flex-wrap">
           {item.variants.map((v, idx) => (
             <button
@@ -357,24 +355,7 @@ function CartBar({ totalItems, totalPrice, onViewCart }) {
   )
 }
 
-// ── Offer Strip ───────────────────────────────────────────────────────────────
-function OfferStrip({ offers }) {
-  const [idx, setIdx] = useState(0)
-  useEffect(() => {
-    if (!offers?.length) return
-    const t = setInterval(() => setIdx(i => (i + 1) % offers.length), 3000)
-    return () => clearInterval(t)
-  }, [offers])
-  if (!offers?.length) return null
-  return (
-    <div className="bg-orange-50 border-t border-orange-100 px-4 py-2 flex items-center gap-2">
-      <span className="text-orange-500 text-sm">🏷️</span>
-      <span className="text-orange-700 text-xs font-semibold truncate">{offers[idx]}</span>
-    </div>
-  )
-}
-
-// ── FIX 1: Distance + Address Bar — reads GeoJSON coordinates[1/0] ────────────
+// ── Distance + Address Bar — reads GeoJSON coordinates[1/0] ──────────────────
 function LocationBar({ restaurant, userLocation }) {
   const address = restaurant?.address
   const addressStr = [address?.street, address?.area, address?.city]
@@ -421,7 +402,20 @@ export default function RestaurantDetailPage() {
   const [activeCategory, setActiveCategory] = useState('')
   const [bannerSrc, setBannerSrc] = useState(BANNER_FALLBACK)
   const [userLocation, setUserLocation] = useState(null)
-  const [foodCart, setFoodCart] = useState({})
+
+  // ── Persistent, cross-restaurant cart (see utils/foodCartStore.js) ─────────
+  // restaurantLat/Lng falls back between the plain lat/lng shape (used
+  // elsewhere) and the GeoJSON coordinates shape (used by LocationBar above),
+  // since the restaurant doc has been observed with either depending on when
+  // it was seeded.
+  const restaurantMeta = {
+    restaurantId: id,
+    restaurantName: restaurant?.name || '',
+    restaurantLat: restaurant?.location?.lat ?? restaurant?.location?.coordinates?.[1] ?? null,
+    restaurantLng: restaurant?.location?.lng ?? restaurant?.location?.coordinates?.[0] ?? null,
+  }
+  const { foodCart, cartCount, cartTotal, handleAdd, handleIncrease, handleDecrease } =
+    useRestaurantCart(restaurantMeta)
 
   // Request location on mount
   useEffect(() => {
@@ -453,31 +447,11 @@ export default function RestaurantDetailPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // ── Cart handlers ──────────────────────────────────────────────────────────
-  const handleAdd = (item) => {
-    setFoodCart(prev => ({ ...prev, [item._id]: { item, qty: 1 } }))
+  const wrappedAdd = (item) => {
+    handleAdd(item)
     toast.success(`${item.name} added!`, { duration: 1200, icon: '🛒' })
   }
-  const handleIncrease = (item) => {
-    setFoodCart(prev => ({ ...prev, [item._id]: { item, qty: (prev[item._id]?.qty || 0) + 1 } }))
-  }
-  const handleDecrease = (item) => {
-    setFoodCart(prev => {
-      const current = prev[item._id]?.qty || 0
-      if (current <= 1) { const next = { ...prev }; delete next[item._id]; return next }
-      return { ...prev, [item._id]: { item, qty: current - 1 } }
-    })
-  }
 
-  const cartEntries = Object.values(foodCart)
-  const cartCount = cartEntries.reduce((s, e) => s + e.qty, 0)
-  const cartTotal = cartEntries.reduce((s, e) => {
-    const price = e.item.discountedPrice > 0 ? e.item.discountedPrice : e.item.price
-    return s + price * e.qty
-  }, 0)
-
-  const allItems = menu.flatMap(s => s.items)
-  const cartForCheckout = Object.fromEntries(Object.entries(foodCart).map(([k, v]) => [k, v.qty]))
   const activeSection = menu.find(m => m.category === activeCategory)
   const groupedItems = activeSection ? groupItems(activeSection.items) : []
 
@@ -587,14 +561,13 @@ export default function RestaurantDetailPage() {
 
                 <div className="px-4">
                   {groupedItems.map((entry) => {
-                    // FIX 2: render InlineVariantCard for pizza-style items
                     if (entry.type === 'inline') {
                       return (
                         <InlineVariantCard
                           key={entry.item._id}
                           item={entry.item}
                           foodCart={foodCart}
-                          onAdd={handleAdd}
+                          onAdd={wrappedAdd}
                           onIncrease={handleIncrease}
                           onDecrease={handleDecrease}
                         />
@@ -607,7 +580,7 @@ export default function RestaurantDetailPage() {
                           key={item._id}
                           item={item}
                           qty={foodCart[item._id]?.qty || 0}
-                          onAdd={() => handleAdd(item)}
+                          onAdd={() => wrappedAdd(item)}
                           onIncrease={() => handleIncrease(item)}
                           onDecrease={() => handleDecrease(item)}
                         />
@@ -618,7 +591,7 @@ export default function RestaurantDetailPage() {
                         key={entry.baseName}
                         group={entry}
                         foodCart={foodCart}
-                        onAdd={handleAdd}
+                        onAdd={wrappedAdd}
                         onIncrease={handleIncrease}
                         onDecrease={handleDecrease}
                       />
@@ -656,16 +629,7 @@ export default function RestaurantDetailPage() {
       <CartBar
         totalItems={cartCount}
         totalPrice={cartTotal}
-        onViewCart={() => navigate('/food-checkout', {
-          state: {
-            cart: cartForCheckout,
-            allItems,
-            restaurantId: id,
-            restaurantName: restaurant?.name,
-            restaurantLat: restaurant?.location?.lat,
-            restaurantLng: restaurant?.location?.lng,
-          }
-        })}
+        onViewCart={() => navigate('/food-checkout')}
       />
     </div>
   )
