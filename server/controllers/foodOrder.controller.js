@@ -12,25 +12,31 @@ const getRazorpay = () => new Razorpay({
   key_secret: process.env.RAZORPAY_SECRET_KEY,
 })
 
-const genOrderId = () =>
-  'FOOD-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase()
+const genOrderId = (suffix = '') =>
+  'FOOD-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase() + (suffix ? `-${suffix}` : '')
 
-// ── Build cart items, trusting the DATABASE for price/margin, not the client ──
-// Looks up each MenuItem by its real _id so a tampered client payload can't
-// change what the customer is charged or what the restaurant gets paid.
-// Falls back to the client-submitted price only if the menu item can't be
-// found (e.g. deleted after being added to cart), so an order doesn't hard-fail.
-const buildCartItems = async (items) => {
+const genGroupOrderId = () =>
+  Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase()
+
+// ── Group cart items by restaurant, trusting the DATABASE for price/margin
+// AND for which restaurant each item belongs to. Client-sent restaurantId is
+// NEVER trusted for grouping — we look it up from the MenuItem doc itself,
+// so a tampered payload can't attach one restaurant's items to another's order. ──
+const buildGroupsByRestaurant = async (items) => {
   const ids = (items || []).map(i => i.menuItemId).filter(Boolean)
   const dbItems = await MenuItemModel.find({ _id: { $in: ids } })
   const dbById = new Map(dbItems.map(d => [String(d._id), d]))
 
-  return (items || []).map(i => {
+  const groups = new Map() // restaurantId(string) -> { restaurantId, cartItems: [] }
+
+  for (const i of (items || [])) {
     const db = dbById.get(String(i.menuItemId))
+    let restaurantId, cartItem
 
     if (!db) {
-      console.warn(`[buildCartItems] ⚠️ menuItemId=${i.menuItemId} not found in DB, falling back to client price`)
-      return {
+      console.warn(`[buildGroupsByRestaurant] ⚠️ menuItemId=${i.menuItemId} not found in DB, falling back to client price/restaurant`)
+      restaurantId = i.restaurantId ? String(i.restaurantId) : 'unknown'
+      cartItem = {
         productId:         i.menuItemId,
         name:              i.name,
         image:             i.image || '',
@@ -40,54 +46,47 @@ const buildCartItems = async (items) => {
         quantity:          Number(i.quantity),
         seller_store_name: null,
       }
+    } else {
+      const effectivePrice = db.discountedPrice > 0 ? db.discountedPrice : db.price
+      const margin         = Number(db.snapitMargin || 0)
+      restaurantId = String(db.restaurantId)
+      cartItem = {
+        productId:         db._id,
+        name:              db.name,
+        image:             db.image || i.image || '',
+        price:             effectivePrice,
+        sellerPrice:       effectivePrice - margin,
+        snapitMargin:      margin,
+        quantity:          Number(i.quantity),
+        seller_store_name: null,
+      }
     }
 
-    // Effective customer-facing price: discountedPrice if set, else MRP price.
-    const effectivePrice = db.discountedPrice > 0 ? db.discountedPrice : db.price
-    const margin         = Number(db.snapitMargin || 0)
-    const sellerPrice     = effectivePrice - margin
+    if (!groups.has(restaurantId)) groups.set(restaurantId, { restaurantId, cartItems: [] })
+    groups.get(restaurantId).cartItems.push(cartItem)
+  }
 
-    return {
-      productId:         db._id,
-      name:              db.name,
-      image:             db.image || i.image || '',
-      price:             effectivePrice,
-      sellerPrice,
-      snapitMargin:      margin,
-      quantity:          Number(i.quantity),
-      seller_store_name: null,
-    }
-  })
+  return [...groups.values()]
 }
 
-// ── Validate & extract common fields from request body ──────────────────────
+// ── Validate & extract common (restaurant-agnostic) fields from request body ──
 const extractBody = (body) => {
   const {
-    restaurantId,
-    restaurantName,
-    addressId,
     items,
-    subTotalAmt,
-    delivery_fee,
-    totalAmt,
+    addressId,
     deliveryLocation,
     tip                  = 0,
-    offerKey             = null,   // ✅ now extracted
+    offerKey             = null,
     couponCode           = null,
-    couponDiscount       = 0,      // ✅ also extract coupon discount amount
+    couponDiscount       = 0,
     walletAmountUsed     = 0,
     deliveryInstructions = null,
     scheduledDelivery    = null,
   } = body
 
   return {
-    restaurantId,
-    restaurantName,
-    addressId,
     items,
-    subTotalAmt:          Number(subTotalAmt    || 0),
-    delivery_fee:         Number(delivery_fee   || 0),
-    totalAmt:             Number(totalAmt       || 0),
+    addressId,
     deliveryLocation,
     tip:                  Math.max(0, Number(tip || 0)),
     offerKey:             offerKey || null,
@@ -99,20 +98,21 @@ const extractBody = (body) => {
   }
 }
 
-// ── Recompute delivery_fee & totalAmt server-side; client values are never trusted ──
-const applyServerPricing = async (fields, user) => {
-  const { lat, lng } = fields.deliveryLocation || {}
-
-  const restaurant = await RestaurantModel.findById(fields.restaurantId).select('location name')
+// ── Price ONE restaurant's group server-side: subtotal from DB-sourced prices,
+// delivery fee from THAT restaurant's location → deliveryLocation, min-order check. ──
+const priceGroup = async (group, deliveryLocation, user) => {
+  const restaurant = await RestaurantModel.findById(group.restaurantId).select('location name')
   if (!restaurant?.location?.lat || !restaurant?.location?.lng) {
-    console.warn(`PRICE_TAMPER | food-order | restaurant=${fields.restaurantId} missing location, cannot verify delivery fee server-side`)
-    // Fail safe: reject rather than silently trust the client-sent fee
+    console.warn(`PRICE_TAMPER | food-order | restaurant=${group.restaurantId} missing location, cannot verify delivery fee server-side`)
     const err = new Error('Restaurant delivery info unavailable. Please try again shortly.')
     err.statusCode = 400
     throw err
   }
 
-  const serverDeliveryFee = calcDeliveryFeeFromOrigin(
+  const { lat, lng } = deliveryLocation || {}
+  const subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
+
+  const deliveryFee = calcDeliveryFeeFromOrigin(
     restaurant.location.lat, restaurant.location.lng, lat, lng
   )
 
@@ -121,68 +121,67 @@ const applyServerPricing = async (fields, user) => {
     new Date() < new Date(user.snapitPlusExpiresAt)
   )
   const minOrderRequired = getMinOrderAmountFromOrigin(lat, lng, isPlusForMinOrder)
-  if (minOrderRequired > 0 && fields.subTotalAmt < minOrderRequired) {
-    const err = new Error(`Minimum order of ₹${minOrderRequired} required for this location.`)
+  if (minOrderRequired > 0 && subTotalAmt < minOrderRequired) {
+    const err = new Error(`Minimum order of ₹${minOrderRequired} required at ${restaurant.name} for this location.`)
     err.statusCode = 400
     throw err
   }
 
-  const serverTotal = fields.subTotalAmt + serverDeliveryFee
-    + fields.tip - fields.couponDiscount - fields.walletAmountUsed
-
-  if (Math.abs(fields.delivery_fee - serverDeliveryFee) > 1 ||
-      Math.abs(fields.totalAmt - serverTotal) > 1) {
-    console.warn(
-      `PRICE_TAMPER | food-order | user=${user._id} | ` +
-      `clientFee=${fields.delivery_fee} serverFee=${serverDeliveryFee} | ` +
-      `clientTotal=${fields.totalAmt} serverTotal=${serverTotal}`
-    )
-  }
-
-  fields.delivery_fee = serverDeliveryFee
-  fields.totalAmt = serverTotal
-  return fields
+  return { ...group, restaurantName: restaurant.name, subTotalAmt, deliveryFee }
 }
 
-// ── Shared order fields ─────────────────────────────────────────────────────
-// NOTE: now async because buildCartItems looks up the DB — every caller must await this.
-const buildOrderFields = async (userId, fields, extra = {}) => {
-  const {
-    restaurantName, addressId, items,
-    subTotalAmt, delivery_fee, totalAmt,
-    deliveryLocation, tip, offerKey, couponCode, couponDiscount,
-    walletAmountUsed, deliveryInstructions, scheduledDelivery,
-  } = fields
+// ── Price every restaurant group, then fold tip/coupon/wallet into the FIRST
+// group only, so sum(order.totalAmt across the group) === what the customer paid.
+// FLAGGED: daily-accounts / per-restaurant reporting will therefore show the
+// whole checkout's tip+coupon+wallet against whichever restaurant is first in
+// the cart. Say the word if you want this split proportionally by subtotal instead. ──
+const priceAllGroups = async (groups, fields, user) => {
+  const priced = []
+  for (const g of groups) priced.push(await priceGroup(g, fields.deliveryLocation, user))
 
-  return {
-    userId,
-    orderId:      genOrderId(),
-    cartItems:    await buildCartItems(items),
-    product_details: { name: restaurantName || 'Food Order', image: [] },
-    delivery_address: addressId,
-    subTotalAmt,
-    delivery_fee,
-    totalAmt,
-    tip,
-    offerKey,           // ✅ saved
-    couponCode,
-    couponDiscount,     // ✅ saved
-    walletAmountUsed,
-    deliveryInstructions,
-    scheduledDelivery,
-     restaurantId: fields.restaurantId,   // add this line in buildOrderFields return object
-       store_details: {
-        name:     restaurantName || 'Restaurant',
-      address:  '',
-      location: {
-        lat: deliveryLocation?.lat || 25.2921,
-        lng: deliveryLocation?.lng || 84.817,
-      },
+  priced.forEach((g, idx) => {
+    g.tip              = idx === 0 ? fields.tip : 0
+    g.couponDiscount   = idx === 0 ? fields.couponDiscount : 0
+    g.walletAmountUsed = idx === 0 ? fields.walletAmountUsed : 0
+    g.offerKey         = idx === 0 ? fields.offerKey : null
+    g.couponCode       = idx === 0 ? fields.couponCode : null
+    g.totalAmt = g.subTotalAmt + g.deliveryFee + g.tip - g.couponDiscount - g.walletAmountUsed
+  })
+
+  const grandTotal = priced.reduce((s, g) => s + g.totalAmt, 0)
+  return { priced, grandTotal }
+}
+
+// ── Build one order document's fields for a single restaurant group ─────────
+const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}) => ({
+  userId,
+  orderId:          genOrderId(groupOrderId),
+  cartItems:        group.cartItems,
+  product_details:  { name: group.restaurantName || 'Food Order', image: [] },
+  delivery_address: fields.addressId,
+  subTotalAmt:      group.subTotalAmt,
+  delivery_fee:     group.deliveryFee,
+  totalAmt:         group.totalAmt,
+  tip:              group.tip,
+  offerKey:         group.offerKey,
+  couponCode:       group.couponCode,
+  couponDiscount:   group.couponDiscount,
+  walletAmountUsed: group.walletAmountUsed,
+  deliveryInstructions: fields.deliveryInstructions,
+  scheduledDelivery:    fields.scheduledDelivery,
+  restaurantId: group.restaurantId,
+  store_details: {
+    name:     group.restaurantName || 'Restaurant',
+    address:  '',
+    location: {
+      lat: fields.deliveryLocation?.lat || 25.2921,
+      lng: fields.deliveryLocation?.lng || 84.817,
     },
-    delivery_status: 'Pending',
-    ...extra,
-  }
-}
+  },
+  delivery_status:   'Pending',
+  isRestaurantOrder: true,
+  ...extra,
+})
 
 // ── Deduct wallet helper (reused across routes) ─────────────────────────────
 const deductWallet = async (userId, amount, restaurantName) => {
@@ -203,123 +202,109 @@ const deductWallet = async (userId, amount, restaurantName) => {
   })
 }
 
+// ── Shared setup used by every route: validate, group by restaurant, run the
+// store-open guard, price every group server-side. ──
+const prepareMultiRestaurantOrder = async (req) => {
+  const fields = extractBody(req.body)
+  if (!fields.items?.length) { const e = new Error('No items in order'); e.statusCode = 400; throw e }
+  if (!fields.addressId)     { const e = new Error('Address required');  e.statusCode = 400; throw e }
+
+  const user = await UserModel.findById(req.userId)
+  if (!user) { const e = new Error('User not found'); e.statusCode = 404; throw e }
+
+  const groups = await buildGroupsByRestaurant(fields.items)
+  if (!groups.length) { const e = new Error('No valid items in order'); e.statusCode = 400; throw e }
+
+  await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
+
+  const { priced, grandTotal } = await priceAllGroups(groups, fields, user)
+  const groupOrderId = genGroupOrderId()
+
+  return { fields, user, priced, grandTotal, groupOrderId }
+}
+
 // ── POST /api/restaurant/food-order/cash-on-delivery ───────────────────────
 export async function foodOrderCOD(req, res) {
   try {
-    const fields = extractBody(req.body)
-    if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
-    if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
-    // ✅ FIX: auth middleware sets req.userId (not req.user._id) — req.user does not exist
-    const user = await UserModel.findById(req.userId)
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+    const { fields, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
-    try {
-      await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
-    } catch (guardErr) {
-      return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
+    const orders = []
+    for (const group of priced) {
+      const order = new OrderModel(buildOrderFields(req.userId, groupOrderId, group, fields, {
+        payment_status:  'CASH ON DELIVERY',
+        payment_mode:    'COD',
+        delivery_status: 'Pending',
+      }))
+      await order.save()
+      orders.push(order)
     }
 
-    await applyServerPricing(fields, user)
-
-    const order = new OrderModel(await buildOrderFields(req.userId, fields, {
-      payment_status:  'CASH ON DELIVERY',
-      payment_mode:    'COD',
-      delivery_status: 'Pending',
-    }))
-    await order.save()
-
-    console.log(`[foodOrderCOD] ✅ orderId=${order.orderId} total=₹${fields.totalAmt} tip=₹${fields.tip} offer=${fields.offerKey} coupon=${fields.couponCode}`)
-    return res.json({ success: true, message: 'Food order placed!', data: order })
+    console.log(`[foodOrderCOD] ✅ group=${groupOrderId} restaurants=${orders.length} orderIds=${orders.map(o => o.orderId).join(',')}`)
+    return res.json({ success: true, message: 'Food order placed!', data: orders })
 
   } catch (err) {
     console.error('[foodOrderCOD] ❌', err.message)
-    return res.status(500).json({ success: false, message: err.message })
+    return res.status(err.statusCode || 500).json({ success: false, message: err.message })
   }
 }
 
 // ── POST /api/restaurant/food-order/wallet ─────────────────────────────────
 export async function foodOrderWallet(req, res) {
   try {
-    const fields = extractBody(req.body)
-    if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
-    if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
-
-    // ✅ FIX: req.userId, not req.user._id
-    // ✅ FIX: req.userId, not req.user._id
-    const user = await UserModel.findById(req.userId)
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
-
-    try {
-      await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
-    } catch (guardErr) {
-      return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
-    }
-
-    await applyServerPricing(fields, user)   // ← must run before balance check / deduction below
+    const { fields, user, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
     const walletBal = Number(user.walletBalance || 0)
-    // ✅ deduct only what the frontend says was used from wallet (grandTotal when paying 100% via wallet)
-    const deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : fields.totalAmt
+    const deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : grandTotal
     if (walletBal < deductAmt)
       return res.status(400).json({
         success: false,
         message: `Insufficient wallet balance. Have ₹${walletBal}, need ₹${deductAmt}`,
       })
 
-    // ✅ FIX: req.userId, not req.user._id
-    await deductWallet(req.userId, deductAmt, fields.restaurantName)
+    await deductWallet(req.userId, deductAmt, priced[0]?.restaurantName)
 
-    // ✅ FIX: req.userId, not req.user._id
-    const order = new OrderModel(await buildOrderFields(req.userId, fields, {
-      paymentId:       'WALLET-' + Date.now(),
-      payment_status:  'PAID',
-      payment_mode:    'WALLET',
-      delivery_status: 'Confirmed',
-    }))
-    await order.save()
+    const orders = []
+    for (const group of priced) {
+      const order = new OrderModel(buildOrderFields(req.userId, groupOrderId, group, fields, {
+        paymentId:       'WALLET-' + Date.now(),
+        payment_status:  'PAID',
+        payment_mode:    'WALLET',
+        delivery_status: 'Confirmed',
+      }))
+      await order.save()
+      orders.push(order)
+    }
 
-    console.log(`[foodOrderWallet] ✅ orderId=${order.orderId} walletDeducted=₹${deductAmt}`)
-    return res.json({ success: true, message: 'Paid via wallet!', data: order })
+    console.log(`[foodOrderWallet] ✅ group=${groupOrderId} walletDeducted=₹${deductAmt} restaurants=${orders.length}`)
+    return res.json({ success: true, message: 'Paid via wallet!', data: orders })
 
   } catch (err) {
     console.error('[foodOrderWallet] ❌', err.message)
-    return res.status(500).json({ success: false, message: err.message })
+    return res.status(err.statusCode || 500).json({ success: false, message: err.message })
   }
 }
 
 // ── POST /api/restaurant/food-order/create-payment ────────────────────────
 export async function foodOrderCreatePayment(req, res) {
   try {
-    const fields = extractBody(req.body)
-    if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
-    if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
+    const { grandTotal } = await prepareMultiRestaurantOrder(req)
 
-    const user = await UserModel.findById(req.userId)
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
-
-    try {
-      await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
-    } catch (guardErr) {
-      return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
-    }
-
-    await applyServerPricing(fields, user)
-
-    if (fields.totalAmt <= 0)
+    if (grandTotal <= 0)
       return res.status(400).json({ success: false, message: 'Invalid amount' })
 
     const rzpOrder = await getRazorpay().orders.create({
-      amount:   Math.round(fields.totalAmt * 100),
+      amount:   Math.round(grandTotal * 100),
       currency: 'INR',
       receipt:  genOrderId(),
     })
-    console.log(`[foodOrderCreatePayment] ✅ rzpOrderId=${rzpOrder.id} amount=₹${fields.totalAmt}`)
+    console.log(`[foodOrderCreatePayment] ✅ rzpOrderId=${rzpOrder.id} amount=₹${grandTotal}`)
     return res.json(rzpOrder)
   } catch (err) {
     console.error('[foodOrderCreatePayment] ❌', err.message)
-    return res.status(500).json({ success: false, message: err.message })
+    return res.status(err.statusCode || 500).json({ success: false, message: err.message })
   }
 }
+
 // ── POST /api/restaurant/food-order/verify-payment ────────────────────────
 export async function foodOrderVerifyPayment(req, res) {
   try {
@@ -333,7 +318,6 @@ export async function foodOrderVerifyPayment(req, res) {
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature)
       return res.status(400).json({ success: false, message: 'Missing payment verification fields' })
 
-    // ✅ uses same env var as getRazorpay()
     const expected = crypto
       .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -344,38 +328,28 @@ export async function foodOrderVerifyPayment(req, res) {
       return res.status(400).json({ success: false, message: 'Payment verification failed' })
     }
 
-    const fields = extractBody(rest)
-    if (!fields.items?.length) return res.status(400).json({ success: false, message: 'No items in order' })
-    if (!fields.addressId)     return res.status(400).json({ success: false, message: 'Address required' })
+    req.body = rest
+    const { fields, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
-    const user = await UserModel.findById(req.userId)
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+    await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
 
-    try {
-      await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
-    } catch (guardErr) {
-      return res.status(guardErr.statusCode || 400).json({ success: false, message: guardErr.message })
+    const orders = []
+    for (const group of priced) {
+      const order = new OrderModel(buildOrderFields(req.userId, groupOrderId, group, fields, {
+        paymentId:       razorpay_payment_id,
+        payment_status:  'PAID',
+        payment_mode:    'ONLINE',
+        delivery_status: 'Confirmed',
+      }))
+      await order.save()
+      orders.push(order)
     }
 
-    await applyServerPricing(fields, user)
-
-    // ✅ FIX: req.userId, not req.user._id — deduct partial wallet if used alongside online payment
-    await deductWallet(req.userId, fields.walletAmountUsed, fields.restaurantName)
-
-    // ✅ FIX: req.userId, not req.user._id
-    const order = new OrderModel(await buildOrderFields(req.userId, fields, {
-      paymentId:       razorpay_payment_id,
-      payment_status:  'PAID',
-      payment_mode:    'ONLINE',
-      delivery_status: 'Confirmed',
-    }))
-    await order.save()
-
-    console.log(`[foodOrderVerifyPayment] ✅ orderId=${order.orderId} paymentId=${razorpay_payment_id} total=₹${fields.totalAmt} tip=₹${fields.tip}`)
-    return res.json({ success: true, message: 'Food order placed!', data: order })
+    console.log(`[foodOrderVerifyPayment] ✅ group=${groupOrderId} paymentId=${razorpay_payment_id} restaurants=${orders.length}`)
+    return res.json({ success: true, message: 'Food order placed!', data: orders })
 
   } catch (err) {
     console.error('[foodOrderVerifyPayment] ❌', err.message)
-    return res.status(500).json({ success: false, message: err.message })
+    return res.status(err.statusCode || 500).json({ success: false, message: err.message })
   }
 }
