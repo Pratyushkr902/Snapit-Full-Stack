@@ -6,6 +6,12 @@ import crypto     from 'crypto'
 import { calcDeliveryFeeFromOrigin, getMinOrderAmountFromOrigin } from '../utils/deliveryFee.js'
 import RestaurantModel from '../models/restaurant.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
+import { validateCoupon } from '../utils/couponValidation.js'
+import { notifyAllRiders } from '../utils/firebaseNotify.js'
+import {
+    notifyUserOrderPlaced,
+    notifySellersOfNewOrder,
+} from '../utils/notificationService.js'
 
 const getRazorpay = () => new Razorpay({
   key_id:     process.env.RAZORPAY_KEY_ID,
@@ -21,7 +27,8 @@ const genGroupOrderId = () =>
 // ── Group cart items by restaurant, trusting the DATABASE for price/margin
 // AND for which restaurant each item belongs to. Client-sent restaurantId is
 // NEVER trusted for grouping — we look it up from the MenuItem doc itself,
-// so a tampered payload can't attach one restaurant's items to another's order. ──
+// so a tampered payload can't attach one restaurant's items to another's order.
+// Unknown menuItemId REJECTS the order instead of trusting client price. ──
 const buildGroupsByRestaurant = async (items) => {
   const ids = (items || []).map(i => i.menuItemId).filter(Boolean)
   const dbItems = await MenuItemModel.find({ _id: { $in: ids } })
@@ -31,35 +38,26 @@ const buildGroupsByRestaurant = async (items) => {
 
   for (const i of (items || [])) {
     const db = dbById.get(String(i.menuItemId))
-    let restaurantId, cartItem
 
     if (!db) {
-      console.warn(`[buildGroupsByRestaurant] ⚠️ menuItemId=${i.menuItemId} not found in DB, falling back to client price/restaurant`)
-      restaurantId = i.restaurantId ? String(i.restaurantId) : 'unknown'
-      cartItem = {
-        productId:         i.menuItemId,
-        name:              i.name,
-        image:             i.image || '',
-        price:             Number(i.price),
-        sellerPrice:       Number(i.price),
-        snapitMargin:      0,
-        quantity:          Number(i.quantity),
-        seller_store_name: null,
-      }
-    } else {
-      const effectivePrice = db.discountedPrice > 0 ? db.discountedPrice : db.price
-      const margin         = Number(db.snapitMargin || 0)
-      restaurantId = String(db.restaurantId)
-      cartItem = {
-        productId:         db._id,
-        name:              db.name,
-        image:             db.image || i.image || '',
-        price:             effectivePrice,
-        sellerPrice:       effectivePrice - margin,
-        snapitMargin:      margin,
-        quantity:          Number(i.quantity),
-        seller_store_name: null,
-      }
+      console.error(`[buildGroupsByRestaurant] menuItemId=${i.menuItemId} not found in DB — rejecting order (never trust client-supplied price/restaurant)`)
+      const err = new Error('One or more items in your cart are no longer available. Please refresh and try again.')
+      err.statusCode = 400
+      throw err
+    }
+
+    const effectivePrice = db.discountedPrice > 0 ? db.discountedPrice : db.price
+    const margin         = Number(db.snapitMargin || 0)
+    const restaurantId   = String(db.restaurantId)
+    const cartItem = {
+      productId:         db._id,
+      name:              db.name,
+      image:             db.image || i.image || '',
+      price:             effectivePrice,
+      sellerPrice:       effectivePrice - margin,
+      snapitMargin:      margin,
+      quantity:          Number(i.quantity),
+      seller_store_name: null,
     }
 
     if (!groups.has(restaurantId)) groups.set(restaurantId, { restaurantId, cartItems: [] })
@@ -132,19 +130,21 @@ const priceGroup = async (group, deliveryLocation, user) => {
 
 // ── Price every restaurant group, then fold tip/coupon/wallet into the FIRST
 // group only, so sum(order.totalAmt across the group) === what the customer paid.
-// FLAGGED: daily-accounts / per-restaurant reporting will therefore show the
-// whole checkout's tip+coupon+wallet against whichever restaurant is first in
-// the cart. Say the word if you want this split proportionally by subtotal instead. ──
+// Coupon discount is computed SERVER-SIDE via validateCoupon — client-supplied
+// couponDiscount is never trusted. ──
 const priceAllGroups = async (groups, fields, user) => {
   const priced = []
   for (const g of groups) priced.push(await priceGroup(g, fields.deliveryLocation, user))
 
+  const totalSubTotal = priced.reduce((s, g) => s + g.subTotalAmt, 0)
+  const { code: validCouponCode, discount: couponDiscount } = validateCoupon(fields.couponCode, totalSubTotal)
+
   priced.forEach((g, idx) => {
     g.tip              = idx === 0 ? fields.tip : 0
-    g.couponDiscount   = idx === 0 ? fields.couponDiscount : 0
+    g.couponDiscount   = idx === 0 ? couponDiscount : 0
     g.walletAmountUsed = idx === 0 ? fields.walletAmountUsed : 0
     g.offerKey         = idx === 0 ? fields.offerKey : null
-    g.couponCode       = idx === 0 ? fields.couponCode : null
+    g.couponCode       = idx === 0 ? validCouponCode : null
     g.totalAmt = g.subTotalAmt + g.deliveryFee + g.tip - g.couponDiscount - g.walletAmountUsed
   })
 
@@ -183,6 +183,19 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}) => ({
   ...extra,
 })
 
+// ── Notify user + seller/restaurant + riders for one saved food order.
+// Mirrors the grocery flow in order.controller.js. Fire-and-forget (non-fatal
+// on failure) so a push-notification hiccup never blocks order placement. ──
+const notifyFoodOrderPlaced = (order, user) => {
+  notifyUserOrderPlaced(order.userId, order.orderId, user?.fcmToken).catch(() => {})
+  notifySellersOfNewOrder(order).catch(() => {})
+  notifyAllRiders({
+    title: '🛵 New Order!',
+    body:  `Order ${order.orderId} is ready for pickup — ₹${order.totalAmt}`,
+    data:  { orderId: order.orderId, type: 'NEW_ORDER' },
+  }).catch(() => {})
+}
+
 // ── Deduct wallet helper (reused across routes) ─────────────────────────────
 const deductWallet = async (userId, amount, restaurantName) => {
   if (!amount || amount <= 0) return
@@ -203,7 +216,7 @@ const deductWallet = async (userId, amount, restaurantName) => {
 }
 
 // ── Shared setup used by every route: validate, group by restaurant, run the
-// store-open guard, price every group server-side. ──
+// store-open guard, check wallet balance up front, price every group server-side. ──
 const prepareMultiRestaurantOrder = async (req) => {
   const fields = extractBody(req.body)
   if (!fields.items?.length) { const e = new Error('No items in order'); e.statusCode = 400; throw e }
@@ -214,6 +227,12 @@ const prepareMultiRestaurantOrder = async (req) => {
 
   const groups = await buildGroupsByRestaurant(fields.items)
   if (!groups.length) { const e = new Error('No valid items in order'); e.statusCode = 400; throw e }
+
+  if (fields.walletAmountUsed > 0 && fields.walletAmountUsed > Number(user.walletBalance || 0)) {
+    const e = new Error(`Insufficient wallet balance. Have ₹${user.walletBalance || 0}, need ₹${fields.walletAmountUsed}`)
+    e.statusCode = 400
+    throw e
+  }
 
   await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
 
@@ -226,7 +245,10 @@ const prepareMultiRestaurantOrder = async (req) => {
 // ── POST /api/restaurant/food-order/cash-on-delivery ───────────────────────
 export async function foodOrderCOD(req, res) {
   try {
-    const { fields, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    // COD never touches wallet balance — strip any client-supplied
+    // walletAmountUsed before pricing so it can't fake a discount here.
+    req.body.walletAmountUsed = 0
+    const { fields, user, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
     const orders = []
     for (const group of priced) {
@@ -237,6 +259,7 @@ export async function foodOrderCOD(req, res) {
       }))
       await order.save()
       orders.push(order)
+      notifyFoodOrderPlaced(order, user)
     }
 
     console.log(`[foodOrderCOD] ✅ group=${groupOrderId} restaurants=${orders.length} orderIds=${orders.map(o => o.orderId).join(',')}`)
@@ -273,6 +296,7 @@ export async function foodOrderWallet(req, res) {
       }))
       await order.save()
       orders.push(order)
+      notifyFoodOrderPlaced(order, user)
     }
 
     console.log(`[foodOrderWallet] ✅ group=${groupOrderId} walletDeducted=₹${deductAmt} restaurants=${orders.length}`)
@@ -329,7 +353,7 @@ export async function foodOrderVerifyPayment(req, res) {
     }
 
     req.body = rest
-    const { fields, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const { fields, user, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
     await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
 
@@ -343,6 +367,7 @@ export async function foodOrderVerifyPayment(req, res) {
       }))
       await order.save()
       orders.push(order)
+      notifyFoodOrderPlaced(order, user)
     }
 
     console.log(`[foodOrderVerifyPayment] ✅ group=${groupOrderId} paymentId=${razorpay_payment_id} restaurants=${orders.length}`)
