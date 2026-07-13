@@ -137,7 +137,7 @@ const priceAllGroups = async (groups, fields, user) => {
   for (const g of groups) priced.push(await priceGroup(g, fields.deliveryLocation, user))
 
   const totalSubTotal = priced.reduce((s, g) => s + g.subTotalAmt, 0)
-  const { code: validCouponCode, discount: couponDiscount } = validateCoupon(fields.couponCode, totalSubTotal)
+  const { code: validCouponCode, discount: couponDiscount } = validateCoupon(fields.couponCode, totalSubTotal, user._id)
 
   priced.forEach((g, idx) => {
     g.tip              = idx === 0 ? fields.tip : 0
