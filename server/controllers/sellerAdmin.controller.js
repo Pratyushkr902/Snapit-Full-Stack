@@ -161,7 +161,13 @@ export async function updateSellerProductController(req, res) {
             return res.status(403).json({ success: false, error: true, message: "This product doesn't belong to this seller" });
         }
 
-        const allowedFields = ["name", "description", "sellerPrice", "snapitMargin", "publish", "image", "store_inventory", "more_details", "unit"];
+        // stock lives per-seller inside store_inventory, not as a top-level field
+        if (updates.stock !== undefined) {
+            const inv = product.store_inventory.find(inv => inv.sellerId?.toString() === sellerId);
+            if (inv) inv.stock = Number(updates.stock) || 0;
+        }
+
+        const allowedFields = ["name", "description", "sellerPrice", "snapitMargin", "publish", "image", "more_details", "unit", "category", "subCategory"];
         for (const key of allowedFields) {
             if (updates[key] !== undefined) product[key] = updates[key];
         }
@@ -169,6 +175,78 @@ export async function updateSellerProductController(req, res) {
         await product.save();
 
         return res.json({ success: true, error: false, message: "Product updated", data: product });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: true, message: err.message });
+    }
+}
+
+export async function createSellerProductController(req, res) {
+    try {
+        const { sellerId } = req.params;
+        const {
+            name, description = "", image = [], unit = "",
+            sellerPrice, snapitMargin = 0, stock = 0,
+            category = [], subCategory = [], publish = true
+        } = req.body;
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, error: true, message: "Product name is required" });
+        }
+        if (sellerPrice === undefined || sellerPrice === null || isNaN(Number(sellerPrice))) {
+            return res.status(400).json({ success: false, error: true, message: "Valid sellerPrice is required" });
+        }
+
+        const seller = await UserModel.findById(sellerId).select("store_name name role").lean();
+        if (!seller || seller.role !== "SELLER") {
+            return res.status(404).json({ success: false, error: true, message: "Seller not found" });
+        }
+
+        const product = new ProductModel({
+            name: name.trim(),
+            description,
+            image,
+            unit,
+            sellerPrice: Number(sellerPrice),
+            snapitMargin: Number(snapitMargin) || 0,
+            publish,
+            category,
+            subCategory,
+            store_inventory: [{
+                store_name: seller.store_name || seller.name || "Store",
+                sellerId,
+                stock: Number(stock) || 0,
+                isAvailable: true
+            }]
+        });
+
+        await product.save();
+
+        return res.status(201).json({ success: true, error: false, message: "Product created", data: product });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: true, message: err.message });
+    }
+}
+
+export async function deleteSellerProductController(req, res) {
+    try {
+        const { sellerId, productId } = req.params;
+
+        const product = await ProductModel.findById(productId);
+        if (!product) return res.status(404).json({ success: false, error: true, message: "Product not found" });
+
+        const ownsIt = product.store_inventory.some(inv => inv.sellerId?.toString() === sellerId);
+        if (!ownsIt) {
+            return res.status(403).json({ success: false, error: true, message: "This product doesn't belong to this seller" });
+        }
+
+        if (product.store_inventory.length > 1) {
+            product.store_inventory = product.store_inventory.filter(inv => inv.sellerId?.toString() !== sellerId);
+            await product.save();
+            return res.json({ success: true, error: false, message: "Removed from this store's inventory" });
+        }
+
+        await ProductModel.findByIdAndDelete(productId);
+        return res.json({ success: true, error: false, message: "Product deleted" });
     } catch (err) {
         return res.status(500).json({ success: false, error: true, message: err.message });
     }
