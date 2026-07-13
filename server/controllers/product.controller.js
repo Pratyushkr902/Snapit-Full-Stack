@@ -13,9 +13,12 @@ const secureImages = (images) => {
 };
 
 // ── Helper: get seller's store name from the authed user ──────
-// Supports whatever field name you store it under on UserModel
-const getStoreName = (user) =>
-    user?.store_name || user?.storeName || user?.shop_name || user?.name || '';
+// IMPORTANT: only trust the canonical store_name field. Falling back to
+// storeName/shop_name/name silently matches products against a seller's
+// personal name instead of their actual store — this previously caused
+// a stray "Raghu" store to appear (personal name of an admin collaborator
+// account matched against store_inventory.store_name by accident).
+const getStoreName = (user) => user?.store_name || '';
 
 export const createProductController = async (request, response) => {
     try {
