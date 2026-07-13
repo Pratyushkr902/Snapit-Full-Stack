@@ -295,6 +295,14 @@ const SellerDashboard = () => {
                                 <MdAdd size={22} />
                             </button>
                         </div>
+                        <div className='bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 flex items-center justify-between'>
+                            <div>
+                                <p className='text-[10px] font-black text-slate-500 uppercase tracking-widest'>Total Products</p>
+                                <p className='text-2xl font-black text-white mt-0.5'>{products.length}</p>
+                            </div>
+                            <HiOutlineShoppingBag size={28} className='text-orange-500/60' />
+                        </div>
+
                         {outOfStock > 0 && (
                             <div className='bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 text-xs font-black text-red-400'>
                                 {outOfStock} product{outOfStock > 1 ? 's' : ''} out of stock
