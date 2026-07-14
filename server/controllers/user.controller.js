@@ -638,7 +638,9 @@ export async function userDetails(request, response) {
 
 export async function getAllRiders(request, response) {
     try {
-        const riders = await UserModel.find({ role: 'rider' }).select('name email mobile status')
+        // FIX: role is stored as 'RIDER' (uppercase) — this was querying lowercase
+        // 'rider' and matching nothing, so the admin rider list was always empty.
+        const riders = await UserModel.find({ role: 'RIDER' }).select('name email mobile status')
         return response.json({
             message: "Riders fetched",
             error: false,

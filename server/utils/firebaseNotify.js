@@ -83,8 +83,12 @@ export async function sendPushToMultiple({ tokens, title, body, data = {} }) {
 export async function notifyAllRiders({ title, body, data = {} }) {
     try {
         const { default: UserModel } = await import('../models/user.model.js')
+        // FIX: role is stored as 'RIDER' (uppercase) in the User model — this was
+        // querying lowercase 'rider', matching zero documents (MongoDB string
+        // equality is case-sensitive), so rider push notifications silently never
+        // fired for any order, ever.
         const riders = await UserModel.find({
-            role: 'rider',
+            role: 'RIDER',
             fcmToken: { $exists: true, $ne: null, $ne: '' }
         }).select('fcmToken name')
 
