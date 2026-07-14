@@ -324,7 +324,13 @@ export async function logoutController(request, response) {
         response.clearCookie("accessToken", cookiesOption)
         response.clearCookie("refreshToken", cookiesOption)
 
-        await UserModel.findByIdAndUpdate(userid, { refresh_token: "" })
+        // FIX: also clear fcmToken on logout. Previously a device's FCM token
+        // stayed on the account forever once saved — if the same physical device
+        // was ever used to log into a different role (e.g. testing the Rider
+        // Dashboard from an admin's phone), that device's token would silently
+        // keep receiving that role's push notifications indefinitely, even after
+        // switching back to a different account on the same device.
+        await UserModel.findByIdAndUpdate(userid, { refresh_token: "", fcmToken: "" })
 
         return response.json({
             message: "Logout successfully",
