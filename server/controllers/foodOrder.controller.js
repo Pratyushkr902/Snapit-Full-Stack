@@ -183,6 +183,10 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}) => ({
       lng: fields.deliveryLocation?.lng || 84.817,
     },
   },
+  // FIX: was never set, so notifySellersOfNewOrder() always found zero matching
+  // stores for food orders and silently skipped notifying the restaurant owner
+  // of every single new order.
+  involved_stores:  [group.restaurantName || 'Restaurant'],
   delivery_status:   'Pending',
   isRestaurantOrder: true,
   ...extra,
