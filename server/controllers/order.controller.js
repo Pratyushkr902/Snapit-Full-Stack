@@ -150,7 +150,11 @@ const buildTaggedCartItems = async (list_items, storeName) => {
             ...item,
             productId,
             name:         product.name,
-            image:        product.image,
+            // FIX: cartItems.image is a String in the Order schema, but product.image
+            // is an Array (products can have multiple photos) — passing the array
+            // through directly caused Mongoose cast errors on checkout for any
+            // multi-image product ("Cast to string failed for value [...] (type Array)").
+            image:        Array.isArray(product.image) ? (product.image[0] || '') : (product.image || ''),
             price:        product.price,
             // FIX: snapshot seller price + snapit margin onto the order item —
             // previously missing, causing seller/admin dashboards to show ₹0.00
