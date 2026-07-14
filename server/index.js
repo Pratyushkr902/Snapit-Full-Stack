@@ -196,7 +196,12 @@ const authLimiter = rateLimit({
 
 const registerLimiter = rateLimit({
     windowMs:         60 * 60 * 1000,
-    max:              3,
+    // FIX: raised from 3 -> 10. Indian mobile carriers heavily use CGNAT, so many
+    // genuinely different users (e.g. Campus Ambassador referrals signing up
+    // together on the same campus WiFi or mobile network) were sharing one public
+    // IP and getting falsely blocked after the 3rd signup. Still bounded to guard
+    // against abuse, just less likely to hit real users signing up in groups.
+    max:              10,
     standardHeaders:  true,
     legacyHeaders:    false,
     message: { message: 'Too many accounts created from this IP. Please try again later.', error: true, success: false },
