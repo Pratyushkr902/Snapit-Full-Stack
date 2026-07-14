@@ -260,9 +260,14 @@ const saveAndSend = async ({
       recipientType,
       type,
       title:        payload.title,
+      // FIX: schema requires `message` — it was never being set, so every
+      // notification failed validation and was silently never saved.
+      message:      payload.body || payload.shayari || payload.title,
       shayari:      payload.shayari,
       body:         payload.body,
-      metadata,
+      // FIX: schema field is `data`, not `metadata` — was being silently
+      // dropped by Mongoose strict mode (orderId etc. never persisted).
+      data:         metadata,
       fcmToken:     fcmToken || null,
       fcmMessageId: fcmMessageId || null,
     });
