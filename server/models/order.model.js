@@ -86,8 +86,13 @@ const orderSchema = new mongoose.Schema(
             default: "Pending",
         },
 
-        rider_name:    { type: String, default: "Mohit kr keshri" },
-        rider_contact: { type: String, default: "9229295453" },
+        // FIX: previously hardcoded to a specific real rider's name + personal
+        // phone number as the schema default. Any order that never went through
+        // explicit rider-assignment logic (e.g. every food order, before that was
+        // fixed in foodOrder.controller.js) silently displayed that person's real
+        // contact info to customers, whether or not they were actually assigned.
+        rider_name:    { type: String, default: "Unassigned" },
+        rider_contact: { type: String, default: "" },
 
         // ── Assigned rider for this order (top-level, used for rider dashboard
         // filtering, pickup/delivery ownership checks, and tracking) ──

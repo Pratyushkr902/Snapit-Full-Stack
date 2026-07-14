@@ -92,7 +92,7 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 // RIDER ASSIGNMENT — picks the active rider with the fewest current live orders
 // ─────────────────────────────────────────────────────────────────────────────
-async function assignAvailableRider() {
+export async function assignAvailableRider() {
     const activeRiders = await UserModel.find({ role: 'RIDER', status: 'Active' })
         .select('name mobile _id').lean()
 

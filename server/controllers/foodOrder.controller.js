@@ -12,6 +12,11 @@ import {
     notifyUserOrderPlaced,
     notifySellersOfNewOrder,
 } from '../utils/notificationService.js'
+// FIX: food orders never assigned a real rider — every order silently fell back
+// to the OrderModel schema's hardcoded rider_name/rider_contact defaults
+// (a specific person's real name + personal phone number). Reuse the same
+// load-balanced rider assignment grocery orders already use.
+import { assignAvailableRider } from './order.controller.js'
 
 const getRazorpay = () => new Razorpay({
   key_id:     process.env.RAZORPAY_KEY_ID,
@@ -249,6 +254,7 @@ export async function foodOrderCOD(req, res) {
     // walletAmountUsed before pricing so it can't fake a discount here.
     req.body.walletAmountUsed = 0
     const { fields, user, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const assignedRider = await assignAvailableRider()
 
     const orders = []
     for (const group of priced) {
@@ -256,6 +262,9 @@ export async function foodOrderCOD(req, res) {
         payment_status:  'CASH ON DELIVERY',
         payment_mode:    'COD',
         delivery_status: 'Pending',
+        riderId:         assignedRider?._id    || null,
+        rider_name:      assignedRider?.name   || 'Unassigned',
+        rider_contact:   assignedRider?.mobile || '',
       }))
       await order.save()
       orders.push(order)
@@ -285,6 +294,7 @@ export async function foodOrderWallet(req, res) {
       })
 
     await deductWallet(req.userId, deductAmt, priced[0]?.restaurantName)
+    const assignedRider = await assignAvailableRider()
 
     const orders = []
     for (const group of priced) {
@@ -293,6 +303,9 @@ export async function foodOrderWallet(req, res) {
         payment_status:  'PAID',
         payment_mode:    'WALLET',
         delivery_status: 'Confirmed',
+        riderId:         assignedRider?._id    || null,
+        rider_name:      assignedRider?.name   || 'Unassigned',
+        rider_contact:   assignedRider?.mobile || '',
       }))
       await order.save()
       orders.push(order)
@@ -356,6 +369,7 @@ export async function foodOrderVerifyPayment(req, res) {
     const { fields, user, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
     await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
+    const assignedRider = await assignAvailableRider()
 
     const orders = []
     for (const group of priced) {
@@ -364,6 +378,9 @@ export async function foodOrderVerifyPayment(req, res) {
         payment_status:  'PAID',
         payment_mode:    'ONLINE',
         delivery_status: 'Confirmed',
+        riderId:         assignedRider?._id    || null,
+        rider_name:      assignedRider?.name   || 'Unassigned',
+        rider_contact:   assignedRider?.mobile || '',
       }))
       await order.save()
       orders.push(order)
