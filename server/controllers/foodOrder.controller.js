@@ -123,7 +123,7 @@ const priceGroup = async (group, deliveryLocation, user) => {
     user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
     new Date() < new Date(user.snapitPlusExpiresAt)
   )
-  const minOrderRequired = getMinOrderAmountFromOrigin(lat, lng, isPlusForMinOrder)
+  const minOrderRequired = getMinOrderAmountFromOrigin(restaurant.location.lat, restaurant.location.lng, lat, lng, isPlusForMinOrder)
   if (minOrderRequired > 0 && subTotalAmt < minOrderRequired) {
     const err = new Error(`Minimum order of ₹${minOrderRequired} required at ${restaurant.name} for this location.`)
     err.statusCode = 400
