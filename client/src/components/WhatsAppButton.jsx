@@ -11,7 +11,7 @@ const WhatsAppButton = () => {
   const offsetRef = useRef({ x: 0, y: 0 })
   const didDragRef = useRef(false)
 
-  const phoneNumber = '919122335358'
+  const phoneNumber = '919472026580'
   const message = encodeURIComponent('Hi! I need help with my Snapit order.')
   const whatsappURL = `https://wa.me/${phoneNumber}?text=${message}`
 
