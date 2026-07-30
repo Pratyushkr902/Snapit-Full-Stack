@@ -53,7 +53,7 @@ const HIMALAYA_LAT = 25.2639198
 const HIMALAYA_LNG = 84.8545598
 const HIMALAYA_RADIUS_KM = 0.45
 const HIMALAYA_FLAT_FEE = 49
-const HIMALAYA_MIN_ORDER = 299
+const HIMALAYA_MIN_ORDER = 499
 
 // Minimum order value required for deliveries in the 6–14km bracket.
 // Does NOT apply to the Chikasi flat-fee zone or the 0–6km zone.
