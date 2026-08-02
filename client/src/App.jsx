@@ -8,6 +8,7 @@ import Footer from './components/Footer'
 import CartMobileLink from './components/CartMobile'
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
+import ChatBox from './components/ChatBox'
 
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails } from './store/userSlice';
@@ -236,6 +237,7 @@ function App() {
           )}
 
           {!isDashboard && <WhatsAppButton />}
+          {!isDashboard && <ChatBox />}
         </div>
       </GlobalProvider>
     </RemoteConfigProvider>

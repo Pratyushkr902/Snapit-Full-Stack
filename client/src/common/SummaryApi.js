@@ -165,6 +165,14 @@ const SummaryApi = {
         url : '/api/address/get',
         method : 'get'
     },
+    createSupportMessage : {
+        url : '/api/support/message',
+        method : 'post'
+    },
+    getSupportMessages : {
+        url : '/api/support/messages',
+        method : 'get'
+    },
     updateAddress : {
         url : '/api/address/update',
         method : 'put'
