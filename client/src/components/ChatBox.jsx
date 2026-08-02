@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { IoChatbubbleEllipses, IoClose, IoArrowBack } from 'react-icons/io5'
 import toast from 'react-hot-toast'
@@ -6,8 +6,6 @@ import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import SummaryApi from '../common/SummaryApi'
 
-// Canned FAQ topics — each renders a static answer.
-// "Talk to a human" breaks out into the leave-a-message form instead.
 const FAQ_TOPICS = [
   {
     id: 'order_status',
@@ -35,7 +33,7 @@ const ChatBox = () => {
   const user = useSelector(state => state.user)
 
   const [open, setOpen] = useState(false)
-  const [view, setView] = useState('menu') // 'menu' | 'answer' | 'form' | 'sent'
+  const [view, setView] = useState('menu')
   const [activeTopic, setActiveTopic] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState({
@@ -44,6 +42,49 @@ const ChatBox = () => {
     orderId: '',
     message: '',
   })
+
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const [dragging, setDragging] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const dragRef = useRef(null)
+  const offsetRef = useRef({ x: 0, y: 0 })
+  const didDragRef = useRef(false)
+
+  useEffect(() => {
+    setPos({ x: 16, y: window.innerHeight - 90 })
+    setMounted(true)
+  }, [])
+
+  const onPointerDown = (e) => {
+    didDragRef.current = false
+    const rect = dragRef.current.getBoundingClientRect()
+    offsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    setDragging(true)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const onPointerMove = (e) => {
+    if (!dragging) return
+    didDragRef.current = true
+    if (open) setOpen(false)
+    setPos({
+      x: Math.min(Math.max(0, e.clientX - offsetRef.current.x), window.innerWidth - 56),
+      y: Math.min(Math.max(0, e.clientY - offsetRef.current.y), window.innerHeight - 56),
+    })
+  }
+
+  const onPointerUp = () => {
+    setDragging(false)
+    setPos(p => ({
+      ...p,
+      x: p.x < window.innerWidth / 2 ? 12 : window.innerWidth - 68,
+    }))
+  }
+
+  const handleBubbleClick = () => {
+    if (didDragRef.current) return
+    setOpen(prev => !prev)
+  }
 
   const resetToMenu = () => {
     setView('menu')
@@ -88,15 +129,24 @@ const ChatBox = () => {
 
   const closeAndReset = () => {
     setOpen(false)
-    setTimeout(resetToMenu, 300) // reset after close animation
+    setTimeout(resetToMenu, 300)
   }
+
+  if (!mounted) return null
+
+  const isLeft = pos.x < window.innerWidth / 2
 
   return (
     <>
-      {/* Chat window */}
       {open && (
-        <div className='fixed z-50 bottom-24 left-4 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden' style={{ maxHeight: '70vh' }}>
-          {/* Header */}
+        <div
+          className='fixed z-50 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden'
+          style={{
+            left: isLeft ? pos.x : Math.max(12, pos.x - 264),
+            top: Math.max(12, Math.min(pos.y - 380, window.innerHeight - 460)),
+            maxHeight: '70vh',
+          }}
+        >
           <div className='bg-orange-500 px-4 py-3 flex items-center justify-between shrink-0'>
             <div className='flex items-center gap-2'>
               {view !== 'menu' && (
@@ -111,7 +161,6 @@ const ChatBox = () => {
             </button>
           </div>
 
-          {/* Body */}
           <div className='p-4 overflow-y-auto flex-1'>
             {view === 'menu' && (
               <>
@@ -211,14 +260,29 @@ const ChatBox = () => {
         </div>
       )}
 
-      {/* Floating bubble */}
-      <button
-        onClick={() => setOpen(prev => !prev)}
-        className='fixed z-50 bottom-6 left-4 w-14 h-14 bg-orange-500 rounded-full shadow-2xl shadow-orange-200 flex items-center justify-center transition-transform hover:scale-110'
+      <div
+        ref={dragRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onClick={handleBubbleClick}
+        className='fixed z-50 select-none'
+        style={{
+          left: pos.x,
+          top: pos.y,
+          cursor: dragging ? 'grabbing' : 'grab',
+          touchAction: 'none',
+          transition: dragging ? 'none' : 'left 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+        }}
         aria-label='Snapit chat help'
       >
-        {open ? <IoClose size={22} className='text-white' /> : <IoChatbubbleEllipses size={24} className='text-white' />}
-      </button>
+        <div className={`relative w-14 h-14 bg-orange-500 rounded-full shadow-2xl shadow-orange-200 flex items-center justify-center transition-transform ${dragging ? 'scale-110 shadow-orange-300' : 'hover:scale-110'}`}>
+          {open
+            ? <IoClose size={22} className='text-white' />
+            : <IoChatbubbleEllipses size={24} className='text-white' />
+          }
+        </div>
+      </div>
     </>
   )
 }
