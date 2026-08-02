@@ -58,6 +58,7 @@ import streakRouter         from './route/streak.route.js'
 import subscriptionRouter   from './route/subscription.route.js'
 import notificationRouter   from './route/notification.route.js'
 import restaurantRouter     from './route/restaurant.route.js'
+import supportRouter        from './route/support.route.js'
 import scheduledOrderRouter from './route/scheduledOrder.route.js'
 import refundRouter         from './route/refund.route.js'
 import deliveryRouter       from './route/delivery.routes.js'   // ✅ NEW
@@ -361,6 +362,7 @@ app.use('/api/admin',           adminRouter)
 app.use('/api/admin',           sellerAdminRouter)
 app.use('/api/notification',    notificationRouter)
 app.use('/api/restaurant',      restaurantRouter)
+app.use('/api/support',         supportRouter)
 app.use('/api/scheduled-order', scheduledOrderRouter)
 app.use('/api/refund',          refundRouter)
 app.use('/api/delivery',        deliveryRouter)          // ✅ NEW
