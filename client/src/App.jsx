@@ -236,7 +236,7 @@ function App() {
             <CartMobileLink />
           )}
 
-          {!isDashboard && <WhatsAppButton />}
+          {/* {!isDashboard && <WhatsAppButton />} */}
           {!isDashboard && <ChatBox />}
         </div>
       </GlobalProvider>

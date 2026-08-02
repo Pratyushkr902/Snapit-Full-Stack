@@ -95,7 +95,7 @@ const ChatBox = () => {
     <>
       {/* Chat window */}
       {open && (
-        <div className='fixed z-50 bottom-24 right-4 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden' style={{ maxHeight: '70vh' }}>
+        <div className='fixed z-50 bottom-24 left-4 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden' style={{ maxHeight: '70vh' }}>
           {/* Header */}
           <div className='bg-orange-500 px-4 py-3 flex items-center justify-between shrink-0'>
             <div className='flex items-center gap-2'>
@@ -214,7 +214,7 @@ const ChatBox = () => {
       {/* Floating bubble */}
       <button
         onClick={() => setOpen(prev => !prev)}
-        className='fixed z-50 bottom-6 right-4 w-14 h-14 bg-orange-500 rounded-full shadow-2xl shadow-orange-200 flex items-center justify-center transition-transform hover:scale-110'
+        className='fixed z-50 bottom-6 left-4 w-14 h-14 bg-orange-500 rounded-full shadow-2xl shadow-orange-200 flex items-center justify-center transition-transform hover:scale-110'
         aria-label='Snapit chat help'
       >
         {open ? <IoClose size={22} className='text-white' /> : <IoChatbubbleEllipses size={24} className='text-white' />}
