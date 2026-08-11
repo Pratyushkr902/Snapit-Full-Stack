@@ -29,7 +29,7 @@
  */
 
 import mongoose         from 'mongoose'
-import crypto           from 'crypto'
+import { verifyRazorpaySignature } from '../utils/verifyRazorpaySignature.js'
 import Razorpay         from 'razorpay'
 import OrderModel       from '../models/order.model.js'
 import CartProductModel from '../models/cartproduct.model.js'
@@ -654,12 +654,7 @@ export async function verifyPaymentController(request, response) {
             list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress
         } = request.body
 
-        const expectedSignature = crypto
-            .createHmac('sha256', String(process.env.RAZORPAY_SECRET_KEY).trim())
-            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-            .digest('hex')
-
-        if (expectedSignature !== razorpay_signature) {
+        if (!verifyRazorpaySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
             return response.status(400).json({ message: 'Payment signature verification failed.', error: true, success: false })
         }
 

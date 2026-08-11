@@ -1,5 +1,5 @@
 import Razorpay from 'razorpay'
-import crypto from 'crypto'
+import { verifyRazorpaySignature } from '../utils/verifyRazorpaySignature.js'
 import UserModel from '../models/user.model.js'
 import SubscriptionModel from '../models/subscription.model.js'
 import WalletModel from '../models/wallet.model.js'
@@ -64,13 +64,7 @@ export const verifyPayment = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Missing payment verification fields' })
         }
 
-        const secret = (process.env.RAZORPAY_SECRET_KEY || '').trim()
-        const expected = crypto
-            .createHmac('sha256', secret)
-            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-            .digest('hex')
-
-        if (expected !== razorpay_signature) {
+        if (!verifyRazorpaySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
             console.error('[verifyPayment] ❌ Signature mismatch')
             return res.status(400).json({ success: false, message: 'Invalid payment signature' })
         }
@@ -184,13 +178,7 @@ export const verifySubscription = async (req, res) => {
         }
 
         // ── Verify Razorpay signature ──────────────────────────────────────
-        const secret = (process.env.RAZORPAY_SECRET_KEY || '').trim()
-        const expected = crypto
-            .createHmac('sha256', secret)
-            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-            .digest('hex')
-
-        if (expected !== razorpay_signature) {
+        if (!verifyRazorpaySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
             console.error('[verifySubscription] ❌ Signature mismatch')
             return res.status(400).json({ success: false, message: 'Invalid subscription payment signature' })
         }

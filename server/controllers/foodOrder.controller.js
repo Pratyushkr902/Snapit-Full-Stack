@@ -2,7 +2,7 @@ import OrderModel from '../models/order.model.js'
 import UserModel  from '../models/user.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
-import crypto     from 'crypto'
+import { verifyRazorpaySignature } from '../utils/verifyRazorpaySignature.js'
 import { calcDeliveryFeeFromOrigin, getMinOrderAmountFromOrigin } from '../utils/deliveryFee.js'
 import RestaurantModel from '../models/restaurant.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
@@ -359,12 +359,7 @@ export async function foodOrderVerifyPayment(req, res) {
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature)
       return res.status(400).json({ success: false, message: 'Missing payment verification fields' })
 
-    const expected = crypto
-      .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest('hex')
-
-    if (expected !== razorpay_signature) {
+    if (!verifyRazorpaySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
       console.error('[foodOrderVerifyPayment] ❌ Signature mismatch')
       return res.status(400).json({ success: false, message: 'Payment verification failed' })
     }
