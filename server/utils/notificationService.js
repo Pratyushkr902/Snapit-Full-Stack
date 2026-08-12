@@ -24,16 +24,27 @@ const { getMessaging } = require("firebase-admin/messaging");
 //  Reuses the app already initialized in firebaseNotify.js if present.
 // ─────────────────────────────────────────────
 let fcm = null;
-try {
-  if (admin.getApps().length === 0) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
+function getFcm() {
+  if (fcm) return fcm;
+  try {
+    if (admin.getApps().length === 0) {
+      const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env;
+      if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+        throw new Error("Missing FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY in .env");
+      }
+      admin.initializeApp({
+        credential: admin.cert({
+          projectId: FIREBASE_PROJECT_ID,
+          clientEmail: FIREBASE_CLIENT_EMAIL,
+          privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+        }),
+      });
+    }
+    fcm = getMessaging();
+  } catch (error) {
+    console.error("❌ notificationService Firebase init failed — push disabled:", error.message);
   }
-  fcm = getMessaging();
-} catch (error) {
-  console.error("❌ notificationService Firebase init failed — push disabled:", error.message);
+  return fcm;
 }
 
 // ─────────────────────────────────────────────
@@ -238,7 +249,7 @@ const saveAndSend = async ({
         },
       };
 
-      const response = await fcm.send(message);
+      const response = await getFcm().send(message);
       fcmMessageId = response;
       console.log(`[FCM ✅] ${recipientType.toUpperCase()} | ${type} | messageId: ${response}`);
 
@@ -469,7 +480,7 @@ export const sendMulticast = async (fcmTokens, payload, type, metadata = {}) => 
   };
 
   try {
-    const res = await fcm.sendEachForMulticast(message);
+    const res = await getFcm().sendEachForMulticast(message);
     console.log(`[FCM Multicast] ✅ ${res.successCount} sent, ❌ ${res.failureCount} failed`);
     return res;
   } catch (err) {

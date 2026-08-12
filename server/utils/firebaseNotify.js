@@ -1,17 +1,6 @@
 // ============================================================
-// server/utils/firebaseNotify.js — FULL REPLACEMENT
+// server/utils/firebaseNotify.js — FULL REPLACEMENT (lazy init)
 // ============================================================
-//
-// firebase-admin v14 restructured its API:
-//   - admin.apps            → admin.getApps()
-//   - admin.credential.cert → admin.cert()
-//   - admin.messaging()     → getMessaging() from 'firebase-admin/messaging'
-//
-// This version uses the correct v14 modular API throughout.
-// Builds credentials from FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL /
-// FIREBASE_PRIVATE_KEY instead of a single JSON blob env var, and never
-// crashes server boot if Firebase config is missing/broken — push
-// notifications just get silently disabled with a warning instead.
 
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
@@ -19,32 +8,36 @@ const require = createRequire(import.meta.url)
 const admin = require('firebase-admin')
 const { getMessaging } = require('firebase-admin/messaging')
 
-// Initialize Firebase Admin only once
 let messaging = null
 
-if (admin.getApps().length === 0) {
+function getMessagingClient() {
+    if (messaging) return messaging
     try {
-        if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-            throw new Error('Missing FIREBASE_SERVICE_ACCOUNT in .env')
+        if (admin.getApps().length === 0) {
+            const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env
+            if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+                throw new Error('Missing FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY in .env')
+            }
+            admin.initializeApp({
+                credential: admin.cert({
+                    projectId: FIREBASE_PROJECT_ID,
+                    clientEmail: FIREBASE_CLIENT_EMAIL,
+                    privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                })
+            })
+            console.log('✅ Firebase Admin initialized')
         }
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-
-        admin.initializeApp({
-            credential: admin.cert(serviceAccount)
-        })
-        console.log('✅ Firebase Admin initialized')
         messaging = getMessaging()
     } catch (error) {
         console.error('❌ Firebase Admin init failed — push notifications disabled:', error.message)
     }
-} else {
-    messaging = getMessaging()
+    return messaging
 }
 
-// Send notification to a single device token
 export async function sendPushNotification({ token, title, body, data = {} }) {
     try {
-        if (!messaging) {
+        const client = getMessagingClient()
+        if (!client) {
             console.warn('[Push] Firebase not initialized, skipping notification')
             return
         }
@@ -62,7 +55,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                 fcmOptions: { link: '/rider-panel' }
             }
         }
-        const result = await messaging.send(message)
+        const result = await client.send(message)
         console.log('📱 Notification sent:', result)
         return result
     } catch (error) {
@@ -70,7 +63,6 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
     }
 }
 
-// Send notification to multiple tokens
 export async function sendPushToMultiple({ tokens, title, body, data = {} }) {
     if (!tokens || tokens.length === 0) return
     const results = await Promise.allSettled(
@@ -79,14 +71,9 @@ export async function sendPushToMultiple({ tokens, title, body, data = {} }) {
     return results
 }
 
-// Send notification to all riders
 export async function notifyAllRiders({ title, body, data = {} }) {
     try {
         const { default: UserModel } = await import('../models/user.model.js')
-        // FIX: role is stored as 'RIDER' (uppercase) in the User model — this was
-        // querying lowercase 'rider', matching zero documents (MongoDB string
-        // equality is case-sensitive), so rider push notifications silently never
-        // fired for any order, ever.
         const riders = await UserModel.find({
             role: 'RIDER',
             fcmToken: { $exists: true, $ne: null, $ne: '' }

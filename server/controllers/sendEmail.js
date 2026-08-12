@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 const sendEmail = async ({ sendTo, subject, html }) => {
     try {
         const response = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -16,14 +13,11 @@ const sendEmail = async ({ sendTo, subject, html }) => {
                 htmlContent: html
             })
         });
-
         const data = await response.json();
-
         if (!response.ok) {
             console.error('🚨 Brevo error:', JSON.stringify(data));
             return null;
         }
-
         console.log('✅ Email sent:', data.messageId);
         return data;
     } catch (error) {
@@ -31,5 +25,4 @@ const sendEmail = async ({ sendTo, subject, html }) => {
         return null; // don't throw — registration succeeds even if email fails
     }
 }
-
 export default sendEmail;

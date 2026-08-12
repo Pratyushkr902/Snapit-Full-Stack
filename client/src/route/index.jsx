@@ -5,7 +5,7 @@ import App from "../App";
 // Eager load only the most critical pages
 import Home from "../pages/Home";
 import Login from "../pages/Login";
-import Register from "../pages/Register";
+import Register from "../pages/RegisterOtp";
 
 // Lazy load everything else
 const SearchPage             = lazy(() => import('../pages/Searchpage'))

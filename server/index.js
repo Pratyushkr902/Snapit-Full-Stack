@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-dotenv.config()
+dotenv.config({ path: new URL('.env', import.meta.url).pathname })
 
 import { initSubscriptionCron } from './config/cronEngine.js'
 import path from 'path'
@@ -59,6 +59,7 @@ import subscriptionRouter   from './route/subscription.route.js'
 import notificationRouter   from './route/notification.route.js'
 import restaurantRouter     from './route/restaurant.route.js'
 import supportRouter        from './route/support.route.js'
+import otpRouter            from './route/otp.route.js'
 import scheduledOrderRouter from './route/scheduledOrder.route.js'
 import refundRouter         from './route/refund.route.js'
 import deliveryRouter       from './route/delivery.routes.js'   // ✅ NEW
@@ -363,6 +364,7 @@ app.use('/api/admin',           sellerAdminRouter)
 app.use('/api/notification',    notificationRouter)
 app.use('/api/restaurant',      restaurantRouter)
 app.use('/api/support',         supportRouter)
+app.use('/api/otp',             otpRouter)
 app.use('/api/scheduled-order', scheduledOrderRouter)
 app.use('/api/refund',          refundRouter)
 app.use('/api/delivery',        deliveryRouter)          // ✅ NEW
