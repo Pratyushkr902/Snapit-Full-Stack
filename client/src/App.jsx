@@ -225,7 +225,7 @@ function App() {
           </main>
           
           {!isDashboard && <Footer />}
-          {!isDashboard && <WhatsAppButton />}
+          {/* {!isDashboard && <WhatsAppButton />} */}
           
           <Toaster position="top-center" reverseOrder={false} />
 
