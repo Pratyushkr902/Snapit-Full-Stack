@@ -12,11 +12,25 @@ const s3 = new S3Client({
 });
 
 const uploadImageClodinary = async (image) => {
-    const buffer = image?.buffer || Buffer.from(await image.arrayBuffer());
+    const rawBuffer = image?.buffer || Buffer.from(await image.arrayBuffer());
     const mimeType = image?.mimetype || 'image/jpeg';
     const extension = mimeType.split('/')[1] || 'jpg';
     const id = randomUUID();
     const fileName = `snapit/${id}.${extension}`;
+
+    // Strip EXIF/GPS metadata from the original before it ever reaches storage.
+    // .rotate() bakes in the visual orientation first (since we're about to
+    // drop the orientation tag itself); omitting .withMetadata() means no
+    // EXIF/GPS/location data survives into the re-encoded output.
+    let buffer = rawBuffer;
+    try {
+        buffer = await sharp(rawBuffer)
+            .rotate()
+            .toFormat(extension === 'png' ? 'png' : 'jpeg', { quality: 90 })
+            .toBuffer();
+    } catch (stripErr) {
+        console.error('EXIF_STRIP_FAILED (uploading original as-is):', stripErr.message);
+    }
 
     await s3.send(new PutObjectCommand({
         Bucket: process.env.R2_BUCKET_NAME,
