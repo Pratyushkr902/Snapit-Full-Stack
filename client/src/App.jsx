@@ -22,6 +22,7 @@ import useNotifications from './hooks/useNotifications'
 import socket from './utils/socket.js';
 
 import { ACCESS_TOKEN_KEY } from './constants/storageKeys';
+import secureStorage from './utils/secureStorage';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { App as CapacitorApp } from '@capacitor/app';
 
@@ -76,7 +77,7 @@ function App() {
   }, [])
 
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const token = await secureStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       setIsAuthResolving(false)
       SplashScreen.hide({ fadeOutDuration: 300 })

@@ -1,4 +1,5 @@
 import axios from "axios"
+import secureStorage from "./secureStorage"
 
 // ─── SECURITY FIX: No hardcoded fallback URL ────────────────────────────────
 // The backend URL must always come from the environment.
@@ -156,7 +157,7 @@ Axios.interceptors.request.use(
     async (config) => {
         // SECURITY NOTE: Read from one canonical key only.
         // Migrate to httpOnly cookie auth to eliminate this entirely.
-        const accessToken = localStorage.getItem('accessToken')
+        const accessToken = await secureStorage.getItem('accessToken')
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`
         }
@@ -202,7 +203,7 @@ Axios.interceptors.response.use(
 
             // SECURITY NOTE: refreshToken should come from an httpOnly cookie.
             // Until that migration is done, read from canonical single key.
-            const refreshToken = localStorage.getItem('refreshToken')
+            const refreshToken = await secureStorage.getItem('refreshToken')
             if (!refreshToken) {
                 handleLogoutRedirect()
                 return Promise.reject(error)
@@ -241,7 +242,7 @@ Axios.interceptors.response.use(
                 if (!newAccessToken) throw new Error('No access token in refresh response')
 
                 // SECURITY FIX: Use one canonical key name for access token
-                localStorage.setItem('accessToken', newAccessToken)
+                await secureStorage.setItem('accessToken', newAccessToken)
 
                 isRefreshing = false
                 onTokenRefreshed(newAccessToken)

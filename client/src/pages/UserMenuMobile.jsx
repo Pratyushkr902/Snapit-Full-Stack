@@ -40,6 +40,7 @@ const UserMenuMobile = () => {
         {user?.role && (
           <span className='text-xs font-medium text-red-600'>
             {user?.role === "ADMIN"        ? "(Admin)"        :
+             user?.role === "SUPER_ADMIN"  ? "(Super Admin)"  :
              user?.role === "RIDER"        ? "(Rider)"        :
              user?.role === "SELLER"       ? "(Seller)"       :
              user?.role === "RESTO_SELLER" ? "(Resto Seller)" : ""}
@@ -50,7 +51,7 @@ const UserMenuMobile = () => {
       <Divider/>
 
       {/* ADMIN ONLY */}
-      {user?.role === "ADMIN" && (
+      {(user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
         <>
           <Link to={"/dashboard/admin-summary"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100 font-bold text-secondary-100'>Admin Dashboard</Link>
           <Link to={"/dashboard/category"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Category</Link>
@@ -68,21 +69,21 @@ const UserMenuMobile = () => {
       )}
 
       {/* RIDER ACCESS */}
-      {(user?.role === "RIDER" || user?.role === "ADMIN") && (
+      {(user?.role === "RIDER" || user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
         <Link to={"/rider-panel"} className='px-3 py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600'>
           Rider Panel
         </Link>
       )}
 
       {/* SELLER ACCESS */}
-      {(user?.role === "SELLER" || user?.role === "ADMIN") && (
+      {(user?.role === "SELLER" || user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
         <Link to={"/dashboard/seller-dashboard"} className='px-3 py-2.5 rounded-lg bg-orange-50 hover:bg-orange-100 font-bold text-orange-700 border-l-4 border-orange-600'>
           Store Orders (Pack Items)
         </Link>
       )}
 
       {/* RESTO SELLER ACCESS */}
-      {(user?.role === "RESTO_SELLER" || user?.role === "ADMIN") && (
+      {(user?.role === "RESTO_SELLER" || user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
         <Link to={"/dashboard/resto-dashboard"} className='px-3 py-2.5 rounded-lg bg-red-50 hover:bg-red-100 font-bold text-red-700 border-l-4 border-red-600'>
           🍽️ Resto Dashboard
         </Link>

@@ -42,6 +42,7 @@ const UserMenu = ({close}) => {
             {user?.name || user?.mobile}
             <span className='ml-1 font-medium text-red-600'>
               {role === "ADMIN"        ? "(Admin)"      :
+               role === "SUPER_ADMIN"  ? "(Super Admin)":
                role === "RIDER"        ? "(Rider)"      :
                role === "SELLER"       ? "(Seller)"     :
                role === "RESTO_SELLER" ? "(Restaurant)" : ""}
@@ -57,7 +58,7 @@ const UserMenu = ({close}) => {
         <div className='text-sm grid gap-1'>
 
             {/* ADMIN ONLY LINKS */}
-            {role === "ADMIN" && (
+            {(role === "ADMIN" || role === "SUPER_ADMIN") && (
               <>
                 <Link onClick={handleClose} to={"/dashboard/admin-summary"} className='px-2 hover:bg-orange-200 py-1 font-bold text-secondary-100'>Admin Dashboard</Link>
                 <Link onClick={handleClose} to={"/dashboard/category"} className='px-2 hover:bg-orange-200 py-1'>Category</Link>
@@ -86,7 +87,7 @@ const UserMenu = ({close}) => {
             )}
 
             {/* RIDER ACCESS */}
-            {(role === "RIDER" || role === "ADMIN") && (
+            {(role === "RIDER" || role === "ADMIN" || role === "SUPER_ADMIN") && (
               <Link onClick={handleClose} to={"/rider-panel"}
                 className='px-2 bg-blue-50 hover:bg-blue-100 py-1 font-bold text-blue-700 border-l-4 border-blue-600 mb-1'>
                 Rider Panel

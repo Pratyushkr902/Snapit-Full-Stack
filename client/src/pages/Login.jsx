@@ -11,6 +11,7 @@ import { useDispatch } from 'react-redux'
 import { setUserDetails } from '../store/userSlice'
 import fetchUserDetails from '../utils/fetchUserDetails'
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../constants/storageKeys'
+import secureStorage from '../utils/secureStorage'
 import snapitLogo from '/logo.png'
 
 const Login = () => {
@@ -56,14 +57,10 @@ const Login = () => {
                 const refresh = response.data?.data?.refreshToken || response.data?.data?.refreshtoken
 
                 if (token) {
-                    localStorage.setItem('accessToken', token)
-                    localStorage.setItem('accesstoken', token)
-                    localStorage.setItem(ACCESS_TOKEN_KEY, token)
+                    await secureStorage.setItem('accessToken', token)
                 }
                 if (refresh) {
-                    localStorage.setItem('refreshToken', refresh)
-                    localStorage.setItem('refreshtoken', refresh)
-                    localStorage.setItem(REFRESH_TOKEN_KEY, refresh)
+                    await secureStorage.setItem('refreshToken', refresh)
                 }
 
                 const userDetails = await fetchUserDetails()
