@@ -59,6 +59,22 @@ function App() {
     }
   }, [currentNormalizedRoute, isCheckoutOrCartPage])
 
+  // ── Image scrape deterrent — block right-click/drag-save on images ──
+  useEffect(() => {
+    const blockImageContext = (e) => {
+      if (e.target?.tagName === 'IMG') e.preventDefault()
+    }
+    const blockImageDrag = (e) => {
+      if (e.target?.tagName === 'IMG') e.preventDefault()
+    }
+    document.addEventListener('contextmenu', blockImageContext)
+    document.addEventListener('dragstart', blockImageDrag)
+    return () => {
+      document.removeEventListener('contextmenu', blockImageContext)
+      document.removeEventListener('dragstart', blockImageDrag)
+    }
+  }, [])
+
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
