@@ -84,7 +84,6 @@ const latestPositions = new Map()
 // ─── ABUSE / ANOMALY DETECTION ────────────────────────────────────────────────
 // Runs before CORS/helmet/routes so it can short-circuit frozen IPs as early
 // as possible, before any other middleware does work on the request.
-app.use(abuseGuard())
 
 // ─── CORS RULES ───────────────────────────────────────────────────────────────
 const allowedOrigins = [
@@ -129,6 +128,10 @@ app.use(cors({
     methods:        ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"],
 }))
+// ─── ABUSE / ANOMALY DETECTION ────────────────────────────────────────────────
+// Runs after CORS so blocked/frozen responses still carry proper CORS headers
+// and show up in the browser as real 429s instead of fake "CORS error"s.
+app.use(abuseGuard())
 
 // ─── HELMET / CSP ─────────────────────────────────────────────────────────────
 app.use(helmet({
