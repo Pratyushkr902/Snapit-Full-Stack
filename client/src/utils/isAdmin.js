@@ -1,4 +1,5 @@
 const isAdmin = (role) => {
-    return role?.replace(/['"]/g, '').trim().toUpperCase() === "ADMIN"
+    const normalized = role?.replace(/['"]/g, '').trim().toUpperCase()
+    return normalized === "ADMIN" || normalized === "SUPER_ADMIN"
 }
 export default isAdmin
