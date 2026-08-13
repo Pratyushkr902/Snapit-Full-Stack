@@ -67,6 +67,11 @@ import OrderModel from './models/order.model.js'
 import UserModel  from './models/user.model.js'
 
 import adminManagementRouter from './route/adminManagement.route.js'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 app.set('trust proxy', 1)
