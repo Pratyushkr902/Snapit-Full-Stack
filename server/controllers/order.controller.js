@@ -814,7 +814,7 @@ export const updateSellerOrderStatusController = async (request, response) => {
         const order = await OrderModel.findOne({ orderId })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
-        if (request.userRole !== 'ADMIN') {
+        if (request.userRole !== 'ADMIN' && request.userRole !== 'SUPER_ADMIN') {
             const sellerUser = await UserModel.findById(userId).select('store_name').lean()
             if (!sellerUser?.store_name || !order.involved_stores?.includes(sellerUser.store_name)) {
                 console.warn(`SELLER_IDOR | user=${userId} | orderId=${orderId} | ip=${request.ip}`)
@@ -1183,7 +1183,7 @@ export async function getSellerOrdersController(request, response) {
         const userRole = request.userRole
 
         let filter = {}
-        if (userRole !== 'ADMIN') {
+        if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
             const sellerUser = await UserModel.findById(userId).select('store_name').lean()
             if (!sellerUser?.store_name) {
                 return response.status(403).json({ message: 'No store associated with your account.', error: true, success: false })
@@ -1212,7 +1212,7 @@ export async function getSellerEarningsController(request, response) {
         const userRole = request.userRole
 
         let filter = {}
-        if (userRole !== 'ADMIN') {
+        if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
             const sellerUser = await UserModel.findById(userId).select('store_name').lean()
             if (!sellerUser?.store_name) {
                 return response.status(403).json({ message: 'No store associated with your account.', error: true, success: false })
@@ -1511,7 +1511,7 @@ export const getOrderInvoiceController = async (request, response) => {
         const order = await OrderModel.findOne({ orderId }).populate('delivery_address').lean()
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
-        if (order.userId?.toString() !== userId && userRole !== 'ADMIN') {
+        if (order.userId?.toString() !== userId && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
             return response.status(403).json({ message: 'Access denied.', error: true, success: false })
         }
 
