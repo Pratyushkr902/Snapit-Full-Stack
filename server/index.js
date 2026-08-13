@@ -70,6 +70,9 @@ import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
 import UserModel  from './models/user.model.js'
 
+import adminManagementRouter from './route/adminManagement.route.js'
+import { abuseGuard } from './middleware/abuseGuard.js'
+
 const app = express()
 app.set('trust proxy', 1)
 
@@ -225,6 +228,8 @@ const financialLimiter = rateLimit({
     message: { message: 'Too many financial requests. Please slow down.', error: true, success: false },
 })
 
+app.use(abuseGuard('general'))
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
@@ -369,6 +374,7 @@ app.use('/api/scheduled-order', scheduledOrderRouter)
 app.use('/api/refund',          refundRouter)
 app.use('/api/delivery',        deliveryRouter)          // ✅ NEW
 app.use('/api/admin/accounts',  dailyAccountRouter)       // ✅ NEW
+app.use('/api/admin-management', adminManagementRouter)
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
