@@ -12,7 +12,9 @@ const userSchema = new mongoose.Schema({
     },
     password : {
         type : String,
-        required : [true, "provide password"]
+        required : false  // SECURITY/UX CHANGE: password is now optional — Snapit uses email+OTP auth.
+                           // Existing accounts keep their hashed password untouched; new accounts
+                           // created via OTP simply won't have one.
     },
     avatar : {
         type : String,

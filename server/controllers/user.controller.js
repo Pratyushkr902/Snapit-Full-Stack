@@ -277,6 +277,14 @@ export async function loginController(request, response) {
             })
         }
 
+        if (!user.password) {
+            return response.status(400).json({
+                message: "This account was created via OTP login. Please log in with OTP instead of a password.",
+                error: true,
+                success: false
+            })
+        }
+
         const checkPassword = await bcryptjs.compare(password, user.password)
 
         if (!checkPassword) {
