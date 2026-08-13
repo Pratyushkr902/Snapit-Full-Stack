@@ -50,6 +50,7 @@ function recordHit(ip, bucket) {
 
 // type: 'auth' for login/otp routes, 'general' for everything else
 export const abuseGuard = (type = 'general') => async (request, response, next) => {
+    if (request.method === 'OPTIONS') return next()
     try {
         const ip = getClientIp(request)
 
