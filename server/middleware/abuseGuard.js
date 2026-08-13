@@ -2,7 +2,8 @@ import FrozenIpModel from '../models/frozenIp.model.js'
 
 const WINDOW_MS = 60 * 1000
 const AUTH_LIMIT = 15      // login/otp hits per minute per IP
-const GENERAL_LIMIT = 60  // general API hits per minute per IP
+const GENERAL_LIMIT = 60       // general WRITE hits per minute per IP
+const GENERAL_READ_LIMIT = 180 // general READ (GET) hits per minute per IP
 const FREEZE_MINUTES = 30
 
 const hitLog = new Map()
@@ -41,7 +42,7 @@ async function freezeIp(ip, reason) {
 
 function recordHit(ip, bucket) {
     const now = Date.now()
-    const entry = hitLog.get(ip) || { authHits: [], generalHits: [] }
+    const entry = hitLog.get(ip) || { authHits: [], generalHits: [], generalReadHits: [] }
     entry[bucket] = entry[bucket].filter(ts => now - ts < WINDOW_MS)
     entry[bucket].push(now)
     hitLog.set(ip, entry)
@@ -62,8 +63,9 @@ export const abuseGuard = (type = 'general') => async (request, response, next) 
             })
         }
 
-        const bucket = type === 'auth' ? 'authHits' : 'generalHits'
-        const limit = type === 'auth' ? AUTH_LIMIT : GENERAL_LIMIT
+        const isGeneralRead = type === 'general' && request.method === 'GET'
+        const bucket = type === 'auth' ? 'authHits' : (isGeneralRead ? 'generalReadHits' : 'generalHits')
+        const limit = type === 'auth' ? AUTH_LIMIT : (isGeneralRead ? GENERAL_READ_LIMIT : GENERAL_LIMIT)
         const count = recordHit(ip, bucket)
 
         if (count > limit) {
