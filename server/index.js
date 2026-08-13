@@ -12,7 +12,7 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import connectDB from './config/connectDB.js'
 import cron from 'node-cron'
-import { abuseGuard, getFrozenIPs } from './middleware/abuseGuard.js'
+import { abuseGuard } from './middleware/abuseGuard.js'
 
 // ─── PRE-REGISTER MODELS ──────────────────────────────────────────────────────
 import './models/user.model.js'
