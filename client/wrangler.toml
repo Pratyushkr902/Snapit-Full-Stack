@@ -3,7 +3,7 @@ compatibility_date = "2026-06-03"
 pages_build_output_dir = "./dist"
 
 [vars]
-VITE_API_URL = "https://snapit-backend-bn8r.onrender.com"
+VITE_API_URL = "https://snapit.00pratyush20.workers.dev"
 VITE_RAZORPAY_KEY_ID = "rzp_live_Sm766x1DQg2bij"
 VITE_FIREBASE_API_KEY= "AIzaSyAn7lwvs2e4x1vkHN3aqpZL1cwF5_LCFrE"
 VITE_FIREBASE_AUTH_DOMAIN= "snapit-da080.firebaseapp.com"

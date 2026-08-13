@@ -1,30 +1,50 @@
-const CACHE_NAME = 'snapit-v2'
+const CACHE_NAME = 'snapit-v4'
+const IMAGE_CACHE = 'snapit-images-v2'
 
 self.addEventListener('install', e => {
   self.skipWaiting()
 })
 
 self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME && k !== IMAGE_CACHE).map(k => caches.delete(k)))
+    )
+  )
   self.clients.claim()
 })
 
 self.addEventListener('fetch', e => {
   const url = e.request.url
-
-  // Skip everything except GET requests to same origin static assets
   if (e.request.method !== 'GET') return
   if (!url.startsWith('http')) return
   if (url.includes('/api/')) return
   if (url.includes('onrender.com')) return
   if (url.includes('socket.io')) return
-  if (url.includes('firestore') || url.includes('firebase')) return
 
-  // Only cache same-origin static assets
-  if (!url.includes(self.location.origin)) return
+  // Cache R2 images with cache-first strategy
+  if (url.includes('r2.dev') || url.includes('pub-af292132196c4b93bf56272675b82149')) {
+    e.respondWith(
+      caches.open(IMAGE_CACHE).then(cache =>
+        cache.match(e.request).then(cached => {
+          if (cached) return cached
+          return fetch(e.request).then(response => {
+            if (response.ok) cache.put(e.request, response.clone())
+            return response
+          })
+        })
+      )
+    )
+    return
+  }
 
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  )
+  // Same-origin static assets - network first, fallback to cache
+  if (url.includes(self.location.origin)) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    )
+    return
+  }
 })
 
 self.addEventListener('push', e => {

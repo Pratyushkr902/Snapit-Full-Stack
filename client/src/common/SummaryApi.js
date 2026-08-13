@@ -5,6 +5,14 @@ const SummaryApi = {
         url : '/api/user/register',
         method : 'post'
     },
+    sendOtp : {
+        url : '/api/otp/send',
+        method : 'post'
+    },
+    verifyOtp : {
+        url : '/api/otp/verify',
+        method : 'post'
+    },
     login : {
         url : '/api/user/login',
         method : 'post'
@@ -16,6 +24,14 @@ const SummaryApi = {
     forgot_password_otp_verification : {
         url : '/api/user/verify-forgot-password-otp',
         method : 'put'
+    },
+    verify_email : {
+        url : '/api/user/verify-email',
+        method : 'post'
+    },
+    verify_email : {
+        url : '/api/user/verify-email',
+        method : 'post'
     },
     resetPassword : {
         url : "/api/user/reset-password",
@@ -45,6 +61,14 @@ const SummaryApi = {
         url : '/api/user/all-riders',
         method : 'get'
     },
+    getAllAmbassadors : {
+        url : '/api/user/all-ambassadors',
+        method : 'get'
+    },
+    createAmbassador : {
+        url : '/api/user/create-ambassador',
+        method : 'post'
+    },
     saveFcmToken: {
         url: '/api/user/save-fcm-token',
         method: 'post'
@@ -55,6 +79,10 @@ const SummaryApi = {
     },
     uploadImage : {
         url : '/api/file/upload',
+        method : 'post'
+    },
+    uploadImageR2 : {
+        url : '/api/file/upload-r2',
         method : 'post'
     },
     getCategory : {
@@ -145,6 +173,14 @@ const SummaryApi = {
         url : '/api/address/get',
         method : 'get'
     },
+    createSupportMessage : {
+        url : '/api/support/message',
+        method : 'post'
+    },
+    getSupportMessages : {
+        url : '/api/support/messages',
+        method : 'get'
+    },
     updateAddress : {
         url : '/api/address/update',
         method : 'put'
@@ -184,6 +220,10 @@ const SummaryApi = {
     updateOrderStatus: {
         url: '/api/order/update-status',
         method: 'put'
+    },
+    verifyDeliveryOtp: {
+        url: '/api/order/verify-delivery-otp',
+        method: 'post'
     },
     updateSellerStatus: {
         url: '/api/order/update-seller-status',
@@ -327,6 +367,11 @@ const SummaryApi = {
         url: '/api/restaurant/:id',
         method: 'get'
     },
+    submitRefund: { url: '/api/refund/submit', method: 'post' },
+    getMyRefunds:  { url: '/api/refund/my',     method: 'get'  },
+    getAllRefunds:  { url: '/api/refund/all',    method: 'get'  },
+    resolveRefund: { url: '/api/refund/resolve', method: 'post' },
+
     getRestaurantMenu: {
         url: '/api/restaurant/:id/menu',
         method: 'get'

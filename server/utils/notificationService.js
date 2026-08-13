@@ -13,26 +13,39 @@
 //    FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nXXX\n-----END PRIVATE KEY-----\n"
 //
 // ============================================================
-
 import mongoose from "mongoose";
-import admin from "firebase-admin";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const admin = require("firebase-admin");
+const { getMessaging } = require("firebase-admin/messaging");
 
 // ─────────────────────────────────────────────
 //  FIREBASE INIT  (runs once, safe to import anywhere)
+//  Reuses the app already initialized in firebaseNotify.js if present.
 // ─────────────────────────────────────────────
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId:   process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Newlines must be real — JSON.stringify escapes them
-      privateKey:  process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
+let fcm = null;
+function getFcm() {
+  if (fcm) return fcm;
+  try {
+    if (admin.getApps().length === 0) {
+      const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env;
+      if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+        throw new Error("Missing FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY in .env");
+      }
+      admin.initializeApp({
+        credential: admin.cert({
+          projectId: FIREBASE_PROJECT_ID,
+          clientEmail: FIREBASE_CLIENT_EMAIL,
+          privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+        }),
+      });
+    }
+    fcm = getMessaging();
+  } catch (error) {
+    console.error("❌ notificationService Firebase init failed — push disabled:", error.message);
+  }
+  return fcm;
 }
-
-const fcm = admin.messaging();
 
 // ─────────────────────────────────────────────
 //  MONGODB SCHEMA
@@ -97,6 +110,11 @@ const SHAYARI = {
   }),
 
   // ── USER ────────────────────────────────────
+   ORDER_CONFIRMED: (orderId) => ({
+    title:   `✅ Order confirm ho gaya! #${orderId}`,
+    shayari: `"Tayyari shuru, packing ka waqt,\n#${orderId} ab surakshit haathon mein rakht!" 📦`,
+    body:    `Your order #${orderId} has been confirmed and is being prepared.`,
+  }),
   ORDER_PLACED: (orderId) => ({
     title:   `✅ Order place ho gaya! #${orderId}`,
     shayari: `"Tumne kaha, humne suna,\nOrder #${orderId} ki kahani shuru ho gayi!" 🚀`,
@@ -231,7 +249,7 @@ const saveAndSend = async ({
         },
       };
 
-      const response = await fcm.send(message);
+      const response = await getFcm().send(message);
       fcmMessageId = response;
       console.log(`[FCM ✅] ${recipientType.toUpperCase()} | ${type} | messageId: ${response}`);
 
@@ -253,9 +271,14 @@ const saveAndSend = async ({
       recipientType,
       type,
       title:        payload.title,
+      // FIX: schema requires `message` — it was never being set, so every
+      // notification failed validation and was silently never saved.
+      message:      payload.body || payload.shayari || payload.title,
       shayari:      payload.shayari,
       body:         payload.body,
-      metadata,
+      // FIX: schema field is `data`, not `metadata` — was being silently
+      // dropped by Mongoose strict mode (orderId etc. never persisted).
+      data:         metadata,
       fcmToken:     fcmToken || null,
       fcmMessageId: fcmMessageId || null,
     });
@@ -293,6 +316,37 @@ export const notifySellerNewOrder = (sellerId, orderId, amount, fcmToken) =>
     metadata: { orderId, amount }, fcmToken,
   });
 
+// Looks up every SELLER whose store_name is one of the order's
+// involved_stores and fires notifySellerNewOrder() for each of them.
+// Fire-and-forget from the caller's side (wrap in .catch(() => {})).
+export const notifySellersOfNewOrder = async (order) => {
+  try {
+    const { default: UserModel } = await import("../models/user.model.js");
+    const storeNames = order?.involved_stores || [];
+    if (storeNames.length === 0) return;
+
+    const sellers = await UserModel.find({
+      role: { $in: ["SELLER", "RESTO_SELLER"] },
+      store_name: { $in: storeNames },
+      fcmToken: { $exists: true, $ne: null, $ne: "" },
+    }).select("fcmToken store_name").lean();
+
+    if (sellers.length === 0) {
+      console.log(`[notifySellersOfNewOrder] No sellers with fcmToken for stores: ${storeNames.join(", ")}`);
+      return;
+    }
+
+    await Promise.allSettled(
+      sellers.map(seller =>
+        notifySellerNewOrder(seller._id, order.orderId, order.totalAmt, seller.fcmToken)
+      )
+    );
+  } catch (error) {
+    console.error("[notifySellersOfNewOrder] failed:", error.message);
+  }
+};
+
+
 export const notifySellerPayment = (sellerId, amount, fcmToken) =>
   saveAndSend({
     recipientId: sellerId, recipientType: "seller", type: "PAYMENT_RECEIVED",
@@ -317,7 +371,12 @@ export const notifyUserOrderPlaced = (userId, orderId, fcmToken) =>
     payload: SHAYARI.ORDER_PLACED(orderId),
     metadata: { orderId }, fcmToken,
   });
-
+export const notifyUserOrderConfirmed = (userId, orderId, fcmToken) =>
+  saveAndSend({
+    recipientId: userId, recipientType: "user", type: "ORDER_CONFIRMED",
+    payload: SHAYARI.ORDER_CONFIRMED(orderId),
+    metadata: { orderId }, fcmToken,
+  });
 export const notifyUserOrderPacked = (userId, orderId, fcmToken) =>
   saveAndSend({
     recipientId: userId, recipientType: "user", type: "ORDER_PACKED",
@@ -421,7 +480,7 @@ export const sendMulticast = async (fcmTokens, payload, type, metadata = {}) => 
   };
 
   try {
-    const res = await fcm.sendEachForMulticast(message);
+    const res = await getFcm().sendEachForMulticast(message);
     console.log(`[FCM Multicast] ✅ ${res.successCount} sent, ❌ ${res.failureCount} failed`);
     return res;
   } catch (err) {

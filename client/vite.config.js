@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
+    sourcemap: true, // ✅ TEMP: enables real file/line numbers in production error logs
     rollupOptions: {
       output: {
         manualChunks(id) {

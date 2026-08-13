@@ -56,9 +56,13 @@ const UserMenuMobile = () => {
           <Link to={"/dashboard/category"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Category</Link>
           <Link to={"/dashboard/subcategory"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Sub Category</Link>
           <Link to={"/dashboard/upload-product"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Upload Product</Link>
+          <Link to={"/dashboard/refunds"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Refunds</Link>
           <Link to={"/dashboard/product"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Product</Link>
           {/* FIX: was '/dashboard/resto-dashboard' (RESTO_SELLER page) — admin needs restaurant-admin */}
           <Link to={"/dashboard/restaurant-admin"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Resto Admin</Link>
+          <Link to={"/dashboard/store-sellers"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>🏆 Store Rankings</Link>
+          <Link to={"/dashboard/campus-ambassadors"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>🎓 Campus Ambassadors</Link>
+          <Link to={"/dashboard/store-earnings"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>💰 Store Earnings</Link>
           <Divider/>
         </>
       )}

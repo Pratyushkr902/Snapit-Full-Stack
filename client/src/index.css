@@ -9,6 +9,7 @@ html {
   /* MOBILE: Prevent text size bump on orientation change (iOS) */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* MOBILE: Disable pinch-zoom on the page (PWA should feel native) */
 }
 
 body {
@@ -16,6 +17,8 @@ body {
   font-weight: 400;
   font-style: normal;
   @apply bg-white text-neutral-700 scroll-smooth;
+  /* MOBILE: Stop bounce/pull-to-refresh feel */
+  overscroll-behavior-x: none;
 }
 
 /* MOBILE: Remove tap highlight (Android blue flash on tap) */
@@ -24,10 +27,17 @@ body {
 }
 
 /* MOBILE: Smooth momentum scrolling on iOS */
-.overflow-x-auto,
-.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
 .overflow-scroll {
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
 
 /* Scrollbar utilities */
@@ -39,7 +49,7 @@ body {
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
-  scroll-snap-type: x mandatory;
+  
 }
 
 .scrollbarCustom::-webkit-scrollbar {
@@ -84,3 +94,5 @@ body {
 /* iOS safe area padding — use pb-safe on bottom bars and overlays */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe  { padding-top:    env(safe-area-inset-top);    }
+html, body { overscroll-behavior: none; }
+

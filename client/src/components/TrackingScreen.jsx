@@ -38,7 +38,7 @@ const TrackingScreen = ({ orderId, order }) => {
 
     // ✅ Socket created INSIDE useEffect
     const socket = io(
-      import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com",
+      import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app",
       {
         path: "/socket.io/",
         transports: ["websocket", "polling"],

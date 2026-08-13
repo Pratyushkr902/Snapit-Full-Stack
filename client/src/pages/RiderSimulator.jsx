@@ -220,7 +220,13 @@ const RiderDashboard = () => {
                                                 <FaPhone size={18} />
                                             </a>
                                             <a
-                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`}
+                                                href={
+                                                    order.delivery_lat && order.delivery_lng
+                                                        ? `https://www.google.com/maps?q=${order.delivery_lat},${order.delivery_lng}`
+                                                        : order.delivery_address?.lat && order.delivery_address?.lng
+                                                            ? `https://www.google.com/maps?q=${order.delivery_address.lat},${order.delivery_address.lng}`
+                                                            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`
+                                                }
                                                 target="_blank" rel="noreferrer"
                                                 className='p-3 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all'
                                             >

@@ -16,6 +16,7 @@ const UploadProduct = () => {
   const [data, setData] = useState({
       name         : "",
       image        : [],
+      imageThumbnail : [],
       category     : [],
       subCategory  : [],
       unit         : "",
@@ -51,7 +52,15 @@ const UploadProduct = () => {
         const response = await uploadImage(file)
         const { data: ImageResponse } = response
         const imageUrl = ImageResponse.data.url
-        setData(prev => ({ ...prev, image: [...prev.image, imageUrl] }))
+        // thumbnail_url may be null if generation failed on the backend —
+        // in that case we just push the full image so nothing breaks;
+        // the frontend falls back to `image` wherever `imageThumbnail` is empty.
+        const thumbnailUrl = ImageResponse.data.thumbnail_url || imageUrl
+        setData(prev => ({
+            ...prev,
+            image: [...prev.image, imageUrl],
+            imageThumbnail: [...(prev.imageThumbnail || []), thumbnailUrl]
+        }))
     } catch (error) {
         AxiosToastError(error)
     } finally {
@@ -63,7 +72,11 @@ const UploadProduct = () => {
     setData(prev => {
       const newList = [...prev.image]
       newList.splice(index, 1)
-      return { ...prev, image: newList }
+      // Keep imageThumbnail in sync so indexes don't drift out of
+      // alignment with `image` after a delete.
+      const newThumbList = [...(prev.imageThumbnail || [])]
+      newThumbList.splice(index, 1)
+      return { ...prev, image: newList, imageThumbnail: newThumbList }
     })
   }
 

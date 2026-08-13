@@ -1,21 +1,46 @@
-import admin from 'firebase-admin'
+// ============================================================
+// server/utils/firebaseNotify.js — FULL REPLACEMENT (lazy init)
+// ============================================================
 
-// Initialize Firebase Admin only once
-if (!admin.apps.length) {
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
+
+const admin = require('firebase-admin')
+const { getMessaging } = require('firebase-admin/messaging')
+
+let messaging = null
+
+function getMessagingClient() {
+    if (messaging) return messaging
     try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        })
-        console.log('✅ Firebase Admin initialized')
+        if (admin.getApps().length === 0) {
+            const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env
+            if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+                throw new Error('Missing FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY in .env')
+            }
+            admin.initializeApp({
+                credential: admin.cert({
+                    projectId: FIREBASE_PROJECT_ID,
+                    clientEmail: FIREBASE_CLIENT_EMAIL,
+                    privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                })
+            })
+            console.log('✅ Firebase Admin initialized')
+        }
+        messaging = getMessaging()
     } catch (error) {
-        console.error('❌ Firebase Admin init failed:', error.message)
+        console.error('❌ Firebase Admin init failed — push notifications disabled:', error.message)
     }
+    return messaging
 }
 
-// Send notification to a single device token
 export async function sendPushNotification({ token, title, body, data = {} }) {
     try {
+        const client = getMessagingClient()
+        if (!client) {
+            console.warn('[Push] Firebase not initialized, skipping notification')
+            return
+        }
         if (!token) return
         const message = {
             token,
@@ -30,7 +55,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                 fcmOptions: { link: '/rider-panel' }
             }
         }
-        const result = await admin.messaging().send(message)
+        const result = await client.send(message)
         console.log('📱 Notification sent:', result)
         return result
     } catch (error) {
@@ -38,7 +63,6 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
     }
 }
 
-// Send notification to multiple tokens
 export async function sendPushToMultiple({ tokens, title, body, data = {} }) {
     if (!tokens || tokens.length === 0) return
     const results = await Promise.allSettled(
@@ -47,20 +71,18 @@ export async function sendPushToMultiple({ tokens, title, body, data = {} }) {
     return results
 }
 
-// Send notification to all riders
 export async function notifyAllRiders({ title, body, data = {} }) {
     try {
         const { default: UserModel } = await import('../models/user.model.js')
-        const riders = await UserModel.find({ 
-            role: 'rider', 
-            fcmToken: { $exists: true, $ne: null, $ne: '' } 
+        const riders = await UserModel.find({
+            role: 'RIDER',
+            fcmToken: { $exists: true, $ne: null, $ne: '' }
         }).select('fcmToken name')
-        
+
         if (riders.length === 0) {
             console.log('No riders with FCM tokens found')
             return
         }
-
         const tokens = riders.map(r => r.fcmToken)
         console.log(`📢 Notifying ${tokens.length} riders`)
         return await sendPushToMultiple({ tokens, title, body, data })

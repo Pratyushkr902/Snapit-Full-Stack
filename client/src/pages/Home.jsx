@@ -11,7 +11,7 @@ import FoodCategoryCard from '../components/FoodCategoryCard'
 const FALLBACK_IMG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='80' text-anchor='middle' fill='%239ca3af' font-size='11' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com"
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
 // Super-app category definitions
 const SUPER_APP_CATEGORIES = [
@@ -38,7 +38,6 @@ const SUPER_APP_CATEGORIES = [
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     path: '/pharmacy',
-    comingSoon: true,
   },
   {
     id: 'electronics',
@@ -111,10 +110,10 @@ const Home = () => {
                   <div className='bg-slate-100 h-2.5 w-3/4 rounded animate-pulse' />
                 </div>
               ))
-            : Array.isArray(categoryData) && categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase())).map((cat) => {
+            : Array.isArray(categoryData) && categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase())).map((cat, catIndex) => {
                 if (!cat) return null;
 
-                const rawImg = cat?.icon || cat?.image || cat?.imageUrl || '';
+                const rawImg = cat?.imageThumbnail || cat?.icon || cat?.image || cat?.imageUrl || '';
                 let finalSrc = FALLBACK_IMG;
 
                 if (typeof rawImg === 'string' && rawImg.trim().length > 0) {
@@ -152,7 +151,7 @@ const Home = () => {
                         src={finalSrc}
                         alt={cat?.name || "Category"}
                         className='w-full h-full object-scale-down group-hover:scale-105 transition-transform duration-200'
-                        loading="eager"
+                        loading={catIndex < 8 ? "eager" : "lazy"}
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = FALLBACK_IMG;

@@ -199,6 +199,15 @@ const ProductDisplayPage = () => {
   const [variants, setVariants] = useState([])
   const imageContainer = useRef()
 
+  // ── Swipe/drag state for Zepto/Blinkit-style image carousel ──
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const touchDeltaX = useRef(0)
+  const isDragging = useRef(false)
+  const directionLocked = useRef(null) // 'x' | 'y' | null
+  const [dragOffset, setDragOffset] = useState(0)
+  const [isAnimating, setIsAnimating] = useState(false)
+
   const checkShopStatus = () => {
     const now = new Date()
     setIsOpen(now.getHours() >= 8 && now.getHours() < 20)
@@ -236,6 +245,9 @@ const ProductDisplayPage = () => {
     return () => clearInterval(timer)
   }, [productId])
 
+  // Reset to first image whenever product changes
+  useEffect(() => { setImage(0) }, [productId])
+
   const handleShareProductSystem = async () => {
     try {
       if (navigator.share) {
@@ -251,6 +263,100 @@ const ProductDisplayPage = () => {
     if (variant._id === data._id) return
     const slug = `${variant.name.toLowerCase().replace(/\s+/g, '-')}-${variant._id}`
     navigate(`/product/${slug}`)
+  }
+
+  const imageCount = data?.image?.length || 0
+
+  const goToImage = (idx) => {
+    if (imageCount === 0) return
+    const clamped = ((idx % imageCount) + imageCount) % imageCount
+    setImage(clamped)
+  }
+
+  // ── Swipe handlers (touch) ──
+  const handleTouchStart = (e) => {
+    if (imageCount <= 1) return
+    isDragging.current = true
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+    touchDeltaX.current = 0
+    directionLocked.current = null
+    setIsAnimating(false)
+  }
+
+  const handleTouchMove = (e) => {
+    if (!isDragging.current || imageCount <= 1) return
+    const currentX = e.touches[0].clientX
+    const currentY = e.touches[0].clientY
+    const deltaX = currentX - touchStartX.current
+    const deltaY = currentY - touchStartY.current
+
+    // Lock the gesture direction once movement is clearly one axis —
+    // prevents a vertical scroll attempt from being hijacked as a
+    // horizontal image drag (the Android "stuck scroll" bug).
+    if (!directionLocked.current) {
+      if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return // too small to decide yet
+      directionLocked.current = Math.abs(deltaX) > Math.abs(deltaY) ? 'x' : 'y'
+    }
+
+    if (directionLocked.current === 'y') {
+      // Let the page handle vertical scroll natively — don't treat as drag.
+      isDragging.current = false
+      return
+    }
+
+    touchDeltaX.current = deltaX
+    setDragOffset(deltaX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!isDragging.current || imageCount <= 1) return
+    isDragging.current = false
+    const threshold = 50 // px needed to trigger a slide change
+    setIsAnimating(true)
+
+    if (touchDeltaX.current > threshold) {
+      goToImage(image - 1) // swiped right -> previous image
+    } else if (touchDeltaX.current < -threshold) {
+      goToImage(image + 1) // swiped left -> next image
+    }
+    setDragOffset(0)
+    touchDeltaX.current = 0
+  }
+
+  // ── Swipe handlers (mouse drag, for desktop testing) ──
+  const handleMouseDown = (e) => {
+    if (imageCount <= 1) return
+    isDragging.current = true
+    touchStartX.current = e.clientX
+    touchDeltaX.current = 0
+    setIsAnimating(false)
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isDragging.current || imageCount <= 1) return
+    const currentX = e.clientX
+    touchDeltaX.current = currentX - touchStartX.current
+    setDragOffset(touchDeltaX.current)
+  }
+
+  const handleMouseUp = () => {
+    if (!isDragging.current || imageCount <= 1) return
+    isDragging.current = false
+    const threshold = 50
+    setIsAnimating(true)
+
+    if (touchDeltaX.current > threshold) {
+      goToImage(image - 1)
+    } else if (touchDeltaX.current < -threshold) {
+      goToImage(image + 1)
+    }
+    setDragOffset(0)
+    touchDeltaX.current = 0
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging.current) handleMouseUp()
   }
 
   return (
@@ -274,10 +380,41 @@ const ProductDisplayPage = () => {
         
         {/* Gallery */}
         <div className='space-y-3'>
-          <div className='bg-white w-full aspect-square max-h-[280px] sm:max-h-[340px] lg:max-h-[420px] rounded-2xl flex items-center justify-center overflow-hidden border border-gray-100/70 shadow-sm cursor-zoom-in'
-            onClick={() => setImageZoom(!imageZoom)}>
+          <div
+            className='bg-white w-full aspect-[4/3] max-h-[240px] sm:max-h-[320px] lg:max-h-[420px] rounded-2xl overflow-hidden border border-gray-100/70 shadow-sm relative select-none'
+            style={{ touchAction: 'pan-y' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+          >
             {!loading && data?.image?.length > 0 ? (
-              <img src={data.image[image]} className={`w-full h-full object-contain p-3 sm:p-4 transition-transform duration-300 ${imageZoom ? 'scale-150' : 'scale-100'}`} alt={data.name} />
+              <div
+                className={`flex h-full ${isAnimating ? 'transition-transform duration-300 ease-out' : ''}`}
+                style={{
+                  width: `${imageCount * 100}%`,
+                  transform: `translateX(calc(${-image * (100 / imageCount)}% + ${dragOffset}px))`,
+                }}
+              >
+                {data.image.map((img, idx) => (
+                  <div
+                    key={img + idx}
+                    className='h-full flex items-center justify-center flex-shrink-0 cursor-zoom-in'
+                    style={{ width: `${100 / imageCount}%` }}
+                    onClick={() => { if (Math.abs(touchDeltaX.current) < 5) setImageZoom(!imageZoom) }}
+                  >
+                    <img
+                      src={img}
+                      className={`w-full h-full object-contain p-3 sm:p-4 transition-transform duration-300 ${imageZoom && idx === image ? 'scale-150' : 'scale-100'}`}
+                      alt={data.name}
+                      draggable={false}
+                    />
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className='w-full h-full bg-slate-50 animate-pulse flex items-center justify-center'>
                 <p className='text-gray-400 font-bold text-xs uppercase tracking-widest'>Loading...</p>
@@ -286,13 +423,13 @@ const ProductDisplayPage = () => {
           </div>
           <div className='flex items-center justify-center gap-1.5'>
             {data?.image?.map((img, index) => (
-              <button key={img+index} onClick={() => setImage(index)} className={`h-1.5 rounded-full transition-all ${index === image ? "bg-green-600 w-6" : "bg-gray-200 w-1.5"}`} />
+              <button key={img+index} onClick={() => { setIsAnimating(true); setImage(index) }} className={`h-1.5 rounded-full transition-all ${index === image ? "bg-green-600 w-6" : "bg-gray-200 w-1.5"}`} />
             ))}
           </div>
           <div className='relative hidden sm:block'>
             <div ref={imageContainer} className='flex gap-2.5 overflow-x-auto scrollbar-none snap-x scroll-smooth px-1'>
               {data?.image?.map((img, index) => (
-                <button key={img+index} onClick={() => setImage(index)}
+                <button key={img+index} onClick={() => { setIsAnimating(true); setImage(index) }}
                   className={`min-w-20 w-20 h-20 rounded-2xl border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md scale-105' : 'border-transparent opacity-60 bg-white p-1'}`}>
                   <img src={img} alt='thumb' className='w-full h-full object-contain p-1' />
                 </button>

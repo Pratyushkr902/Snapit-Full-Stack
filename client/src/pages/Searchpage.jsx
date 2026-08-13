@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import CardLoading from '../components/CardLoading'
 import SummaryApi from '../common/SummaryApi'
 import Axios from '../utils/Axios'
@@ -8,17 +8,19 @@ import InfiniteScroll from 'react-infinite-scroll-component'
 import { useLocation } from 'react-router-dom'
 import noDataImage from '../assets/empty_cart.webp'
 
+const LOADING_CARDS = new Array(10).fill(null)
+
 const SearchPage = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
-  const loadingArrayCard = new Array(10).fill(null)
   const [page, setPage] = useState(1)
   const [totalPage, setTotalPage] = useState(1)
   const params = useLocation()
-  const searchText = new URLSearchParams(params.search).get('q') || new URLSearchParams(params.search).get('search') || ''
+  const searchText =
+    new URLSearchParams(params.search).get('q') ||
+    new URLSearchParams(params.search).get('search') ||
+    ''
 
-  // ✅ FIX 1: Reset page and data when search query changes
-  const isFirstRender = useRef(true)
   const prevSearchText = useRef(searchText)
 
   useEffect(() => {
@@ -29,77 +31,65 @@ const SearchPage = () => {
     }
   }, [searchText])
 
-  const fetchData = async () => {
+  // ✅ FIX: no longer creates/returns an AbortController from inside the
+  // async function — that return value was wrapped in a Promise and never
+  // reached useEffect synchronously, which was the root cause of the
+  // "n is not a function" crash (useEffect was returning a Promise as its
+  // cleanup function instead of an actual function).
+  const fetchData = useCallback(async (signal) => {
     try {
       setLoading(true)
       const response = await Axios({
         ...SummaryApi.searchProduct,
-        data: {
-          search: searchText,
-          page: page,
-          limit: 10, // ✅ FIX 3: Added limit
-        }
+        signal,
+        data: { search: searchText, page, limit: 10 },
       })
-
       const { data: responseData } = response
-
       if (responseData.success) {
-        if (page === 1) {
-          // ✅ FIX 1 continued: Use page state (not responseData.page) to reset
-          setData(responseData.data)
-        } else {
-          setData((prev) => [...prev, ...responseData.data])
-        }
+        setData(prev => page === 1 ? responseData.data : [...prev, ...responseData.data])
         setTotalPage(responseData.totalPage)
       }
     } catch (error) {
-      AxiosToastError(error)
+      if (error.name !== 'CanceledError') AxiosToastError(error)
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    fetchData()
   }, [page, searchText])
 
+  useEffect(() => {
+    // ✅ FIX: AbortController now lives here, and the cleanup function
+    // returned is a real synchronous function — exactly what useEffect expects.
+    const controller = new AbortController()
+    fetchData(controller.signal)
+    return () => controller.abort()
+  }, [fetchData])
+
   const handleFetchMore = () => {
-    if (totalPage > page) {
-      setPage(prev => prev + 1)
-    }
+    if (totalPage > page) setPage(prev => prev + 1)
   }
 
   return (
     <section className='bg-white'>
       <div className='container mx-auto p-4'>
         <p className='font-semibold'>Search Results: {data.length}</p>
-
         <InfiniteScroll
           dataLength={data.length}
-          hasMore={page < totalPage} // ✅ FIX 2: was always `true`
+          hasMore={page < totalPage}
           next={handleFetchMore}
           loader={null}
         >
           <div className='grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 py-4 gap-2'>
             {data.map((p, index) => (
-              <CardProduct data={p} key={p?._id + "searchProduct" + index} />
+              <CardProduct data={p} key={p?._id + 'searchProduct' + index} />
             ))}
-
-            {/* Loading skeletons */}
-            {loading && loadingArrayCard.map((_, index) => (
-              <CardLoading key={"loadingsearchpage" + index} />
+            {loading && LOADING_CARDS.map((_, index) => (
+              <CardLoading key={'loadingsearchpage' + index} />
             ))}
           </div>
         </InfiniteScroll>
-
-        {/* No data state */}
         {!data[0] && !loading && (
           <div className='flex flex-col justify-center items-center w-full mx-auto'>
-            <img
-              src={noDataImage}
-              className='w-full h-full max-w-xs max-h-xs block'
-              alt='No results found'
-            />
+            <img src={noDataImage} className='w-full h-full max-w-xs max-h-xs block' alt='No results found' />
             <p className='font-semibold my-2'>No Data found</p>
           </div>
         )}

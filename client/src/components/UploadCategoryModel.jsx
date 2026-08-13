@@ -60,12 +60,14 @@ const UploadCategoryModel = ({close, fetchData}) => {
             
             // Safely extract the URL. If it doesn't exist, this won't crash.
             const imageUrl = response?.data?.data?.url
+            const thumbnailUrl = response?.data?.data?.thumbnail_url || imageUrl
 
             if (imageUrl) {
                 setData((preve)=>{
                     return{
                         ...preve,
-                        image : imageUrl
+                        image : imageUrl,
+                        imageThumbnail : thumbnailUrl
                     }
                 })
             } else {

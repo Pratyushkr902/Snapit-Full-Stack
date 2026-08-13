@@ -9,7 +9,7 @@ import { FaAngleLeft, FaAngleRight } from "react-icons/fa6"
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com"
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
 const normalizeImageField = (image) => {
     if (Array.isArray(image)) {
@@ -45,12 +45,12 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     observer.disconnect()
                 }
             },
-            { rootMargin: '600px', threshold: 0 }
+            { rootMargin: '150px', threshold: 0 }
         )
 
         if (sectionRef.current) observer.observe(sectionRef.current)
 
-        const timer = setTimeout(() => setVisible(true), 2000)
+        const timer = setTimeout(() => setVisible(true), 8000)
 
         return () => {
             observer.disconnect()
@@ -129,13 +129,13 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                 <div
                     className='flex gap-3 container mx-auto px-4 overflow-x-auto scrollbar-none scroll-smooth'
                     ref={containerRef}
-                    style={{ scrollSnapType: 'x mandatory' }}
+                    style={{ scrollSnapType: 'none' }}
                 >
                     {loading && loadingCardNumber.map((_, index) => (
                         <div
                             key={"ld" + index}
                             className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]'
-                            style={{ scrollSnapAlign: 'start' }}
+                            style={{  }}
                         >
                             <CardLoading />
                         </div>
@@ -145,7 +145,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                         <div
                             key={"ph" + index}
                             className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px] h-64 bg-slate-100 dark:bg-zinc-800 rounded-2xl animate-pulse flex-shrink-0'
-                            style={{ scrollSnapAlign: 'start' }}
+                            style={{  }}
                         />
                     ))}
 
@@ -155,7 +155,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                                 <div
                                     key={p._id + "cat" + index}
                                     className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]'
-                                    style={{ scrollSnapAlign: 'start' }}
+                                    style={{  }}
                                 >
                                     <CardProduct data={p} />
                                 </div>

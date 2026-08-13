@@ -5,6 +5,7 @@ import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
+import { optimizeImage } from '../utils/optimizeImage'
 
 // ─── CHANGE 1: Replace window.confirm with inline confirm UI ──────────────────
 // window.confirm() blocks the main thread, looks like a browser bug alert, and
@@ -50,7 +51,7 @@ const ProductCardAdmin = ({ data, fetchProductData }) => {
       {/* Product image */}
       <div className='w-full h-32 bg-slate-50 rounded-lg p-2 mb-2'>
         <img
-          src={data?.image[0]}
+          src={optimizeImage(data?.image?.[0], 300)}
           alt={data?.name}
           onError={handleImgError}
           className='w-full h-full object-scale-down'

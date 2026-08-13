@@ -33,3 +33,4 @@ const AddStore = ({ fetchStores }) => {
         </form>
     );
 };
+export default AddStore;

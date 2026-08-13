@@ -4,7 +4,7 @@ import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 
-const SNAPIT_UPI_ID = "00pr1199@oksbi"
+const SNAPIT_UPI_ID = "raghurishav54321-1@okicici"
 const SNAPIT_NAME = "Snapit Grocery"
 
 const CollectPayment = ({ order, onSuccess, onClose }) => {
@@ -13,12 +13,27 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
     const [confirming, setConfirming] = useState(false)
     const [upiConfirmed, setUpiConfirmed] = useState(false)
 
+    // ── Delivery confirmation step state ────────────
+    const [showOtpStep, setShowOtpStep] = useState(false)
+    const [otpError, setOtpError] = useState('')
+    const [verifyingOtp, setVerifyingOtp] = useState(false)
+
+    // ── Delivery proof photo ────────────────────────
+    const [proofPhoto, setProofPhoto] = useState(null)
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
+    // ── Dispute state ───────────────────────────────
+    const [showDispute, setShowDispute] = useState(false)
+    const [disputeNote, setDisputeNote] = useState('')
+    const [submittingDispute, setSubmittingDispute] = useState(false)
+
     const amount = order?.totalAmt || 0
     const change = cashReceived ? Math.max(0, Number(cashReceived) - amount) : 0
 
     const upiLink = `upi://pay?pa=${SNAPIT_UPI_ID}&pn=${encodeURIComponent(SNAPIT_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Order ' + (order?.orderId?.slice(-6) || ''))}`
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`
 
+    // Step 1: record payment, then move to OTP step (does NOT mark Delivered anymore)
     const handleConfirmPayment = async () => {
         try {
             setConfirming(true)
@@ -26,16 +41,14 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                 ...SummaryApi.updateOrderStatus,
                 data: {
                     orderId: order.orderId,
-                    status: 'Delivered',
+                    status: 'Confirmed',
                     payment_status: method === 'upi' ? 'UPI' : 'CASH ON DELIVERY',
-                    payment_collected: true,
                     isSettled: method === 'upi',
                     cashReceived: method === 'cash' ? Number(cashReceived) : amount,
                 }
             })
             if (response.data.success) {
-                toast.success(method === 'upi' ? '✅ UPI Payment Confirmed! Delivered!' : '✅ Cash Collected! Delivered!')
-                if (onSuccess) onSuccess()
+                setShowOtpStep(true)
             } else {
                 toast.error(response.data.message || 'Update failed')
             }
@@ -43,6 +56,79 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
             toast.error('Failed to update order. Try again.')
         } finally {
             setConfirming(false)
+        }
+    }
+
+    // Capture and upload delivery proof photo
+    const handlePhotoCapture = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        try {
+            setUploadingPhoto(true)
+            const formData = new FormData()
+            formData.append('image', file)
+            const response = await Axios({
+                ...SummaryApi.uploadImageR2,
+                data: formData,
+                headers: { 'Content-Type': 'multipart/form-data' }
+            })
+            if (response.data.success) {
+                setProofPhoto(response.data.data.url || response.data.data.secure_url)
+            } else {
+                toast.error('Photo upload failed. Try again.')
+            }
+        } catch (error) {
+            toast.error('Photo upload failed. Try again.')
+        } finally {
+            setUploadingPhoto(false)
+        }
+    }
+
+    // Step 2: mark Delivered (photo proof only, no OTP)
+    const handleVerifyOtp = async () => {
+        if (!proofPhoto) {
+            setOtpError('Take a delivery photo first.')
+            return
+        }
+        try {
+            setVerifyingOtp(true)
+            setOtpError('')
+            const response = await Axios({
+                ...SummaryApi.verifyDeliveryOtp,
+                data: { orderId: order.orderId, deliveryProofPhoto: proofPhoto }
+            })
+            if (response.data.success) {
+                toast.success('✅ Delivered! Proof saved.')
+                if (onSuccess) onSuccess()
+            } else {
+                setOtpError(response.data.message || 'Could not mark delivered')
+            }
+        } catch (error) {
+            setOtpError(error?.response?.data?.message || 'Marking delivered failed. Try again.')
+        } finally {
+            setVerifyingOtp(false)
+        }
+    }
+
+    // Dispute: customer denies the order
+    const handleReportDispute = async () => {
+        try {
+            setSubmittingDispute(true)
+            const response = await Axios({
+                ...SummaryApi.reportOrderDispute,
+                data: { orderId: order.orderId, type: 'DENIED_ORDER', note: disputeNote }
+            })
+            if (response.data.success) {
+                toast.success('Dispute logged. Our support team will review it.')
+                setShowDispute(false)
+                if (onClose) onClose()
+            } else {
+                toast.error(response.data.message || 'Failed to log dispute')
+            }
+        } catch (error) {
+            toast.error('Failed to log dispute. Try again.')
+        } finally {
+            setSubmittingDispute(false)
         }
     }
 
@@ -62,14 +148,87 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
 
                 <div className='p-5 border-b border-slate-100 flex items-start justify-between'>
                     <div>
-                        <p className='text-[11px] font-bold text-slate-400 uppercase tracking-widest'>Collect Payment</p>
+                        <p className='text-[11px] font-bold text-slate-400 uppercase tracking-widest'>
+                            {showOtpStep ? 'Verify Delivery' : 'Collect Payment'}
+                        </p>
                         <p className='text-2xl font-black text-slate-900 mt-1'>{DisplayPriceInRupees(amount)}</p>
                         <p className='text-xs text-slate-400 font-mono mt-0.5'>#{order?.orderId?.slice(-8)}</p>
                     </div>
                     <button onClick={onClose} className='text-slate-400 hover:text-slate-700 font-bold text-lg mt-1'>✕</button>
                 </div>
 
-                {!method && (
+                {/* ── DISPUTE MODE ── */}
+                {showDispute && (
+                    <div className='p-5 flex flex-col gap-4'>
+                        <div className='bg-red-50 border-2 border-red-100 rounded-2xl p-4'>
+                            <p className='font-black text-red-700'>Customer says they didn&apos;t order this?</p>
+                            <p className='text-xs text-red-500 mt-1'>Don&apos;t leave the order. Log it here — our team will investigate and this won&apos;t be held against you.</p>
+                        </div>
+                        <textarea
+                            value={disputeNote}
+                            onChange={e => setDisputeNote(e.target.value)}
+                            placeholder='Add any details (optional) — e.g. "Customer refused at door, said number was used by someone else"'
+                            className='w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-400 min-h-[90px]'
+                        />
+                        <button onClick={handleReportDispute} disabled={submittingDispute} className='w-full bg-red-600 disabled:bg-slate-200 text-white font-black py-4 rounded-2xl text-sm active:scale-95'>
+                            {submittingDispute ? 'Submitting...' : '🚩 Submit Dispute Report'}
+                        </button>
+                        <button onClick={() => setShowDispute(false)} className='text-sm text-slate-400 font-bold text-center'>← Back</button>
+                    </div>
+                )}
+
+                {/* ── OTP VERIFICATION STEP (with photo proof) ── */}
+                {!showDispute && showOtpStep && (
+                    <div className='p-5 flex flex-col gap-4'>
+                        <div className='bg-blue-50 border-2 border-blue-100 rounded-2xl p-4 text-center'>
+                            <p className='text-sm font-bold text-blue-700'>Payment recorded ✅</p>
+                            <p className='text-xs text-blue-500 mt-1'>Take a photo of the order at the doorstep to confirm delivery.</p>
+                        </div>
+
+                        {!proofPhoto ? (
+                            <label className='w-full border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center gap-2 cursor-pointer active:scale-95'>
+                                <span className='text-3xl'>📷</span>
+                                <span className='text-sm font-bold text-slate-600'>
+                                    {uploadingPhoto ? 'Uploading...' : 'Tap to take delivery photo'}
+                                </span>
+                                <input
+                                    type='file'
+                                    accept='image/*'
+                                    capture='environment'
+                                    className='hidden'
+                                    disabled={uploadingPhoto}
+                                    onChange={handlePhotoCapture}
+                                />
+                            </label>
+                        ) : (
+                            <div className='relative'>
+                                <img src={proofPhoto} alt='Delivery proof' className='w-full h-40 object-cover rounded-2xl' />
+                                <button
+                                    onClick={() => setProofPhoto(null)}
+                                    className='absolute top-2 right-2 bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-full'
+                                >
+                                    Retake
+                                </button>
+                            </div>
+                        )}
+
+                        {otpError && <p className='text-sm font-bold text-red-600 text-center'>{otpError}</p>}
+
+                        <button
+                            onClick={handleVerifyOtp}
+                            disabled={verifyingOtp || !proofPhoto}
+                            className='w-full bg-green-600 disabled:bg-slate-200 text-white font-black py-4 rounded-2xl text-sm active:scale-95'
+                        >
+                            {verifyingOtp ? 'Marking Delivered...' : '✅ Mark Delivered'}
+                        </button>
+                        <button onClick={() => setShowDispute(true)} className='text-sm text-red-500 font-bold text-center'>
+                            🚩 Customer says they didn&apos;t order this
+                        </button>
+                    </div>
+                )}
+
+                {/* ── PAYMENT METHOD SELECTION ── */}
+                {!showDispute && !showOtpStep && !method && (
                     <div className='p-5 flex flex-col gap-3'>
                         <p className='text-sm font-bold text-slate-600 mb-1'>Choose payment method:</p>
                         <button onClick={() => setMethod('upi')} className='flex items-center gap-4 p-4 border-2 border-blue-100 bg-blue-50 rounded-2xl hover:border-blue-400 transition-all active:scale-95'>
@@ -88,10 +247,13 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                             </div>
                             <span className='ml-auto text-green-500 text-xl'>›</span>
                         </button>
+                        <button onClick={() => setShowDispute(true)} className='mt-2 text-sm text-red-500 font-bold text-center'>
+                            🚩 Customer says they didn&apos;t order this
+                        </button>
                     </div>
                 )}
 
-                {method === 'upi' && (
+                {!showDispute && !showOtpStep && method === 'upi' && (
                     <div className='p-5 flex flex-col items-center gap-4'>
                         <div className='bg-white border-2 border-slate-100 rounded-2xl p-4 shadow-sm'>
                             <img src={qrUrl} alt='UPI QR Code' className='w-52 h-52' />
@@ -117,13 +279,13 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                             </label>
                         </div>
                         <button onClick={handleConfirmPayment} disabled={!upiConfirmed || confirming} className='w-full bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-4 rounded-2xl text-sm active:scale-95'>
-                            {confirming ? 'Confirming...' : '✅ Confirm & Mark Delivered'}
+                            {confirming ? 'Confirming...' : '✅ Confirm Payment'}
                         </button>
                         <button onClick={() => setMethod(null)} className='text-sm text-slate-400 font-bold'>← Back</button>
                     </div>
                 )}
 
-                {method === 'cash' && (
+                {!showDispute && !showOtpStep && method === 'cash' && (
                     <div className='p-5 flex flex-col gap-4'>
                         <div className='bg-green-50 rounded-2xl p-4 text-center'>
                             <p className='text-sm font-bold text-green-700'>Amount to Collect</p>
@@ -152,7 +314,7 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                             </div>
                         )}
                         <button onClick={handleConfirmPayment} disabled={!cashReceived || Number(cashReceived) < amount || confirming} className='w-full bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-4 rounded-2xl text-sm active:scale-95'>
-                            {confirming ? 'Confirming...' : '✅ Cash Collected — Mark Delivered'}
+                            {confirming ? 'Confirming...' : '✅ Cash Collected — Continue'}
                         </button>
                         <button onClick={() => setMethod(null)} className='text-sm text-slate-400 font-bold text-center'>← Back</button>
                     </div>

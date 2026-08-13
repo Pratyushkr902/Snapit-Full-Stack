@@ -10,6 +10,7 @@ import { GoTriangleDown, GoTriangleUp } from "react-icons/go";
 import UserMenu from './UserMenu';
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees';
 import { useGlobalContext } from '../provider/GlobalProvider';
+import { useFullCart } from '../utils/foodCartStore';
 
 const Header = ({ openCart }) => {
     const [isMobile] = useMobile()
@@ -20,13 +21,18 @@ const Header = ({ openCart }) => {
     const [openUserMenu, setOpenUserMenu] = useState(false)
     const menuRef = useRef(null)
 
-    const { totalPrice, totalQty, fetchUser, fetchAddress } = useGlobalContext()
+    const { totalPrice = 0, totalQty = 0, fetchAddress } = useGlobalContext() || {}
     const addressList = useSelector(state => state.addresses.addressList)
     const primaryAddress = addressList?.[0]?.address_line || "Select Address"
 
+    // Persistent, cross-restaurant food cart — separate from the grocery
+    // cart above (useGlobalContext). Lives in localStorage via foodCartStore
+    // so it stays populated across page navigation, not just within the
+    // restaurant page.
+    const { grandCount: foodGrandCount, grandTotal: foodGrandTotal } = useFullCart()
+
     useEffect(() => {
         if (user?._id) {
-            if (fetchUser) fetchUser()
             if (fetchAddress) fetchAddress()
         }
     }, [user?._id])
@@ -66,10 +72,10 @@ const Header = ({ openCart }) => {
                             </h2>
                             <span className='text-lg'>⚡</span>
                         </div>
-                        <div className='flex items-center gap-0.5 text-xs text-slate-500 font-semibold cursor-pointer'>
+                        <Link to='/dashboard/address' className='flex items-center gap-0.5 text-xs text-slate-500 font-semibold cursor-pointer active:opacity-60'>
                             <span className='truncate max-w-[150px]'>📍 {primaryAddress}</span>
                             <GoTriangleDown size={12} />
-                        </div>
+                        </Link>
                     </div>
                 </div>
 
@@ -108,6 +114,20 @@ const Header = ({ openCart }) => {
                         <button onClick={() => navigate('/login')} className='text-lg px-2 font-bold text-slate-700 hover:text-green-700 transition-colors'>Login</button>
                     )}
 
+                    {/* Food cart — separate persistent cross-restaurant cart */}
+                    {foodGrandCount > 0 && (
+                        <Link
+                            to='/food-checkout'
+                            className='flex items-center gap-3 bg-orange-500 hover:bg-orange-600 px-5 py-2.5 rounded-xl text-white shadow-lg active:scale-95 transition-all'
+                        >
+                            <span className='text-2xl leading-none'>🍔</span>
+                            <div className='font-bold text-sm text-left leading-tight'>
+                                <p>{foodGrandCount} Item{foodGrandCount !== 1 ? 's' : ''}</p>
+                                <p className='text-[11px] font-medium opacity-90'>{DisplayPriceInRupees(foodGrandTotal)}</p>
+                            </div>
+                        </Link>
+                    )}
+
                     <button onClick={openCart} className='flex items-center gap-3 bg-green-700 hover:bg-green-800 px-5 py-2.5 rounded-xl text-white shadow-lg active:scale-95 transition-all'>
                         <BsCart4 size={24} className={totalQty > 0 ? 'animate-bounce' : ''} />
                         <div className='font-bold text-sm text-left leading-tight'>
@@ -140,10 +160,10 @@ const Header = ({ openCart }) => {
                                     in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
                                 </span>
                             </div>
-                            <div className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0'>
+                            <Link to='/dashboard/address' className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0 active:opacity-60'>
                                 <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
                                 <GoTriangleDown size={10} className='flex-shrink-0' />
-                            </div>
+                            </Link>
                         </div>
                     </div>
 
@@ -153,6 +173,17 @@ const Header = ({ openCart }) => {
                         <button className='text-neutral-600 active:scale-90 transition-transform' onClick={handleMobileUser}>
                             <FaRegCircleUser size={22} />
                         </button>
+
+                        {/* Food cart — separate persistent cross-restaurant cart */}
+                        {foodGrandCount > 0 && (
+                            <Link to='/food-checkout' className='relative text-orange-500 active:scale-90 transition-transform'>
+                                <span className='text-xl leading-none'>🍔</span>
+                                <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white'>
+                                    {foodGrandCount}
+                                </span>
+                            </Link>
+                        )}
+
                         <button onClick={openCart} className='relative text-green-700 active:scale-90 transition-transform'>
                             <BsCart4 size={22} />
                             {totalQty > 0 && (

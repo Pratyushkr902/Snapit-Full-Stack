@@ -13,10 +13,16 @@ import AxiosToastError from '../utils/AxiosToastError'
 const FALLBACK_IMG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='80' text-anchor='middle' fill='%239ca3af' font-size='11' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com"
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
 // ✅ Safely resolve any image value (string, array, relative, absolute)
-const resolveImage = (image) => {
+const resolveImage = (image, imageThumbnail) => {
+  // Prefer the small pre-generated thumbnail for the grid — falls back to
+  // the full image for older categories that don't have one yet.
+  const rawThumb = Array.isArray(imageThumbnail) ? imageThumbnail[0] : imageThumbnail
+  if (rawThumb && typeof rawThumb === 'string' && (rawThumb.startsWith('http://') || rawThumb.startsWith('https://'))) {
+    return rawThumb
+  }
   const raw = Array.isArray(image) ? image[0] : image
   if (!raw || typeof raw !== 'string') return FALLBACK_IMG
   if (raw.startsWith('http://') || raw.startsWith('https://')) return raw
@@ -114,9 +120,9 @@ const CategoryPage = () => {
               <div className='w-full aspect-square bg-slate-50 flex items-center justify-center p-3'>
                 <img
                   alt={category.name}
-                  src={resolveImage(category.image)}
+                  src={resolveImage(category.image, category.imageThumbnail)}
                   className='w-full h-full object-contain'
-                  loading="eager"
+                  loading="lazy"
                   onError={(e) => {
                     e.target.onerror = null
                     e.target.src = FALLBACK_IMG

@@ -16,8 +16,28 @@ const WhatsAppButton = () => {
   const whatsappURL = `https://wa.me/${phoneNumber}?text=${message}`
 
   useEffect(() => {
-    setPos({ x: window.innerWidth - 72, y: window.innerHeight - 90 })
+    const getViewport = () => ({
+      w: window.visualViewport?.width  || window.innerWidth,
+      h: window.visualViewport?.height || window.innerHeight,
+    })
+
+    const place = () => {
+      const { w, h } = getViewport()
+      setPos(prev => ({
+        x: Math.min(Math.max(0, prev.x || w - 72), w - 56),
+        y: Math.min(Math.max(0, prev.y || h - 90), h - 56),
+      }))
+    }
+
+    place()
     setMounted(true)
+
+    window.addEventListener('resize', place)
+    window.visualViewport?.addEventListener('resize', place)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.visualViewport?.removeEventListener('resize', place)
+    }
   }, [])
 
   const onPointerDown = (e) => {
@@ -45,6 +65,7 @@ const WhatsAppButton = () => {
       ...p,
       x: p.x < window.innerWidth / 2 ? 12 : window.innerWidth - 68
     }))
+    setTimeout(() => { didDragRef.current = false }, 100)
   }
 
   const handleClick = () => {

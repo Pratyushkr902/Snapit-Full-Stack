@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import AddAddress from '../components/AddAddress'
 import Axios from '../utils/Axios'
@@ -7,6 +7,8 @@ import AxiosToastError from '../utils/AxiosToastError'
 import toast from 'react-hot-toast'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { useGlobalContext } from '../provider/GlobalProvider'
+import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
+import { useFullCart } from '../utils/foodCartStore'
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -22,10 +24,11 @@ const QUICK_TAGS = [
   { icon: '🪜', label: 'Climb stairs' },
 ]
 
-const OFFER_PRESETS = [
-  { key: 'OFF20', pct: 0.20, label: '20% off', minOrder: 300 },
-  { key: 'OFF15', pct: 0.15, label: '15% off', minOrder: 0 },
-]
+const VALID_COUPONS = ['SNAPIT', 'FIRSTUSER', 'FIRSTFREE', 'FIRST50']
+
+// Fallback ₹30 flat fee only for restaurants missing location data —
+// remove once every restaurant has lat/lng set in the DB.
+const FALLBACK_DELIVERY_FEE = 30
 
 const VegDot = ({ isVeg }) => (
   <span
@@ -51,41 +54,38 @@ const VegDot = ({ isVeg }) => (
 
 const FoodCheckoutPage = () => {
   const navigate  = useNavigate()
-  const location  = useLocation()
   const user      = useSelector(s => s.user)
   const addressList = useSelector(s => s.addresses.addressList)
-  const { fetchAddress } = useGlobalContext()
+  const { fetchAddress } = useGlobalContext() || {}
 
   useEffect(() => { fetchAddress() }, [])
 
-  const {
-    cart = {},
-    allItems = [],
-    restaurantId,
-    restaurantName,
-    restaurantDeliveryFee = 0,
-  } = location.state || {}
+  // ── Cross-restaurant cart ────────────────────────────────────────────────
+  const { restaurants, isEmpty, clearAll } = useFullCart()
 
-  // ── Resolve cart items ──────────────────────────────────────────────────────
-  const cartEntries = Object.entries(cart).filter(([, qty]) => qty > 0)
-  const [quantities, setQuantities] = useState(() => {
-    const init = {}
-    cartEntries.forEach(([key, qty]) => { init[key] = qty })
-    return init
-  })
+  // ── Per-item quantity overrides (lets the customer tweak qty right here,
+  // same UX as before, but now indexed by restaurantId + itemId) ───────────
+  const [qtyOverrides, setQtyOverrides] = useState({})
+  const qtyKey = (restaurantId, itemId) => `${restaurantId}__${itemId}`
+  const getQty = (restaurantId, item) =>
+    qtyOverrides[qtyKey(restaurantId, item._id)] ?? item.__baseQty
+  const changeQty = (restaurantId, item, delta) => {
+    const key = qtyKey(restaurantId, item._id)
+    setQtyOverrides(prev => ({
+      ...prev,
+      [key]: Math.max(1, (prev[key] ?? item.__baseQty) + delta),
+    }))
+  }
 
-  const resolvedItems = cartEntries.map(([key]) => {
-    const [itemId, sizeName] = key.split('_')
-    const item = allItems.find(i => String(i._id) === itemId)
-    if (!item) return null
-    let price = item.discountedPrice || item.price || 0
-    if (sizeName) {
-      const sizeGroup = item.customizations?.find(c => c.groupName === 'Size')
-      const opt = sizeGroup?.options?.find(o => o.name === sizeName)
-      if (opt) price += opt.extraPrice || 0
-    }
-    return { item, basePrice: price, sizeName, key }
-  }).filter(Boolean)
+  // Flatten restaurants -> per-restaurant item lists carrying resolved price
+  // and an editable qty, without mutating the store.
+  const restaurantItemLists = restaurants.map(r => ({
+    ...r,
+    resolvedItems: r.items.map(({ item, qty }) => {
+      const price = item.discountedPrice > 0 ? item.discountedPrice : item.price
+      return { item: { ...item, __baseQty: qty }, price }
+    }),
+  }))
 
   // ── State ───────────────────────────────────────────────────────────────────
   const [selectAddress, setSelectAddress]   = useState(0)
@@ -96,15 +96,11 @@ const FoodCheckoutPage = () => {
   const [customTip,     setCustomTip]       = useState('')
   const [activeTipIdx,  setActiveTipIdx]    = useState(1)
 
-  // % offer (20% / 15% buttons)
-  const [appliedOffer,  setAppliedOffer]    = useState(null)
-  const [offerError,    setOfferError]      = useState('')
-
-  // flat coupon (random ₹1–8)
   const [couponCode,       setCouponCode]       = useState('')
   const [couponDiscount,   setCouponDiscount]   = useState(0)
   const [appliedCouponCode, setAppliedCouponCode] = useState('')
   const [couponError,      setCouponError]      = useState('')
+  const [couponLoading,    setCouponLoading]    = useState(false)
 
   const [walletApplied, setWalletApplied]   = useState(false)
 
@@ -115,27 +111,52 @@ const FoodCheckoutPage = () => {
   const [instructions,  setInstructions]    = useState('')
 
   // ── Calculations ────────────────────────────────────────────────────────────
-  const subTotal = resolvedItems.reduce((acc, { basePrice, key }) => {
-    return acc + basePrice * (quantities[key] || 1)
-  }, 0)
+  const isSnapitPlus = Boolean(
+    user?.isSnapitPlusMember &&
+    user?.snapitPlusExpiresAt &&
+    new Date() < new Date(user.snapitPlusExpiresAt)
+  )
+  const selectedAddr = addressList[selectAddress]
 
-  const offerDiscount = appliedOffer
-    ? Math.round(subTotal * appliedOffer.pct)
-    : 0
+  // Per-restaurant subtotal (using the editable qty overrides) + per-restaurant
+  // delivery fee/min-order, mirroring how the backend prices each group.
+  const restaurantPricing = restaurantItemLists.map(r => {
+    const subtotal = r.resolvedItems.reduce((s, { item, price }) => {
+      return s + price * getQty(r.restaurantId, item)
+    }, 0)
 
-  const FREE_DELIVERY_THRESHOLD = 399
-  const deliveryFee = subTotal >= FREE_DELIVERY_THRESHOLD ? 0 : restaurantDeliveryFee
+    const hasLoc = Boolean(r.restaurantLat && r.restaurantLng)
+    const info = (selectedAddr?.lat && selectedAddr?.lng && hasLoc)
+      ? getDeliveryInfoFromOrigin(r.restaurantLat, r.restaurantLng, selectedAddr.lat, selectedAddr.lng, subtotal, isSnapitPlus)
+      : null
+    const fee = hasLoc
+      ? (info?.charge ?? FALLBACK_DELIVERY_FEE)
+      : (isSnapitPlus ? 0 : FALLBACK_DELIVERY_FEE)
+    const minOrder = info?.minOrder ?? 0
+
+    return { ...r, subtotal, fee, minOrder }
+  })
+
+  const subTotal    = restaurantPricing.reduce((s, r) => s + r.subtotal, 0)
+  const deliveryFee = restaurantPricing.reduce((s, r) => s + r.fee, 0)
+
   const walletBal   = Number(user?.walletBalance || 0)
-  const preWallet   = subTotal - offerDiscount - couponDiscount + deliveryFee + tipAmt
+  const preWallet   = subTotal - couponDiscount + deliveryFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
   const grandTotal  = Math.max(0, preWallet - walletDeduct)
-  const totalSaved  = 48 + offerDiscount + couponDiscount + walletDeduct
+  const totalSaved  = 48 + couponDiscount + walletDeduct
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
-  const changeQty = (key, delta) => {
-    setQuantities(prev => ({ ...prev, [key]: Math.max(1, (prev[key] || 1) + delta) }))
+  const checkMinOrder = () => {
+    for (const r of restaurantPricing) {
+      if (r.minOrder > 0 && r.subtotal < r.minOrder) {
+        toast.error(`Minimum order of ₹${r.minOrder} required for ${r.restaurantName} at this location.`, { duration: 5000 })
+        return false
+      }
+    }
+    return true
   }
 
+  // ── Handlers ────────────────────────────────────────────────────────────────
   const handleTipPreset = (idx, amt) => {
     setActiveTipIdx(idx)
     setCustomTip('')
@@ -149,22 +170,32 @@ const FoodCheckoutPage = () => {
     setTipAmt(isNaN(n) || n < 0 ? 0 : Math.min(500, n))
   }
 
-  const handleApplyOffer = (offer) => {
-    if (offer.minOrder > 0 && subTotal < offer.minOrder) {
-      setOfferError(`Min order ₹${offer.minOrder} needed for this offer`)
-      return
-    }
-    setAppliedOffer(prev => prev?.key === offer.key ? null : offer)
-    setOfferError('')
-  }
-
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase()
     if (!code) { setCouponError('Please enter a coupon code'); return }
-    const randomDiscount = Math.floor(Math.random() * 8) + 1
-    setCouponDiscount(randomDiscount)
-    setAppliedCouponCode(code)
+    if (!VALID_COUPONS.includes(code)) {
+      setCouponError('Invalid coupon code')
+      return
+    }
     setCouponError('')
+    setCouponLoading(true)
+    try {
+      const res = await Axios({
+        method: 'POST',
+        url: '/api/order/coupon/apply',
+        data: { couponCode: code, totalAmt: subTotal }
+      })
+      if (res.data?.success) {
+        setCouponDiscount(res.data.data.discount)
+        setAppliedCouponCode(res.data.data.couponCode)
+      } else {
+        setCouponError(res.data?.message || 'Coupon could not be applied')
+      }
+    } catch (e) {
+      setCouponError(e?.response?.data?.message || 'Coupon could not be applied')
+    } finally {
+      setCouponLoading(false)
+    }
   }
 
   const removeCoupon = () => {
@@ -181,15 +212,23 @@ const FoodCheckoutPage = () => {
   }
 
   // ── GPS ─────────────────────────────────────────────────────────────────────
+  const STORE_COORDS_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
   const getCoordinates = () => new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve({ lat: 25.2921, lng: 84.8170 })
+    if (!navigator.geolocation) return resolve(STORE_COORDS_FALLBACK)
+    let settled = false
+    const finish = (coords) => { if (!settled) { settled = true; resolve(coords) } }
+    const timer = setTimeout(() => finish(STORE_COORDS_FALLBACK), 8000)
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      ()  => resolve({ lat: 25.2921, lng: 84.8170 }),
-      { enableHighAccuracy: true }
+      pos => { clearTimeout(timer); finish({ lat: pos.coords.latitude, lng: pos.coords.longitude }) },
+      ()  => { clearTimeout(timer); finish(STORE_COORDS_FALLBACK) },
+      { enableHighAccuracy: true, timeout: 8000 }
     )
   })
 
+  // ── Build the multi-restaurant payload — items span every restaurant in
+  // cart, with editable qty baked in. Backend groups these by menuItemId's
+  // own restaurantId (DB-derived, not trusted from client) into one order
+  // per restaurant, folding tip/coupon/wallet into the first group. ────────
   const buildPayload = useCallback(async (extra = {}) => {
     const coords = await getCoordinates()
     const fullInstructions = [
@@ -197,40 +236,39 @@ const FoodCheckoutPage = () => {
       instructions.trim(),
     ].filter(Boolean).join('. ')
 
+    const items = restaurantItemLists.flatMap(r =>
+      r.resolvedItems.map(({ item, price }) => ({
+        menuItemId: item._id,
+        restaurantId: r.restaurantId, // fallback hint only; backend re-derives from DB
+        name: item.name,
+        image: item.image || '',
+        price,
+        quantity: getQty(r.restaurantId, item),
+      }))
+    )
+
     return {
-      restaurantId,
-      restaurantName,
       addressId: addressList[selectAddress]?._id,
       scheduledDelivery: scheduleNow ? null : scheduleSlot,
       deliveryInstructions: fullInstructions || undefined,
       tip: tipAmt,
-      offerKey: appliedOffer?.key || undefined,
       couponCode: appliedCouponCode || undefined,
       couponDiscount: couponDiscount || undefined,
       walletAmountUsed: walletDeduct || undefined,
-      items: resolvedItems.map(({ item, basePrice, sizeName, key }) => ({
-        menuItemId: item._id,
-        name:       item.name + (sizeName ? ` (${sizeName})` : ''),
-        image:      item.image || '',
-        price:      basePrice,
-        quantity:   quantities[key] || 1,
-      })),
-      subTotalAmt:      subTotal,
-      delivery_fee:     deliveryFee,
-      totalAmt:         grandTotal,
+      items,
       deliveryLocation: { lat: coords.lat, lng: coords.lng },
       ...extra,
     }
   }, [
-    activeTags, instructions, restaurantId, restaurantName,
-    addressList, selectAddress, scheduleNow, scheduleSlot,
-    tipAmt, appliedOffer, appliedCouponCode, couponDiscount,
-    walletDeduct, resolvedItems, quantities, subTotal, deliveryFee, grandTotal,
+    activeTags, instructions, addressList, selectAddress, scheduleNow, scheduleSlot,
+    tipAmt, appliedCouponCode, couponDiscount, walletDeduct,
+    restaurantItemLists, qtyOverrides,
   ])
 
   // ── Payment handlers ─────────────────────────────────────────────────────────
   const handleCOD = async () => {
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
+    if (!checkMinOrder()) return
     setPlacing(true)
     const t = toast.loading('Placing order...')
     try {
@@ -239,6 +277,7 @@ const FoodCheckoutPage = () => {
       toast.dismiss(t)
       if (res.data?.success) {
         toast.success('Order placed!')
+        clearAll()
         navigate('/success', { state: { text: 'Food Order' } })
       }
     } catch (e) { toast.dismiss(t); AxiosToastError(e) }
@@ -247,6 +286,7 @@ const FoodCheckoutPage = () => {
 
   const handleWalletPay = async () => {
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
+    if (!checkMinOrder()) return
     if (walletBal < grandTotal) return toast.error(`Insufficient wallet balance. Need ₹${grandTotal}, have ₹${walletBal.toFixed(0)}`)
     setPlacing(true)
     const t = toast.loading('Processing wallet payment...')
@@ -256,6 +296,7 @@ const FoodCheckoutPage = () => {
       toast.dismiss(t)
       if (res.data?.success) {
         toast.success('Paid via wallet!')
+        clearAll()
         navigate('/success', { state: { text: 'Food Order' } })
       }
     } catch (e) { toast.dismiss(t); AxiosToastError(e) }
@@ -266,6 +307,7 @@ const FoodCheckoutPage = () => {
     const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
     if (!RAZORPAY_KEY) return toast.error('Razorpay key missing')
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
+    if (!checkMinOrder()) return
 
     let RazorpayClass
     const gt = toast.loading('Loading payment gateway...')
@@ -282,11 +324,13 @@ const FoodCheckoutPage = () => {
       const rzpOrder = res.data
       if (!rzpOrder?.id) { toast.error('Payment initiation failed'); setPlacing(false); return }
 
+      const restaurantNames = restaurantItemLists.map(r => r.restaurantName).join(', ')
+
       const options = {
         key:       RAZORPAY_KEY,
         amount:    rzpOrder.amount,
         currency:  'INR',
-        name:      restaurantName || 'Snapit Food',
+        name:      restaurantNames || 'Snapit Food',
         order_id:  rzpOrder.id,
         handler: async (rzpRes) => {
           const vt = toast.loading('Verifying payment...')
@@ -300,6 +344,7 @@ const FoodCheckoutPage = () => {
             toast.dismiss(vt)
             if (vRes.data?.success) {
               toast.success('Order placed!')
+              clearAll()
               navigate('/success', { state: { text: 'Food Order' } })
             }
           } catch (e) { toast.dismiss(vt); AxiosToastError(e) }
@@ -309,6 +354,14 @@ const FoodCheckoutPage = () => {
           contact: addressList[selectAddress]?.mobile || '',
         },
         theme: { color: '#e84339' },
+        modal: {
+          ondismiss: () => {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            document.documentElement.style.overflow = '';
+            document.documentElement.style.touchAction = '';
+          }
+        },
       }
       new RazorpayClass(options).open()
     } catch (e) { toast.dismiss(lt); AxiosToastError(e) }
@@ -316,7 +369,7 @@ const FoodCheckoutPage = () => {
   }
 
   // ── Empty state ──────────────────────────────────────────────────────────────
-  if (!location.state || resolvedItems.length === 0) {
+  if (isEmpty) {
     return (
       <div className='min-h-screen flex flex-col items-center justify-center gap-4 bg-orange-50'>
         <span className='text-5xl'>🛒</span>
@@ -344,56 +397,67 @@ const FoodCheckoutPage = () => {
         </button>
         <div>
           <h1 className='font-bold text-gray-900 text-base'>Review order</h1>
-          <p className='text-xs text-gray-400'>{restaurantName}</p>
+          <p className='text-xs text-gray-400'>
+            {restaurantItemLists.map(r => r.restaurantName).join(' • ')}
+          </p>
         </div>
       </div>
 
-      {/* ── Items ────────────────────────────────────────────────────── */}
-      <div className='bg-white mt-2 px-4 py-4'>
-        <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3'>Your items</p>
-        <div className='divide-y divide-gray-50'>
-          {resolvedItems.map(({ item, basePrice, sizeName, key }) => {
-            const qty = quantities[key] || 1
-            return (
-              <div key={key} className='flex items-center gap-3 py-3'>
-                <VegDot isVeg={item.isVeg !== false} />
-                <div className='w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0'>
-                  {item.image
-                    ? <img src={item.image} alt={item.name} className='w-full h-full object-cover' />
-                    : <div className='w-full h-full flex items-center justify-center text-xl'>🍽️</div>
-                  }
-                </div>
-                <div className='flex-1 min-w-0'>
-                  <p className='font-semibold text-gray-800 text-sm truncate'>
-                    {item.name}{sizeName ? ` (${sizeName})` : ''}
-                  </p>
-                  <p className='text-xs text-gray-400 mt-0.5'>₹{basePrice} each</p>
-                </div>
-                <div className='flex flex-col items-end gap-1.5'>
-                  <p className='font-bold text-gray-900 text-sm'>₹{basePrice * qty}</p>
-                  <div className='flex items-center border-2 border-red-500 rounded-lg overflow-hidden'>
-                    <button
-                      onClick={() => changeQty(key, -1)}
-                      className='w-7 h-6 bg-white text-red-500 font-bold text-base flex items-center justify-center'
-                    >−</button>
-                    <div className='w-7 h-6 bg-red-50 text-red-500 font-semibold text-xs flex items-center justify-center'>{qty}</div>
-                    <button
-                      onClick={() => changeQty(key, 1)}
-                      className='w-7 h-6 bg-white text-red-500 font-bold text-base flex items-center justify-center'
-                    >+</button>
+      {/* ── Items, grouped by restaurant ────────────────────────────────── */}
+      {restaurantPricing.map((r) => (
+        <div key={r.restaurantId} className='bg-white mt-2 px-4 py-4'>
+          <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3'>
+            {r.restaurantName || 'Restaurant'}
+          </p>
+          <div className='divide-y divide-gray-50'>
+            {r.resolvedItems.map(({ item, price }) => {
+              const qty = getQty(r.restaurantId, item)
+              return (
+                <div key={item._id} className='flex items-center gap-3 py-3'>
+                  <VegDot isVeg={item.isVeg !== false} />
+                  <div className='w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0'>
+                    {item.image
+                      ? <img src={item.image} alt={item.name} className='w-full h-full object-cover' />
+                      : <div className='w-full h-full flex items-center justify-center text-xl'>🍽️</div>
+                    }
+                  </div>
+                  <div className='flex-1 min-w-0'>
+                    <p className='font-semibold text-gray-800 text-sm truncate'>{item.name}</p>
+                    <p className='text-xs text-gray-400 mt-0.5'>₹{price} each</p>
+                  </div>
+                  <div className='flex flex-col items-end gap-1.5'>
+                    <p className='font-bold text-gray-900 text-sm'>₹{price * qty}</p>
+                    <div className='flex items-center border-2 border-red-500 rounded-lg overflow-hidden'>
+                      <button
+                        onClick={() => changeQty(r.restaurantId, item, -1)}
+                        className='w-7 h-6 bg-white text-red-500 font-bold text-base flex items-center justify-center'
+                      >−</button>
+                      <div className='w-7 h-6 bg-red-50 text-red-500 font-semibold text-xs flex items-center justify-center'>{qty}</div>
+                      <button
+                        onClick={() => changeQty(r.restaurantId, item, 1)}
+                        className='w-7 h-6 bg-white text-red-500 font-bold text-base flex items-center justify-center'
+                      >+</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+          <div className='mt-3 flex justify-between text-xs text-gray-400'>
+            <span>Subtotal</span>
+            <span className='font-semibold text-gray-600'>₹{r.subtotal}</span>
+          </div>
         </div>
-        {totalSaved > 0 && (
-          <div className='mt-3 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 flex items-center gap-2'>
+      ))}
+
+      {totalSaved > 0 && (
+        <div className='bg-white mt-2 px-4 py-3'>
+          <div className='bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 flex items-center gap-2'>
             <span className='text-green-600 text-sm'>🏷️</span>
             <p className='text-xs font-semibold text-green-700'>You saved ₹{totalSaved} on this order!</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Delivery time ────────────────────────────────────────────── */}
       <div className='bg-white mt-2 px-4 py-4'>
@@ -532,43 +596,8 @@ const FoodCheckoutPage = () => {
         />
       </div>
 
-      {/* ── Offers + Coupon ───────────────────────────────────────────── */}
       <div className='bg-white mt-2 px-4 py-4'>
-
-        {/* % Offer buttons */}
-        <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3'>Offers</p>
-        <div className='grid grid-cols-2 gap-2 mb-1'>
-          {OFFER_PRESETS.map(offer => {
-            const isActive = appliedOffer?.key === offer.key
-            const tooLow   = offer.minOrder > 0 && subTotal < offer.minOrder
-            return (
-              <button
-                key={offer.key}
-                onClick={() => handleApplyOffer(offer)}
-                className={`border-2 rounded-xl py-3 text-center transition-all ${
-                  isActive
-                    ? 'border-red-500 bg-red-50'
-                    : tooLow
-                    ? 'border-gray-100 opacity-50'
-                    : 'border-gray-200'
-                }`}
-              >
-                <p className={`text-sm font-bold ${isActive ? 'text-red-500' : 'text-gray-800'}`}>
-                  {offer.label}
-                </p>
-                {offer.minOrder > 0 && (
-                  <p className='text-xs text-gray-400 mt-0.5'>Min ₹{offer.minOrder}</p>
-                )}
-                {isActive && (
-                  <p className='text-xs text-red-400 mt-0.5'>Tap to remove</p>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        {offerError && <p className='text-xs text-red-500 mb-3'>{offerError}</p>}
-
-        {/* Flat coupon — random ₹1–8 */}
+        {/* Flat coupon — random ₹1–5, one use per user per calendar month, validated server-side */}
         <div className='mt-4'>
           <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2'>Coupon code</p>
           {!appliedCouponCode ? (
@@ -577,14 +606,16 @@ const FoodCheckoutPage = () => {
                 <input
                   value={couponCode}
                   onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
-                  placeholder='Enter any coupon code'
-                  className='flex-1 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
+                 placeholder='Try SNAPIT, FIRSTUSER, FIRSTFREE, FIRST50'
+                  className='flex-1 min-w-0 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
+                  disabled={couponLoading}
                 />
                 <button
                   onClick={applyCoupon}
-                  className='px-5 h-10 bg-red-500 text-white text-sm font-semibold rounded-xl'
+                  disabled={couponLoading}
+                  className='px-5 h-10 bg-red-500 text-white text-sm font-semibold rounded-xl disabled:opacity-60'
                 >
-                  Apply
+                  {couponLoading ? '...' : 'Apply'}
                 </button>
               </div>
               {couponError && <p className='text-xs text-red-500 mt-2'>{couponError}</p>}
@@ -640,12 +671,6 @@ const FoodCheckoutPage = () => {
             <span className='text-gray-500'>Item total</span>
             <span className='font-semibold text-gray-800'>₹{subTotal}</span>
           </div>
-          {offerDiscount > 0 && (
-            <div className='flex justify-between text-sm'>
-              <span className='text-gray-500'>Offer discount ({appliedOffer.label})</span>
-              <span className='font-semibold text-green-600'>−₹{offerDiscount}</span>
-            </div>
-          )}
           {couponDiscount > 0 && (
             <div className='flex justify-between text-sm'>
               <span className='text-gray-500'>Coupon ({appliedCouponCode})</span>
@@ -659,7 +684,7 @@ const FoodCheckoutPage = () => {
             </div>
           )}
           <div className='flex justify-between text-sm'>
-            <span className='text-gray-500'>🛵 Delivery fee</span>
+            <span className='text-gray-500'>🛵 Delivery fee{restaurantPricing.length > 1 ? ` (${restaurantPricing.length} restaurants)` : ''}</span>
             <span className='font-semibold'>
               {deliveryFee === 0
                 ? <><span className='line-through text-gray-300 mr-1'>₹30</span><span className='text-green-600'>Free</span></>
@@ -694,7 +719,6 @@ const FoodCheckoutPage = () => {
             <p className='text-xl font-bold text-gray-900'>₹{grandTotal}</p>
           </div>
           <div className='text-right'>
-            <p className='text-xs font-semibold text-green-600'>Free delivery applied</p>
             <p className='text-xs text-gray-400'>
               {scheduleNow ? 'Est. 25–35 min' : `Scheduled: ${scheduleSlot}`}
             </p>

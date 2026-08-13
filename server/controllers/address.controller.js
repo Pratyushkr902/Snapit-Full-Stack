@@ -1,6 +1,23 @@
 import { body, validationResult } from 'express-validator'
 import AddressModel from "../models/address.model.js"
 import UserModel    from "../models/user.model.js"
+import { isInDeliveryZone } from '../utils/serviceArea.js'
+
+// ─── GEOCODE FALLBACK ─────────────────────────────────────────────────────────
+// Called when user saves address without clicking "Use My Current Location"
+// Uses Nominatim (free, no API key) to get coords from city name
+
+const geocodeCityFallback = async (city) => {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ', Bihar, India')}&format=json&limit=1&countrycodes=in`
+    const res  = await fetch(url, { headers: { 'User-Agent': 'Snapit-Grocery-App/1.0' } })
+    const data = await res.json()
+    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    return null
+  } catch {
+    return null
+  }
+}
 
 // ─── SHARED INPUT VALIDATION ─────────────────────────────────────────────────
 //
@@ -95,6 +112,30 @@ export const addAddressController = async (request, response) => {
             country, mobile, lat, lng
         } = request.body
 
+        // GPS is now MANDATORY for zone enforcement. Typed city names are no
+        // longer trusted for delivery-zone verification — misspelled or
+        // fuzzy-matched village names were letting users outside the service
+        // area slip through via the old geocodeCityFallback() text-match path.
+        const finalLat = lat != null ? Number(lat) : null
+        const finalLng = lng != null ? Number(lng) : null
+
+        if (finalLat == null || finalLng == null || Number.isNaN(finalLat) || Number.isNaN(finalLng)) {
+            return response.status(400).json({
+                message: "Please enable location access and tap 'Use My Current Location' to add an address.",
+                error:   true,
+                success: false,
+            })
+        }
+
+        const zoneCheck = isInDeliveryZone(finalLat, finalLng)
+        if (!zoneCheck.serviceable) {
+            return response.status(400).json({
+                message: "Sorry, we don't deliver to this location yet.",
+                error:   true,
+                success: false,
+            })
+        }
+
         const createAddress = new AddressModel({
             address_line,
             city,
@@ -102,8 +143,8 @@ export const addAddressController = async (request, response) => {
             country,
             pincode,
             mobile,
-            lat:    lat != null ? Number(lat) : null,
-            lng:    lng != null ? Number(lng) : null,
+            lat: finalLat,
+            lng: finalLng,
             userId,
         })
 
@@ -165,6 +206,19 @@ export const updateAddressController = async (request, response) => {
             country, pincode, mobile, lat, lng
         } = request.body
 
+        // Use GPS coords if provided, otherwise geocode from city name
+        let finalLat = lat != null ? Number(lat) : null
+        let finalLng = lng != null ? Number(lng) : null
+
+        if (!finalLat || !finalLng) {
+            const geocoded = await geocodeCityFallback(city)
+            if (geocoded) {
+                finalLat = geocoded.lat
+                finalLng = geocoded.lng
+                console.log(`[updateAddress] Geocoded "${city}" → ${finalLat}, ${finalLng}`)
+            }
+        }
+
         // SECURITY: { _id, userId } filter ensures user can only update their own addresses (IDOR protection)
         const updateAddress = await AddressModel.updateOne(
             { _id, userId },
@@ -175,8 +229,8 @@ export const updateAddressController = async (request, response) => {
                 country,
                 mobile,
                 pincode,
-                lat: lat != null ? Number(lat) : null,
-                lng: lng != null ? Number(lng) : null,
+                lat: finalLat,
+                lng: finalLng,
             }
         )
 

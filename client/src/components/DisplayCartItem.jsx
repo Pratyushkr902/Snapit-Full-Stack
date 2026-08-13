@@ -8,6 +8,8 @@ import { useSelector } from 'react-redux'
 import AddToCartButton from './AddToCartButton'
 import imageEmpty from '../assets/empty_cart.webp'
 import toast from 'react-hot-toast'
+import { optimizeImage } from '../utils/optimizeImage'
+import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 
 const PricewithDiscount = (price, discount) => {
     const finalPrice = (Number(price) || 0) - (Number(discount) || 0);
@@ -15,13 +17,28 @@ const PricewithDiscount = (price, discount) => {
 }
 
 const DisplayCartItem = ({close}) => {
-    const { notDiscountTotalPrice, totalPrice, totalQty } = useGlobalContext()
+    const { notDiscountTotalPrice = 0, totalPrice = 0, totalQty = 0 } = useGlobalContext() || {}
     const cartItem = useSelector(state => state.cartItem.cart)
     const user = useSelector(state => state.user)
+    const addressList = useSelector(state => state.addresses.addressList)
     const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
     const navigate = useNavigate()
 
-    const deliveryFee = totalPrice >= 399 ? 0 : 12;
+    // Use the customer's default/first saved address for a real distance-based
+    // estimate — matches what CheckoutPage will actually charge. Previously
+    // this was a hardcoded flat ₹12 regardless of distance, which didn't match
+    // the checkout price for anyone outside the 0-4km slab.
+    const defaultAddress = addressList?.[0]
+    const deliveryInfo = (defaultAddress?.lat && defaultAddress?.lng)
+        ? getDeliveryInfo(defaultAddress.lat, defaultAddress.lng, totalPrice, isSnapitPlus)
+        : null
+
+    // Fallback flat ₹12 only when we have no address/coords to estimate from —
+    // marked "Estimated" in the UI so it's not read as a locked-in price.
+    const deliveryFee = deliveryInfo
+        ? deliveryInfo.charge
+        : (isSnapitPlus ? 0 : 12)
+    const isEstimate = !deliveryInfo
     const grandTotal = totalPrice + deliveryFee;
 
     const redirectToCheckoutPage = (e) => {
@@ -65,12 +82,12 @@ const DisplayCartItem = ({close}) => {
 
                                 <div className='bg-white rounded-xl p-4 grid gap-5 shadow-sm'>
                                     {
-                                        cartItem.map((item, index) => {
+                                        cartItem.filter(item => item?.productId).map((item, index) => {
                                             return (
                                                 <div key={item?._id || index} className='flex w-full gap-4 items-center'>
                                                     <div className='w-14 h-14 min-h-14 min-w-14 bg-white border rounded-lg p-1'>
                                                         <img
-                                                            src={item?.productId?.image?.[0]}
+                                                            src={optimizeImage(item?.productId?.image?.[0], 150)}
                                                             className='object-scale-down w-full h-full'
                                                             alt={item?.productId?.name || 'product'}
                                                         />
@@ -112,17 +129,24 @@ const DisplayCartItem = ({close}) => {
                                         <p className='font-medium'>{totalQty} {totalQty > 1 ? 'items' : 'item'}</p>
                                     </div>
                                     <div className='flex justify-between text-sm'>
-                                        <p className='text-slate-500'>Delivery Charge</p>
+                                        <p className='text-slate-500'>
+                                            Delivery Charge{isEstimate ? ' (est.)' : ''}
+                                        </p>
                                         <p className={deliveryFee === 0 ? 'text-green-600 font-black' : 'font-bold'}>
                                             {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
                                         </p>
                                     </div>
-                                    {deliveryFee > 0 && (
-                                        <div className='bg-orange-50 p-2 rounded-lg border border-orange-100'>
-                                            <p className='text-[10px] text-orange-600 text-center font-bold uppercase tracking-tight'>
-                                                Add {DisplayPriceInRupees((isSnapitPlus ? 149 : 399) - totalPrice)} more for FREE DELIVERY
+                                    {deliveryFee > 0 && !isEstimate && !isSnapitPlus && (
+                                        <div className='bg-purple-50 p-2 rounded-lg border border-purple-100'>
+                                            <p className='text-[10px] text-purple-600 text-center font-bold uppercase tracking-tight'>
+                                                Join Snapit Plus for FREE DELIVERY on every order
                                             </p>
                                         </div>
+                                    )}
+                                    {isEstimate && (
+                                        <p className='text-[10px] text-slate-400 text-center'>
+                                            Final delivery charge is confirmed at checkout based on your address.
+                                        </p>
                                     )}
                                     <div className='font-black flex items-center justify-between border-t border-dashed pt-3 text-lg text-slate-900'>
                                         <p>Grand total</p>

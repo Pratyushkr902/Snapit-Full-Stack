@@ -130,7 +130,7 @@ export default function RewardsPage() {
   const [promoApplied, setPromoApplied] = useState(false)
   // ── Global ──────────────────────────────────────────────────
   const [loading, setLoading] = useState(true)
-  const { fetchUser } = useGlobalContext()
+  const { fetchUser } = useGlobalContext() || {}
   const coinRef = useRef()
 
   // ── Fetch all data in one shot ───────────────────────────────

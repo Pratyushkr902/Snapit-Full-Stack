@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 
 export const AddCategoryController = async(request,response)=>{
     try {
-        const { name, image, icon } = request.body 
+        const { name, image, icon, imageThumbnail } = request.body 
         const categoryAsset = icon || image;
 
         if(!name || !categoryAsset){
@@ -20,7 +20,11 @@ export const AddCategoryController = async(request,response)=>{
         const addCategory = new CategoryModel({
             name,
             image: categoryAsset,
-            icon: categoryAsset
+            icon: categoryAsset,
+            // Optional — only present if the upload step generated one.
+            // Missing on older/manual creates is fine: frontend falls
+            // back to `image`.
+            imageThumbnail: imageThumbnail || ""
         })
 
         const saveCategory = await addCategory.save()
@@ -51,7 +55,7 @@ export const AddCategoryController = async(request,response)=>{
 
 export const getCategoryController = async(request,response)=>{
     try {
-        const data = await CategoryModel.find().sort({ createdAt : -1 })
+        const data = await CategoryModel.find().sort({ createdAt : -1 }).lean()
         return response.json({
             data : data,
             error : false,
@@ -68,7 +72,7 @@ export const getCategoryController = async(request,response)=>{
 
 export const updateCategoryController = async(request,response)=>{
     try {
-        const { _id, name, image, icon } = request.body 
+        const { _id, name, image, icon, imageThumbnail } = request.body 
         const categoryAsset = icon || image;
 
         if(!_id || !mongoose.Types.ObjectId.isValid(_id)){
@@ -80,11 +84,18 @@ export const updateCategoryController = async(request,response)=>{
         }
 
         // ✅ FIXED: Updates both field references simultaneously to shield mobile models
-        const update = await CategoryModel.findByIdAndUpdate(_id, {
+        const updateFields = {
            name, 
            image: categoryAsset,
            icon: categoryAsset 
-        }, { new: true })
+        }
+        // Only touch imageThumbnail if the frontend actually sent one —
+        // avoids wiping an existing thumbnail on unrelated edits (e.g. a
+        // name-only update) that don't resend it.
+        if (imageThumbnail !== undefined) {
+            updateFields.imageThumbnail = imageThumbnail
+        }
+        const update = await CategoryModel.findByIdAndUpdate(_id, updateFields, { new: true })
 
         return response.json({
             message : "Updated Category",

@@ -16,6 +16,91 @@ const cookiesOption = {
     path: "/"
 }
 
+export async function getAllAmbassadorsController(request, response) {
+    try {
+        const ambassadors = await UserModel.find({ role: 'CAMPUS_AMBASSADOR' })
+            .select('name email campusAmbassador createdAt')
+            .sort({ 'campusAmbassador.performance.points': -1, createdAt: -1 })
+
+        return response.json({
+            message: "Campus Ambassadors fetched successfully",
+            error: false,
+            success: true,
+            data: ambassadors
+        })
+    } catch (error) {
+        console.error("getAllAmbassadorsController:", error.message)
+        return response.status(500).json({
+            message: error.message || "Failed to fetch Campus Ambassadors",
+            error: true,
+            success: false
+        })
+    }
+}
+
+export async function createCampusAmbassadorController(request, response) {
+    try {
+        const {
+            name, email, password,
+            college, course, year, campus, instagram
+        } = request.body
+
+        if (!name || !email || !password || !college) {
+            return response.status(400).json({
+                message: "provide name, email, password, college",
+                error: true,
+                success: false
+            })
+        }
+
+        const existing = await UserModel.findOne({ email })
+        if (existing) {
+            return response.status(400).json({
+                message: "Email already registered",
+                error: true,
+                success: false
+            })
+        }
+
+        const salt = await bcryptjs.genSalt(10)
+        const hashPassword = await bcryptjs.hash(password, salt)
+
+        const newUser = new UserModel({
+            name,
+            email,
+            password: hashPassword,
+            role: 'CAMPUS_AMBASSADOR',
+            campusAmbassador: {
+                college,
+                course: course || '',
+                year: year || '',
+                campus: campus || '',
+                status: 'active',
+                social: { instagram: instagram || '' }
+            }
+        })
+
+        await newUser.save()
+
+        const safeUser = newUser.toObject()
+        delete safeUser.password
+
+        return response.status(201).json({
+            message: "Campus Ambassador created successfully",
+            error: false,
+            success: true,
+            data: safeUser
+        })
+    } catch (error) {
+        console.error("createCampusAmbassadorController:", error.message)
+        return response.status(500).json({
+            message: error.message || "Failed to create Campus Ambassador",
+            error: true,
+            success: false
+        })
+    }
+}
+
 export async function registerUserController(request, response) {
     try {
         const { name, email, password, referralCode: incomingReferralCode } = request.body
@@ -51,6 +136,26 @@ export async function registerUserController(request, response) {
             referralCode: newReferralCode
         }
 
+        
+        // Check if incomingReferralCode matches a Campus Ambassador's code
+        // (separate namespace from the general referralCode system below).
+        const ambassadorReferrer = incomingReferralCode
+            ? await UserModel.findOne({
+                role: 'CAMPUS_AMBASSADOR',
+                'campusAmbassador.referralCode': incomingReferralCode
+              })
+            : null
+        if (ambassadorReferrer) {
+            payload.referredByAmbassador = ambassadorReferrer._id
+            await UserModel.updateOne(
+                { _id: ambassadorReferrer._id },
+                { $inc: {
+                    'campusAmbassador.referralStats.signUps': 1,
+                    'campusAmbassador.performance.points': 5
+                } }
+            )
+        }
+
         if (incomingReferralCode) {
             const referrer = await UserModel.findOne({
                 referralCode: incomingReferralCode
@@ -81,7 +186,7 @@ export async function registerUserController(request, response) {
         const newUser = new UserModel(payload)
         const save = await newUser.save()
 
-        const VerifyEmailUrl = `${process.env.FRONTFrontend_URL || process.env.FRONTEND_URL}/verify-email?code=${save?._id}`
+        const VerifyEmailUrl = `${process.env.FRONTEND_URL}/#/verify-email?code=${save?._id}`
 
         await sendEmail({
             sendTo: email,
@@ -172,6 +277,14 @@ export async function loginController(request, response) {
             })
         }
 
+        if (!user.password) {
+            return response.status(400).json({
+                message: "This account was created via OTP login. Please log in with OTP instead of a password.",
+                error: true,
+                success: false
+            })
+        }
+
         const checkPassword = await bcryptjs.compare(password, user.password)
 
         if (!checkPassword) {
@@ -182,7 +295,6 @@ export async function loginController(request, response) {
             })
         }
 
-        // ✅ FIXED: pass user.role so JWT includes role field
         const accesstoken = await generatedAccessToken(user._id, user.role)
         const refreshToken = await genertedRefreshToken(user._id)
 
@@ -220,7 +332,13 @@ export async function logoutController(request, response) {
         response.clearCookie("accessToken", cookiesOption)
         response.clearCookie("refreshToken", cookiesOption)
 
-        await UserModel.findByIdAndUpdate(userid, { refresh_token: "" })
+        // FIX: also clear fcmToken on logout. Previously a device's FCM token
+        // stayed on the account forever once saved — if the same physical device
+        // was ever used to log into a different role (e.g. testing the Rider
+        // Dashboard from an admin's phone), that device's token would silently
+        // keep receiving that role's push notifications indefinitely, even after
+        // switching back to a different account on the same device.
+        await UserModel.findByIdAndUpdate(userid, { refresh_token: "", fcmToken: "" })
 
         return response.json({
             message: "Logout successfully",
@@ -480,7 +598,6 @@ export async function refreshToken(request, response) {
 
         const userId = verifyToken?.id
 
-        // ✅ FIXED: fetch user from DB so we have user.role available
         const user = await UserModel.findById(userId)
         if (!user) {
             return response.status(401).json({
@@ -490,7 +607,6 @@ export async function refreshToken(request, response) {
             })
         }
 
-        // ✅ FIXED: pass user.role so refreshed token also includes role
         const newAccessToken = await generatedAccessToken(userId, user.role)
 
         response.cookie('accessToken', newAccessToken, cookiesOption)
@@ -536,7 +652,9 @@ export async function userDetails(request, response) {
 
 export async function getAllRiders(request, response) {
     try {
-        const riders = await UserModel.find({ role: 'rider' }).select('name email mobile status')
+        // FIX: role is stored as 'RIDER' (uppercase) — this was querying lowercase
+        // 'rider' and matching nothing, so the admin rider list was always empty.
+        const riders = await UserModel.find({ role: 'RIDER' }).select('name email mobile status')
         return response.json({
             message: "Riders fetched",
             error: false,
@@ -578,5 +696,40 @@ export async function saveFcmTokenController(request, response) {
             error: true,
             success: false
         })
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE DOB (needed for Birthday Bonus)
+// ─────────────────────────────────────────────────────────────────────────────
+export const updateDobController = async (request, response) => {
+    try {
+        const userId = request.userId
+        const { dob } = request.body
+
+        if (!dob) {
+            return response.status(400).json({ message: 'dob is required.', error: true, success: false })
+        }
+
+        const parsedDob = new Date(dob)
+        if (isNaN(parsedDob.getTime())) {
+            return response.status(400).json({ message: 'Invalid date format.', error: true, success: false })
+        }
+
+        if (parsedDob > new Date()) {
+            return response.status(400).json({ message: 'Date of birth cannot be in the future.', error: true, success: false })
+        }
+
+        await UserModel.findByIdAndUpdate(userId, { dob: parsedDob })
+
+        return response.json({
+            message: 'Birthday saved.',
+            error: false,
+            success: true,
+            data: { dob: parsedDob }
+        })
+    } catch (error) {
+        console.error('updateDobController:', error.message)
+        return response.status(500).json({ message: 'Failed to update birthday.', error: true, success: false })
     }
 }

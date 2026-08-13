@@ -1,15 +1,16 @@
-import { createHashRouter } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { createHashRouter, useRouteError, useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
 import App from "../App";
 
 // Eager load only the most critical pages
 import Home from "../pages/Home";
 import Login from "../pages/Login";
-import Register from "../pages/Register";
+import Register from "../pages/RegisterOtp";
 
 // Lazy load everything else
 const SearchPage             = lazy(() => import('../pages/Searchpage'))
 const ForgotPassword         = lazy(() => import('../pages/ForgotPassword'))
+const VerifyEmail            = lazy(() => import('../pages/VerifyEmail'))
 const OtpVerification        = lazy(() => import('../pages/OtpVerification'))
 const ResetPassword          = lazy(() => import('../pages/ResetPassword'))
 const UserMenuMobile         = lazy(() => import('../pages/UserMenuMobile'))
@@ -31,6 +32,7 @@ const Success                = lazy(() => import('../pages/Success'))
 const Cancel                 = lazy(() => import('../pages/Cancel'))
 const RiderTracking          = lazy(() => import('../pages/RiderTracking'))
 const RiderDashboard         = lazy(() => import('../pages/RiderDashboard'))
+const AdminRefunds           = lazy(() => import('../pages/AdminRefunds'))
 const StoreOrders            = lazy(() => import('../pages/StoreOrders'))
 const Wallet                 = lazy(() => import('../pages/Wallet'))
 const AdminSummary           = lazy(() => import('../components/AdminSummary'))
@@ -45,6 +47,9 @@ const SellerDashboard        = lazy(() => import('../pages/SellerDashboard'))
 const FoodHomePage           = lazy(() => import('../pages/FoodHomePage'))
 const RestaurantDetailPage   = lazy(() => import('../pages/RestaurantDetailPage'))
 const RestaurantAdminPage    = lazy(() => import('../pages/RestaurantAdminPage'))
+const AdminSellerStorePanel  = lazy(() => import('../pages/AdminSellerStorePanel'))
+const AdminCampusAmbassadors = lazy(() => import('../pages/AdminCampusAmbassadors'))
+const SellerEarnings         = lazy(() => import('../pages/SellerEarnings'))
 const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'))
 const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
 const PharmacyPage           = lazy(() => import('../pages/PharmacyPage'))
@@ -67,16 +72,81 @@ const PageLoader = () => (
 
 const S = ({ children }) => <Suspense fallback={<PageLoader />}>{children}</Suspense>
 
+// Friendly error page shown instead of React Router's default crash screen
+const ErrorPage = () => {
+  const error = useRouteError()
+  const navigate = useNavigate()
+
+  // Auto-recover: after long background suspension, Capacitor's WebView
+  // can leave a stale JS module context — lazy chunks or closures reference
+  // dead memory and throw ("n is not a function", ChunkLoadError, etc).
+  // A soft navigate doesn't fix this because the JS context itself is
+  // stale. A single automatic hard reload clears it without making the
+  // user tap through the error screen every time.
+  useEffect(() => {
+    const alreadyRetried = sessionStorage.getItem('snapit_error_auto_reload')
+    if (!alreadyRetried) {
+      sessionStorage.setItem('snapit_error_auto_reload', '1')
+      window.location.reload()
+    } else {
+      // Reload already tried once this session and error happened again —
+      // don't loop forever, let the user see the screen and tap manually.
+      sessionStorage.removeItem('snapit_error_auto_reload')
+    }
+  }, [])
+
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', minHeight: '100vh', padding: '24px',
+      background: '#fff', textAlign: 'center'
+    }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>😕</div>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+        Something went wrong
+      </h1>
+      <p style={{ color: '#64748b', fontSize: 14, marginBottom: 28, maxWidth: 320 }}>
+        The page ran into an unexpected error. Tap below to go back home.
+      </p>
+      <button
+        onClick={() => {
+          navigate('/', { replace: true })
+          window.location.reload()
+        }}
+        style={{
+          background: '#16a34a', color: '#fff', border: 'none',
+          borderRadius: 12, padding: '12px 32px', fontSize: 15,
+          fontWeight: 700, cursor: 'pointer'
+        }}
+      >
+        Go to Home
+      </button>
+      {import.meta.env.DEV && error && (
+        <pre style={{
+          marginTop: 24, padding: 16, background: '#fef2f2', borderRadius: 8,
+          fontSize: 11, color: '#dc2626', textAlign: 'left',
+          maxWidth: 480, overflowX: 'auto', whiteSpace: 'pre-wrap'
+        }}>
+          {error?.message || String(error)}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 const router = createHashRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <ErrorPage />,
     children: [
       { path: "", element: <Home /> },
       { path: "search", element: <S><SearchPage /></S> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       { path: "forgot-password", element: <S><ForgotPassword /></S> },
+      { path: "verify-email", element: <S><VerifyEmail /></S> },
       { path: "verification-otp", element: <S><OtpVerification /></S> },
       { path: "reset-password", element: <S><ResetPassword /></S> },
       { path: "user", element: <S><UserMenuMobile /></S> },
@@ -109,6 +179,18 @@ const router = createHashRouter([
             element: <S><AdminPermision><RestaurantAdminPage /></AdminPermision></S>
           },
           {
+            path: "store-sellers",
+            element: <S><AdminPermision><AdminSellerStorePanel /></AdminPermision></S>
+          },
+          {
+            path: "campus-ambassadors",
+            element: <S><AdminPermision><AdminCampusAmbassadors /></AdminPermision></S>
+          },
+          {
+            path: "store-earnings",
+            element: <S><AdminPermision><SellerEarnings /></AdminPermision></S>
+          },
+          {
             path: "resto-dashboard",
             element: <S><RestoSellerDashboard /></S>
           },
@@ -125,6 +207,7 @@ const router = createHashRouter([
             path: "subcategory",
             element: <S><AdminPermision><SubCategoryPage /></AdminPermision></S>
           },
+          { path: "refunds", element: <S><AdminPermision><AdminRefunds /></AdminPermision></S> },
           {
             path: "product",
             element: <S><AdminPermision><ProductAdmin /></AdminPermision></S>

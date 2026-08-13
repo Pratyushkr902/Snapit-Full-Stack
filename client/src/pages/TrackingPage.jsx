@@ -120,7 +120,7 @@ const TrackingPage = () => {
 
     // ✅ Create socket INSIDE useEffect — same pattern as RiderGPS.jsx
     const socket = io(
-      import.meta.env.VITE_API_URL || 'https://snapit-backend-bn8r.onrender.com',
+      import.meta.env.VITE_API_URL || 'https://snapit-full-stack-production.up.railway.app',
       {
         path: '/socket.io/',
         transports: ['websocket', 'polling'],
@@ -341,7 +341,7 @@ const TrackingPage = () => {
             <p className='text-xs text-slate-400'>Delivery Partner</p>
           </div>
 <a
-            href={`tel:${order.rider_contact || '9472026580'}`}
+            href={`tel:${order.rider_contact || '9576467701'}`}
             className='bg-green-600 text-white p-3 rounded-full shadow-md active:scale-95 transition-all'
           >
             <FaPhone size={16} />

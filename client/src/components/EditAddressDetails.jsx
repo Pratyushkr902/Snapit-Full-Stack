@@ -21,7 +21,7 @@ const EditAddressDetails = ({ close, data }) => {
             mobile       : data.mobile,
         }
     })
-    const { fetchAddress } = useGlobalContext()
+    const { fetchAddress } = useGlobalContext() || {}
     const [locating, setLocating] = useState(false)
     // Pre-fill with existing saved coords if available
     const [coords, setCoords] = useState({

@@ -1,0 +1,26 @@
+{
+  "restaurant": {
+    "name": "Satish Chowmein Center",
+    "city": "Paliganj",
+    "cuisine": ["Chinese", "Indo-Chinese", "Fast Food"],
+    "isActive": true
+  },
+  "menuItems": [
+    { "name": "Chowmin", "category": "Chowmin", "isVeg": true, "price": { "full": 60, "half": 30 } },
+    { "name": "Chowmin Fry Manchurian", "category": "Chowmin", "isVeg": true, "price": { "full": 100, "half": 60 } },
+    { "name": "Mix Chowmin", "category": "Chowmin", "isVeg": true, "price": { "full": 160, "half": 80 } },
+    { "name": "Fry Chowmin", "category": "Chowmin", "isVeg": true, "price": { "full": 80, "half": 50 } },
+    { "name": "Paneer Chowmin", "category": "Chowmin", "isVeg": true, "price": { "full": 130, "half": 80 } },
+    { "name": "Egg Chowmin", "category": "Chowmin", "isVeg": false, "price": { "full": 100, "half": 50 } },
+    { "name": "Chicken Chowmin", "category": "Chowmin", "isVeg": false, "price": { "full": 140, "half": 80 } },
+    { "name": "Manchurian", "category": "Manchurian", "isVeg": true, "price": { "full": 80, "half": 40 } },
+    { "name": "Fry Manchurian", "category": "Manchurian", "isVeg": true, "price": { "full": 130, "half": 50 } },
+    { "name": "Paneer Chilli", "category": "Paneer", "isVeg": true, "price": { "full": 160, "half": 80 } },
+    { "name": "Paneer Roll", "category": "Rolls", "isVeg": true, "price": { "full": 50, "half": null } },
+    { "name": "Egg Roll (2 Anda)", "category": "Rolls", "isVeg": false, "price": { "full": 40, "half": null } },
+    { "name": "Chicken Chilli", "category": "Chicken", "isVeg": false, "price": { "full": 80, "half": 40 } },
+    { "name": "Chicken Bone Fry", "category": "Chicken", "isVeg": false, "price": { "full": 120, "half": 70 } },
+    { "name": "Chicken Boneless", "category": "Chicken", "isVeg": false, "price": { "full": 140, "half": 80 } },
+    { "name": "Laccha Paratha", "category": "Bread", "isVeg": true, "price": { "full": 20, "half": null } }
+  ]
+}

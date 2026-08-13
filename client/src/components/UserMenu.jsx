@@ -63,11 +63,24 @@ const UserMenu = ({close}) => {
                 <Link onClick={handleClose} to={"/dashboard/category"} className='px-2 hover:bg-orange-200 py-1'>Category</Link>
                 <Link onClick={handleClose} to={"/dashboard/subcategory"} className='px-2 hover:bg-orange-200 py-1'>Sub Category</Link>
                 <Link onClick={handleClose} to={"/dashboard/upload-product"} className='px-2 hover:bg-orange-200 py-1'>Upload Product</Link>
+                <Link onClick={handleClose} to={"/dashboard/refunds"} className='px-2 hover:bg-orange-200 py-1'>Refunds</Link>
                 <Link onClick={handleClose} to={"/dashboard/product"} className='px-2 hover:bg-orange-200 py-1'>Product</Link>
                 {/* Admin can also manage restaurants */}
                 <Link onClick={handleClose} to={"/dashboard/restaurant-admin"}
                   className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
                   🍔 Restaurant Admin
+                </Link>
+                <Link onClick={handleClose} to={"/dashboard/store-sellers"}
+                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  🏪 Store Panel
+                </Link>
+                <Link onClick={handleClose} to={"/dashboard/campus-ambassadors"}
+                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  🎓 Campus Ambassadors
+                </Link>
+                <Link onClick={handleClose} to={"/dashboard/store-earnings"}
+                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  💰 Store Earnings
                 </Link>
               </>
             )}
@@ -80,8 +93,11 @@ const UserMenu = ({close}) => {
               </Link>
             )}
 
-            {/* SELLER ACCESS */}
-            {(role === "SELLER" || role === "ADMIN") && (
+            {/* SELLER ACCESS — ADMIN uses the dedicated per-store panel above instead,
+                since the seller dashboard's own-store filter is bypassed for ADMIN
+                (see getSellerOrdersController), which used to dump every store's
+                orders/products into one mixed view for admin accounts. */}
+            {role === "SELLER" && (
               <Link onClick={handleClose} to={"/dashboard/seller-dashboard"}
                 className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-600 mb-1'>
                 🏪 Store Panel

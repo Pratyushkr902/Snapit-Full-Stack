@@ -1,10 +1,16 @@
-import RestaurantModel from '../models/Restaurant.model.js'
+import RestaurantModel from '../models/restaurant.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
+import NodeCache from 'node-cache'
+
+const cache = new NodeCache({ stdTTL: 60, checkperiod: 120 })
 
 // ── GET /api/restaurant/all ────────────────────────────────────────────────────
 export async function getAllRestaurants(req, res) {
   try {
     const { cuisine, search, isOpen } = req.query
+    const cacheKey = `all_${isOpen}_${cuisine}_${search}`
+    const cached = cache.get(cacheKey)
+    if (cached) return res.json(cached)
 
     const filter = { isActive: true }
     if (isOpen === 'true') filter.isOpen = true
@@ -16,7 +22,9 @@ export async function getAllRestaurants(req, res) {
       .sort({ isOpen: -1, rating: -1, createdAt: -1 })
       .lean()
 
-    return res.json({ success: true, data: restaurants, message: 'Restaurants fetched successfully' })
+    const response = { success: true, data: restaurants, message: 'Restaurants fetched successfully' }
+    cache.set(cacheKey, response)
+    return res.json(response)
   } catch (err) {
     console.error(err)
     return res.status(500).json({ success: false, message: err.message })
@@ -26,6 +34,10 @@ export async function getAllRestaurants(req, res) {
 // ── GET /api/restaurant/:id ────────────────────────────────────────────────────
 export async function getRestaurantById(req, res) {
   try {
+    const cacheKey = `restaurant_${req.params.id}`
+    const cached = cache.get(cacheKey)
+    if (cached) return res.json(cached)
+
     const restaurant = await RestaurantModel.findById(req.params.id).lean()
     if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' })
 
@@ -50,7 +62,9 @@ export async function getRestaurantById(req, res) {
 
     const menu = categories.map(cat => ({ category: cat, items: categoryMap[cat] || [] }))
 
-    return res.json({ success: true, data: { restaurant, menu }, message: 'Restaurant details fetched' })
+    const response = { success: true, data: { restaurant, menu }, message: 'Restaurant details fetched' }
+    cache.set(cacheKey, response)
+    return res.json(response)
   } catch (err) {
     console.error(err)
     return res.status(500).json({ success: false, message: err.message })
@@ -62,6 +76,7 @@ export async function createRestaurant(req, res) {
   try {
     const restaurant = new RestaurantModel(req.body)
     await restaurant.save()
+    cache.flushAll()
     return res.status(201).json({ success: true, data: restaurant, message: 'Restaurant created' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -71,14 +86,14 @@ export async function createRestaurant(req, res) {
 // ── PATCH /api/restaurant/update/:id ─────────────────────────────────────────
 export async function updateRestaurant(req, res) {
   try {
-    // FIX: assertOwnership was missing here — any RESTO_SELLER could update any restaurant.
-    // ADMIN bypasses this check (assertOwnership returns true immediately for ADMIN).
     if (!await assertOwnership(req, res, req.params.id)) return
 
     const updated = await RestaurantModel.findByIdAndUpdate(
       req.params.id, req.body, { new: true, runValidators: true }
     )
     if (!updated) return res.status(404).json({ success: false, message: 'Restaurant not found' })
+    cache.del(`restaurant_${req.params.id}`)
+    cache.flushAll()
     return res.json({ success: true, data: updated, message: 'Restaurant updated' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -86,20 +101,21 @@ export async function updateRestaurant(req, res) {
 }
 
 // ── Helper: verify RESTO_SELLER owns this restaurant ─────────────────────────
-// ADMIN role bypasses the ownership check entirely.
 async function assertOwnership(req, res, restaurantId) {
-  if (req.user?.role === 'ADMIN') return true
-  if (req.user?.role === 'RESTO_SELLER') {
+  if (req.userRole === 'ADMIN') return true
+
+  if (req.userRole === 'RESTO_SELLER') {
     const resto = await RestaurantModel.findById(restaurantId).lean()
     if (!resto) {
       res.status(404).json({ success: false, message: 'Restaurant not found' })
       return false
     }
-    if (String(resto.ownerId) !== String(req.user._id)) {
+    if (String(resto.ownerId) !== String(req.userId)) {
       res.status(403).json({ success: false, message: 'Not your restaurant' })
       return false
     }
   }
+
   return true
 }
 
@@ -130,6 +146,8 @@ export async function addMenuItem(req, res) {
       $addToSet: { menuCategories: item.category },
     })
 
+    cache.del(`restaurant_${req.params.id}`)
+    cache.flushAll()
     return res.status(201).json({ success: true, data: item, message: 'Menu item created' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -139,7 +157,7 @@ export async function addMenuItem(req, res) {
 // ── PUT /api/restaurant/menu/:itemId ──────────────────────────────────────────
 export async function updateMenuItem(req, res) {
   try {
-    if (req.user?.role === 'RESTO_SELLER') {
+    if (req.userRole === 'RESTO_SELLER') {
       const existing = await MenuItemModel.findById(req.params.itemId).lean()
       if (!existing) return res.status(404).json({ success: false, message: 'Item not found' })
       if (!await assertOwnership(req, res, existing.restaurantId)) return
@@ -149,16 +167,18 @@ export async function updateMenuItem(req, res) {
       req.params.itemId, req.body, { new: true, runValidators: true }
     )
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
+    cache.del(`restaurant_${item.restaurantId}`)
+    cache.flushAll()
     return res.json({ success: true, data: item, message: 'Menu item updated' })
   } catch (err) {
-    return res.status(400).json({ success: false, message: err.message })
+    return res.status(500).json({ success: false, message: err.message })
   }
 }
 
 // ── DELETE /api/restaurant/menu/:itemId ───────────────────────────────────────
 export async function deleteMenuItem(req, res) {
   try {
-    if (req.user?.role === 'RESTO_SELLER') {
+    if (req.userRole === 'RESTO_SELLER') {
       const existing = await MenuItemModel.findById(req.params.itemId).lean()
       if (!existing) return res.status(404).json({ success: false, message: 'Item not found' })
       if (!await assertOwnership(req, res, existing.restaurantId)) return
@@ -166,6 +186,8 @@ export async function deleteMenuItem(req, res) {
 
     const item = await MenuItemModel.findByIdAndDelete(req.params.itemId)
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
+    cache.del(`restaurant_${item.restaurantId}`)
+    cache.flushAll()
     return res.json({ success: true, message: 'Menu item deleted' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -185,6 +207,8 @@ export async function createFoodItem(req, res) {
     await RestaurantModel.findByIdAndUpdate(restaurantId, {
       $addToSet: { menuCategories: item.category },
     })
+    cache.del(`restaurant_${restaurantId}`)
+    cache.flushAll()
     return res.status(201).json({ success: true, data: item, message: 'Food item created' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -195,6 +219,10 @@ export async function createFoodItem(req, res) {
 export async function updateFoodItem(req, res) {
   try {
     const updated = await MenuItemModel.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    if (updated) {
+      cache.del(`restaurant_${updated.restaurantId}`)
+      cache.flushAll()
+    }
     return res.json({ success: true, data: updated, message: 'Food item updated' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -260,6 +288,7 @@ export async function seedDemoRestaurants(req, res) {
       },
     ]
     await RestaurantModel.insertMany(demos)
+    cache.flushAll()
     return res.json({ success: true, message: 'Demo restaurants seeded', count: demos.length })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })

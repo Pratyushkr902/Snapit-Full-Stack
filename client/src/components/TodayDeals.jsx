@@ -4,27 +4,28 @@ import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
 
-const COMBO_KEYWORDS = ["combo", "pack of 2", "pack of 3", "pack of 4", "bundle", "duo", "trio"]
-const BOGO_KEYWORDS  = ["b1g1", "buy 1 get 1", "buy one get one", "bogo", "free item", "1+1"]
+// Matches: "Pack of 2", "pack of 2", "Pack of 3" etc
+const COMBO_KEYWORDS = ["pack of 2", "pack of 3", "pack of 4", "pack of 5", "combo", "bundle", "duo", "trio", "multipack", "value pack", "set of 2", "set of 3"]
 
-const isComboUnit = (unit = "") => COMBO_KEYWORDS.some(k => unit.toLowerCase().includes(k))
-const isBogoUnit  = (unit = "") => BOGO_KEYWORDS.some(k => unit.toLowerCase().includes(k))
+// Matches: "Buy 1 Get 1 Free", "buy 1 get 1", "BOGO" etc
+const BOGO_KEYWORDS = ["buy 1 get 1", "buy one get one", "bogo", "b1g1", "1+1", "get 1 free", "get one free"]
 
-// discount works with price/sellingPrice OR price/discount fields
+// toLowerCase ensures "Pack of 2" matches "pack of 2"
+const getText = (p) => [p.unit, p.name].filter(Boolean).join(" ").toLowerCase()
+
+const isCombo = (p) => COMBO_KEYWORDS.some(k => getText(p).includes(k))
+const isBogo  = (p) => BOGO_KEYWORDS.some(k => getText(p).includes(k))
+
 const getDiscount = (product) => {
   const mrp     = Number(product.price)
   const selling = Number(product.sellingPrice ?? product.discount ?? product.discountPrice ?? product.offerPrice)
-  if (mrp > 0 && selling > 0 && mrp > selling) {
-    return Math.round(((mrp - selling) / mrp) * 100)
-  }
-  // fallback: if product has a discountPercentage field
+  if (mrp > 0 && selling > 0 && mrp > selling) return Math.round(((mrp - selling) / mrp) * 100)
   if (product.discountPercentage > 0) return Math.round(product.discountPercentage)
   return 0
 }
 
-const getSellingPrice = (product) => {
-  return product.sellingPrice ?? product.discount ?? product.discountPrice ?? product.offerPrice ?? product.price
-}
+const getSellingPrice = (product) =>
+  product.sellingPrice ?? product.discount ?? product.discountPrice ?? product.offerPrice ?? product.price
 
 function SkeletonCard() {
   return (
@@ -39,7 +40,7 @@ function SkeletonCard() {
   )
 }
 
-function DealCard({ product, isCombo }) {
+function DealCard({ product, isComboCard }) {
   const navigate = useNavigate()
   const discount     = getDiscount(product)
   const sellingPrice = getSellingPrice(product)
@@ -49,55 +50,45 @@ function DealCard({ product, isCombo }) {
       className="flex-shrink-0 w-36 bg-white rounded-xl border border-slate-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow relative"
       onClick={() => navigate(`/product/${product._id}`)}
     >
-      {/* Image */}
       <div className="w-full h-28 bg-slate-100 flex items-center justify-center p-2">
         <img
-          src={product.image?.[0]}
+          src={product.imageThumbnail?.[0] || product.image?.[0]}
           alt={product.name}
           width={100}
           height={100}
           className="w-full h-full object-contain"
-          loading="eager"
-          fetchpriority="high"
+          loading="lazy"
           decoding="async"
           onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }}
         />
       </div>
 
-      {/* COMBO / B1G1 top-left badge */}
-      <span className={`absolute top-2 left-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded ${isCombo ? "bg-purple-500" : "bg-blue-500"}`}>
-        {isCombo ? "COMBO" : "B1G1"}
+      <span className={`absolute top-2 left-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded ${isComboCard ? "bg-purple-500" : "bg-blue-500"}`}>
+        {isComboCard ? "COMBO" : "B1G1"}
       </span>
 
-      {/* Discount % — top-right */}
       {discount > 0 && (
         <span className="absolute top-2 right-2 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
           {discount}% OFF
         </span>
       )}
 
-      {/* Low stock */}
       {product.stock > 0 && product.stock <= 10 && (
         <div className="absolute top-[88px] left-0 right-0 bg-red-50 text-red-600 text-[9px] font-bold text-center py-0.5 tracking-wide">
           ONLY {product.stock} LEFT
         </div>
       )}
 
-      {/* 10 MIN + FREE ITEM tags */}
       <div className="flex items-center gap-1 px-2 pt-2">
         <span className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">10 MIN</span>
-        {!isCombo && (
+        {!isComboCard && (
           <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">FREE ITEM</span>
         )}
       </div>
 
-      {/* Name */}
       <p className="text-xs font-semibold text-slate-800 line-clamp-2 px-2 pt-1 leading-tight">{product.name}</p>
-
-      {/* Unit */}
       <p className="text-[10px] text-slate-400 px-2 pb-1">{product.unit}</p>
 
-      {/* Price row */}
       <div className="flex items-center justify-between px-2 pb-2 gap-1" onClick={e => e.stopPropagation()}>
         <div className="flex flex-col">
           <span className="text-sm font-bold text-slate-800">₹{sellingPrice}</span>
@@ -113,10 +104,14 @@ function DealCard({ product, isCombo }) {
   )
 }
 
-function CountdownTimer({ initialSeconds }) {
-  const [secs, setSecs] = useState(initialSeconds)
+function CountdownTimer() {
+  const getSecsUntilNextHour = () => {
+    const now = new Date()
+    return 3600 - (now.getMinutes() * 60 + now.getSeconds())
+  }
+  const [secs, setSecs] = useState(getSecsUntilNextHour)
   useEffect(() => {
-    const id = setInterval(() => setSecs(s => (s > 0 ? s - 1 : 0)), 1000)
+    const id = setInterval(() => setSecs(getSecsUntilNextHour), 1000)
     return () => clearInterval(id)
   }, [])
   const h = String(Math.floor(secs / 3600)).padStart(2, "0")
@@ -146,16 +141,20 @@ export function useDealsData() {
   const fetchDeals = useCallback(async () => {
     try {
       setLoading(true)
-      let page = 1, allProducts = [], hasMore = true
-      while (hasMore && allProducts.length < 200) {
-        const res = await Axios({ ...SummaryApi.getProduct, data: { page, limit: 100 } })
-        const data = res.data?.data ?? []
-        allProducts = [...allProducts, ...data]
-        hasMore = data.length === 100
-        page++
-      }
-      setComboProducts(allProducts.filter(p => isComboUnit(p.unit)))
-      setBogoProducts(allProducts.filter(p => isBogoUnit(p.unit)))
+      // Single optimized call - fetch only discount products
+      const res = await Axios({
+        ...SummaryApi.getProduct,
+        data: { page: 1, limit: 500 },
+        withCredentials: true,
+      })
+      const data = res.data?.data ?? res.data ?? []
+      const list = Array.isArray(data) ? data : (data.products ?? data.list ?? [])
+
+      const combos = list.filter(p => isCombo(p))
+      const bogos  = list.filter(p => isBogo(p))
+
+      setComboProducts(combos)
+      setBogoProducts(bogos)
     } catch (err) {
       console.error("TodayDeals fetch error:", err)
     } finally {
@@ -177,9 +176,8 @@ export default function TodayDeals() {
     <div className="container mx-auto px-4 my-4">
       <div className="bg-green-50 border border-green-100 rounded-2xl py-4 overflow-hidden">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-4 mb-3">
-          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Today's Deals 🔥</h2>
+          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Today's Deals </h2>
           <button
             onClick={() => navigate("/deals")}
             className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-full px-4 py-1.5 transition-colors"
@@ -188,10 +186,9 @@ export default function TodayDeals() {
           </button>
         </div>
 
-        {/* Countdown */}
-        <CountdownTimer initialSeconds={8 * 3600 + 42 * 60 + 17} />
+        <CountdownTimer />
 
-        {/* Combo */}
+        {/* Combo Offers */}
         {(loading || comboProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
@@ -199,7 +196,10 @@ export default function TodayDeals() {
               <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-100 rounded px-2 py-0.5">SAVE MORE</span>
             </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
-              {loading ? [1,2,3].map(i => <SkeletonCard key={i} />) : comboProducts.map(p => <DealCard key={p._id} product={p} isCombo={true} />)}
+              {loading
+                ? [1,2,3].map(i => <SkeletonCard key={i} />)
+                : comboProducts.map(p => <DealCard key={p._id} product={p} isComboCard={true} />)
+              }
             </div>
           </>
         )}
@@ -208,7 +208,7 @@ export default function TodayDeals() {
           <div className="mx-4 my-4 border-t border-green-100" />
         )}
 
-        {/* B1G1 */}
+        {/* Buy 1 Get 1 Free */}
         {(loading || bogoProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
@@ -216,7 +216,10 @@ export default function TodayDeals() {
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5">FREE ITEM</span>
             </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
-              {loading ? [1,2,3].map(i => <SkeletonCard key={i} />) : bogoProducts.map(p => <DealCard key={p._id} product={p} isCombo={false} />)}
+              {loading
+                ? [1,2,3].map(i => <SkeletonCard key={i} />)
+                : bogoProducts.map(p => <DealCard key={p._id} product={p} isComboCard={false} />)
+              }
             </div>
           </>
         )}

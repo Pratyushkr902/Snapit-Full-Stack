@@ -25,8 +25,7 @@ export const validateRegister = [
         .normalizeEmail(),
     body('password')
         .notEmpty().withMessage('Password is required')
-        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase and number'),
+        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
     handleValidationErrors
 ]
 
@@ -53,8 +52,7 @@ export const validateForgotPassword = [
 export const validateResetPassword = [
     body('password')
         .notEmpty().withMessage('Password is required')
-        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase and number'),
+        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
     handleValidationErrors
 ]
 

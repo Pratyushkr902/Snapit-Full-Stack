@@ -44,6 +44,11 @@ const Search = () => {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // ✅ FIX: clear any pending debounced fetch when component unmounts
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current)
+  }, [])
+
   const fetchSuggestions = async (query) => {
     if (!query || query.length < 2) {
       setSuggestions([])
@@ -91,12 +96,14 @@ const Search = () => {
   }
 
   const handleSuggestionClick = (name) => {
+    clearTimeout(debounceRef.current) // ✅ FIX: cancel any pending suggestion fetch
     setInputValue(name)
     setShowSuggestions(false)
     navigate(`/search?q=${encodeURIComponent(name)}`)
   }
 
   const handleClear = () => {
+    clearTimeout(debounceRef.current) // ✅ FIX: cancel any pending suggestion fetch
     setInputValue('')
     setSuggestions([])
     setShowSuggestions(false)
@@ -163,15 +170,15 @@ const Search = () => {
               value={inputValue}
               className='bg-transparent w-full h-full outline-none text-sm text-slate-800'
               onChange={handleOnChange}
-               onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
                   e.preventDefault()
+                  clearTimeout(debounceRef.current) // ✅ FIX: cancel any pending suggestion fetch
                   e.target.blur()
-               setShowSuggestions(false)
-             navigate(`/search?q=${encodeURIComponent(inputValue)}`)
-               }
-             }}
-              
+                  setShowSuggestions(false)
+                  navigate(`/search?q=${encodeURIComponent(inputValue)}`)
+                }
+              }}
               onFocus={() => {
                 if (inputValue.length >= 2) {
                   fetchSuggestions(inputValue)

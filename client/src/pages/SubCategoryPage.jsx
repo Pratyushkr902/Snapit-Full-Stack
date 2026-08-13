@@ -12,7 +12,7 @@ import EditSubCategory from '../components/EditSubCategory'
 import CofirmBox from '../components/ConfirmBox'
 import toast from 'react-hot-toast'
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com"
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
 // ✅ Inline SVG fallback — never fails
 const FALLBACK_IMG =
@@ -70,7 +70,7 @@ const SubCategoryPage = () => {
               src={src}
               alt={row.original.name}
               className='w-8 h-8 cursor-pointer object-contain'
-              loading="eager"
+              loading="lazy"
               onClick={() => setImageURL(src)}
               onError={(e) => {
                 e.target.onerror = null

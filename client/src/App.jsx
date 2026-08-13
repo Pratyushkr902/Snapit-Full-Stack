@@ -6,9 +6,9 @@ import { Toaster } from 'react-hot-toast';
 import Header from './components/Header'
 import Footer from './components/Footer'
 import CartMobileLink from './components/CartMobile'
-import OfferStrip from './components/OfferStrip';
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
+import ChatBox from './components/ChatBox'
 
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails } from './store/userSlice';
@@ -23,6 +23,7 @@ import socket from './utils/socket.js';
 
 import { ACCESS_TOKEN_KEY } from './constants/storageKeys';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { App as CapacitorApp } from '@capacitor/app';
 
 import './App.css'
 
@@ -31,6 +32,7 @@ export { socket };
 function App() {
   const dispatch = useDispatch()
   const location = useLocation()
+  const navigate = useNavigate()
   const user = useSelector(state => state.user)
   
   useNotifications() 
@@ -65,17 +67,21 @@ function App() {
       return
     }
     try {
-      const userData = await fetchUserDetails()
+      const userData = await Promise.race([
+        fetchUserDetails(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Session check timed out')), 8000))
+      ])
       if (userData?.success) {
-        const profileData = userData.data; 
+        const profileData = userData.data;
         if (profileData?._id) {
           dispatch(setUserDetails(profileData))
         }
       }
     } catch (error) {
-      console.log("Session Check: No active user found.")
+      console.log("Session Check: No active user found or timed out.", error?.message)
     } finally {
       setIsAuthResolving(false)
+      SplashScreen.hide({ fadeOutDuration: 300 })
     }
   }, [dispatch])
 
@@ -146,6 +152,60 @@ function App() {
     };
   }, []);
 
+  // ─── Android hardware back button ─────────────────────────────
+  useEffect(() => {
+    let listenerHandle;
+
+    const setupBackButton = async () => {
+      listenerHandle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        if (canGoBack) {
+          window.history.back()
+        } else {
+          CapacitorApp.exitApp()
+        }
+      })
+    }
+
+    setupBackButton()
+
+    return () => {
+      listenerHandle?.remove()
+    }
+  }, [])
+
+  // ─── Force refresh after long background suspension ───────────
+  // After ~15-20 min backgrounded, Android reclaims WebView memory and the
+  // JS context can come back stale — lazy-loaded chunks/closures throw
+  // "n is not a function" style errors on resume. Rather than let the user
+  // hit the error screen, do a controlled reload once resume-gap crosses
+  // a threshold, while state is still simple (app just became active).
+  useEffect(() => {
+    let backgroundedAt = null
+    let stateListenerHandle
+
+    const setupStateListener = async () => {
+      stateListenerHandle = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) {
+          backgroundedAt = Date.now()
+        } else if (backgroundedAt) {
+          const awayMs = Date.now() - backgroundedAt
+          backgroundedAt = null
+          // 10 min threshold — long enough to avoid reloading on quick
+          // app-switches, short enough to catch the WebView-reclaim window.
+          if (awayMs > 10 * 60 * 1000) {
+            window.location.reload()
+          }
+        }
+      })
+    }
+
+    setupStateListener()
+
+    return () => {
+      stateListenerHandle?.remove()
+    }
+  }, [])
+
   if (isAuthResolving) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white">
@@ -158,7 +218,6 @@ function App() {
     <RemoteConfigProvider>
       <GlobalProvider>
         <div className="App">
-          {!isDashboard && <OfferStrip />}
           {!isDashboard && <Header openCart={() => setShowCart(true)} />}
           
           <main className={isDashboard ? '' : 'min-h-[78vh]'}>
@@ -177,7 +236,8 @@ function App() {
             <CartMobileLink />
           )}
 
-          {!isDashboard && <WhatsAppButton />}
+          {/* {!isDashboard && <WhatsAppButton />} */}
+          {!isDashboard && <ChatBox />}
         </div>
       </GlobalProvider>
     </RemoteConfigProvider>

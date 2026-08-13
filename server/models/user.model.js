@@ -67,14 +67,13 @@ const userSchema = new mongoose.Schema({
     },
     role : {
         type : String,
-        enum : ['ADMIN', 'USER', 'RIDER', 'rider', 'SELLER', 'RESTO_SELLER'],
+        enum : ['SUPER_ADMIN', 'ADMIN', 'USER', 'RIDER', 'rider', 'SELLER', 'RESTO_SELLER'],
         default : "USER"
     },
     store_name : {
         type : String,
         default : null
     },
-    // Restaurant this user owns — set when role is RESTO_SELLER
     restaurantId : {
         type : mongoose.Schema.ObjectId,
         ref : 'Restaurant',

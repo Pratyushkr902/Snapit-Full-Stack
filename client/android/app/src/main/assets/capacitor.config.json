@@ -4,24 +4,24 @@
 	"webDir": "dist",
 	"server": {
 		"androidScheme": "https",
-		"hostname": "snapit.grocery",
 		"cleartext": true,
 		"allowNavigation": [
-			"snapit-full-stack-2.onrender.com"
+			"snapit-full-stack-production.up.railway.app"
 		]
 	},
 	"android": {
 		"allowMixedContent": true,
 		"captureInput": true,
-		"webContentsDebuggingEnabled": false,
+		"webContentsDebuggingEnabled": true,
 		"hardwareAccelerated": true,
 		"backgroundColor": "#FFFFFF",
-		"initialFocus": true
+		"initialFocus": true,
+		"overrideUserAgent": "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
 	},
 	"plugins": {
 		"SplashScreen": {
-			"launchShowDuration": 3000,
-			"launchAutoHide": false,
+			"launchShowDuration": 2000,
+			"launchAutoHide": true,
 			"backgroundColor": "#FFFFFF",
 			"androidSplashResourceName": "splash",
 			"androidScaleType": "CENTER_INSIDE",
@@ -33,7 +33,7 @@
 			"enabled": true
 		},
 		"CapacitorHttp": {
-			"enabled": true
+			"enabled": false
 		}
 	}
 }

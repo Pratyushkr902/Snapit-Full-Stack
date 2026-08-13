@@ -16,13 +16,12 @@ function DealCardGrid({ product, isCombo }) {
     >
       <div className="w-full h-32 bg-slate-100 flex items-center justify-center p-2">
         <img
-          src={product.image?.[0]}
+          src={product.imageThumbnail?.[0] || product.image?.[0]}
           alt={product.name}
           width={120}
           height={120}
           className="w-full h-full object-contain"
-          loading="eager"
-          fetchpriority="high"
+          loading="lazy"
           onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }}
         />
       </div>

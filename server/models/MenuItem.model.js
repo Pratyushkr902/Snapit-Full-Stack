@@ -18,6 +18,13 @@ const menuItemSchema = new mongoose.Schema(
     // Must match one of Restaurant.menuCategories[]
     category: { type: String, required: true, trim: true, index: true },
 
+    // ── Variants (mirrors product.model.js variant system) ──────────────────
+    // Shared slug to link related sizes/flavors together e.g. all sizes of
+    // "Black Forest Cake" get variantGroup: "black-forest-cake"
+    variantGroup: { type: String, default: "", trim: true, index: true },
+    variantType:  { type: String, default: "size", trim: true }, // "size" | "flavor" | "color"
+    variantLabel: { type: String, default: "", trim: true },     // e.g. "1 kg", "Half kg", "Chocolate"
+    variantColor: { type: String, default: "", trim: true },     // hex, only used when variantType is "color"
     // ── Pricing ──────────────────────────────────────────────────────────────
     price: { type: Number, required: true },          // MRP shown to customer
     discountedPrice: { type: Number, default: 0 },   // actual customer pays (0 = no discount)

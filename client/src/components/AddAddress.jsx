@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import { IoClose, IoLocationSharp } from "react-icons/io5"
 import { useGlobalContext } from '../provider/GlobalProvider'
-import { isInDeliveryZone, getUserLocation } from '../utils/serviceArea'
+import { isInDeliveryZone, getUserLocation, SERVICEABLE_VILLAGES } from '../utils/serviceArea'
 
 const SERVICEABLE_PINCODES = [
   '801110', '801108', '801105', '801113', '801116'
@@ -14,7 +14,7 @@ const SERVICEABLE_PINCODES = [
 
 const AddAddress = ({ close }) => {
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm()
-  const { fetchAddress } = useGlobalContext()
+  const { fetchAddress } = useGlobalContext() || {}
   const [locationChecking, setLocationChecking] = useState(false)
   const [locationStatus, setLocationStatus] = useState(null)
   const [detectedLocation, setDetectedLocation] = useState(null)
@@ -23,9 +23,15 @@ const AddAddress = ({ close }) => {
     setLocationChecking(true)
     setLocationStatus(null)
     try {
-      const { lat, lng } = await getUserLocation()
+      const { lat, lng, accuracy } = await getUserLocation()
+      if (accuracy != null && accuracy > 150) {
+        toast.error(`Location signal is weak (±${Math.round(accuracy)}m). Move near a window or outdoors and try again.`)
+        setLocationStatus('out')
+        setLocationChecking(false)
+        return
+      }
       const result = isInDeliveryZone(lat, lng)
-      setDetectedLocation({ lat, lng, ...result })
+      setDetectedLocation({ lat, lng, accuracy, ...result })
       if (result.serviceable) {
         setLocationStatus('ok')
         toast.success(`✅ We deliver to ${result.zone}!`)
@@ -72,7 +78,7 @@ const AddAddress = ({ close }) => {
 
   return (
     <section className='bg-black fixed inset-0 z-50 bg-opacity-70 overflow-auto flex items-start justify-center p-4'>
-      <div className='bg-white w-full max-w-lg mt-8 rounded-2xl overflow-hidden shadow-2xl'>
+      <div className='bg-white w-full max-w-lg mt-8 rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto'>
 
         {/* Header */}
         <div className='flex justify-between items-center p-5 border-b'>
@@ -153,16 +159,16 @@ const AddAddress = ({ close }) => {
             {/* City */}
             <div className='grid gap-1'>
               <label className='text-xs font-bold text-slate-600 uppercase tracking-wider'>City / Village</label>
-              <input
-                type='text'
-                placeholder='Paliganj'
+              <select
                 className={inputClass(errors.city)}
-                {...register("city", {
-                  required: "City is required",
-                  pattern: { value: /^[a-zA-Z\u0900-\u097F\s]+$/, message: "City name cannot contain numbers" },
-                  minLength: { value: 2, message: "Too short" }
-                })}
-              />
+                defaultValue=""
+                {...register("city", { required: "Please select your village" })}
+              >
+                <option value="" disabled>Select village</option>
+                {SERVICEABLE_VILLAGES.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
               {errors.city && <p className='text-xs text-red-500 mt-0.5'>⚠ {errors.city.message}</p>}
             </div>
 
@@ -234,10 +240,20 @@ const AddAddress = ({ close }) => {
 
           <button
             type='submit'
-            className='w-full bg-green-600 hover:bg-green-700 text-white font-black py-3.5 rounded-xl mt-2 transition-all active:scale-95 shadow-lg shadow-green-100'
+            disabled={locationStatus !== 'ok'}
+            className={`w-full font-black py-3.5 rounded-xl mt-2 transition-all active:scale-95 shadow-lg ${
+              locationStatus === 'ok'
+                ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-100'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+            }`}
           >
-            Save Address
+            {locationStatus === 'ok' ? 'Save Address' : 'Verify Location First'}
           </button>
+          {locationStatus !== 'ok' && (
+            <p className='text-xs text-center text-slate-400 -mt-1'>
+              Tap "Use My Current Location" above to confirm we deliver to you.
+            </p>
+          )}
         </form>
       </div>
     </section>

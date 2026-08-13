@@ -67,17 +67,23 @@ const GlobalProvider = ({ children }) => {
 
     // Logic to calculate totals whenever cart changes
     useEffect(() => {
-        const qty = cartItem.reduce((prev, curr) => prev + curr.quantity, 0)
+        // ✅ FIX: guard against cartItem being undefined/null (not just empty array),
+        // which previously crashed this effect and took down the whole provider tree.
+        const items = Array.isArray(cartItem) ? cartItem : []
+
+        const qty = items.reduce((prev, curr) => prev + (curr?.quantity || 0), 0)
         setTotalQty(qty)
 
-        const tPrice = cartItem.reduce((prev, curr) => {
-            const priceAfterDiscount = pricewithDiscount(curr?.productId?.price, curr?.productId?.discount)
-            return prev + (priceAfterDiscount * curr.quantity)
+        const tPrice = items.reduce((prev, curr) => {
+            if (!curr?.productId) return prev // skip orphaned cart items (deleted product)
+            const priceAfterDiscount = pricewithDiscount(curr.productId.price, curr.productId.discount)
+            return prev + (priceAfterDiscount * (curr?.quantity || 0))
         }, 0)
         setTotalPrice(tPrice)
 
-        const notDiscountPrice = cartItem.reduce((prev, curr) => {
-            return prev + (curr?.productId?.price * curr.quantity)
+        const notDiscountPrice = items.reduce((prev, curr) => {
+            if (!curr?.productId) return prev
+            return prev + ((curr.productId.price || 0) * (curr?.quantity || 0))
         }, 0)
         setNotDiscountTotalPrice(notDiscountPrice)
     }, [cartItem])
