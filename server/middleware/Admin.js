@@ -1,6 +1,6 @@
 import UserModel from "../models/user.model.js"
 
-// Accepts array of roles — ADMIN always has access to everything
+// Accepts array of roles — SUPER_ADMIN always bypasses, ADMIN keeps working as before
 const checkRole = (roles) => async (request, response, next) => {
   try {
     const userId = request.userId
@@ -11,15 +11,31 @@ const checkRole = (roles) => async (request, response, next) => {
         success: false
       })
     }
+
     const user = await UserModel.findById(userId)
-    const allowedRoles = Array.isArray(roles) ? roles : [roles]
-    if (!user || !allowedRoles.includes(user.role)) {
+    if (!user) {
       return response.status(403).json({
         message: "Permission denied",
         error: true,
         success: false
       })
     }
+
+    // SUPER_ADMIN has unconditional access to every role-gated route
+    if (user.role === 'SUPER_ADMIN') {
+      request.user = user
+      return next()
+    }
+
+    const allowedRoles = Array.isArray(roles) ? roles : [roles]
+    if (!allowedRoles.includes(user.role)) {
+      return response.status(403).json({
+        message: "Permission denied",
+        error: true,
+        success: false
+      })
+    }
+
     request.user = user
     next()
   } catch (error) {
@@ -31,6 +47,7 @@ const checkRole = (roles) => async (request, response, next) => {
   }
 }
 
+export const superAdmin  = checkRole('SUPER_ADMIN')
 export const admin       = checkRole('ADMIN')
 export const seller      = checkRole(['SELLER', 'ADMIN'])
 export const rider       = checkRole(['RIDER', 'ADMIN'])
