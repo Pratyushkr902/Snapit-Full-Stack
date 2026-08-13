@@ -115,6 +115,22 @@ const orderSchema = new mongoose.Schema(
         settledAt:   { type: Date },
         deliveredAt: { type: Date },
 
+        // ── Delivery OTP & Fraud Prevention ───────────────────────────
+        deliveryOtp:        { type: String, default: null },
+        otpGeneratedAt:     { type: Date,   default: null },
+        otpVerifiedAt:      { type: Date,   default: null },
+        deliveryProofPhoto: { type: String, default: null },
+
+        disputes: [
+            {
+                type:         { type: String, enum: ["DENIED_ORDER", "WRONG_ITEMS", "OTHER"], default: "DENIED_ORDER" },
+                reportedBy:   { type: mongoose.Schema.ObjectId, ref: "User" },
+                reporterRole: { type: String, enum: ["RIDER", "ADMIN"], default: "RIDER" },
+                note:         { type: String, default: "" },
+                createdAt:    { type: Date, default: Date.now },
+            },
+        ],
+
         // ── Promotions ───────────────────────────────────────────────
         coupon_used:     { type: String, default: null },
         discount_amount: { type: Number, default: 0 },

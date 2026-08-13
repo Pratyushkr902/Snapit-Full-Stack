@@ -2,8 +2,6 @@ import dotenv from 'dotenv'
 dotenv.config({ path: new URL('.env', import.meta.url).pathname })
 
 import { initSubscriptionCron } from './config/cronEngine.js'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import { Server } from 'socket.io'
 import http from 'http'
 import express from 'express'
@@ -14,9 +12,7 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import connectDB from './config/connectDB.js'
 import cron from 'node-cron'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname  = path.dirname(__filename)
+import { abuseGuard, getFrozenIPs } from './middleware/abuseGuard.js'
 
 // ─── PRE-REGISTER MODELS ──────────────────────────────────────────────────────
 import './models/user.model.js'
@@ -71,7 +67,6 @@ import OrderModel from './models/order.model.js'
 import UserModel  from './models/user.model.js'
 
 import adminManagementRouter from './route/adminManagement.route.js'
-import { abuseGuard } from './middleware/abuseGuard.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -80,6 +75,11 @@ const server = http.createServer(app)
 
 // In-memory cache: latest GPS fix per orderId
 const latestPositions = new Map()
+
+// ─── ABUSE / ANOMALY DETECTION ────────────────────────────────────────────────
+// Runs before CORS/helmet/routes so it can short-circuit frozen IPs as early
+// as possible, before any other middleware does work on the request.
+app.use(abuseGuard())
 
 // ─── CORS RULES ───────────────────────────────────────────────────────────────
 const allowedOrigins = [
@@ -279,7 +279,7 @@ io.on('connection', (socket) => {
                     .findById(requestingUserId)
                     .select('role')
                     .lean()
-                isAdmin = user?.role === 'ADMIN'
+                isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
             }
 
             if (!isOwner && !isRider && !isAdmin) {
@@ -343,6 +343,7 @@ app.use('/api/wallet',                          financialLimiter)
 app.use('/api/order',                           financialLimiter)
 app.use('/api/coins',                           financialLimiter)
 app.use('/api/admin/accounts',                  financialLimiter) // ✅ NEW
+app.use('/api/admin-management',                authLimiter)
 
 // General API limiter on everything else
 app.use('/api', apiLimiter)

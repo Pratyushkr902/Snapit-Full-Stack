@@ -26,6 +26,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { App as CapacitorApp } from '@capacitor/app';
 
 import './App.css'
+import WhatsAppButton from './components/WhatsAppButton'
 
 export { socket };
 
@@ -225,6 +226,7 @@ function App() {
           </main>
           
           {!isDashboard && <Footer />}
+          {!isDashboard && <WhatsAppButton />}
           
           <Toaster position="top-center" reverseOrder={false} />
 

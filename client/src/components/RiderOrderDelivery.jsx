@@ -2,7 +2,7 @@ import { io } from "socket.io-client";
 import { useEffect } from "react";
 
 // Connect to your live Render Tracking Server
-const socket = io("https://snapit-full-stack-2.onrender.com", {
+const socket = io("https://snapit-full-stack-production.up.railway.app", {
     path: '/socket.io/', // Explicitly match the custom path defined in your server's socket config
     transports: ["websocket", "polling"],
     withCredentials: true

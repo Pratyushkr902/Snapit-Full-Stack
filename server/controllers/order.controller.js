@@ -862,19 +862,30 @@ export const updateOrderStatusController = async (request, response) => {
             }
         }
 
-        if (status === 'Delivered' && !order.payment_collected && order.payment_status !== 'PAID' && !payment_status) {
-            return response.status(400).json({ message: 'Collect payment before marking as Delivered.', success: false, error: true })
+        // Delivered must now go through /verify-delivery-otp, not this route.
+        if (status === 'Delivered') {
+            return response.status(400).json({
+                message: 'Use OTP verification to mark an order as Delivered.',
+                error: true,
+                success: false
+            })
         }
+
+        if (status === 'Out for Delivery' && !order.payment_collected && order.payment_status !== 'PAID' && !payment_status) {
+            return response.status(400).json({ message: 'Collect payment before dispatch (or confirm COD).', success: false, error: true })
+        }
+
+        const updateFields = {
+            delivery_status: status,
+            ...(payment_status          && { payment_status, payment_collected: true }),
+            ...(isSettled !== undefined && { isSettled, settledAt: isSettled ? new Date() : null }),
+            ...(cashReceived            && { cashReceived: Number(cashReceived) }),
+        }
+
 
         const updatedOrder = await OrderModel.findOneAndUpdate(
             { orderId },
-            {
-                delivery_status: status,
-                ...(payment_status             && { payment_status, payment_collected: true }),
-                ...(isSettled !== undefined    && { isSettled, settledAt: isSettled ? new Date() : null }),
-                ...(cashReceived               && { cashReceived: Number(cashReceived) }),
-                ...(status === 'Delivered'     && { deliveredAt: new Date() }),
-            },
+            updateFields,
             { new: true }
         )
 
@@ -998,6 +1009,54 @@ export const collectPaymentController = async (request, response) => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DISPUTE REPORTING — "customer says they never ordered this"
+// ─────────────────────────────────────────────────────────────────────────────
+export const reportOrderDisputeController = async (request, response) => {
+    try {
+        const { orderId, type, note } = request.body
+        const userId   = request.userId
+        const userRole = request.userRole
+
+        if (!orderId) return response.status(400).json({ message: 'orderId is required.', error: true, success: false })
+
+        const order = await OrderModel.findOne({ orderId })
+        if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
+
+        if (userRole === 'RIDER') {
+            if (!order.riderId || order.riderId.toString() !== userId) {
+                return response.status(403).json({ message: 'This order is not assigned to you.', error: true, success: false })
+            }
+        }
+
+        const allowedTypes = ['DENIED_ORDER', 'WRONG_ITEMS', 'OTHER']
+        const disputeType  = allowedTypes.includes(type) ? type : 'DENIED_ORDER'
+
+        const updated = await OrderModel.findOneAndUpdate(
+            { orderId },
+            {
+                $push: {
+                    disputes: {
+                        type:         disputeType,
+                        reportedBy:   userId,
+                        reporterRole: userRole === 'ADMIN' ? 'ADMIN' : 'RIDER',
+                        note:         note || '',
+                        createdAt:    new Date(),
+                    }
+                }
+            },
+            { new: true }
+        )
+
+        console.warn(`ORDER_DISPUTE | orderId=${orderId} | type=${disputeType} | reportedBy=${userId}`)
+
+        return response.json({ message: 'Dispute logged. Our team will review this order.', error: false, success: true, data: updated })
+    } catch (error) {
+        console.error('reportOrderDisputeController:', error.message)
+        return response.status(500).json({ message: 'Failed to log dispute.', error: true, success: false })
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RIDER TRACKING
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1096,7 +1155,7 @@ export async function getOrderItems(request, response) {
         const userRole = request.userRole
 
         const filter = userRole === 'ADMIN'
-            ? { delivery_status: { $nin: ['Cancelled'] } }
+            ? {}
             : { riderId: userId, delivery_status: { $nin: ['Cancelled'] } }
 
         const orders = await populateOrder(
@@ -1516,4 +1575,31 @@ export const getScratchCardsController = async (request, response) => {
 }
 export async function webhookStripe(request, response) {
     return response.json({ message: 'Webhook received.', success: true })
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — Settle ALL unsettled COD cash (used by AdminDashboard)
+// ─────────────────────────────────────────────────────────────────────────────
+export const settleCashController = async (req, res) => {
+    try {
+        const result = await OrderModel.updateMany(
+            {
+                payment_status:   'CASH ON DELIVERY',
+                delivery_status:  'Delivered',
+                isSettled:        { $ne: true }
+            },
+            {
+                $set: { isSettled: true, settledAt: new Date() }
+            }
+        )
+
+        return res.json({
+            message:  `Cash settled successfully. ${result.modifiedCount} order(s) marked as settled.`,
+            error:    false,
+            success:  true,
+            data:     { settledCount: result.modifiedCount }
+        })
+    } catch (error) {
+        console.error('settleCashController:', error.message)
+        return res.status(500).json({ message: 'Settlement failed.', error: true, success: false })
+    }
 }

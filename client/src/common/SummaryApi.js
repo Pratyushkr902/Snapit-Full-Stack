@@ -229,6 +229,14 @@ const SummaryApi = {
         url: '/api/order/update-seller-status',
         method: 'post'
     },
+    verifyDeliveryOtp: {
+        url: '/api/order/verify-delivery-otp',
+        method: 'post'
+    },
+    reportOrderDispute: {
+        url: '/api/order/report-dispute',
+        method: 'post'
+    },
     getNearestStore: {
         url: '/api/store/nearest',
         method: 'post'
