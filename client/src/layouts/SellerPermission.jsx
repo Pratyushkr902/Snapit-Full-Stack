@@ -5,7 +5,7 @@ const SellerPermission = ({ children }) => {
     const role = user?.role
     // ✅ RESTO_SELLER included so accounts operating both a grocery store
     // and a restaurant (e.g. Monginis) can access the grocery dashboard too.
-    const hasAccess = role === 'SELLER' || role === 'ADMIN' || role === 'RESTO_SELLER'
+    const hasAccess = role === 'SELLER' || role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'RESTO_SELLER'
     return (
         <>
             {hasAccess ? (
