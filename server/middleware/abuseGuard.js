@@ -79,6 +79,26 @@ export const abuseGuard = (type = 'general') => async (request, response, next) 
     }
 }
 
+// ── Order velocity check ──────────────────────────────────────
+// Not a block — just flags whether this user should be queued instead
+// of auto-confirmed. Fail-open: any error means "not abnormal".
+const orderLog = new Map()
+const ORDER_WINDOW_MS = 5 * 60 * 1000   // 5 min window
+const ORDER_LIMIT = 3                   // more than 3 orders/5min = queue it
+
+export function shouldQueueOrder(userId) {
+    try {
+        const now = Date.now()
+        const key = String(userId)
+        const hits = (orderLog.get(key) || []).filter(ts => now - ts < ORDER_WINDOW_MS)
+        hits.push(now)
+        orderLog.set(key, hits)
+        return hits.length > ORDER_LIMIT
+    } catch (error) {
+        return false
+    }
+}
+
 export const listFrozenIps = () => FrozenIpModel.find().sort({ frozenAt: -1 })
 
 export const unfreezeIpByAddress = async (ip) => {

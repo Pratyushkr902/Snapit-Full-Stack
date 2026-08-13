@@ -37,6 +37,7 @@ import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
+import { shouldQueueOrder } from '../middleware/abuseGuard.js'
 import { sendPushNotification, notifyAllRiders } from '../utils/firebaseNotify.js'
 import {
     notifyUserOrderPlaced,
@@ -391,7 +392,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             totalAmt:         Number(totalAmt),
             delivery_fee,
             is_express:       !!isExpress,
-            delivery_status:  'Pending',
+            delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
             seller_status:    'Pending',
             store_details:    {
                 name: involvedStores.length === 1 ? involvedStores[0] : (involvedStores[0] || assignedStore.name),
@@ -564,7 +565,7 @@ export async function WalletPaymentOrderController(request, response) {
             totalAmt:         exactRequiredTotal,
             delivery_fee,
             is_express:       !!isExpress,
-            delivery_status:  'Pending',
+            delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
             seller_status:    'Pending',
             store_details:    {
                 name: involvedStores.length === 1 ? involvedStores[0] : (involvedStores[0] || assignedStore.name),
@@ -744,7 +745,7 @@ export async function verifyPaymentController(request, response) {
             totalAmt:         Number(totalAmt),
             delivery_fee,
             is_express:       !!isExpress,
-            delivery_status:  'Pending',
+            delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
             seller_status:    'Pending',
             store_details:    {
                 name: involvedStores.length === 1 ? involvedStores[0] : (involvedStores[0] || assignedStore.name),
