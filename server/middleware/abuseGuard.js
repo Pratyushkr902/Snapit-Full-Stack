@@ -2,7 +2,7 @@ import FrozenIpModel from '../models/frozenIp.model.js'
 
 const WINDOW_MS = 60 * 1000
 const AUTH_LIMIT = 15      // login/otp hits per minute per IP
-const GENERAL_LIMIT = 300  // general API hits per minute per IP
+const GENERAL_LIMIT = 60  // general API hits per minute per IP
 const FREEZE_MINUTES = 30
 
 const hitLog = new Map()
