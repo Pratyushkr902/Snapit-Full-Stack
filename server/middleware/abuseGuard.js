@@ -9,6 +9,8 @@ const hitLog = new Map()
 const frozenCache = new Map()
 
 function getClientIp(request) {
+    const cfIp = request.headers['cf-connecting-ip']
+    if (cfIp) return cfIp.trim()
     const forwarded = request.headers['x-forwarded-for']
     if (forwarded) return forwarded.split(',')[0].trim()
     return request.socket?.remoteAddress || request.ip
