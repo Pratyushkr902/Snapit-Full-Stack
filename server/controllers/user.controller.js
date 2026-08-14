@@ -162,24 +162,17 @@ export async function registerUserController(request, response) {
             })
 
             if (referrer) {
-                referrer.walletBalance += 20
+                referrer.walletBalance += 10
                 referrer.referralCount += 1
                 referrer.walletTransactions.push({
                     type: 'credit',
-                    amount: 20,
+                    amount: 10,
                     description: `Referral bonus - ${name} joined using your code!`,
                     date: new Date()
                 })
                 await referrer.save()
-
                 payload.referredBy = incomingReferralCode
-                payload.walletBalance = 10
-                payload.walletTransactions = [{
-                    type: 'credit',
-                    amount: 10,
-                    description: "Welcome bonus for using a referral code!",
-                    date: new Date()
-                }]
+                // Note: new user no longer gets a signup bonus — only the referrer is rewarded.
             }
         }
 
