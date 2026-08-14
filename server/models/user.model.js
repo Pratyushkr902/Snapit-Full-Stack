@@ -104,6 +104,10 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    referralBonusCredited: {
+        type: Boolean,
+        default: false
+    },
     firstOrderBonusApplied: {
         type: Boolean,
         default: false

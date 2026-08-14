@@ -162,17 +162,9 @@ export async function registerUserController(request, response) {
             })
 
             if (referrer) {
-                referrer.walletBalance += 10
-                referrer.referralCount += 1
-                referrer.walletTransactions.push({
-                    type: 'credit',
-                    amount: 10,
-                    description: `Referral bonus - ${name} joined using your code!`,
-                    date: new Date()
-                })
-                await referrer.save()
+                // Referral wallet credit now happens on email verification, not signup —
+                // this stops disposable-email bot farming from instantly cashing out.
                 payload.referredBy = incomingReferralCode
-                // Note: new user no longer gets a signup bonus — only the referrer is rewarded.
             }
         }
 
@@ -215,7 +207,6 @@ export async function verifyEmailController(request, response) {
     try {
         const { code } = request.body
         const user = await UserModel.findOne({ _id: code })
-
         if (!user) {
             return response.status(400).json({
                 message: "Invalid code",
@@ -223,8 +214,48 @@ export async function verifyEmailController(request, response) {
                 success: false
             })
         }
-
+        const wasAlreadyVerified = user.verify_email
         await UserModel.updateOne({ _id: code }, { verify_email: true })
+
+        // Credit the referrer's wallet now — only once (guarded), only if this
+        // account wasn't already verified before, and capped per referrer per day
+        // to bound the damage from bot-farmed fake accounts.
+        if (!wasAlreadyVerified && user.referredBy && !user.referralBonusCredited) {
+            try {
+                const startOfDay = new Date()
+                startOfDay.setHours(0, 0, 0, 0)
+
+                const referrer = await UserModel.findOne({ referralCode: user.referredBy })
+                if (referrer) {
+                    const DAILY_REFERRAL_CAP = 10
+                    const creditsToday = (referrer.walletTransactions || []).filter(
+                        t => t.type === 'credit' &&
+                             t.description?.startsWith('Referral bonus') &&
+                             new Date(t.date) >= startOfDay
+                    ).length
+
+                    if (creditsToday < DAILY_REFERRAL_CAP) {
+                        await UserModel.updateOne(
+                            { _id: referrer._id },
+                            {
+                                $inc: { walletBalance: 10, referralCount: 1 },
+                                $push: {
+                                    walletTransactions: {
+                                        type: 'credit',
+                                        amount: 10,
+                                        description: `Referral bonus - 20 coins (₹10) for inviting ${user.name}!`,
+                                        date: new Date()
+                                    }
+                                }
+                            }
+                        )
+                        await UserModel.updateOne({ _id: user._id }, { referralBonusCredited: true })
+                    }
+                }
+            } catch (referralErr) {
+                console.error('[verifyEmailController] referral credit failed:', referralErr.message)
+            }
+        }
 
         return response.json({
             message: "Verify email done",
