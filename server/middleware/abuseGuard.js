@@ -2,8 +2,8 @@ import FrozenIpModel from '../models/frozenIp.model.js'
 
 const WINDOW_MS = 60 * 1000
 const AUTH_LIMIT = 15      // login/otp hits per minute per IP
-const GENERAL_LIMIT = 60       // general WRITE hits per minute per IP
-const GENERAL_READ_LIMIT = 180 // general READ (GET) hits per minute per IP
+const GENERAL_LIMIT = 120      // general WRITE hits per minute per IP (raised — shared/CGNAT IPs)
+const GENERAL_READ_LIMIT = 300 // general READ (GET) hits per minute per IP (raised — shared/CGNAT IPs)
 const FREEZE_MINUTES = 30
 
 const hitLog = new Map()
@@ -69,14 +69,24 @@ export const abuseGuard = (type = 'general') => async (request, response, next) 
         const count = recordHit(ip, bucket)
 
         if (count > limit) {
-            await freezeIp(ip, `Exceeded ${type} rate limit (${count} hits/min)`)
+            // Only hard-freeze on the AUTH bucket (login/OTP brute-force).
+            // General/read traffic often shares an IP (CGNAT, office wifi) across
+            // many unrelated users — freezing the whole IP there blocks innocent
+            // users. For general/read we just throttle this request, no freeze.
+            if (type === 'auth') {
+                await freezeIp(ip, `Exceeded ${type} rate limit (${count} hits/min)`)
+                return response.status(429).json({
+                    message: "Abnormal activity detected. This IP has been temporarily frozen.",
+                    error: true,
+                    success: false
+                })
+            }
             return response.status(429).json({
-                message: "Abnormal activity detected. This IP has been temporarily frozen.",
+                message: "Too many requests. Please slow down and try again shortly.",
                 error: true,
                 success: false
             })
         }
-
         next()
     } catch (error) {
         // fail-open: never let guard errors block legit traffic
