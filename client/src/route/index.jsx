@@ -33,6 +33,11 @@ const Cancel                 = lazy(() => import('../pages/Cancel'))
 const RiderTracking          = lazy(() => import('../pages/RiderTracking'))
 const RiderDashboard         = lazy(() => import('../pages/RiderDashboard'))
 const AdminRefunds           = lazy(() => import('../pages/AdminRefunds'))
+const AdminWithdrawals       = lazy(() => import('../pages/AdminWithdrawals'))
+const AdminReferrals         = lazy(() => import('../pages/AdminReferrals'))
+const AdminManageAdmins      = lazy(() => import('../pages/AdminManageAdmins'))
+const AdminFrozenIps         = lazy(() => import('../pages/AdminFrozenIps'))
+const SuperAdminDashboard    = lazy(() => import('../pages/SuperAdminDashboard'))
 const StoreOrders            = lazy(() => import('../pages/StoreOrders'))
 const Wallet                 = lazy(() => import('../pages/Wallet'))
 const AdminSummary           = lazy(() => import('../components/AdminSummary'))
@@ -208,6 +213,11 @@ const router = createHashRouter([
             element: <S><AdminPermision><SubCategoryPage /></AdminPermision></S>
           },
           { path: "refunds", element: <S><AdminPermision><AdminRefunds /></AdminPermision></S> },
+          { path: "super-admin", element: <S><SuperAdminDashboard /></S> },
+          { path: "super-admin/withdrawals", element: <S><AdminWithdrawals /></S> },
+          { path: "super-admin/referrals", element: <S><AdminReferrals /></S> },
+          { path: "super-admin/manage-admins", element: <S><AdminManageAdmins /></S> },
+          { path: "super-admin/frozen-ips", element: <S><AdminFrozenIps /></S> },
           {
             path: "product",
             element: <S><AdminPermision><ProductAdmin /></AdminPermision></S>
