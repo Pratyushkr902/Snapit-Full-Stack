@@ -7,7 +7,8 @@ import {
     updateAdminStatusController,
     removeAdminController,
     listFrozenIPsController,
-    unfreezeIPController
+    unfreezeIPController,
+    listReferralsController
 } from '../controllers/adminManagement.controller.js'
 
 const router = express.Router()
@@ -19,5 +20,7 @@ router.delete('/:adminId', auth, superAdmin, removeAdminController)
 
 router.get('/frozen-ips', auth, superAdmin, listFrozenIPsController)
 router.delete('/frozen-ips/:ip', auth, superAdmin, unfreezeIPController)
+
+router.get('/referrals', auth, superAdmin, listReferralsController)
 
 export default router
