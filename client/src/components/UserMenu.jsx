@@ -65,6 +65,12 @@ const UserMenu = ({close}) => {
                 <Link onClick={handleClose} to={"/dashboard/subcategory"} className='px-2 hover:bg-orange-200 py-1'>Sub Category</Link>
                 <Link onClick={handleClose} to={"/dashboard/upload-product"} className='px-2 hover:bg-orange-200 py-1'>Upload Product</Link>
                 <Link onClick={handleClose} to={"/dashboard/refunds"} className='px-2 hover:bg-orange-200 py-1'>Refunds</Link>
+                {role === "SUPER_ADMIN" && (
+                  <Link onClick={handleClose} to={"/dashboard/super-admin"}
+                    className='px-2 bg-purple-50 hover:bg-purple-100 py-1 font-bold text-purple-700 border-l-4 border-purple-500'>
+                    👑 Super Admin Panel
+                  </Link>
+                )}
                 <Link onClick={handleClose} to={"/dashboard/product"} className='px-2 hover:bg-orange-200 py-1'>Product</Link>
                 {/* Admin can also manage restaurants */}
                 <Link onClick={handleClose} to={"/dashboard/restaurant-admin"}
