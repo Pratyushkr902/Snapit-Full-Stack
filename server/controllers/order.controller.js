@@ -1158,7 +1158,7 @@ export async function getOrderItems(request, response) {
         const userId   = request.userId
         const userRole = request.userRole
 
-        const filter = userRole === 'ADMIN'
+        const filter = (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN')
             ? {}
             : { riderId: userId, delivery_status: { $nin: ['Cancelled'] } }
 
