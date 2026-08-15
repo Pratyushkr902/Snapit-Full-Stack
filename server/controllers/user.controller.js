@@ -214,48 +214,11 @@ export async function verifyEmailController(request, response) {
                 success: false
             })
         }
-        const wasAlreadyVerified = user.verify_email
+        // NOTE: Referral bonus no longer credited on email verification.
+        // It now fires on the referred friend's FIRST qualifying order
+        // (>= min order amount) — see creditFirstOrderReferralBonus() in
+        // utils/referralBonus.js, called from every order-creation controller.
         await UserModel.updateOne({ _id: code }, { verify_email: true })
-
-        // Credit the referrer's wallet now — only once (guarded), only if this
-        // account wasn't already verified before, and capped per referrer per day
-        // to bound the damage from bot-farmed fake accounts.
-        if (!wasAlreadyVerified && user.referredBy && !user.referralBonusCredited) {
-            try {
-                const startOfDay = new Date()
-                startOfDay.setHours(0, 0, 0, 0)
-
-                const referrer = await UserModel.findOne({ referralCode: user.referredBy })
-                if (referrer) {
-                    const DAILY_REFERRAL_CAP = 10
-                    const creditsToday = (referrer.walletTransactions || []).filter(
-                        t => t.type === 'credit' &&
-                             t.description?.startsWith('Referral bonus') &&
-                             new Date(t.date) >= startOfDay
-                    ).length
-
-                    if (creditsToday < DAILY_REFERRAL_CAP) {
-                        await UserModel.updateOne(
-                            { _id: referrer._id },
-                            {
-                                $inc: { walletBalance: 10, referralCount: 1 },
-                                $push: {
-                                    walletTransactions: {
-                                        type: 'credit',
-                                        amount: 10,
-                                        description: `Referral bonus - 20 coins (₹10) for inviting ${user.name}!`,
-                                        date: new Date()
-                                    }
-                                }
-                            }
-                        )
-                        await UserModel.updateOne({ _id: user._id }, { referralBonusCredited: true })
-                    }
-                }
-            } catch (referralErr) {
-                console.error('[verifyEmailController] referral credit failed:', referralErr.message)
-            }
-        }
 
         return response.json({
             message: "Verify email done",

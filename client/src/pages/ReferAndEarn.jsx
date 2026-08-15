@@ -73,7 +73,7 @@ const STYLES = `
 `
 
 const MILESTONES = [
-  { count:1,  reward:'₹20',          icon:'🎁', label:'First Referral' },
+  { count:1,  reward:'10 coins',     icon:'🎁', label:'First Referral' },
   { count:5,  reward:'₹50 Bonus',    icon:'🔥', label:'5 Friends'      },
   { count:10, reward:'₹100 Credit',  icon:'💎', label:'10 Friends'     },
   { count:15, reward:'Plus FREE',    icon:'⭐', label:'15 Friends'     },
@@ -125,7 +125,7 @@ const ReferAndEarn = () => {
     if (navigator.share) {
       navigator.share({
         title: 'Join Snapit!',
-        text:  `Use my referral code ${info.referralCode} and get ₹20 off your first grocery order on Snapit!`,
+        text:  `Join Snapit with my referral code ${info.referralCode}!`,
         url:   info.referralLink
       })
     } else {
@@ -135,7 +135,7 @@ const ReferAndEarn = () => {
 
   // ── WhatsApp share (new) ──
   const handleWhatsApp = () => {
-    const msg = `🛒 Order fresh groceries on *Snapit* and get ₹20 OFF your first order!\n\nUse my code: *${info?.referralCode}*\n\n👉 ${info?.referralLink}`
+    const msg = `🛒 Come order fresh groceries on *Snapit*!\n\nSign up with my code: *${info?.referralCode}*\n\n👉 ${info?.referralLink}`
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
@@ -181,7 +181,7 @@ const ReferAndEarn = () => {
           </h1>
           <p style={{ fontSize:'14px', opacity:.85, margin:'0 0 20px', lineHeight:1.5 }}>
             Invite friends to Snapit.<br />
-            <strong>Both of you get ₹20</strong> when they place their first order!
+            <strong>You earn 10 coins (₹5)</strong> when they place their first order of ₹149+!
           </p>
 
           {/* Stats row */}
@@ -191,8 +191,8 @@ const ReferAndEarn = () => {
               <p style={{ fontSize:'11px', opacity:.8, margin:'4px 0 0', fontWeight:'600' }}>Friends Referred</p>
             </div>
             <div style={{ background:'rgba(255,255,255,.15)', backdropFilter:'blur(6px)', borderRadius:'16px', padding:'12px 20px', border:'1px solid rgba(255,255,255,.2)' }}>
-              <p style={{ fontSize:'26px', fontWeight:'900', margin:0, lineHeight:1 }}>₹{totalEarned}</p>
-              <p style={{ fontSize:'11px', opacity:.8, margin:'4px 0 0', fontWeight:'600' }}>Total Earned</p>
+              <p style={{ fontSize:'26px', fontWeight:'900', margin:0, lineHeight:1 }}>🪙{totalEarned * 2}</p>
+              <p style={{ fontSize:'11px', opacity:.8, margin:'4px 0 0', fontWeight:'600' }}>Coins Earned (₹{totalEarned})</p>
             </div>
           </div>
 
@@ -284,11 +284,11 @@ const ReferAndEarn = () => {
               <div>
                 {[
                   { icon:'📤', step:'1', title:'Share your code', desc:'Send your unique code to friends via WhatsApp, SMS, or any app.' },
-                  { icon:'📲', step:'2', title:'Friend installs Snapit', desc:'They sign up using your referral code during registration.' },
-                  { icon:'🛒', step:'3', title:'They place first order', desc:'Your friend places their first grocery order on Snapit.' },
-                  { icon:'💰', step:'4', title:'Both of you get ₹20!', desc:'₹20 is credited to your wallet automatically. No waiting!' },
+                  { icon:'📲', step:'2', title:'Friend signs up', desc:'They create their Snapit account using your referral code.' },
+                  { icon:'🛒', step:'3', title:'They order ₹149+', desc:'Your friend places their first qualifying order.' },
+                  { icon:'💰', step:'4', title:'You both earn 10 coins!', desc:'Worth ₹5 each, credited to your wallets instantly!' },
                 ].map((s, i) => (
-                  <div key={i} style={{ display:'flex', gap:'14px', alignItems:'flex-start', marginBottom: i < 3 ? '18px' : 0 }}>
+                  <div key={i} style={{ display:'flex', gap:'14px', alignItems:'flex-start', marginBottom: i < 2 ? '18px' : 0 }}>
                     <div style={{
                       width:'40px', height:'40px', borderRadius:'14px', flexShrink:0,
                       background:'#f0fdf4', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px'
@@ -310,7 +310,7 @@ const ReferAndEarn = () => {
                 {/* T&C note */}
                 <div style={{ background:'#f8fafc', borderRadius:'12px', padding:'10px 12px', marginTop:'18px' }}>
                   <p style={{ fontSize:'11px', color:'#94a3b8', margin:0, lineHeight:1.6 }}>
-                    * Reward credited within 24 hrs of friend's first order. Min order ₹99 required. One reward per friend. Snapit reserves the right to reverse fraudulent referrals.
+                    * 10 coins (₹5) credited to both your wallets when your friend places their first order of ₹149 or more. 1 coin = ₹0.5. One reward per friend. Snapit reserves the right to reverse fraudulent referrals.
                   </p>
                 </div>
               </div>
@@ -450,7 +450,7 @@ const ReferAndEarn = () => {
           onMouseOver={e => e.currentTarget.style.transform='translateY(-2px)'}
           onMouseOut={e  => e.currentTarget.style.transform='translateY(0)'}
         >
-          📱 Invite Friends on WhatsApp → Earn ₹20
+          📱 Invite Friends on WhatsApp → Earn 20 Coins
         </button>
 
       </div>

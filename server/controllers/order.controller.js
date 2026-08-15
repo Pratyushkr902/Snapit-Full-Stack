@@ -37,6 +37,7 @@ import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
+import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { shouldQueueOrder } from '../middleware/abuseGuard.js'
 import { sendPushNotification, notifyAllRiders } from '../utils/firebaseNotify.js'
 import {
@@ -421,6 +422,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         await updateStreak(userId)
         await CartProductModel.deleteMany({ userId })
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] })
+        creditFirstOrderReferralBonus(userId, generatedOrder.totalAmt).catch(() => {})
 
         return response.json({
             message: 'Order placed successfully.',
@@ -594,6 +596,7 @@ export async function WalletPaymentOrderController(request, response) {
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
         await CartProductModel.deleteMany({ userId })
+        creditFirstOrderReferralBonus(userId, newOrder.totalAmt).catch(() => {})
 
         return response.json({
             message: 'Order placed via Snapit Wallet!',
@@ -779,6 +782,7 @@ export async function verifyPaymentController(request, response) {
         }
         await CartProductModel.deleteMany({ userId })
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] })
+        creditFirstOrderReferralBonus(userId, newOrder.totalAmt).catch(() => {})
 
         return response.json({
             message: 'Order placed successfully!',

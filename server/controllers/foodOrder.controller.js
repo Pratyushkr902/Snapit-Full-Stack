@@ -6,6 +6,7 @@ import { verifyRazorpaySignature } from '../utils/verifyRazorpaySignature.js'
 import { calcDeliveryFeeFromOrigin, getMinOrderAmountFromOrigin } from '../utils/deliveryFee.js'
 import RestaurantModel from '../models/restaurant.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
+import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { validateCoupon } from '../utils/couponValidation.js'
 import { notifyAllRiders } from '../utils/firebaseNotify.js'
 import {
@@ -257,7 +258,7 @@ export async function foodOrderCOD(req, res) {
     // COD never touches wallet balance — strip any client-supplied
     // walletAmountUsed before pricing so it can't fake a discount here.
     req.body.walletAmountUsed = 0
-    const { fields, user, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const { fields, user, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
     const assignedRider = await assignAvailableRider()
 
     const orders = []
@@ -274,6 +275,7 @@ export async function foodOrderCOD(req, res) {
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
     }
+    creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
 
     console.log(`[foodOrderCOD] ✅ group=${groupOrderId} restaurants=${orders.length} orderIds=${orders.map(o => o.orderId).join(',')}`)
     return res.json({ success: true, message: 'Food order placed!', data: orders })
@@ -316,6 +318,7 @@ export async function foodOrderWallet(req, res) {
       notifyFoodOrderPlaced(order, user)
     }
 
+    creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
     console.log(`[foodOrderWallet] ✅ group=${groupOrderId} walletDeducted=₹${deductAmt} restaurants=${orders.length}`)
     return res.json({ success: true, message: 'Paid via wallet!', data: orders })
 
@@ -365,7 +368,7 @@ export async function foodOrderVerifyPayment(req, res) {
     }
 
     req.body = rest
-    const { fields, user, priced, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const { fields, user, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
     await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
     const assignedRider = await assignAvailableRider()
