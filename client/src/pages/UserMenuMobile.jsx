@@ -88,7 +88,7 @@ const UserMenuMobile = () => {
       )}
 
       {/* RESTO SELLER ACCESS */}
-      {(user?.role === "RESTO_SELLER" || user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
+      {user?.role === "RESTO_SELLER" && (
         <Link to={"/dashboard/resto-dashboard"} className='px-3 py-2.5 rounded-lg bg-red-50 hover:bg-red-100 font-bold text-red-700 border-l-4 border-red-600'>
           🍽️ Resto Dashboard
         </Link>
