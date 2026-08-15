@@ -100,10 +100,21 @@ export async function verifyOtpController(request, response) {
             const newReferralCode = name.toUpperCase().replace(/\s/g, '').slice(0, 4) +
                 Math.floor(1000 + Math.random() * 9000)
 
+            // Capture who referred this user, if a referral code was supplied.
+            // Only set referredBy if the code actually belongs to a real user
+            // (prevents storing garbage/typo'd codes that can never match later).
+            const incomingReferralCode = (request.body.referralCode || '').trim().toUpperCase()
+            let referredByCode = null
+            if (incomingReferralCode) {
+                const referrerExists = await UserModel.exists({ referralCode: incomingReferralCode })
+                if (referrerExists) referredByCode = incomingReferralCode
+            }
+
             user = await UserModel.create({
                 name,
                 email,
                 referralCode: newReferralCode,
+                referredBy: referredByCode,
                 status: 'Active',
             })
         }

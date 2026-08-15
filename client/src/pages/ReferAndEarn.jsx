@@ -450,7 +450,7 @@ const ReferAndEarn = () => {
           onMouseOver={e => e.currentTarget.style.transform='translateY(-2px)'}
           onMouseOut={e  => e.currentTarget.style.transform='translateY(0)'}
         >
-          📱 Invite Friends on WhatsApp → Earn 20 Coins
+          📱 Invite Friends on WhatsApp → Earn 10 Coins
         </button>
 
       </div>
