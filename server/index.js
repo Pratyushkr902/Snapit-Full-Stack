@@ -131,7 +131,7 @@ app.use(cors({
 // ─── ABUSE / ANOMALY DETECTION ────────────────────────────────────────────────
 // Runs after CORS so blocked/frozen responses still carry proper CORS headers
 // and show up in the browser as real 429s instead of fake "CORS error"s.
-app.use(abuseGuard())
+// app.use(abuseGuard()) — REMOVED: duplicate global mount was double-counting every hit (see line ~239)
 
 // ─── HELMET / CSP ─────────────────────────────────────────────────────────────
 app.use(helmet({
@@ -393,6 +393,37 @@ app.get("/health", (req, res) => {
         razorpay_status:       process.env.RAZORPAY_KEY_ID ? "Configured" : "Missing Keys",
         active_tracking_rooms: latestPositions.size,
     })
+})
+
+// ─── TEMP DIAGNOSTIC — remove after debugging invoice email issue ────────────
+app.get("/debug-brevo-test", async (req, res) => {
+    try {
+        const testEmail = req.query.to
+        if (!testEmail) return res.status(400).json({ error: 'Add ?to=youremail@example.com to the URL' })
+        const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'api-key': process.env.BREVO_API_KEY
+            },
+            body: JSON.stringify({
+                sender: { name: 'Snapit', email: 'snapitxpress@gmail.com' },
+                to: [{ email: testEmail }],
+                subject: 'Snapit Brevo Test',
+                htmlContent: '<p>This is a test email from the debug endpoint.</p>'
+            })
+        })
+        const data = await brevoResponse.json()
+        return res.status(brevoResponse.status).json({
+            brevo_status: brevoResponse.status,
+            brevo_ok:     brevoResponse.ok,
+            brevo_response: data,
+            api_key_present: !!process.env.BREVO_API_KEY,
+            api_key_prefix:  process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.slice(0, 12) + '...' : null
+        })
+    } catch (error) {
+        return res.status(500).json({ error: error.message })
+    }
 })
 
 // ─── SERVE FRONTEND ───────────────────────────────────────────────────────────
