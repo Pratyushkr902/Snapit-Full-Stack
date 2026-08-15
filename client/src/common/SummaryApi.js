@@ -310,11 +310,11 @@ const SummaryApi = {
         method: 'post'
     },
     updateAdminStatus: {
-        url: '/api/admin-management',
+        url: '/api/admin-management/:adminId/status',
         method: 'patch'
     },
     removeAdmin: {
-        url: '/api/admin-management',
+        url: '/api/admin-management/:adminId',
         method: 'delete'
     },
     listFrozenIps: {
