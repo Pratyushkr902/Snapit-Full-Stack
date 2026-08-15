@@ -872,7 +872,10 @@ export const updateOrderStatusController = async (request, response) => {
             })
         }
 
-        if (status === 'Out for Delivery' && !order.payment_collected && order.payment_status !== 'PAID' && !payment_status) {
+        // COD orders collect payment at the customer's door, not before dispatch —
+        // only block dispatch for prepaid/UPI orders that haven't actually been paid yet.
+        const isCod = order.payment_status === 'CASH ON DELIVERY'
+        if (status === 'Out for Delivery' && !isCod && !order.payment_collected && order.payment_status !== 'PAID' && !payment_status) {
             return response.status(400).json({ message: 'Collect payment before dispatch (or confirm COD).', success: false, error: true })
         }
 
