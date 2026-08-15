@@ -159,8 +159,9 @@ const RiderDashboard = () => {
                 setIsTracking(true);
                 fetchRiderOrders(true);
             }
-        } catch {
-            toast.error("Update failed");
+        } catch (error) {
+            console.error('Pickup update failed:', error?.response?.data || error);
+            toast.error(error?.response?.data?.message || "Update failed");
         }
     };
 

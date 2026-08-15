@@ -38,6 +38,15 @@ const CARDS = [
     color: '#0ea5e9',
     bg: '#f0f9ff',
   },
+  {
+    key: 'rider-panel',
+    title: 'Rider Panel',
+    desc: 'View live deliveries, rider locations, and dispatch activity',
+    icon: '🛵',
+    path: '/rider-panel',
+    color: '#ea580c',
+    bg: '#fff7ed',
+  },
 ]
 
 const SuperAdminDashboard = () => {
