@@ -90,9 +90,12 @@ async function assertRestaurantItemsAvailable(list_items) {
  * @param {Array}  opts.list_items - cart items being ordered
  * @param {String} [opts.userRole] - role of the placing user (bypasses global-hours check)
  */
-export async function assertStoreOpenForOrder({ list_items = [], userRole } = {}) {
+export async function assertStoreOpenForOrder({ list_items = [], userRole, orderType = 'grocery' } = {}) {
   const roleBypassesHours = userRole && ADMIN_LIKE_ROLES.includes(userRole)
-  if (!roleBypassesHours && !isWithinGlobalHours()) {
+  // Global 8AM-9PM gate now applies to grocery orders only.
+  // Food/restaurant orders are controlled per-restaurant via the isOpen
+  // toggle in Restaurant Admin, checked below in assertRestaurantItemsAvailable.
+  if (orderType === 'grocery' && !roleBypassesHours && !isWithinGlobalHours()) {
     const err = new Error('Store is closed. We open at 8 AM!')
     err.statusCode = 400
     throw err

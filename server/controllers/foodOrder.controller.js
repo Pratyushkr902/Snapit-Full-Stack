@@ -243,7 +243,7 @@ const prepareMultiRestaurantOrder = async (req) => {
     throw e
   }
 
-  await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role })
+  await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role, orderType: 'food' })
 
   const { priced, grandTotal } = await priceAllGroups(groups, fields, user)
   const groupOrderId = genGroupOrderId()
