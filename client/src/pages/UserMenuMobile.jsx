@@ -97,6 +97,9 @@ const UserMenuMobile = () => {
       {/* COMMON LINKS */}
       <Link to={"/dashboard/profile"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>My Profile</Link>
       <Link to={"/dashboard/myorders"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>My Orders</Link>
+      <Link to={"/refer"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100 flex items-center gap-1.5'>
+        <span>🎁</span> Refer &amp; Earn
+      </Link>
       <Link to={"/wishlist"} className='px-3 py-2.5 rounded-lg hover:bg-red-50 flex items-center gap-1.5'>
         <span>❤️</span> My Wishlist
       </Link>

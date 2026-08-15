@@ -121,6 +121,9 @@ const UserMenu = ({close}) => {
 
             {/* COMMON LINKS */}
             <Link onClick={handleClose} to={"/dashboard/myorders"} className='px-2 hover:bg-orange-200 py-1'>My Orders</Link>
+            <Link onClick={handleClose} to={"/refer"} className='px-2 hover:bg-orange-200 py-1 flex items-center gap-1.5'>
+              <span>🎁</span> Refer &amp; Earn
+            </Link>
             <Link onClick={handleClose} to={"/wishlist"} className='px-2 hover:bg-red-50 py-1 flex items-center gap-1.5'>
               <span>❤️</span> My Wishlist
             </Link>
