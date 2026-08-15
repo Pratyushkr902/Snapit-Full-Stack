@@ -281,6 +281,50 @@ const SummaryApi = {
         url: '/api/wallet/pay',
         method: 'post'
     },
+    requestWithdrawal: {
+        url: '/api/wallet/withdraw',
+        method: 'post'
+    },
+    listWithdrawals: {
+        url: '/api/wallet/admin/withdrawals',
+        method: 'get'
+    },
+    approveWithdrawal: {
+        url: '/api/wallet/admin/withdrawals/approve',
+        method: 'post'
+    },
+    rejectWithdrawal: {
+        url: '/api/wallet/admin/withdrawals/reject',
+        method: 'post'
+    },
+    listReferralsAdmin: {
+        url: '/api/admin-management/referrals',
+        method: 'get'
+    },
+    listAdmins: {
+        url: '/api/admin-management/list',
+        method: 'get'
+    },
+    createAdmin: {
+        url: '/api/admin-management/create',
+        method: 'post'
+    },
+    updateAdminStatus: {
+        url: '/api/admin-management',
+        method: 'patch'
+    },
+    removeAdmin: {
+        url: '/api/admin-management',
+        method: 'delete'
+    },
+    listFrozenIps: {
+        url: '/api/admin-management/frozen-ips',
+        method: 'get'
+    },
+    unfreezeIp: {
+        url: '/api/admin-management/frozen-ips',
+        method: 'delete'
+    },
     getReferralInfo: {
         url: '/api/referral/info',
         method: 'get'
