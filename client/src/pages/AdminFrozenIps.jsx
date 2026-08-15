@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
@@ -6,6 +7,7 @@ import AxiosToastError from '../utils/AxiosToastError'
 import SuperAdminPermision from '../layouts/SuperAdminPermision'
 
 const AdminFrozenIps = () => {
+  const navigate = useNavigate()
   const [ips, setIps] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -41,6 +43,10 @@ const AdminFrozenIps = () => {
   return (
     <SuperAdminPermision>
       <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
+        <button onClick={() => navigate('/dashboard/super-admin')}
+          style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '800', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '14px', padding: 0 }}>
+          ← Back to Super Admin Panel
+        </button>
         <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', marginBottom: '4px' }}>
           Frozen IPs
         </h1>
