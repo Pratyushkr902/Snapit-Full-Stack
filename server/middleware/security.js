@@ -4,12 +4,12 @@ import mongoSanitize from 'mongo-sanitize'
 // --- RATE LIMITERS ---
 
 // Auth limiter — login/register
-// ✅ FIXED: increased max from 10 → 50 per 15 min window
+// ✅ FIXED: increased max from 10 → 150 per 15 min window
 //    10 was too strict — normal users hit it during testing and repeated
 //    failed logins (e.g. wrong password twice) triggered 429s
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50,
+    max: 150,
     message: {
         success: false,
         error: true,
