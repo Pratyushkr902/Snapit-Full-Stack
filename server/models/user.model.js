@@ -12,7 +12,9 @@ const userSchema = new mongoose.Schema({
     },
     password : {
         type : String,
-        required : [true, "provide password"]
+        // Not required — OTP-based accounts (see otp.controller.js) are
+        // created without a password by design. loginController already
+        // handles the passwordless case and tells the user to log in via OTP.
     },
     avatar : {
         type : String,

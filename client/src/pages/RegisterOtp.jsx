@@ -201,7 +201,7 @@ const RegisterOtp = () => {
                                 autoFocus
                                 inputMode='numeric'
                                 maxLength={6}
-                                className='bg-blue-50 p-2.5 border rounded-lg outline-none focus:border-green-600 transition-all text-center text-2xl font-black tracking-[0.5em]'
+                                className='w-full box-border bg-blue-50 p-2.5 border rounded-lg outline-none focus:border-green-600 transition-all text-center text-xl sm:text-2xl font-black tracking-[0.3em] sm:tracking-[0.5em]'
                                 name='otp'
                                 value={data.otp}
                                 onChange={handleChange}

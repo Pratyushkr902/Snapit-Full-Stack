@@ -56,7 +56,8 @@ export async function sendOtpController(request, response) {
 
         return response.json({ message: 'OTP sent', error: false, success: true })
     } catch (error) {
-        return response.status(500).json({ message: error.message || error, error: true, success: false })
+        console.error('[otp.controller]', error.message)
+        return response.status(500).json({ message: 'Something went wrong. Please try again.', error: true, success: false })
     }
 }
 
@@ -129,6 +130,7 @@ export async function verifyOtpController(request, response) {
             data: { accesstoken, refreshToken },
         })
     } catch (error) {
-        return response.status(500).json({ message: error.message || error, error: true, success: false })
+        console.error('[otp.controller]', error.message)
+        return response.status(500).json({ message: 'Something went wrong. Please try again.', error: true, success: false })
     }
 }
