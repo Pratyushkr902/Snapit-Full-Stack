@@ -4,8 +4,8 @@ import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 
-const SNAPIT_UPI_ID = "raghurishav54321-1@okicici"
-const SNAPIT_NAME = "Snapit Grocery"
+const SNAPIT_UPI_ID = "00pr1199-1@oksbi"
+const SNAPIT_NAME = "Pratyush Kumar"
 
 const CollectPayment = ({ order, onSuccess, onClose }) => {
     const [method, setMethod] = useState(null)

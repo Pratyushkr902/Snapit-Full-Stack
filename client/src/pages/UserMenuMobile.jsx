@@ -58,6 +58,11 @@ const UserMenuMobile = () => {
           <Link to={"/dashboard/subcategory"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Sub Category</Link>
           <Link to={"/dashboard/upload-product"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Upload Product</Link>
           <Link to={"/dashboard/refunds"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Refunds</Link>
+          {user?.role === "SUPER_ADMIN" && (
+            <Link to={"/dashboard/super-admin"} className='px-3 py-2.5 rounded-lg bg-purple-50 hover:bg-purple-100 font-bold text-purple-700 border-l-4 border-purple-500'>
+              👑 Super Admin Panel
+            </Link>
+          )}
           <Link to={"/dashboard/product"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Product</Link>
           {/* FIX: was '/dashboard/resto-dashboard' (RESTO_SELLER page) — admin needs restaurant-admin */}
           <Link to={"/dashboard/restaurant-admin"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Resto Admin</Link>
