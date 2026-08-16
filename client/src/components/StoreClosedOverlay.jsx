@@ -3,12 +3,17 @@ import { useEffect, useState } from "react";
 /**
  * StoreClosedOverlay
  * Shows a "shutter closed" premium overlay on the homepage between
- * CLOSE_HOUR (9pm) and OPEN_HOUR (8am) local time. Signboard uses a
- * basket-icon + wordmark combo as the Snapit logo.
+ * CLOSE_HOUR (9pm) and OPEN_HOUR (8am) IST — regardless of the visitor's
+ * own timezone, so this matches the store's actual local hours in India.
+ * Signboard uses a basket-icon + wordmark combo as the Snapit logo.
  *
  * Usage:
  *   <StoreClosedOverlay />                            // full-screen blocker
  *   <StoreClosedOverlay allowBrowse onDismiss={fn} />  // dismissible banner
+ *
+ * Also exports:
+ *   isStoreOpen(): boolean — for lightweight checks elsewhere (e.g. HomeBanner)
+ *   that just need a yes/no without rendering the overlay.
  *
  * Requires "Baloo 2" (or drop the fontFamily lines to use your default
  * sans) and Tabler icons for the clock glyph:
@@ -24,20 +29,34 @@ const LOGO_SRC = "/snapit-logo-mark.png";
 const CLOSE_HOUR = 21; // 9 PM
 const OPEN_HOUR = 8; // 8 AM
 
-function getStoreStatus() {
+// Store hours are IST-based, not the visitor's local time.
+function getISTNow() {
   const now = new Date();
-  const hour = now.getHours();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const istMs = utcMs + 5.5 * 3600000;
+  return new Date(istMs);
+}
+
+function getStoreStatus() {
+  const nowIST = getISTNow();
+  const hour = nowIST.getHours();
   const isClosed = hour >= CLOSE_HOUR || hour < OPEN_HOUR;
 
   if (!isClosed) return { isClosed: false, msUntilOpen: 0 };
 
-  const opensAt = new Date(now);
+  const opensAt = new Date(nowIST);
   if (hour >= CLOSE_HOUR) {
     opensAt.setDate(opensAt.getDate() + 1);
   }
   opensAt.setHours(OPEN_HOUR, 0, 0, 0);
 
-  return { isClosed: true, msUntilOpen: opensAt.getTime() - now.getTime() };
+  return { isClosed: true, msUntilOpen: opensAt.getTime() - nowIST.getTime() };
+}
+
+// ✅ Named export used by HomeBanner.jsx (and anywhere else that just
+// needs a boolean without mounting the full overlay).
+export function isStoreOpen() {
+  return !getStoreStatus().isClosed;
 }
 
 function formatCountdown(ms) {
