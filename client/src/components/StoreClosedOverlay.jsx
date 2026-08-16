@@ -91,7 +91,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
   return (
     <div className="snapit-closed" role="dialog" aria-label="Store closed for the night">
       <style>{`
-        .snapit-closed { position: fixed; inset: 0; z-index: 1000; overflow: hidden;
+        .snapit-closed { position: fixed; inset: 0; z-index: 30; overflow: hidden;
           display: flex; flex-direction: column; align-items: center; justify-content: center;
           background: linear-gradient(180deg, #0B0E1F 0%, #12162B 60%, #181C38 100%); }
         .snapit-closed__sky { position: absolute; inset: 0; pointer-events: none; }
