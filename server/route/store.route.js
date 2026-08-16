@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import auth from '../middleware/auth.js';
+import { admin } from '../middleware/Admin.js';
 import StoreModel from '../models/store.model.js';
 
 const storeRouter = Router();
 
 // 1. Add a new Mart (Admin only)
-storeRouter.post("/add", auth, async (req, res) => {
+storeRouter.post("/add", auth, admin, async (req, res) => {
     try {
         const { name, address, lat, lng } = req.body;
         
