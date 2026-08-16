@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay'
 import TodayDeals from '../components/TodayDeals'
 import FoodCategoryCard from '../components/FoodCategoryCard'
+import StoreClosedOverlay from '../components/StoreClosedOverlay'
 
 // ✅ Inline SVG fallback — no network request, never fails
 const FALLBACK_IMG =
@@ -83,6 +84,7 @@ const Home = () => {
   return (
     <section className='bg-white min-h-screen overflow-x-hidden'>
 
+            <StoreClosedOverlay />   {/* ← add this line */}
       {/* 1. BANNER */}
       <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
         <HomeBanner />
