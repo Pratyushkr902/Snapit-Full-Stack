@@ -24,7 +24,7 @@ import { useEffect, useState } from "react";
  * it from /src/assets, and update LOGO_SRC below to match its path.
  */
 
-const LOGO_SRC = "/logo.png";
+const LOGO_SRC = "/snapit-logo-mark.png";
 
 const CLOSE_HOUR = 21; // 9 PM
 const OPEN_HOUR = 8; // 8 AM
