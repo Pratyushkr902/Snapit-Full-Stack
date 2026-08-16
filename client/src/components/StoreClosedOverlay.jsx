@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
  * a stack of separate decorations.
  *
  * Usage:
- *   <StoreClosedOverlay />                            // full-screen blocker
+ *   <StoreClosedOverlay allowBrowse />                            // full-screen blocker
  *   <StoreClosedOverlay allowBrowse onDismiss={fn} />  // dismissible banner
  *
  * Also exports:

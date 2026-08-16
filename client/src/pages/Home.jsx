@@ -85,7 +85,7 @@ const Home = () => {
     <section className='bg-white min-h-screen overflow-x-hidden'>
 
       {/* 0. STORE CLOSED BANNER (9pm-8am IST, hidden for admin/seller/rider) */}
-      <StoreClosedOverlay />
+      <StoreClosedOverlay allowBrowse />
 
       {/* 1. BANNER */}
       <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
