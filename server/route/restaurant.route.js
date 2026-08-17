@@ -28,7 +28,7 @@ const restaurantRouter = Router()
 restaurantRouter.get('/all', getAllRestaurants)
 
 // ── Dev seed (remove in production) ──────────────────────────────────────────
-restaurantRouter.post('/dev/seed', seedDemoRestaurants)
+restaurantRouter.post('/dev/seed', auth, admin, seedDemoRestaurants)  // SECURITY FIX: was public
 
 // ── Food Order (customer checkout) ───────────────────────────────────────────
 restaurantRouter.post('/food-order/cash-on-delivery', auth, foodOrderCOD)

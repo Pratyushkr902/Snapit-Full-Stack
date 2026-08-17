@@ -36,3 +36,5 @@ server/seed*.mjs
 client/.gradle/
 client/android/app/google-services.json
 snapit-apk/.gradle/
+client/dist/
+.DS_Store
