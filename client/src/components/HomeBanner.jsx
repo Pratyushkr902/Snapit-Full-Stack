@@ -9,20 +9,6 @@ import banner1 from '../assets/banner1.webp';
 import banner2 from '../assets/banner2.webp';
 import banner3 from '../assets/banner3.webp';
 
-const getISTHour = () => {
-  const now   = new Date()
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
-  const istMs = utcMs + 5.5 * 3600000
-  return new Date(istMs).getHours()
-}
-
-import { isStoreOpen } from './StoreClosedOverlay';
-
-const getOpeningMessage = () => {
-  const h = getISTHour()
-  return h >= 21 ? "We'll be back at 8:00 AM tomorrow 🌙" : 'We open at 8:00 AM today 🌅'
-}
-
 // ✅ Each banner navigates to its own product search
 const bannerData = [
   { image: banner1, link: '/search?q=chicken' },
@@ -32,7 +18,6 @@ const bannerData = [
 
 const HomeBanner = () => {
   const navigate  = useNavigate()
-  const storeOpen = isStoreOpen()
 
   // Once Swiper has mounted and painted its own first slide,
   // we hide the instant static image so they don't double-stack.
@@ -41,19 +26,9 @@ const HomeBanner = () => {
   return (
     <div className='container mx-auto px-4 mt-2 lg:mt-4'>
 
-      {!storeOpen && (
-        <div className='mb-3 bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-md'>
-          <span className='text-2xl'>🌙</span>
-          <div className='flex-1'>
-            <p className='text-white font-bold text-sm'>Snapit is currently closed</p>
-            <p className='text-gray-300 text-xs mt-0.5'>{getOpeningMessage()}</p>
-          </div>
-          <div className='text-right'>
-            <p className='text-gray-400 text-[10px] font-medium'>Store hours</p>
-            <p className='text-white text-xs font-bold'>8 AM – 9 PM</p>
-          </div>
-        </div>
-      )}
+      {/* Note: the "store closed" message lives in <StoreClosedOverlay allowBrowse />
+          in Home.jsx, rendered once above this banner — it used to be duplicated
+          here too, showing two separate closed messages stacked on the page. */}
 
       <div className='relative w-full h-44 md:h-64 lg:h-80 rounded-2xl overflow-hidden shadow-sm group bg-slate-50'>
 
