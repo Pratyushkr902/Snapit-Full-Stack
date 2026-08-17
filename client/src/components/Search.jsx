@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { IoSearch, IoClose } from "react-icons/io5"
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { TypeAnimation } from 'react-type-animation'
 import { FaArrowLeft } from "react-icons/fa"
 import useMobile from '../hooks/useMobile'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 
 const POPULAR = ['Milk', 'Bread', 'Rice', 'Dal', 'Sugar', 'Paneer', 'Eggs', 'Atta', 'Oil', 'Maggi', 'Chips', 'Curd']
+
+// Rotating placeholder terms — plain crossfade, no typewriter/cursor effect.
+const PLACEHOLDER_TERMS = ['milk', 'bread', 'sugar', 'paneer', 'chocolate', 'curd', 'rice', 'eggs', 'chips']
 
 const Search = () => {
   const navigate = useNavigate()
@@ -26,6 +28,22 @@ const Search = () => {
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef(null)
   const wrapperRef = useRef(null)
+
+  // Rotating placeholder — crossfades every 2s, pauses when not visible.
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const [placeholderVisible, setPlaceholderVisible] = useState(true)
+
+  useEffect(() => {
+    if (isSearchPage) return
+    const interval = setInterval(() => {
+      setPlaceholderVisible(false)
+      setTimeout(() => {
+        setPlaceholderIndex((i) => (i + 1) % PLACEHOLDER_TERMS.length)
+        setPlaceholderVisible(true)
+      }, 200)
+    }, 2200)
+    return () => clearInterval(interval)
+  }, [isSearchPage])
 
   // ✅ Sync input with URL param when navigating
   useEffect(() => {
@@ -143,23 +161,18 @@ const Search = () => {
               onClick={handlePlaceholderClick}
               className='w-full h-full flex items-center cursor-pointer'
             >
-              <TypeAnimation
-                sequence={[
-                  'Search "milk"', 1000,
-                  'Search "bread"', 1000,
-                  'Search "sugar"', 1000,
-                  'Search "paneer"', 1000,
-                  'Search "chocolate"', 1000,
-                  'Search "curd"', 1000,
-                  'Search "rice"', 1000,
-                  'Search "eggs"', 1000,
-                  'Search "chips"', 1000,
-                ]}
-                wrapper="span"
-                speed={50}
-                repeat={Infinity}
-                className='text-sm text-slate-400'
-              />
+              <span className='text-sm text-slate-400'>
+                Search for{' '}
+                <span
+                  style={{
+                    display: 'inline-block',
+                    opacity: placeholderVisible ? 1 : 0,
+                    transition: 'opacity 200ms ease',
+                  }}
+                >
+                  {PLACEHOLDER_TERMS[placeholderIndex]}
+                </span>
+              </span>
             </div>
           ) : (
             // ✅ Real input shown on /search page
