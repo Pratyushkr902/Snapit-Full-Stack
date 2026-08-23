@@ -9,6 +9,15 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { Capacitor } from '@capacitor/core'
 
+// Global safety net: intercept uncaught errors and promise rejections so the WebView/React never crashes
+window.addEventListener('error', (event) => {
+  console.warn('Snapit Global Error Guard:', event?.error?.message || event?.message)
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.warn('Snapit Unhandled Rejection Guard:', event?.reason?.message || event?.reason)
+})
+
 if (Capacitor.isNativePlatform()) {
   SplashScreen.hide().catch(() => {})
 }

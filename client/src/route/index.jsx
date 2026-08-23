@@ -82,23 +82,9 @@ const ErrorPage = () => {
   const error = useRouteError()
   const navigate = useNavigate()
 
-  // Auto-recover: after long background suspension, Capacitor's WebView
-  // can leave a stale JS module context — lazy chunks or closures reference
-  // dead memory and throw ("n is not a function", ChunkLoadError, etc).
-  // A soft navigate doesn't fix this because the JS context itself is
-  // stale. A single automatic hard reload clears it without making the
-  // user tap through the error screen every time.
   useEffect(() => {
-    const alreadyRetried = sessionStorage.getItem('snapit_error_auto_reload')
-    if (!alreadyRetried) {
-      sessionStorage.setItem('snapit_error_auto_reload', '1')
-      window.location.reload()
-    } else {
-      // Reload already tried once this session and error happened again —
-      // don't loop forever, let the user see the screen and tap manually.
-      sessionStorage.removeItem('snapit_error_auto_reload')
-    }
-  }, [])
+    console.warn("Route error caught by ErrorPage:", error?.message || error)
+  }, [error])
 
 
   return (

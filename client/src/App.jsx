@@ -179,7 +179,6 @@ function App() {
     if (!Capacitor.isNativePlatform()) return
 
     let listenerHandle;
-    let lastBackPress = 0;
 
     const setupBackButton = async () => {
       try {
@@ -187,16 +186,8 @@ function App() {
           const hash = window.location.hash || ""
           const isHome = !hash || hash === '#/' || hash === '#' || hash === '#/grocery' || hash === '#/food' || hash === '#/pharmacy'
 
-          if (!isHome) {
+          if (!isHome && window.history.length > 1) {
             window.history.back()
-          } else {
-            const now = Date.now()
-            if (now - lastBackPress < 2000 && lastBackPress > 0) {
-              CapacitorApp.exitApp()
-            } else {
-              lastBackPress = now
-              toast("Press back again to exit", { id: "exit-toast", duration: 2000 })
-            }
           }
         })
       } catch (e) {
