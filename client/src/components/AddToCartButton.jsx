@@ -46,7 +46,11 @@ const AddToCartButton = ({ data }) => {
             })
             const { data: responseData } = response
             if (responseData.success) {
-                toast.success(responseData.message)
+                if (storeClosed) {
+                    toast.success("Added to cart! Deliveries start at 9:00 AM.", { icon: "🛒" })
+                } else {
+                    toast.success(responseData.message)
+                }
                 if (fetchCartItem) fetchCartItem()
             }
         } catch (error) {
@@ -59,13 +63,16 @@ const AddToCartButton = ({ data }) => {
     const increaseQty = async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        // FIX: block increasing quantity on an out-of-stock item, but this
-        // button only renders when the item is already in the cart, so
-        // decrease/remove is never blocked.
         if (isOutOfStock) return
         if (!updateCartItem) return
         const response = await updateCartItem(cartItemDetails?._id, qty + 1)
-        if (response?.success) toast.success("Item added")
+        if (response?.success) {
+            if (storeClosed) {
+                toast.success("Cart updated! Deliveries start at 9:00 AM.")
+            } else {
+                toast.success("Item added")
+            }
+        }
     }
 
     const decreaseQty = async (e) => {
@@ -78,18 +85,6 @@ const AddToCartButton = ({ data }) => {
             const response = await updateCartItem(cartItemDetails?._id, qty - 1)
             if (response?.success) toast.success("Item removed")
         }
-    }
-
-    if (storeClosed) {
-        return (
-            <div className='w-full'>
-                <div className='border border-gray-200 bg-gray-50 px-1 py-1.5 rounded text-center'>
-                    <p className='text-gray-400 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
-                        Store<br />Closed
-                    </p>
-                </div>
-            </div>
-        )
     }
 
     // FIX: only show the blocking "Out of stock" badge (no controls at all)

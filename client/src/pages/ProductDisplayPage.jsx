@@ -488,9 +488,12 @@ const ProductDisplayPage = () => {
           {productId && /^[0-9a-fA-F]{24}$/.test(productId) && <WishlistButton productId={productId} />}
 
           {!isOpen ? (
-            <div className='bg-indigo-50/60 border-2 border-indigo-100 border-dashed p-4 sm:p-6 rounded-3xl text-center animate-pulse'>
+            <div className='bg-indigo-50/60 border-2 border-indigo-100 border-dashed p-4 sm:p-6 rounded-3xl text-center'>
               <p className='font-black text-slate-800 text-sm sm:text-base'>🌙 Snapit is resting</p>
-              <p className='text-xs text-indigo-600 font-bold mt-1 uppercase tracking-wider'>Ordering resumes at 8:00 AM</p>
+              <p className='text-xs text-indigo-600 font-bold mt-1 uppercase tracking-wider'>Deliveries resume at 9:00 AM IST</p>
+              <div className='mt-3'>
+                <AddToCartButton data={data} />
+              </div>
             </div>
           ) : data.stock === 0 ? (
             <div className='bg-rose-50 border border-rose-100 p-4 rounded-2xl text-center'>
