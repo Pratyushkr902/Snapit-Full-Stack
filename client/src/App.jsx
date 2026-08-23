@@ -9,6 +9,7 @@ import CartMobileLink from './components/CartMobile'
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
 import ChatBox from './components/ChatBox'
+import StoreClosedOverlay from './components/StoreClosedOverlay'
 
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails } from './store/userSlice';
@@ -246,6 +247,7 @@ function App() {
     <RemoteConfigProvider>
       <GlobalProvider>
         <div className="App">
+          {!isDashboard && <StoreClosedOverlay />}
           {!isDashboard && <Header openCart={() => setShowCart(true)} />}
           
           <main className={isDashboard ? '' : 'min-h-[78vh]'}>

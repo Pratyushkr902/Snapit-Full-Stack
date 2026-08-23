@@ -77,9 +77,12 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Admin-like roles bypass store closed banner/overlay
-  const userRole = user?.role ? String(user.role).replace(/['"]/g, '').trim().toUpperCase() : '';
-  if (ADMIN_LIKE_ROLES.includes(userRole)) {
+  // Only bypass store closed overlay when actively inside admin dashboard panels (/dashboard)
+  const isDashboardRoute = typeof window !== 'undefined' && (
+    window.location.hash.includes('/dashboard') || 
+    window.location.pathname.includes('/dashboard')
+  );
+  if (isDashboardRoute) {
     return null;
   }
 
