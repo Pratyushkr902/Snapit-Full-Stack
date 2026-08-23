@@ -25,6 +25,7 @@ import { ACCESS_TOKEN_KEY } from './constants/storageKeys';
 import secureStorage from './utils/secureStorage';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 import './App.css'
 
@@ -80,7 +81,9 @@ function App() {
     const token = await secureStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       setIsAuthResolving(false)
-      SplashScreen.hide({ fadeOutDuration: 300 })
+      if (Capacitor.isNativePlatform()) {
+        SplashScreen.hide({ fadeOutDuration: 300 }).catch(() => {})
+      }
       return
     }
     try {
@@ -98,7 +101,9 @@ function App() {
       console.log("Session Check: No active user found or timed out.", error?.message)
     } finally {
       setIsAuthResolving(false)
-      SplashScreen.hide({ fadeOutDuration: 300 })
+      if (Capacitor.isNativePlatform()) {
+        SplashScreen.hide({ fadeOutDuration: 300 }).catch(() => {})
+      }
     }
   }, [dispatch])
 
@@ -171,16 +176,32 @@ function App() {
 
   // ─── Android hardware back button ─────────────────────────────
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+
     let listenerHandle;
+    let lastBackPress = 0;
 
     const setupBackButton = async () => {
-      listenerHandle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-        if (canGoBack) {
-          window.history.back()
-        } else {
-          CapacitorApp.exitApp()
-        }
-      })
+      try {
+        listenerHandle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+          const hash = window.location.hash || ""
+          const isHome = !hash || hash === '#/' || hash === '#' || hash === '#/grocery'
+
+          if (!isHome && window.history.length > 1) {
+            window.history.back()
+          } else {
+            const now = Date.now()
+            if (now - lastBackPress < 2000) {
+              CapacitorApp.exitApp()
+            } else {
+              lastBackPress = now
+              toast("Press back again to exit", { id: "exit-toast", duration: 2000 })
+            }
+          }
+        })
+      } catch (e) {
+        console.warn("Back button setup error:", e?.message)
+      }
     }
 
     setupBackButton()
@@ -191,29 +212,28 @@ function App() {
   }, [])
 
   // ─── Force refresh after long background suspension ───────────
-  // After ~15-20 min backgrounded, Android reclaims WebView memory and the
-  // JS context can come back stale — lazy-loaded chunks/closures throw
-  // "n is not a function" style errors on resume. Rather than let the user
-  // hit the error screen, do a controlled reload once resume-gap crosses
-  // a threshold, while state is still simple (app just became active).
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+
     let backgroundedAt = null
     let stateListenerHandle
 
     const setupStateListener = async () => {
-      stateListenerHandle = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
-        if (!isActive) {
-          backgroundedAt = Date.now()
-        } else if (backgroundedAt) {
-          const awayMs = Date.now() - backgroundedAt
-          backgroundedAt = null
-          // 10 min threshold — long enough to avoid reloading on quick
-          // app-switches, short enough to catch the WebView-reclaim window.
-          if (awayMs > 10 * 60 * 1000) {
-            window.location.reload()
+      try {
+        stateListenerHandle = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+          if (!isActive) {
+            backgroundedAt = Date.now()
+          } else if (backgroundedAt) {
+            const awayMs = Date.now() - backgroundedAt
+            backgroundedAt = null
+            if (awayMs > 10 * 60 * 1000) {
+              window.location.reload()
+            }
           }
-        }
-      })
+        })
+      } catch (e) {
+        console.warn("App state listener setup error:", e?.message)
+      }
     }
 
     setupStateListener()

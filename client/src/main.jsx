@@ -7,8 +7,11 @@ import { Provider } from 'react-redux'
 import { store, persistor } from './store/store.js'
 import { PersistGate } from 'redux-persist/integration/react'
 import { SplashScreen } from '@capacitor/splash-screen'
+import { Capacitor } from '@capacitor/core'
 
-SplashScreen.hide()
+if (Capacitor.isNativePlatform()) {
+  SplashScreen.hide().catch(() => {})
+}
 
 createRoot(document.getElementById('root')).render(
   <Provider store={store}>

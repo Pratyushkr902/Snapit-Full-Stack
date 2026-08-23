@@ -8,9 +8,17 @@ const useRemoteConfig = () => {
   useEffect(() => {
     const load = async () => {
       await initRemoteConfig()
+      let parsedBanners = []
+      try {
+        const raw = getFlag('banners')
+        parsedBanners = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : [])
+      } catch (e) {
+        parsedBanners = []
+      }
+
       setConfig({
         // Banners
-        banners: JSON.parse(getFlag('banners')),
+        banners: parsedBanners,
 
         // Feature Flags
         showWallet: getFlagBool('show_wallet'),

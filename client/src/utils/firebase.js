@@ -44,15 +44,34 @@ const firebaseConfig = {
 // VAPID key for push notifications — must come from env, never hardcoded
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
 
-const app = initializeApp(firebaseConfig)
-const messaging = getMessaging(app)
+let app = null
+let messaging = null
+let remoteConfigInstance = null
 
-// Remote Config instance
-export const remoteConfig = getRemoteConfig(app)
-remoteConfig.settings.minimumFetchIntervalMillis = 300000 // 5 minutes
+try {
+    if (firebaseConfig.apiKey) {
+        app = initializeApp(firebaseConfig)
+        try {
+            if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                messaging = getMessaging(app)
+            }
+        } catch (mErr) {
+            console.warn('[Firebase] Messaging not available in this environment:', mErr?.message)
+        }
+
+        try {
+            remoteConfigInstance = getRemoteConfig(app)
+            remoteConfigInstance.settings.minimumFetchIntervalMillis = 300000 // 5 minutes
+        } catch (rcErr) {
+            console.warn('[Firebase] RemoteConfig not available:', rcErr?.message)
+        }
+    }
+} catch (err) {
+    console.warn('[Firebase] Initialization error:', err?.message)
+}
 
 // Default values (fallback if Firebase is unreachable)
-remoteConfig.defaultConfig = {
+const DEFAULT_CONFIG = {
     // Banners
     banners: JSON.stringify([
         { id: 1, image: '/banners/banner1.png', link: '/category/fruits', active: true },
@@ -82,46 +101,52 @@ remoteConfig.defaultConfig = {
     offer_strip_active:   'true',
 }
 
+if (remoteConfigInstance) {
+    remoteConfigInstance.defaultConfig = DEFAULT_CONFIG
+}
+
+export const remoteConfig = remoteConfigInstance
+
 export async function initRemoteConfig() {
+    if (!remoteConfigInstance) return
     try {
-        await fetchAndActivate(remoteConfig)
+        await fetchAndActivate(remoteConfigInstance)
         console.log('✅ Remote Config fetched')
     } catch (err) {
         console.log('⚠️ Remote Config using defaults:', err.message)
     }
 }
 
-export function getFlag(key)       { return getValue(remoteConfig, key).asString() }
-export function getFlagBool(key)   { return getValue(remoteConfig, key).asBoolean() }
-export function getFlagNumber(key) { return getValue(remoteConfig, key).asNumber() }
+export function getFlag(key) {
+    try {
+        if (remoteConfigInstance) return getValue(remoteConfigInstance, key).asString()
+    } catch (e) {}
+    return DEFAULT_CONFIG[key] || ''
+}
 
-// Notification helpers
-// ============================================================
-// PATCH — client/src/utils/firebase.js
-// ============================================================
-//
-// PROBLEM: getToken() was never given a ServiceWorkerRegistration for
-// firebase-messaging-sw.js. The general /sw.js registered in index.html
-// does NOT satisfy Firebase's requirement — it looks specifically for
-// its own messaging service worker. Without this, getToken() silently
-// returns undefined, which is exactly the "permission granted but no
-// notification arrives" symptom.
-//
-// REPLACE the existing requestNotificationPermission function with this:
+export function getFlagBool(key) {
+    try {
+        if (remoteConfigInstance) return getValue(remoteConfigInstance, key).asBoolean()
+    } catch (e) {}
+    return DEFAULT_CONFIG[key] === 'true'
+}
+
+export function getFlagNumber(key) {
+    try {
+        if (remoteConfigInstance) return getValue(remoteConfigInstance, key).asNumber()
+    } catch (e) {}
+    return Number(DEFAULT_CONFIG[key]) || 0
+}
 
 export async function requestNotificationPermission() {
     try {
-        if (!VAPID_KEY) {
-            console.error('[FCM] VITE_FIREBASE_VAPID_KEY is not set')
+        if (!VAPID_KEY || !messaging) {
             return null
         }
 
         const permission = await Notification.requestPermission()
         if (permission !== 'granted') return null
 
-        // Explicitly register the Firebase messaging service worker.
-        // If it's already registered, this just returns the existing
-        // registration — safe to call every time.
         const swRegistration = await navigator.serviceWorker.register(
             '/firebase-messaging-sw.js'
         )
@@ -132,18 +157,22 @@ export async function requestNotificationPermission() {
         })
 
         if (token) return token
-        console.warn('[FCM] getToken returned no token — check VAPID key matches Firebase project and SW registered correctly')
         return null
     } catch (error) {
-        console.error('FCM token error:', error)
+        console.warn('FCM token error:', error?.message)
         return null
     }
 }
 
 export function onForegroundMessage(callback) {
-    return onMessage(messaging, (payload) => {
-        callback(payload)
-    })
+    if (!messaging) return () => {}
+    try {
+        return onMessage(messaging, (payload) => {
+            callback(payload)
+        })
+    } catch (e) {
+        return () => {}
+    }
 }
 
 export { messaging }
