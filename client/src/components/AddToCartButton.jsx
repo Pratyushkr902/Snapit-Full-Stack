@@ -9,37 +9,15 @@ import { useSelector } from 'react-redux'
 import { FaMinus, FaPlus } from "react-icons/fa6"
 import { useState } from 'react'
 
-const STORE_OPEN_HOUR  = 8
-const STORE_CLOSE_HOUR = 21
+import { isStoreOpen } from './StoreClosedOverlay'
 
-// Moved outside component — stable reference, never recreated
-const isStoreClosed = () => {
-    const now = new Date()
-    const istOffsetMs = (5 * 60 + 30) * 60 * 1000
-    const istTime = new Date(now.getTime() + istOffsetMs)
-    const hour = istTime.getUTCHours()
-    return hour < STORE_OPEN_HOUR || hour >= STORE_CLOSE_HOUR
-}
-
-// FIX: stable store-closed value computed once per render cycle, not per card
-const storeClosed = isStoreClosed()
-
-const AddToCartButton = ({ data }) => {
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext() || {}
     const [loading, setLoading] = useState(false)
     const productId = data?._id
+    const user = useSelector(state => state.user)
+    const storeClosed = !isStoreOpen(user?.role)
 
-    // FIX: instead of .filter() (returns new array every time → always triggers
-    // re-render even with custom equality), select only the specific cart item
-    // by looking it up directly. useSelector re-renders only when the returned
-    // value changes by reference or value.
-    //
-    // The old selector did:
-    //   state.cartItem.cart.filter(i => i?.productId?._id === data?._id ...)
-    // .filter() always returns a NEW array, so even a perfectly written
-    // equality function gets called on every Redux state change for every
-    // mounted card — with 20 cards that's 20 equality checks per action.
-    // And if any other cart item changes quantity, all 20 cards re-render.
+    // FIX: select only the specific cart item by looking it up directly
     const cartItemDetails = useSelector(state => {
         if (!productId) return undefined
         return state.cartItem.cart.find(
@@ -50,9 +28,6 @@ const AddToCartButton = ({ data }) => {
     // FIX: qty and isAvailableCart are derived from cartItemDetails — no
     // separate useState + useEffect sync needed. That sync was a second
     // render per cart update (setState schedules another render after the
-    // selector already triggered one).
-    const isAvailableCart = Boolean(cartItemDetails?.productId)
-    const qty             = cartItemDetails?.quantity ?? 0
 
     // FIX: compute out-of-stock as a plain flag instead of an early return,
     // so we can decide the UI *after* we know whether it's already in cart.

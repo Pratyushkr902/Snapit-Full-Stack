@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import logo from "../assets/snapit.png";
 
 /**
  * StoreClosedOverlay
@@ -6,62 +8,65 @@ import { useEffect, useState } from "react";
  * and OPEN_HOUR (8am) IST — regardless of the visitor's own timezone, so
  * this matches the store's actual local hours in India.
  *
- * Design idea: the hanging sign is the only warm light left on in an
- * otherwise dark storefront. That same glow is echoed in the countdown
- * pill below, tying the scene together as one light source rather than
- * a stack of separate decorations.
- *
  * Usage:
- *   <StoreClosedOverlay allowBrowse />                            // full-screen blocker
- *   <StoreClosedOverlay allowBrowse onDismiss={fn} />  // dismissible banner
+ *   <StoreClosedOverlay />                            // full-screen blocker (with browse option)
+ *   <StoreClosedOverlay allowBrowse />                // dismissible banner mode
+ *   <StoreClosedOverlay allowBrowse onDismiss={fn} /> // banner with custom dismiss handler
  *
  * Also exports:
- *   isStoreOpen(): boolean — for lightweight checks elsewhere (e.g. HomeBanner)
- *   that just need a yes/no without rendering the overlay.
- *
- * Logo: uses /logo.png from the client's /public folder. Swap LOGO_SRC if
- * you add a dedicated icon-only mark later — the signboard sizes itself
- * to whatever image you give it via object-fit: contain, so it won't
- * distort, but very tall/wordy logos will still render small. A square
- * or wide icon+wordmark lockup reads best here.
+ *   isStoreOpen(userRole): boolean — for lightweight checks elsewhere (e.g. CheckoutPage, AddToCartButton)
+ *   getStoreStatus(): { isClosed: boolean, msUntilOpen: number }
  */
 
-const LOGO_SRC = "/logo.png";
+export const CLOSE_HOUR = 21; // 9 PM IST
+export const OPEN_HOUR = 8;   // 8 AM IST
 
-const CLOSE_HOUR = 21; // 9 PM
-const OPEN_HOUR = 8; // 8 AM
+export const ADMIN_LIKE_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER'];
 
-// Store hours are IST-based, not the visitor's local time.
-function getISTNow() {
+/**
+ * Robust IST store status computation regardless of client device timezone.
+ */
+export function getStoreStatus() {
   const now = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  const istMs = utcMs + 5.5 * 3600000;
-  return new Date(istMs);
-}
+  const nowUtcMs = now.getTime();
+  const istOffsetMs = 5.5 * 60 * 60 * 1000;
+  const istMs = nowUtcMs + istOffsetMs;
+  const istDate = new Date(istMs);
 
-function getStoreStatus() {
-  const nowIST = getISTNow();
-  const hour = nowIST.getHours();
+  const hour = istDate.getUTCHours();
   const isClosed = hour >= CLOSE_HOUR || hour < OPEN_HOUR;
 
   if (!isClosed) return { isClosed: false, msUntilOpen: 0 };
 
-  const opensAt = new Date(nowIST);
-  if (hour >= CLOSE_HOUR) {
-    opensAt.setDate(opensAt.getDate() + 1);
-  }
-  opensAt.setHours(OPEN_HOUR, 0, 0, 0);
+  const year = istDate.getUTCFullYear();
+  const month = istDate.getUTCMonth();
+  let date = istDate.getUTCDate();
 
-  return { isClosed: true, msUntilOpen: opensAt.getTime() - nowIST.getTime() };
+  if (hour >= CLOSE_HOUR) {
+    date += 1;
+  }
+
+  const opensAtUtcMs = Date.UTC(year, month, date, OPEN_HOUR, 0, 0, 0) - istOffsetMs;
+  const msUntilOpen = Math.max(0, opensAtUtcMs - nowUtcMs);
+
+  return { isClosed: true, msUntilOpen };
 }
 
-// Named export used by HomeBanner.jsx (and anywhere else that just
-// needs a boolean without mounting the full overlay).
-export function isStoreOpen() {
+/**
+ * Named export used by CheckoutPage.jsx, AddToCartButton.jsx, etc.
+ * Admins, sellers, and riders bypass closing hours.
+ */
+export function isStoreOpen(userRole) {
+  if (userRole) {
+    const normalized = userRole.replace(/['"]/g, '').trim().toUpperCase();
+    if (ADMIN_LIKE_ROLES.includes(normalized)) {
+      return true;
+    }
+  }
   return !getStoreStatus().isClosed;
 }
 
-function formatCountdown(ms) {
+export function formatCountdown(ms) {
   const totalMinutes = Math.max(0, Math.floor(ms / 60000));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -69,6 +74,7 @@ function formatCountdown(ms) {
 }
 
 export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
+  const user = useSelector((state) => state?.user);
   const [status, setStatus] = useState(getStoreStatus);
   const [dismissed, setDismissed] = useState(false);
 
@@ -76,6 +82,12 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
     const interval = setInterval(() => setStatus(getStoreStatus()), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Admin-like roles bypass store closed banner/overlay
+  const userRole = user?.role ? user.role.replace(/['"]/g, '').trim().toUpperCase() : '';
+  if (ADMIN_LIKE_ROLES.includes(userRole)) {
+    return null;
+  }
 
   if (!status.isClosed || dismissed) return null;
 
@@ -150,10 +162,29 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
               padding: "10px 20px",
             }}
           >
-            <i className="ti ti-clock" style={{ fontSize: 16, color: "#F5A623" }} aria-hidden="true" />
+            <ClockIcon size={16} color="#F5A623" />
             <span style={{ fontSize: 14, fontWeight: 500, color: "#F5A623" }}>
               Opens in {formatCountdown(status.msUntilOpen)}
             </span>
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <button
+              onClick={handleDismiss}
+              aria-label="Browse store anyway"
+              style={{
+                background: "transparent",
+                border: "1px solid #3A3F66",
+                borderRadius: 999,
+                color: "#949AC2",
+                fontSize: 13,
+                fontWeight: 600,
+                padding: "8px 18px",
+                cursor: "pointer",
+              }}
+            >
+              Browse anyway
+            </button>
           </div>
         </div>
       </div>
@@ -188,7 +219,7 @@ function ClosedBanner({ status, onDismiss }) {
           justifyContent: "center",
         }}
       >
-        <i className="ti ti-moon" style={{ fontSize: 20, color: "#F5A623" }} aria-hidden="true" />
+        <MoonIcon size={20} color="#F5A623" />
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -237,7 +268,7 @@ function Signboard() {
         }}
       >
         <img
-          src={LOGO_SRC}
+          src={logo}
           alt="Snapit"
           style={{ height: 84, width: "auto", maxWidth: 220, display: "block", objectFit: "contain", borderRadius: 6 }}
         />
@@ -305,6 +336,29 @@ function Rivets() {
         <div key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: "#464C72" }} />
       ))}
     </div>
+  );
+}
+
+function ClockIcon({ size = 16, color = "#F5A623" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.8" />
+      <path d="M12 7v5l3.5 2" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MoonIcon({ size = 20, color = "#F5A623" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8A9.042 9.042 0 0 0 12 3z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

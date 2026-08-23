@@ -10,9 +10,8 @@ const ADMIN_LIKE_ROLES = ['ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER']
 
 function getISTHour() {
   const now = new Date()
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
-  const istMs = utcMs + 5.5 * 3600000
-  return new Date(istMs).getHours()
+  const istMs = now.getTime() + 5.5 * 3600000
+  return new Date(istMs).getUTCHours()
 }
 
 function isWithinGlobalHours() {
