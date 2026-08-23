@@ -49,6 +49,37 @@ const useNotifications = () => {
             }
             try {
                 try {
+                    await PushNotifications.removeAllListeners()
+                } catch (e) {}
+
+                // 1. Attach listeners FIRST before calling register()
+                PushNotifications.addListener('registration', (token) => {
+                    const tokenValue = typeof token === 'string' ? token : token?.value
+                    if (tokenValue) saveToken(tokenValue)
+                })
+
+                PushNotifications.addListener('registrationError', (err) => {
+                    console.warn('Push registration error:', err?.message || err)
+                })
+
+                PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                    if (notification?.title || notification?.body) {
+                        toast(
+                            renderToast(notification.title || 'Notification', notification.body || '', notification.data?.type),
+                            toastStyle
+                        )
+                    }
+                })
+
+                PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+                    const url = action?.notification?.data?.url
+                    if (url) {
+                        window.location.hash = url.startsWith('#') ? url : `#${url}`
+                    }
+                })
+
+                // 2. Create notification channel
+                try {
                     await PushNotifications.createChannel({
                         id: 'snapit_orders',
                         name: 'Snapit Orders',
@@ -63,43 +94,23 @@ const useNotifications = () => {
                     console.warn('PushNotifications createChannel warning:', chErr?.message)
                 }
 
+                // 3. Check and request permissions
                 let permStatus = await PushNotifications.checkPermissions().catch(() => ({ receive: 'prompt' }))
                 if (permStatus?.receive !== 'granted') {
                     permStatus = await PushNotifications.requestPermissions().catch(() => ({ receive: 'denied' }))
                 }
                 if (permStatus?.receive !== 'granted') return
 
-                await PushNotifications.register().catch(regErr => {
-                    console.warn('Push registration warning:', regErr?.message)
-                })
-
-                try {
-                    await PushNotifications.removeAllListeners()
-                } catch (e) {}
-
-                PushNotifications.addListener('registration', (token) => {
-                    if (token?.value) saveToken(token.value)
-                })
-
-                PushNotifications.addListener('registrationError', (err) => {
-                    console.warn('Push registration error:', err?.message)
-                })
-
-                PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                    if (notification?.title || notification?.body) {
-                        toast(
-                            renderToast(notification.title, notification.body, notification.data?.type),
-                            toastStyle
-                        )
+                // 4. Settle Activity before registering
+                setTimeout(async () => {
+                    try {
+                        await PushNotifications.register().catch(regErr => {
+                            console.warn('Push registration warning:', regErr?.message || regErr)
+                        })
+                    } catch (rErr) {
+                        console.warn('Register catch:', rErr?.message)
                     }
-                })
-
-                PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-                    const url = action.notification?.data?.url
-                    if (url) {
-                        window.location.hash = url.startsWith('#') ? url : `#${url}`
-                    }
-                })
+                }, 500)
             } catch (error) {
                 console.warn('Native notification setup error:', error?.message)
             }
