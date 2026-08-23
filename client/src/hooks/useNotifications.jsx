@@ -38,81 +38,7 @@ const useNotifications = () => {
                 await Axios({ ...SummaryApi.saveFcmToken, data: { fcmToken } })
                 console.log('✅ FCM token registered')
             } catch (err) {
-                console.error('Token save error:', err)
-            }
-        }
-
-        const setupNative = async () => {
-            if (!Capacitor.isPluginAvailable('PushNotifications')) {
-                console.log('PushNotifications plugin not available on this platform')
-                return
-            }
-            try {
-                try {
-                    await PushNotifications.removeAllListeners()
-                } catch (e) {}
-
-                // 1. Attach listeners FIRST before calling register()
-                PushNotifications.addListener('registration', (token) => {
-                    const tokenValue = typeof token === 'string' ? token : token?.value
-                    if (tokenValue) saveToken(tokenValue)
-                })
-
-                PushNotifications.addListener('registrationError', (err) => {
-                    console.warn('Push registration error:', err?.message || err)
-                })
-
-                PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                    if (notification?.title || notification?.body) {
-                        toast(
-                            renderToast(notification.title || 'Notification', notification.body || '', notification.data?.type),
-                            toastStyle
-                        )
-                    }
-                })
-
-                PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-                    const url = action?.notification?.data?.url
-                    if (url) {
-                        window.location.hash = url.startsWith('#') ? url : `#${url}`
-                    }
-                })
-
-                // 2. Create notification channel
-                try {
-                    await PushNotifications.createChannel({
-                        id: 'snapit_orders',
-                        name: 'Snapit Orders',
-                        description: 'Order updates, delivery status, and offers',
-                        importance: 5,
-                        visibility: 1,
-                        sound: 'default',
-                        vibration: true,
-                        lights: true,
-                    })
-                } catch (chErr) {
-                    console.warn('PushNotifications createChannel warning:', chErr?.message)
-                }
-
-                // 3. Check and request permissions
-                let permStatus = await PushNotifications.checkPermissions().catch(() => ({ receive: 'prompt' }))
-                if (permStatus?.receive !== 'granted') {
-                    permStatus = await PushNotifications.requestPermissions().catch(() => ({ receive: 'denied' }))
-                }
-                if (permStatus?.receive !== 'granted') return
-
-                // 4. Settle Activity before registering
-                setTimeout(async () => {
-                    try {
-                        await PushNotifications.register().catch(regErr => {
-                            console.warn('Push registration warning:', regErr?.message || regErr)
-                        })
-                    } catch (rErr) {
-                        console.warn('Register catch:', rErr?.message)
-                    }
-                }, 500)
-            } catch (error) {
-                console.warn('Native notification setup error:', error?.message)
+                console.warn('Token save error:', err?.message)
             }
         }
 
@@ -125,29 +51,22 @@ const useNotifications = () => {
                 if (!token) return
                 await saveToken(token)
                 onForegroundMessage((payload) => {
-                    const { title, body } = payload.notification || {}
+                    const { title, body } = payload?.notification || {}
                     if (title || body) {
                         toast(
-                            renderToast(title, body, payload.data?.type),
+                            renderToast(title, body, payload?.data?.type),
                             toastStyle
                         )
                     }
                 })
             } catch (error) {
-                console.warn('Web notification setup error:', error?.message)
+                console.warn('Web notification setup warning:', error?.message)
             }
         }
 
-        if (Capacitor.isNativePlatform()) {
-            setupNative()
-        } else {
+        // Run web notifications only outside native platform to guarantee zero APK crashes
+        if (!Capacitor.isNativePlatform()) {
             setupWeb()
-        }
-
-        return () => {
-            if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('PushNotifications')) {
-                PushNotifications.removeAllListeners().catch(() => {})
-            }
         }
     }, [user?._id])
 }
