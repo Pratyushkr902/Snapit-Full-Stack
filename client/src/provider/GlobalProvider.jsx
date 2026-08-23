@@ -75,15 +75,20 @@ const GlobalProvider = ({ children }) => {
         setTotalQty(qty)
 
         const tPrice = items.reduce((prev, curr) => {
-            if (!curr?.productId) return prev // skip orphaned cart items (deleted product)
-            const priceAfterDiscount = pricewithDiscount(curr.productId.price, curr.productId.discount)
+            const product = curr?.productId
+            if (!product || typeof product !== 'object') return prev
+            const price = Number(product.price) || 0
+            const discount = Number(product.discount) || 0
+            const priceAfterDiscount = pricewithDiscount(price, discount)
             return prev + (priceAfterDiscount * (curr?.quantity || 0))
         }, 0)
         setTotalPrice(tPrice)
 
         const notDiscountPrice = items.reduce((prev, curr) => {
-            if (!curr?.productId) return prev
-            return prev + ((curr.productId.price || 0) * (curr?.quantity || 0))
+            const product = curr?.productId
+            if (!product || typeof product !== 'object') return prev
+            const price = Number(product.price) || 0
+            return prev + (price * (curr?.quantity || 0))
         }, 0)
         setNotDiscountTotalPrice(notDiscountPrice)
     }, [cartItem])

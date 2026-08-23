@@ -43,56 +43,51 @@ const useNotifications = () => {
         }
 
         const setupNative = async () => {
+            if (!Capacitor.isPluginAvailable('PushNotifications')) {
+                console.log('PushNotifications plugin not available on this platform')
+                return
+            }
             try {
-                // FIX: create the 'snapit_orders' Android notification channel.
-                // Your backend (firebaseNotify.js / notificationService.js) sends
-                // every push with channelId: 'snapit_orders'. On Android 8+, if
-                // that channel was never created on-device, the OS silently
-                // DROPS the notification whenever the app is backgrounded or
-                // killed — no error anywhere, it just never appears. This is
-                // almost certainly why notifications work in foreground (via
-                // the pushNotificationReceived listener/toast below) but never
-                // show on the home screen / lock screen when the app is closed.
-                // Must be created before register() and on every app launch —
-                // it's a no-op if the channel already exists.
-                await PushNotifications.createChannel({
-                    id: 'snapit_orders',
-                    name: 'Snapit Orders',
-                    description: 'Order updates, delivery status, and offers',
-                    importance: 5,      // IMPORTANCE_HIGH — required for heads-up/lock-screen display
-                    visibility: 1,      // VISIBILITY_PUBLIC — show full content on lock screen
-                    sound: 'default',
-                    vibration: true,
-                    lights: true,
-                })
+                try {
+                    await PushNotifications.createChannel({
+                        id: 'snapit_orders',
+                        name: 'Snapit Orders',
+                        description: 'Order updates, delivery status, and offers',
+                        importance: 5,
+                        visibility: 1,
+                        sound: 'default',
+                        vibration: true,
+                        lights: true,
+                    })
+                } catch (chErr) {
+                    console.warn('PushNotifications createChannel warning:', chErr?.message)
+                }
 
-                const permStatus = await PushNotifications.requestPermissions()
-                if (permStatus.receive !== 'granted') return
+                let permStatus = await PushNotifications.checkPermissions()
+                if (permStatus?.receive !== 'granted') {
+                    permStatus = await PushNotifications.requestPermissions()
+                }
+                if (permStatus?.receive !== 'granted') return
 
                 await PushNotifications.register()
 
                 PushNotifications.addListener('registration', (token) => {
-                    saveToken(token.value)
+                    if (token?.value) saveToken(token.value)
                 })
 
                 PushNotifications.addListener('registrationError', (err) => {
-                    console.error('Push registration error:', err)
+                    console.warn('Push registration error:', err?.message)
                 })
 
-                // Fires only while the app is in the FOREGROUND — background/
-                // killed-state display is handled entirely by the OS using the
-                // channel created above, no JS code runs for that case.
                 PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                    toast(
-                        renderToast(notification.title, notification.body, notification.data?.type),
-                        toastStyle
-                    )
+                    if (notification?.title || notification?.body) {
+                        toast(
+                            renderToast(notification.title, notification.body, notification.data?.type),
+                            toastStyle
+                        )
+                    }
                 })
 
-                // ADDED: handle the user tapping a notification from the tray/
-                // lock screen (app was backgrounded or killed) — without this,
-                // tapping the notification just opens the app to wherever it
-                // last was, instead of the relevant order/screen.
                 PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
                     const url = action.notification?.data?.url
                     if (url) {
@@ -100,24 +95,29 @@ const useNotifications = () => {
                     }
                 })
             } catch (error) {
-                console.error('Native notification setup error:', error)
+                console.warn('Native notification setup error:', error?.message)
             }
         }
 
         const setupWeb = async () => {
+            if (typeof window === 'undefined' || typeof Notification === 'undefined' || !('serviceWorker' in navigator)) {
+                return
+            }
             try {
                 const token = await requestNotificationPermission()
                 if (!token) return
                 await saveToken(token)
                 onForegroundMessage((payload) => {
                     const { title, body } = payload.notification || {}
-                    toast(
-                        renderToast(title, body, payload.data?.type),
-                        toastStyle
-                    )
+                    if (title || body) {
+                        toast(
+                            renderToast(title, body, payload.data?.type),
+                            toastStyle
+                        )
+                    }
                 })
             } catch (error) {
-                console.error('Web notification setup error:', error)
+                console.warn('Web notification setup error:', error?.message)
             }
         }
 
