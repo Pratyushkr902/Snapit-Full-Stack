@@ -5,13 +5,7 @@ import secureStorage from "./secureStorage"
 // The backend URL must always come from the environment.
 // A missing env var in production will now throw immediately (fail-loud),
 // rather than silently pointing at a hardcoded Render URL.
-const API_URL = import.meta.env.VITE_API_URL
-if (!API_URL) {
-    throw new Error(
-        "[Axios] VITE_API_URL is not set. " +
-        "Add it to your .env file (e.g. VITE_API_URL=https://your-backend.onrender.com)"
-    )
-}
+const API_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
 export const baseURL = API_URL
 

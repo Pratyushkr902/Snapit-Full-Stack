@@ -1,12 +1,15 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import HomeBanner from '../components/HomeBanner'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
 import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay'
 import TodayDeals from '../components/TodayDeals'
 import FoodCategoryCard from '../components/FoodCategoryCard'
 import StoreClosedOverlay from '../components/StoreClosedOverlay'
+import Axios from '../utils/Axios'
+import SummaryApi from '../common/SummaryApi'
+import { setAllCategory, setAllSubCategory, setLoadingCategory } from '../store/productSlice'
 
 // ✅ Inline SVG fallback — no network request, never fails
 const FALLBACK_IMG =
@@ -52,10 +55,50 @@ const SUPER_APP_CATEGORIES = [
 ]
 
 const Home = () => {
+  const dispatch = useDispatch()
   const loadingCategory = useSelector(state => state.product.loadingCategory)
-  const categoryData = useSelector(state => state.product.allCategory)
-  const subCategoryData = useSelector(state => state.product.allSubCategory)
+  const categoryData = useSelector(state => state.product.allCategory) || []
+  const subCategoryData = useSelector(state => state.product.allSubCategory) || []
   const navigate = useNavigate()
+
+  const fetchCategoryData = async () => {
+    try {
+      dispatch(setLoadingCategory(true))
+      const [catRes, subRes] = await Promise.allSettled([
+        Axios({ ...SummaryApi.getCategory }),
+        Axios({ ...SummaryApi.getSubCategory })
+      ])
+
+      if (catRes.status === 'fulfilled' && catRes.value?.data?.success && Array.isArray(catRes.value.data.data)) {
+        const sorted = catRes.value.data.data
+          .filter(cat => cat && typeof cat === 'object')
+          .sort((a, b) => String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase()))
+        dispatch(setAllCategory(sorted))
+      }
+
+      if (subRes.status === 'fulfilled' && subRes.value?.data?.success && Array.isArray(subRes.value.data.data)) {
+        const sorted = subRes.value.data.data
+          .filter(sub => sub && typeof sub === 'object')
+          .sort((a, b) => String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase()))
+        dispatch(setAllSubCategory(sorted))
+      }
+    } catch (error) {
+      console.error("Home category fetch error", error)
+    } finally {
+      dispatch(setLoadingCategory(false))
+    }
+  }
+
+  useEffect(() => {
+    if (!categoryData || categoryData.length === 0) {
+      fetchCategoryData()
+    }
+  }, [categoryData?.length])
+
+  const filteredCategories = useMemo(() => {
+    if (!Array.isArray(categoryData)) return []
+    return categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase()))
+  }, [categoryData])
 
   const prioritizedCategorySections = useMemo(() => {
     if (!Array.isArray(categoryData) || categoryData.length === 0) return []
@@ -107,14 +150,14 @@ const Home = () => {
           Shop by Category
         </p>
         <div className='grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-2 lg:gap-4'>
-          {loadingCategory
+          {loadingCategory || filteredCategories.length === 0
             ? new Array(12).fill(null).map((_, i) => (
                 <div key={i + "load"} className='flex flex-col items-center gap-2'>
                   <div className='bg-slate-100 w-full aspect-square rounded-xl animate-pulse' />
                   <div className='bg-slate-100 h-2.5 w-3/4 rounded animate-pulse' />
                 </div>
               ))
-            : Array.isArray(categoryData) && categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase())).map((cat, catIndex) => {
+            : filteredCategories.map((cat, catIndex) => {
                 if (!cat) return null;
 
                 const rawImg = cat?.imageThumbnail || cat?.icon || cat?.image || cat?.imageUrl || '';
@@ -177,7 +220,7 @@ const Home = () => {
 
       {/* 5. PRODUCT SECTIONS */}
       <div className='flex flex-col gap-1 lg:gap-8 pb-24'>
-        {loadingCategory
+        {loadingCategory || prioritizedCategorySections.length === 0
           ? new Array(3).fill(null).map((_, i) => (
               <div key={"secLoad" + i} className='w-full px-4 py-4'>
                 <div className='flex items-center justify-between mb-3'>
