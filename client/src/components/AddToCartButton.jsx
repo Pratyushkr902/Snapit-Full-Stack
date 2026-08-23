@@ -11,6 +11,7 @@ import { useState } from 'react'
 
 import { isStoreOpen } from './StoreClosedOverlay'
 
+const AddToCartButton = ({ data }) => {
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext() || {}
     const [loading, setLoading] = useState(false)
     const productId = data?._id
@@ -26,8 +27,9 @@ import { isStoreOpen } from './StoreClosedOverlay'
     })
 
     // FIX: qty and isAvailableCart are derived from cartItemDetails — no
-    // separate useState + useEffect sync needed. That sync was a second
-    // render per cart update (setState schedules another render after the
+    // separate useState + useEffect sync needed.
+    const isAvailableCart = Boolean(cartItemDetails?.productId)
+    const qty             = cartItemDetails?.quantity ?? 0
 
     // FIX: compute out-of-stock as a plain flag instead of an early return,
     // so we can decide the UI *after* we know whether it's already in cart.
