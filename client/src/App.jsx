@@ -183,15 +183,15 @@ function App() {
 
     const setupBackButton = async () => {
       try {
-        listenerHandle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        listenerHandle = await CapacitorApp.addListener('backButton', () => {
           const hash = window.location.hash || ""
-          const isHome = !hash || hash === '#/' || hash === '#' || hash === '#/grocery'
+          const isHome = !hash || hash === '#/' || hash === '#' || hash === '#/grocery' || hash === '#/food' || hash === '#/pharmacy'
 
-          if (!isHome && window.history.length > 1) {
+          if (!isHome) {
             window.history.back()
           } else {
             const now = Date.now()
-            if (now - lastBackPress < 2000) {
+            if (now - lastBackPress < 2000 && lastBackPress > 0) {
               CapacitorApp.exitApp()
             } else {
               lastBackPress = now

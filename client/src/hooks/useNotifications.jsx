@@ -63,13 +63,19 @@ const useNotifications = () => {
                     console.warn('PushNotifications createChannel warning:', chErr?.message)
                 }
 
-                let permStatus = await PushNotifications.checkPermissions()
+                let permStatus = await PushNotifications.checkPermissions().catch(() => ({ receive: 'prompt' }))
                 if (permStatus?.receive !== 'granted') {
-                    permStatus = await PushNotifications.requestPermissions()
+                    permStatus = await PushNotifications.requestPermissions().catch(() => ({ receive: 'denied' }))
                 }
                 if (permStatus?.receive !== 'granted') return
 
-                await PushNotifications.register()
+                await PushNotifications.register().catch(regErr => {
+                    console.warn('Push registration warning:', regErr?.message)
+                })
+
+                try {
+                    await PushNotifications.removeAllListeners()
+                } catch (e) {}
 
                 PushNotifications.addListener('registration', (token) => {
                     if (token?.value) saveToken(token.value)
@@ -125,6 +131,12 @@ const useNotifications = () => {
             setupNative()
         } else {
             setupWeb()
+        }
+
+        return () => {
+            if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('PushNotifications')) {
+                PushNotifications.removeAllListeners().catch(() => {})
+            }
         }
     }, [user?._id])
 }

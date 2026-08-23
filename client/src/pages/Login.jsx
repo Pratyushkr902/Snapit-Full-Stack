@@ -69,7 +69,7 @@ const Login = () => {
                 }
 
                 setData({ email: "", password: "" })
-                setTimeout(() => navigate("/"), 100)
+                navigate("/", { replace: true })
             }
         } catch (error) {
             AxiosToastError(error)
