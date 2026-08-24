@@ -53,7 +53,7 @@ const Header = ({ openCart }) => {
     }
 
     return (
-        <header className='sticky top-0 z-40 bg-white shadow-sm'>
+        <header className='sticky top-0 z-40 bg-white shadow-sm pt-[env(safe-area-inset-top,0px)]'>
 
             {/* ════════════════════════════════
                 DESKTOP HEADER  (lg and above)
