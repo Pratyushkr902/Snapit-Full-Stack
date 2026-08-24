@@ -248,6 +248,7 @@ function App() {
       <GlobalProvider>
         <div className="App">
           {!isDashboard && !isFoodPage && <StoreClosedOverlay />}
+          {!isDashboard && <Header openCart={() => setShowCart(true)} />}
           
           <main className={isDashboard ? '' : 'min-h-[78vh]'}>
             <Outlet />

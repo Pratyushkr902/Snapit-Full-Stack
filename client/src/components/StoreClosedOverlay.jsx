@@ -93,9 +93,9 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
     onDismiss?.();
   };
 
-  // If dismissed or allowBrowse mode is active, render the sleek Flipkart Minutes top banner
+  // If dismissed or in browse mode, return null so no top bar obstructs the header/user menu
   if (allowBrowse || dismissed) {
-    return <ClosedBanner status={status} onReopenShutter={() => setDismissed(false)} />;
+    return null;
   }
 
   return (
