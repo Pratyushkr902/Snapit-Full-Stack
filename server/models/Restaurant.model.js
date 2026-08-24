@@ -58,6 +58,18 @@ const restaurantSchema = new mongoose.Schema(
       lng: { type: Number },
     },
 
+    // ── Compatibility Aliases ───────────────────────────────────────────────
+    coverImage: { type: String, default: '' },
+    cuisine: [{ type: String }],
+    email: { type: String, default: '' },
+    phone: { type: String, default: '' },
+    closesAt: { type: String, default: '22:00' },
+    lat: { type: Number },
+    lng: { type: Number },
+    minOrder: { type: Number, default: 0 },
+    deliveryTime: { type: String, default: '25-35' },
+    isVeg: { type: Boolean, default: false },
+
     // ── Ownership ────────────────────────────────────────────────────────────
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     fssaiLicense: { type: String, default: '' },
