@@ -268,7 +268,7 @@ const FoodCheckoutPage = () => {
 
   // ── Payment handlers ─────────────────────────────────────────────────────────
   const handleCOD = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
+    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
     if (!checkMinOrder()) return
     setPlacing(true)
@@ -287,7 +287,7 @@ const FoodCheckoutPage = () => {
   }
 
   const handleWalletPay = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
+    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
     if (!checkMinOrder()) return
     if (walletBal < grandTotal) return toast.error(`Insufficient wallet balance. Need ₹${grandTotal}, have ₹${walletBal.toFixed(0)}`)
@@ -307,7 +307,7 @@ const FoodCheckoutPage = () => {
   }
 
   const handleOnlinePayment = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
+    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
     if (!RAZORPAY_KEY) return toast.error('Razorpay key missing')
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')

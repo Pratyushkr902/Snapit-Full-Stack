@@ -87,7 +87,7 @@ async function seed() {
     deliveryFee: 0,
     minOrderValue: 50,
     offers: ['10-Min Fast Preparation', 'Free Delivery on Orders Above ₹149'],
-    opensAt: '9:00 AM',
+    opensAt: '10:00 AM',
     address: {
       street: 'Main Bazaar',
       area: 'Main Market',
@@ -162,6 +162,8 @@ async function seed() {
   for (const item of afraMenuItems) {
     await MenuItemModel.create({
       ...item,
+      price: item.price + 10,
+      snapitMargin: 10,
       restaurantId: afra._id,
       isAvailable: true,
     })
@@ -202,7 +204,7 @@ async function seed() {
     deliveryFee: 0,
     minOrderValue: 100,
     offers: ['15% OFF on orders above ₹299', 'Complimentary Mint Chutney & Salad'],
-    opensAt: '9:00 AM',
+    opensAt: '10:00 AM',
     address: {
       street: 'Near Bypass Road',
       area: 'Paliganj',
@@ -356,6 +358,8 @@ async function seed() {
   for (const item of rjMenuItems) {
     await MenuItemModel.create({
       ...item,
+      price: item.price + 10,
+      snapitMargin: 10,
       restaurantId: rj._id,
       isAvailable: true,
     })

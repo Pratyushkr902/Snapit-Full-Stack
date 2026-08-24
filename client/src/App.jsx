@@ -247,8 +247,7 @@ function App() {
     <RemoteConfigProvider>
       <GlobalProvider>
         <div className="App">
-          {!isDashboard && <StoreClosedOverlay />}
-          {!isDashboard && <Header openCart={() => setShowCart(true)} />}
+          {!isDashboard && !isFoodPage && <StoreClosedOverlay />}
           
           <main className={isDashboard ? '' : 'min-h-[78vh]'}>
             <Outlet />
