@@ -19,7 +19,7 @@ const AdminBannerOffers = () => {
     startsAt: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString().slice(0, 16),
     endsAt: new Date(Date.now() + 42 * 60 * 60 * 1000).toISOString().slice(0, 16),
     minOrderForFreebie: 599,
-    freebieName: 'Margherita Pizza (Worth ₹89)',
+    freebieName: 'Margherita Pizza (Worth ₹99)',
     discountPercentage: 10,
   })
 

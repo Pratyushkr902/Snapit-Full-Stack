@@ -43,7 +43,7 @@ const festiveOfferSchema = new mongoose.Schema(
     },
     freebieName: {
       type: String,
-      default: "Margherita Pizza (Worth ₹89)",
+      default: "Margherita Pizza (Worth ₹99)",
     },
     discountPercentage: {
       type: Number,
