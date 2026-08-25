@@ -21,7 +21,6 @@ const bannerData = [
 const HomeBanner = () => {
   const navigate = useNavigate();
   const [swiperReady, setSwiperReady] = useState(false);
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   const [offer, setOffer] = useState({
     isActive: true,
@@ -87,52 +86,34 @@ const HomeBanner = () => {
 
   return (
     <div className='container mx-auto px-4 mt-2 lg:mt-4'>
-      <div className='relative w-full h-48 sm:h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-sm group bg-slate-900'>
+      <div className='relative w-full h-44 sm:h-60 md:h-72 lg:h-80 rounded-2xl overflow-hidden shadow-sm group bg-slate-900'>
 
         {/* INSTANT PAINT LAYER (LCP) */}
         {!swiperReady && (
-          <img
-            src={rakhiBanner}
-            alt='Raksha Bandhan MGD Special'
-            className='absolute inset-0 w-full h-full object-cover object-center'
-            fetchPriority='high'
-            loading='eager'
-            decoding='async'
-          />
-        )}
-
-        {/* ULTRA-SLEEK FLOATING COUNTDOWN PILL (Integrated right on the banner) */}
-        {showCountdown && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate('/restaurant/6a3963a7e0dd57acb747e405');
-            }}
-            className='absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-20 cursor-pointer transition-all hover:scale-105'
-          >
-            <div className='flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full backdrop-blur-md bg-black/75 border border-amber-400/60 shadow-xl text-white'>
-              <span className='text-xs sm:text-sm animate-pulse'>
-                {timeLeft.isLive ? '🔥' : '🪢'}
-              </span>
-              <div className='flex items-center gap-1 text-[11px] sm:text-xs font-bold text-amber-300'>
-                <span className='hidden xs:inline'>
-                  {timeLeft.isLive ? 'Offer Ends In:' : 'Rakhi Starts:'}
-                </span>
-                <div className='flex items-center gap-0.5 font-mono font-black text-white text-[11px] sm:text-xs'>
-                  {timeLeft.days > 0 && (
-                    <>
-                      <span className='text-amber-200'>{String(timeLeft.days).padStart(2, '0')}d</span>
-                      <span className='text-amber-400'>:</span>
-                    </>
-                  )}
-                  <span className='text-amber-200'>{String(timeLeft.hours).padStart(2, '0')}h</span>
-                  <span className='text-amber-400'>:</span>
-                  <span className='text-amber-200'>{String(timeLeft.minutes).padStart(2, '0')}m</span>
-                  <span className='text-amber-400'>:</span>
-                  <span className='text-amber-200'>{String(timeLeft.seconds).padStart(2, '0')}s</span>
+          <div className='relative w-full h-full'>
+            <img
+              src={rakhiBanner}
+              alt='Raksha Bandhan MGD Special'
+              className='absolute inset-0 w-full h-full object-cover object-center'
+              fetchPriority='high'
+              loading='eager'
+              decoding='async'
+            />
+            {showCountdown && (
+              <div className='absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-10'>
+                <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md bg-black/75 border border-amber-400/60 shadow-lg text-white'>
+                  <span className='text-xs animate-pulse'>
+                    {timeLeft.isLive ? '🔥' : '🪢'}
+                  </span>
+                  <div className='flex items-center gap-1 font-mono font-black text-[11px] sm:text-xs text-amber-200'>
+                    {timeLeft.days > 0 && <span>{String(timeLeft.days).padStart(2, '0')}d : </span>}
+                    <span>{String(timeLeft.hours).padStart(2, '0')}h : </span>
+                    <span>{String(timeLeft.minutes).padStart(2, '0')}m : </span>
+                    <span>{String(timeLeft.seconds).padStart(2, '0')}s</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -147,13 +128,12 @@ const HomeBanner = () => {
           modules={[Autoplay, Pagination, Navigation]}
           className='mySwiper h-full w-full'
           onSwiper={() => setSwiperReady(true)}
-          onSlideChange={(swiper) => setCurrentSlideIndex(swiper.realIndex)}
         >
           {bannerData.map((item, index) => (
             <SwiperSlide
               key={index}
               onClick={() => navigate(item.link)}
-              className='cursor-pointer w-full h-full'
+              className='relative cursor-pointer w-full h-full'
             >
               <img
                 src={item.image}
@@ -163,6 +143,26 @@ const HomeBanner = () => {
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding='async'
               />
+
+              {/* ONLY SHOW COUNTDOWN ON THE RAKSHA BANDHAN FESTIVE SLIDE */}
+              {item.isFestive && showCountdown && (
+                <div className='absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-10'>
+                  <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md bg-black/75 border border-amber-400/60 shadow-lg text-white transition-all hover:scale-105'>
+                    <span className='text-xs sm:text-sm animate-pulse'>
+                      {timeLeft.isLive ? '🔥' : '🪢'}
+                    </span>
+                    <div className='flex items-center gap-1 font-mono font-black text-[11px] sm:text-xs text-amber-200'>
+                      <span className='font-sans text-[10px] text-amber-300 font-bold hidden xs:inline mr-0.5'>
+                        {timeLeft.isLive ? 'Ends:' : 'Starts:'}
+                      </span>
+                      {timeLeft.days > 0 && <span>{String(timeLeft.days).padStart(2, '0')}d : </span>}
+                      <span>{String(timeLeft.hours).padStart(2, '0')}h : </span>
+                      <span>{String(timeLeft.minutes).padStart(2, '0')}m : </span>
+                      <span>{String(timeLeft.seconds).padStart(2, '0')}s</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </SwiperSlide>
           ))}
         </Swiper>

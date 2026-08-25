@@ -127,18 +127,18 @@ const Home = () => {
   return (
     <section className='bg-white min-h-screen overflow-x-hidden'>
 
-      {/* 1. SUPER-APP CATEGORY CARDS */}
-      <div className='container mx-auto px-4 mt-2 mb-3'>
-        <div className='grid grid-cols-4 gap-3'>
+      {/* 1. TOP BANNER CAROUSEL (With Rakhi Countdown on festive slide) */}
+      <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-4'>
+        <HomeBanner />
+      </div>
+
+      {/* 2. 4 SUPER-APP CATEGORY CARDS (Below Banners) */}
+      <div className='container mx-auto px-4 mb-4 lg:mb-6'>
+        <div className='grid grid-cols-4 gap-2.5 sm:gap-4'>
           {SUPER_APP_CATEGORIES.map((cat) => (
             <FoodCategoryCard key={cat.id} category={cat} />
           ))}
         </div>
-      </div>
-
-      {/* 2. MAIN UNIFIED BANNER CAROUSEL (With Rakhi Countdown) */}
-      <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
-        <HomeBanner />
       </div>
 
       {/* 3. GROCERY CATEGORY GRID */}
