@@ -543,10 +543,10 @@ export default function RestaurantDetailPage() {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-black text-amber-900 flex items-center gap-1.5">
                     <span>🎁</span>
-                    <span>Raksha Bandhan Special Offer</span>
+                    <span>Raksha Bandhan Special (28 August)</span>
                   </span>
                   <span className="text-[11px] font-extrabold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
-                    10% OFF ON ALL PIZZAS
+                    28 AUG: 10% OFF ON EVERY PIZZA
                   </span>
                 </div>
                 {cartTotal >= 599 ? (
