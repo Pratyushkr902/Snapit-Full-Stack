@@ -212,6 +212,14 @@ function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
         </div>
         <div className="flex items-center gap-2 mt-1.5">
           <span className="font-bold text-gray-900 text-[15px]">₹{price}</span>
+          {selectedVariant.mrp > price && (
+            <>
+              <span className="text-gray-400 text-[12px] line-through">₹{selectedVariant.mrp}</span>
+              <span className="text-green-600 text-[11px] font-semibold">
+                {Math.round((1 - price / selectedVariant.mrp) * 100)}% off
+              </span>
+            </>
+          )}
         </div>
         {item.calories > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{item.calories} kcal</p>}
       </div>

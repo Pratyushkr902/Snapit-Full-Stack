@@ -11,10 +11,11 @@
 //  - Never throws — errors are logged and swallowed so a referral hiccup
 //    never blocks the order response
 import UserModel from '../models/user.model.js'
+import { normalizeEmail } from './emailNormalize.js'
 
 const REFERRAL_BONUS_AMOUNT = 5      // ₹5 (shown to users as "10 coins")
 const MIN_ORDER_AMOUNT      = 149    // friend's order must be >= this
-const DAILY_REFERRAL_CAP    = 10     // max referral credits per referrer per day
+const DAILY_REFERRAL_CAP    = 5      // max referral credits per referrer per day (anti-fraud)
 
 export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
     try {
@@ -25,6 +26,11 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
 
         const referrer = await UserModel.findOne({ referralCode: user.referredBy })
         if (!referrer) return
+
+        // Anti-abuse: ensure referrer is not the same user (by ID, normalized email, or phone)
+        if (referrer._id.equals(user._id)) return
+        if (normalizeEmail(referrer.email) === normalizeEmail(user.email)) return
+        if (referrer.mobile && user.mobile && String(referrer.mobile) === String(user.mobile)) return
 
         const startOfDay = new Date()
         startOfDay.setHours(0, 0, 0, 0)

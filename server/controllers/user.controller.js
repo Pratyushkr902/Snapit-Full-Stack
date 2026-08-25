@@ -8,6 +8,7 @@ import uploadImageClodinary from '../utils/uploadImageClodinary.js'
 import generatedOtp from '../utils/generatedOtp.js'
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import jwt from 'jsonwebtoken'
+import { normalizeEmail, isDisposableEmail } from '../utils/emailNormalize.js'
 
 const cookiesOption = {
     httpOnly: true,
@@ -113,7 +114,19 @@ export async function registerUserController(request, response) {
             })
         }
 
-        const user = await UserModel.findOne({ email })
+        if (isDisposableEmail(email)) {
+            return response.status(400).json({
+                message: "Temporary/disposable email addresses are not allowed. Please use a valid personal email.",
+                error: true,
+                success: false
+            })
+        }
+
+        const cleanEmail = normalizeEmail(email)
+
+        const user = await UserModel.findOne({
+            $or: [{ email: cleanEmail }, { email: email.trim().toLowerCase() }]
+        })
 
         if (user) {
             return response.json({
@@ -130,22 +143,21 @@ export async function registerUserController(request, response) {
             Math.floor(1000 + Math.random() * 9000);
 
         const payload = {
-            name,
-            email,
+            name: name.trim(),
+            email: cleanEmail,
             password: hashPassword,
             referralCode: newReferralCode
         }
 
-        
         // Check if incomingReferralCode matches a Campus Ambassador's code
         // (separate namespace from the general referralCode system below).
         const ambassadorReferrer = incomingReferralCode
             ? await UserModel.findOne({
                 role: 'CAMPUS_AMBASSADOR',
-                'campusAmbassador.referralCode': incomingReferralCode
+                'campusAmbassador.referralCode': incomingReferralCode.trim().toUpperCase()
               })
             : null
-        if (ambassadorReferrer) {
+        if (ambassadorReferrer && normalizeEmail(ambassadorReferrer.email) !== cleanEmail) {
             payload.referredByAmbassador = ambassadorReferrer._id
             await UserModel.updateOne(
                 { _id: ambassadorReferrer._id },
@@ -157,14 +169,14 @@ export async function registerUserController(request, response) {
         }
 
         if (incomingReferralCode) {
+            const cleanCode = incomingReferralCode.trim().toUpperCase()
             const referrer = await UserModel.findOne({
-                referralCode: incomingReferralCode
+                referralCode: cleanCode
             })
 
-            if (referrer) {
-                // Referral wallet credit now happens on email verification, not signup —
-                // this stops disposable-email bot farming from instantly cashing out.
-                payload.referredBy = incomingReferralCode
+            // Prevent self-referral (cannot refer yourself using alias/dot tricks)
+            if (referrer && normalizeEmail(referrer.email) !== cleanEmail) {
+                payload.referredBy = cleanCode
             }
         }
 
@@ -246,7 +258,10 @@ export async function loginController(request, response) {
             })
         }
 
-        const user = await UserModel.findOne({ email })
+        const cleanEmail = normalizeEmail(email)
+        const user = await UserModel.findOne({
+            $or: [{ email: cleanEmail }, { email: email.trim().toLowerCase() }]
+        })
 
         if (!user) {
             return response.status(400).json({

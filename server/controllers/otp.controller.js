@@ -5,6 +5,7 @@ import generatedOtp from '../utils/generatedOtp.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
 import genertedRefreshToken from '../utils/generatedRefreshToken.js'
 import sendEmailResend from './sendEmailResend.js'
+import { normalizeEmail, isDisposableEmail } from '../utils/emailNormalize.js'
 
 const cookiesOption = {
     httpOnly: true,
@@ -23,9 +24,20 @@ const MAX_ATTEMPTS = 5
 export async function sendOtpController(request, response) {
     try {
         const { email } = request.body
+
         if (!email) {
             return response.status(400).json({ message: 'Email is required', error: true, success: false })
         }
+
+        if (isDisposableEmail(email)) {
+            return response.status(400).json({
+                message: 'Temporary/disposable emails are not allowed.',
+                error: true,
+                success: false
+            })
+        }
+
+        const cleanEmail = normalizeEmail(email)
 
         const otp = generatedOtp()
         const otpHash = await bcryptjs.hash(String(otp), 10)
@@ -71,7 +83,13 @@ export async function verifyOtpController(request, response) {
             return response.status(400).json({ message: 'Email and OTP are required', error: true, success: false })
         }
 
-        const otpRecord = await OtpModel.findOne({ email, verified: false }).sort({ createdAt: -1 })
+        const cleanEmail = normalizeEmail(email)
+
+        const otpRecord = await OtpModel.findOne({
+            $or: [{ email: cleanEmail }, { email: email.trim().toLowerCase() }],
+            verified: false
+        }).sort({ createdAt: -1 })
+
         if (!otpRecord) {
             return response.status(400).json({ message: 'OTP expired or not found. Please request a new one.', error: true, success: false })
         }
@@ -90,7 +108,9 @@ export async function verifyOtpController(request, response) {
         otpRecord.verified = true
         await otpRecord.save()
 
-        let user = await UserModel.findOne({ email })
+        let user = await UserModel.findOne({
+            $or: [{ email: cleanEmail }, { email: email.trim().toLowerCase() }]
+        })
 
         if (!user) {
             // New account via OTP — no password required.
@@ -101,18 +121,19 @@ export async function verifyOtpController(request, response) {
                 Math.floor(1000 + Math.random() * 9000)
 
             // Capture who referred this user, if a referral code was supplied.
-            // Only set referredBy if the code actually belongs to a real user
-            // (prevents storing garbage/typo'd codes that can never match later).
+            // Ensure no self-referrals via alias/dot tricks
             const incomingReferralCode = (request.body.referralCode || '').trim().toUpperCase()
             let referredByCode = null
             if (incomingReferralCode) {
-                const referrerExists = await UserModel.exists({ referralCode: incomingReferralCode })
-                if (referrerExists) referredByCode = incomingReferralCode
+                const referrer = await UserModel.findOne({ referralCode: incomingReferralCode }).select('email')
+                if (referrer && normalizeEmail(referrer.email) !== cleanEmail) {
+                    referredByCode = incomingReferralCode
+                }
             }
 
             user = await UserModel.create({
-                name,
-                email,
+                name: name.trim(),
+                email: cleanEmail,
                 referralCode: newReferralCode,
                 referredBy: referredByCode,
                 status: 'Active',
