@@ -7,6 +7,11 @@ export default {
         { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }
       );
     }
-    return env.ASSETS.fetch(request);
+
+    const response = await env.ASSETS.fetch(request);
+    if (response.status === 404 && !url.pathname.startsWith('/assets/')) {
+      return env.ASSETS.fetch(new URL('/index.html', request.url));
+    }
+    return response;
   }
 }
