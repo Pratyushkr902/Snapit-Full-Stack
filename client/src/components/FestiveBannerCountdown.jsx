@@ -7,16 +7,22 @@ const FestiveBannerCountdown = () => {
   const navigate = useNavigate()
   const [offer, setOffer] = useState({
     isActive: true,
-    title: 'Raksha Bandhan Special — MGD Pizza Point',
+    title: 'Happy Raksha Bandhan — MGD Pizza Point Special',
     bannerImage: bannerImg,
     targetUrl: '/restaurant/6a3963a7e0dd57acb747e405',
-    startsAt: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(),
-    endsAt: new Date(Date.now() + 42 * 60 * 60 * 1000).toISOString(),
+    startsAt: '2026-08-27T18:30:00.000Z', // 28 August 00:00 IST
+    endsAt: '2026-08-28T18:29:59.000Z',   // 28 August 23:59 IST
   })
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0, isLive: false, expired: false })
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    isLive: false,
+    expired: false
+  })
 
   useEffect(() => {
-    // Fetch live offer settings from backend
     Axios({ method: 'GET', url: '/api/festive-offer/current' })
       .then(res => {
         if (res.data?.success && res.data?.data) {
@@ -39,23 +45,23 @@ const FestiveBannerCountdown = () => {
       let expired = false
 
       if (now < startTime) {
-        // Countdown to start
+        // Countdown to launch (Raksha Bandhan 28 Aug)
         diff = Math.max(0, startTime - now)
       } else if (now >= startTime && now < endTime) {
-        // Offer is live! Countdown to end
+        // Offer is live!
         diff = Math.max(0, endTime - now)
         isLive = true
       } else {
-        // Expired
         expired = true
       }
 
       const totalSec = Math.floor(diff / 1000)
-      const hours = Math.floor(totalSec / 3600)
+      const days = Math.floor(totalSec / (24 * 3600))
+      const hours = Math.floor((totalSec % (24 * 3600)) / 3600)
       const minutes = Math.floor((totalSec % 3600) / 60)
       const seconds = totalSec % 60
 
-      setTimeLeft({ hours, minutes, seconds, isLive, expired })
+      setTimeLeft({ days, hours, minutes, seconds, isLive, expired })
     }
 
     updateTimer()
@@ -66,62 +72,63 @@ const FestiveBannerCountdown = () => {
   if (!offer.isActive || timeLeft.expired) return null
 
   return (
-    <div className="container mx-auto px-4 mt-3 mb-2">
+    <div className="container mx-auto px-4 mt-2 mb-4">
       <div
         onClick={() => navigate(offer.targetUrl || '/restaurant/6a3963a7e0dd57acb747e405')}
-        className="relative rounded-2xl overflow-hidden shadow-md cursor-pointer group bg-stone-900 border border-amber-500/30 transition-all hover:shadow-xl hover:scale-[1.008]"
+        className="rounded-2xl overflow-hidden shadow-md cursor-pointer group bg-gradient-to-r from-red-900 via-amber-800 to-red-950 border border-amber-400/40 transition-all hover:shadow-xl hover:scale-[1.006]"
       >
-        {/* Banner Graphic */}
-        <img
-          src={offer.bannerImage || bannerImg}
-          alt="Raksha Bandhan MGD Pizza Point Offer"
-          className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover object-center"
-          loading="eager"
-          decoding="async"
-        />
-
-        {/* Dynamic Countdown Header Overlay */}
-        <div className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-10">
-          <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl backdrop-blur-md bg-black/75 border border-amber-400/60 shadow-lg text-white">
-            <span className="text-base sm:text-lg animate-pulse">
-              {timeLeft.isLive ? '🔥' : '⏳'}
-            </span>
-            <div className="flex flex-col">
-              <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider text-amber-300">
-                {timeLeft.isLive ? 'LIVE 24H OFFER ENDS IN' : 'RAKHI OFFER STARTS IN'}
+        {/* Sleek Festive Ribbon Header */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 sm:px-5 py-2.5 bg-black/40 backdrop-blur-sm border-b border-amber-400/20 text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-lg sm:text-xl animate-bounce">🪢</span>
+            <div>
+              <span className="text-xs sm:text-sm font-black tracking-wide text-amber-300">
+                Raksha Bandhan Special (28 August)
               </span>
-              <div className="flex items-center gap-1 font-mono font-black text-xs sm:text-sm text-white">
-                <span className="bg-white/20 px-1.5 py-0.5 rounded text-amber-200">
-                  {String(timeLeft.hours).padStart(2, '0')}h
-                </span>
-                <span>:</span>
-                <span className="bg-white/20 px-1.5 py-0.5 rounded text-amber-200">
-                  {String(timeLeft.minutes).padStart(2, '0')}m
-                </span>
-                <span>:</span>
-                <span className="bg-white/20 px-1.5 py-0.5 rounded text-amber-200">
-                  {String(timeLeft.seconds).padStart(2, '0')}s
-                </span>
-              </div>
+              <span className="hidden sm:inline-block ml-2 text-[11px] text-amber-100/70 font-semibold">
+                • MGD Pizza Point
+              </span>
+            </div>
+          </div>
+
+          {/* Live Countdown Clock */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-200">
+              {timeLeft.isLive ? '🔥 Offer Ends In:' : '⏳ Starts In:'}
+            </span>
+            <div className="flex items-center gap-1 font-mono font-black text-xs sm:text-sm">
+              {timeLeft.days > 0 && (
+                <>
+                  <span className="bg-amber-500/20 border border-amber-400/50 text-amber-200 px-1.5 py-0.5 rounded shadow-inner">
+                    {String(timeLeft.days).padStart(2, '0')}d
+                  </span>
+                  <span className="text-amber-400">:</span>
+                </>
+              )}
+              <span className="bg-amber-500/20 border border-amber-400/50 text-amber-200 px-1.5 py-0.5 rounded shadow-inner">
+                {String(timeLeft.hours).padStart(2, '0')}h
+              </span>
+              <span className="text-amber-400">:</span>
+              <span className="bg-amber-500/20 border border-amber-400/50 text-amber-200 px-1.5 py-0.5 rounded shadow-inner">
+                {String(timeLeft.minutes).padStart(2, '0')}m
+              </span>
+              <span className="text-amber-400">:</span>
+              <span className="bg-amber-500/20 border border-amber-400/50 text-amber-200 px-1.5 py-0.5 rounded shadow-inner">
+                {String(timeLeft.seconds).padStart(2, '0')}s
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Bottom CTA Bar */}
-        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 sm:p-4 flex items-center justify-between">
-          <div className="text-white">
-            <p className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-1.5">
-              <span>🎁</span>
-              <span>10% OFF Every Pizza + FREE ₹89 Margherita above ₹599</span>
-            </p>
-            <p className="text-[10px] sm:text-xs text-gray-200 hidden sm:block">
-              Tap to order now from MGD Pizza Point & celebrate Rakhi!
-            </p>
-          </div>
-          <button className="px-3.5 py-1.5 sm:px-5 sm:py-2 bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-600 hover:to-red-700 text-white text-xs sm:text-sm font-black rounded-xl shadow-md group-hover:scale-105 transition-transform flex items-center gap-1.5">
-            <span>ORDER NOW</span>
-            <span>➔</span>
-          </button>
+        {/* Clean, Un-obscured Creative Banner */}
+        <div className="relative w-full aspect-[2/1] sm:aspect-[2.3/1] max-h-[360px] bg-stone-900 overflow-hidden">
+          <img
+            src={offer.bannerImage || bannerImg}
+            alt="Happy Raksha Bandhan MGD Pizza Point Special"
+            className="w-full h-full object-cover sm:object-contain object-center group-hover:scale-[1.01] transition-transform duration-300"
+            loading="eager"
+            decoding="async"
+          />
         </div>
       </div>
     </div>

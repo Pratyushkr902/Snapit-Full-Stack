@@ -128,21 +128,21 @@ const Home = () => {
   return (
     <section className='bg-white min-h-screen overflow-x-hidden'>
 
-      {/* 1. FESTIVE COUNTDOWN BANNER */}
-      <FestiveBannerCountdown />
-
-      {/* 2. MAIN BANNER */}
-      <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
-        <HomeBanner />
-      </div>
-
-      {/* 2. SUPER-APP CATEGORY CARDS */}
-      <div className='container mx-auto px-4 mb-5'>
+      {/* 1. SUPER-APP CATEGORY CARDS */}
+      <div className='container mx-auto px-4 mt-2 mb-3'>
         <div className='grid grid-cols-4 gap-3'>
           {SUPER_APP_CATEGORIES.map((cat) => (
             <FoodCategoryCard key={cat.id} category={cat} />
           ))}
         </div>
+      </div>
+
+      {/* 2. FESTIVE COUNTDOWN BANNER (Raksha Bandhan 28 Aug) */}
+      <FestiveBannerCountdown />
+
+      {/* 3. MAIN BANNER SLIDER */}
+      <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
+        <HomeBanner />
       </div>
 
       {/* 3. GROCERY CATEGORY GRID */}
