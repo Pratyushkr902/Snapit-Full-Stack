@@ -1,5 +1,6 @@
 import RestaurantModel from '../models/restaurant.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
+import FestiveOfferModel from '../models/festiveOffer.model.js'
 import NodeCache from 'node-cache'
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 120 })
@@ -46,8 +47,56 @@ export async function getRestaurantById(req, res) {
       .sort({ category: 1, sortOrder: 1, isBestseller: -1 })
       .lean()
 
+    // Check if festive offer is live for this restaurant (Raksha Bandhan dynamic discount)
+    const festiveOffer = await FestiveOfferModel.findOne().sort({ createdAt: -1 }).lean()
+    const now = new Date()
+    const isFestiveLive = festiveOffer && festiveOffer.isActive &&
+      now >= new Date(festiveOffer.startsAt) && now < new Date(festiveOffer.endsAt) &&
+      String(festiveOffer.restaurantId || '6a3963a7e0dd57acb747e405') === String(req.params.id)
+
+    const processedItems = items.map(item => {
+      const isPizzaOrSignature = item.category?.toLowerCase().includes('pizza') ||
+        (Array.isArray(item.variants) && item.variants.length > 0)
+
+      if (isFestiveLive && isPizzaOrSignature) {
+        // Apply 10% Zero-Loss festive markup on MRP
+        const basePrice = item.price
+        const mrp = Math.round(basePrice / 0.90)
+        const updatedVariants = (item.variants || []).map(v => {
+          const vBase = v.price
+          const vMrp = Math.round(vBase / 0.90)
+          return {
+            ...v,
+            price: vBase,
+            mrp: vMrp,
+            discountedPrice: vBase,
+          }
+        })
+        return {
+          ...item,
+          mrp,
+          price: basePrice,
+          discountedPrice: basePrice,
+          variants: updatedVariants,
+        }
+      } else {
+        // Normal days before Raksha Bandhan: plain base prices, no fake markup, no discount
+        const updatedVariants = (item.variants || []).map(v => ({
+          ...v,
+          mrp: v.price,
+          discountedPrice: 0,
+        }))
+        return {
+          ...item,
+          mrp: item.price,
+          discountedPrice: 0,
+          variants: updatedVariants,
+        }
+      }
+    })
+
     const categoryMap = {}
-    for (const item of items) {
+    for (const item of processedItems) {
       if (!categoryMap[item.category]) categoryMap[item.category] = []
       categoryMap[item.category].push(item)
     }
