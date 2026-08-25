@@ -15,7 +15,7 @@
     "socket.io": "^4.8.3"
   },
   "scripts": {
-    "build": "cd client && npm install && npm run build",
+    "build": "cd client && npm install && npm run build && cd .. && rm -rf dist && cp -r client/dist dist",
     "start": "node server/index.js",
     "dev": "node server/index.js"
   }
