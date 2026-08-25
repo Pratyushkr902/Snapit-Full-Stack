@@ -2,14 +2,31 @@ import { createHashRouter, useRouteError, useNavigate } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import App from "../App";
 
-// Eager load critical customer pages
+// Critical Pages
+import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/RegisterOtp";
-import SearchPage from "../pages/Searchpage";
-// Lazy load admin & secondary pages
+
+// Lazy Loaded Pages
+const SearchPage             = lazy(() => import('../pages/Searchpage'))
 const ForgotPassword         = lazy(() => import('../pages/ForgotPassword'))
 const VerifyEmail            = lazy(() => import('../pages/VerifyEmail'))
+const OtpVerification        = lazy(() => import('../pages/OtpVerification'))
 const ResetPassword          = lazy(() => import('../pages/ResetPassword'))
+const UserMenuMobile         = lazy(() => import('../pages/UserMenuMobile'))
+const Dashboard              = lazy(() => import('../layouts/Dashboard'))
+const Profile                = lazy(() => import('../pages/Profile'))
+const MyOrders               = lazy(() => import('../pages/MyOrders'))
+const Address                = lazy(() => import('../pages/Address'))
+const CategoryPage           = lazy(() => import('../pages/CategoryPage'))
+const SubCategoryPage        = lazy(() => import('../pages/SubCategoryPage'))
+const UploadProduct          = lazy(() => import('../pages/UploadProduct'))
+const ProductAdmin           = lazy(() => import('../pages/ProductAdmin'))
+const AdminPermision         = lazy(() => import('../layouts/AdminPermision'))
+const SellerPermission       = lazy(() => import('../layouts/SellerPermission'))
+const ProductListPage        = lazy(() => import('../pages/ProductListPage'))
+const ProductDisplayPage     = lazy(() => import('../pages/ProductDisplayPage'))
+const CartMobile             = lazy(() => import('../pages/CartMobile'))
 const CheckoutPage           = lazy(() => import('../pages/CheckoutPage'))
 const Success                = lazy(() => import('../pages/Success'))
 const Cancel                 = lazy(() => import('../pages/Cancel'))
@@ -32,12 +49,14 @@ const SnapitPlus             = lazy(() => import('../components/SnapitPlus'))
 const StreakTracker          = lazy(() => import('../components/StreakTracker'))
 const MySubscriptions        = lazy(() => import('../pages/MySubscriptions'))
 const SellerDashboard        = lazy(() => import('../pages/SellerDashboard'))
+const FoodHomePage           = lazy(() => import('../pages/FoodHomePage'))
 const RestaurantDetailPage   = lazy(() => import('../pages/RestaurantDetailPage'))
 const RestaurantAdminPage    = lazy(() => import('../pages/RestaurantAdminPage'))
 const AdminSellerStorePanel  = lazy(() => import('../pages/AdminSellerStorePanel'))
 const AdminCampusAmbassadors = lazy(() => import('../pages/AdminCampusAmbassadors'))
 const SellerEarnings         = lazy(() => import('../pages/SellerEarnings'))
 const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'))
+const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
 const PharmacyPage           = lazy(() => import('../pages/PharmacyPage'))
 const FoodCheckoutPage       = lazy(() => import('../pages/FoodCheckoutPage'))
 
