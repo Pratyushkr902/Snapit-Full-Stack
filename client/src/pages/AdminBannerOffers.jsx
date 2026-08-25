@@ -6,18 +6,32 @@ import AxiosToastError from '../utils/AxiosToastError'
 import toast from 'react-hot-toast'
 import bannerImg from '../assets/mgd_rakhi_banner.jpg'
 
+// Format Date object to local YYYY-MM-DDTHH:mm for <input type="datetime-local">
+function toLocalDatetimeInput(date) {
+  if (!date) return ''
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  const year = d.getFullYear()
+  const month = pad(d.getMonth() + 1)
+  const day = pad(d.getDate())
+  const hours = pad(d.getHours())
+  const minutes = pad(d.getMinutes())
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
 const AdminBannerOffers = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [offer, setOffer] = useState({
-    title: 'Raksha Bandhan Special — MGD Pizza Point',
+    title: 'Happy Raksha Bandhan — MGD Pizza Point Special',
     subtitle: '10% OFF on all pizzas + FREE Margherita Pizza on orders above ₹599!',
     bannerImage: '/mgd_rakhi_banner.jpg',
     targetUrl: '/restaurant/6a3963a7e0dd57acb747e405',
     isActive: true,
-    startsAt: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString().slice(0, 16),
-    endsAt: new Date(Date.now() + 42 * 60 * 60 * 1000).toISOString().slice(0, 16),
+    startsAt: '2026-08-28T00:00',
+    endsAt: '2026-08-28T23:59',
     minOrderForFreebie: 599,
     freebieName: 'Margherita Pizza (Worth ₹99)',
     discountPercentage: 10,
@@ -35,8 +49,8 @@ const AdminBannerOffers = () => {
         const d = res.data.data
         setOffer({
           ...d,
-          startsAt: d.startsAt ? new Date(d.startsAt).toISOString().slice(0, 16) : '',
-          endsAt: d.endsAt ? new Date(d.endsAt).toISOString().slice(0, 16) : '',
+          startsAt: toLocalDatetimeInput(d.startsAt || '2026-08-28T00:00:00+05:30'),
+          endsAt: toLocalDatetimeInput(d.endsAt || '2026-08-28T23:59:59+05:30'),
         })
       }
     } catch (error) {
@@ -65,29 +79,26 @@ const AdminBannerOffers = () => {
     }
   }
 
+  const setRakhiFullDay = () => {
+    setOffer(prev => ({
+      ...prev,
+      isActive: true,
+      startsAt: '2026-08-28T00:00',
+      endsAt: '2026-08-28T23:59',
+    }))
+    toast.success('Configured for Raksha Bandhan (28 August 12:00 AM to 11:59 PM)!')
+  }
+
   const setGoLiveNow = () => {
     const now = new Date()
     const ends = new Date(now.getTime() + 24 * 60 * 60 * 1000)
     setOffer(prev => ({
       ...prev,
       isActive: true,
-      startsAt: now.toISOString().slice(0, 16),
-      endsAt: ends.toISOString().slice(0, 16),
+      startsAt: toLocalDatetimeInput(now),
+      endsAt: toLocalDatetimeInput(ends),
     }))
     toast.success('Timer set to LIVE NOW for the next 24 hours!')
-  }
-
-  const setCountdownFromNow = () => {
-    const now = new Date()
-    const starts = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-    const ends = new Date(now.getTime() + 48 * 60 * 60 * 1000)
-    setOffer(prev => ({
-      ...prev,
-      isActive: true,
-      startsAt: starts.toISOString().slice(0, 16),
-      endsAt: ends.toISOString().slice(0, 16),
-    }))
-    toast.success('Countdown configured to start in 24 hours!')
   }
 
   return (
@@ -106,7 +117,7 @@ const AdminBannerOffers = () => {
               <span>🎁</span> Festive Banners & Offers Control
             </h1>
             <p className="text-xs text-gray-500 font-medium">
-              Manage user access, live countdown timers, and festive perks in real time
+              Manage user access, live countdown timers, and festive perks in real time (IST)
             </p>
           </div>
         </div>
@@ -144,17 +155,17 @@ const AdminBannerOffers = () => {
               <div className="flex flex-wrap gap-2.5">
                 <button
                   type="button"
-                  onClick={setGoLiveNow}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                  onClick={setRakhiFullDay}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1"
                 >
-                  🔥 Make Offer Live Now (24 Hours)
+                  <span>🪢</span> Set Raksha Bandhan (28 Aug Full Day)
                 </button>
                 <button
                   type="button"
-                  onClick={setCountdownFromNow}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                  onClick={setGoLiveNow}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1"
                 >
-                  ⏳ Set 24h Countdown (Starts Tomorrow)
+                  <span>🔥</span> Make Offer Live Now (24 Hours)
                 </button>
                 <button
                   type="button"
@@ -170,7 +181,7 @@ const AdminBannerOffers = () => {
 
             {/* Config Fields */}
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-gray-900">Offer Configuration</h3>
+              <h3 className="text-sm font-bold text-gray-900">Offer Configuration (Indian Standard Time)</h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -196,7 +207,7 @@ const AdminBannerOffers = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Countdown Ends / Offer Starts (Date & Time)
+                    Countdown Ends / Offer Starts (IST)
                   </label>
                   <input
                     type="datetime-local"
@@ -207,7 +218,7 @@ const AdminBannerOffers = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    24h Offer Expires (Date & Time)
+                    24h Offer Expires (IST)
                   </label>
                   <input
                     type="datetime-local"
