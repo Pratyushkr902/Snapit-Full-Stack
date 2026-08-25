@@ -5,6 +5,7 @@ import Razorpay   from 'razorpay'
 import { verifyRazorpaySignature } from '../utils/verifyRazorpaySignature.js'
 import { calcDeliveryFeeFromOrigin, getMinOrderAmountFromOrigin } from '../utils/deliveryFee.js'
 import RestaurantModel from '../models/restaurant.model.js'
+import FestiveOfferModel from '../models/festiveOffer.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
 import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { validateCoupon } from '../utils/couponValidation.js'
@@ -129,6 +130,30 @@ const priceGroup = async (group, deliveryLocation, user) => {
     const err = new Error(`Minimum order of ₹${minOrderRequired} required at ${restaurant.name} for this location.`)
     err.statusCode = 400
     throw err
+  }
+
+  // Check if festive offer is active for this restaurant (Raksha Bandhan freebie)
+  const festiveOffer = await FestiveOfferModel.findOne().sort({ createdAt: -1 }).lean()
+  const now = new Date()
+  const isFestiveActive = festiveOffer && festiveOffer.isActive &&
+    now >= new Date(festiveOffer.startsAt) && now < new Date(festiveOffer.endsAt) &&
+    String(festiveOffer.restaurantId || '6a3963a7e0dd57acb747e405') === String(group.restaurantId)
+
+  if (isFestiveActive && subTotalAmt >= (festiveOffer.minOrderForFreebie || 599)) {
+    const alreadyHasFreebie = group.cartItems.some(it => it.name?.includes('Free Margherita Pizza') || it.isFreebie)
+    if (!alreadyHasFreebie) {
+      group.cartItems.push({
+        productId: null,
+        name: `🎁 ${festiveOffer.freebieName || 'Free Margherita Pizza (Worth ₹99)'}`,
+        image: '',
+        price: 0,
+        sellerPrice: 0,
+        snapitMargin: 0,
+        quantity: 1,
+        isFreebie: true,
+        seller_store_name: null,
+      })
+    }
   }
 
   return { ...group, restaurantName: restaurant.name, subTotalAmt, deliveryFee }
