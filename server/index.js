@@ -62,6 +62,7 @@ import refundRouter         from './route/refund.route.js'
 import deliveryRouter       from './route/delivery.routes.js'   // ✅ NEW
 import sellerAdminRouter    from './route/sellerAdmin.routes.js' // ✅ NEW
 import dailyAccountRouter   from './route/dailyAccount.route.js' // ✅ NEW
+import festiveOfferRouter   from './route/festiveOffer.route.js' // ✅ Festive Offers
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -386,6 +387,7 @@ app.use('/api/refund',          refundRouter)
 app.use('/api/delivery',        deliveryRouter)          // ✅ NEW
 app.use('/api/admin/accounts',  dailyAccountRouter)       // ✅ NEW
 app.use('/api/admin-management', adminManagementRouter)
+app.use('/api/festive-offer',    festiveOfferRouter)       // ✅ Festive Offers
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

@@ -37,6 +37,7 @@ const AdminWithdrawals       = lazy(() => import('../pages/AdminWithdrawals'))
 const AdminReferrals         = lazy(() => import('../pages/AdminReferrals'))
 const AdminManageAdmins      = lazy(() => import('../pages/AdminManageAdmins'))
 const AdminFrozenIps         = lazy(() => import('../pages/AdminFrozenIps'))
+const AdminBannerOffers      = lazy(() => import('../pages/AdminBannerOffers'))
 const SuperAdminDashboard    = lazy(() => import('../pages/SuperAdminDashboard'))
 const StoreOrders            = lazy(() => import('../pages/StoreOrders'))
 const Wallet                 = lazy(() => import('../pages/Wallet'))
@@ -204,6 +205,7 @@ const router = createHashRouter([
           { path: "super-admin/referrals", element: <S><AdminReferrals /></S> },
           { path: "super-admin/manage-admins", element: <S><AdminManageAdmins /></S> },
           { path: "super-admin/frozen-ips", element: <S><AdminFrozenIps /></S> },
+          { path: "super-admin/banner-offers", element: <S><AdminBannerOffers /></S> },
           {
             path: "product",
             element: <S><AdminPermision><ProductAdmin /></AdminPermision></S>

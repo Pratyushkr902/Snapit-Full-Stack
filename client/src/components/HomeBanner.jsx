@@ -8,9 +8,11 @@ import 'swiper/css/navigation';
 import banner1 from '../assets/banner1.webp';
 import banner2 from '../assets/banner2.webp';
 import banner3 from '../assets/banner3.webp';
+import rakhiBanner from '../assets/mgd_rakhi_banner.jpg';
 
-// ✅ Each banner navigates to its own product search
+// ✅ Each banner navigates to its own page / search
 const bannerData = [
+  { image: rakhiBanner, link: '/restaurant/6a3963a7e0dd57acb747e405' },
   { image: banner1, link: '/search?q=chicken' },
   { image: banner2, link: '/search?q=drink' },
   { image: banner3, link: '/search?q=oats' },

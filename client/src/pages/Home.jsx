@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect } from 'react'
 import HomeBanner from '../components/HomeBanner'
+import FestiveBannerCountdown from '../components/FestiveBannerCountdown'
 import { useDispatch, useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
@@ -127,7 +128,10 @@ const Home = () => {
   return (
     <section className='bg-white min-h-screen overflow-x-hidden'>
 
-      {/* 1. BANNER */}
+      {/* 1. FESTIVE COUNTDOWN BANNER */}
+      <FestiveBannerCountdown />
+
+      {/* 2. MAIN BANNER */}
       <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
         <HomeBanner />
       </div>

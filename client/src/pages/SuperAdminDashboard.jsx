@@ -39,6 +39,15 @@ const CARDS = [
     bg: '#f0f9ff',
   },
   {
+    key: 'banner-offers',
+    title: 'Festive Banners & Offers',
+    desc: 'Manage Raksha Bandhan timer, 10% pizza discount & freebie perks',
+    icon: '🍕',
+    path: '/dashboard/super-admin/banner-offers',
+    color: '#d97706',
+    bg: '#fef3c7',
+  },
+  {
     key: 'rider-panel',
     title: 'Rider Panel',
     desc: 'View live deliveries, rider locations, and dispatch activity',
