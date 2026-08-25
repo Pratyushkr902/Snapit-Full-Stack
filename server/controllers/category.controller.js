@@ -2,6 +2,9 @@ import CategoryModel from "../models/category.model.js";
 import SubCategoryModel from "../models/subCategory.model.js";
 import ProductModel from "../models/product.model.js";
 import mongoose from "mongoose";
+import NodeCache from "node-cache";
+
+const categoryCache = new NodeCache({ stdTTL: 120, checkperiod: 60 });
 
 export const AddCategoryController = async(request,response)=>{
     try {
@@ -21,9 +24,6 @@ export const AddCategoryController = async(request,response)=>{
             name,
             image: categoryAsset,
             icon: categoryAsset,
-            // Optional — only present if the upload step generated one.
-            // Missing on older/manual creates is fine: frontend falls
-            // back to `image`.
             imageThumbnail: imageThumbnail || ""
         })
 
@@ -36,6 +36,8 @@ export const AddCategoryController = async(request,response)=>{
                 success : false
             })
         }
+
+        categoryCache.flushAll() // Invalidate cache on mutation
 
         return response.json({
             message : "Add Category",
@@ -55,7 +57,19 @@ export const AddCategoryController = async(request,response)=>{
 
 export const getCategoryController = async(request,response)=>{
     try {
+        const cached = categoryCache.get('all_categories')
+        if (cached) {
+            return response.json({
+                data : cached,
+                error : false,
+                success : true,
+                cached: true
+            })
+        }
+
         const data = await CategoryModel.find().sort({ createdAt : -1 }).lean()
+        categoryCache.set('all_categories', data)
+
         return response.json({
             data : data,
             error : false,
@@ -96,6 +110,7 @@ export const updateCategoryController = async(request,response)=>{
             updateFields.imageThumbnail = imageThumbnail
         }
         const update = await CategoryModel.findByIdAndUpdate(_id, updateFields, { new: true })
+        categoryCache.flushAll()
 
         return response.json({
             message : "Updated Category",
@@ -141,6 +156,7 @@ export const deleteCategoryController = async(request,response)=>{
         }
 
         const deleteCategory = await CategoryModel.deleteOne({ _id : _id})
+        categoryCache.flushAll()
 
         return response.json({
             message : "Delete category successfully",

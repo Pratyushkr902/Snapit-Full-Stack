@@ -12,7 +12,8 @@ const subCategoryRouter = Router()
 // Create a new sub-category (Requires Admin Auth)
 subCategoryRouter.post('/create', auth, AddSubCategoryController)
 
-// Get all sub-categories (Changed to POST to match your frontend logs)
+// Get all sub-categories (Supports both GET and POST for optimal caching and compatibility)
+subCategoryRouter.get('/get', getSubCategoryController)
 subCategoryRouter.post('/get', getSubCategoryController)
 
 // Update sub-category (Requires Admin Auth)

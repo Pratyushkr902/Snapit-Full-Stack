@@ -10,6 +10,7 @@ import cookieParser from 'cookie-parser'
 import morgan from 'morgan'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import compression from 'compression'
 import connectDB from './config/connectDB.js'
 import cron from 'node-cron'
 import { abuseGuard } from './middleware/abuseGuard.js'
@@ -222,7 +223,7 @@ const registerLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
     windowMs:        60 * 1000,
-    max:             120,
+    max:             600, // Balanced for Indian mobile carrier CGNAT shared IPs
     standardHeaders: true,
     legacyHeaders:   false,
     message: { message: 'Too many requests. Please slow down.', error: true, success: false },
@@ -236,6 +237,7 @@ const financialLimiter = rateLimit({
     message: { message: 'Too many financial requests. Please slow down.', error: true, success: false },
 })
 
+app.use(compression())
 app.use(abuseGuard('general'))
 
 app.use(express.json())
