@@ -1,5 +1,5 @@
-const CACHE_NAME = 'snapit-v4'
-const IMAGE_CACHE = 'snapit-images-v2'
+const CACHE_NAME = 'snapit-v5'
+const IMAGE_CACHE = 'snapit-images-v3'
 
 self.addEventListener('install', e => {
   self.skipWaiting()
@@ -19,29 +19,52 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return
   if (!url.startsWith('http')) return
   if (url.includes('/api/')) return
+  if (url.includes('railway.app')) return
   if (url.includes('onrender.com')) return
   if (url.includes('socket.io')) return
 
   // Cache R2 images with cache-first strategy
   if (url.includes('r2.dev') || url.includes('pub-af292132196c4b93bf56272675b82149')) {
     e.respondWith(
-      caches.open(IMAGE_CACHE).then(cache =>
-        cache.match(e.request).then(cached => {
-          if (cached) return cached
-          return fetch(e.request).then(response => {
-            if (response.ok) cache.put(e.request, response.clone())
-            return response
-          })
-        })
-      )
+      caches.open(IMAGE_CACHE).then(async cache => {
+        const cached = await cache.match(e.request)
+        if (cached) return cached
+        try {
+          const response = await fetch(e.request)
+          if (response && response.ok) cache.put(e.request, response.clone())
+          return response
+        } catch (err) {
+          return cached || new Response('', { status: 408, statusText: 'Request timed out' })
+        }
+      })
     )
     return
   }
 
-  // Same-origin static assets - network first, fallback to cache
+  // Same-origin static assets - network first, fallback to cache, NEVER return undefined
   if (url.includes(self.location.origin)) {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
+      fetch(e.request)
+        .then(response => {
+          if (response && response.status === 200 && e.request.url.includes('/assets/')) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone))
+          }
+          return response
+        })
+        .catch(async () => {
+          const cached = await caches.match(e.request)
+          if (cached) return cached
+          if (e.request.mode === 'navigate') {
+            const indexHtml = await caches.match('/index.html')
+            if (indexHtml) return indexHtml
+          }
+          return new Response('Network error occurred. Please refresh.', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain' }
+          })
+        })
     )
     return
   }
