@@ -41,7 +41,7 @@ function App() {
   useNotifications() 
 
   const [showCart, setShowCart] = useState(false)
-  const [isAuthResolving, setIsAuthResolving] = useState(true)
+  const [isAuthResolving, setIsAuthResolving] = useState(false)
 
   const currentNormalizedRoute = (location.pathname + (location.hash || "")).toLowerCase();
 
@@ -234,14 +234,6 @@ function App() {
       stateListenerHandle?.remove()
     }
   }, [])
-
-  if (isAuthResolving) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-green-700"></div>
-      </div>
-    );
-  }
 
   return (
     <RemoteConfigProvider>
