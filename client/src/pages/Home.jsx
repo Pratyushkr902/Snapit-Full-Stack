@@ -1,6 +1,5 @@
 import React, { useMemo, useEffect } from 'react'
 import HomeBanner from '../components/HomeBanner'
-import FestiveBannerCountdown from '../components/FestiveBannerCountdown'
 import { useDispatch, useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
@@ -137,10 +136,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 2. FESTIVE COUNTDOWN BANNER (Raksha Bandhan 28 Aug) */}
-      <FestiveBannerCountdown />
-
-      {/* 3. MAIN BANNER SLIDER */}
+      {/* 2. MAIN UNIFIED BANNER CAROUSEL (With Rakhi Countdown) */}
       <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-5'>
         <HomeBanner />
       </div>
