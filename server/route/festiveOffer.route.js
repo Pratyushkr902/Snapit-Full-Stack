@@ -1,6 +1,6 @@
 import { Router } from "express";
 import auth from "../middleware/auth.js";
-import { superAdmin } from "../middleware/superAdmin.js";
+import { superAdmin } from "../middleware/Admin.js";
 import {
   getFestiveOfferController,
   updateFestiveOfferController,
