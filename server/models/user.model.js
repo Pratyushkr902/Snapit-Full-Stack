@@ -157,7 +157,7 @@ const userSchema = new mongoose.Schema({
         default: []
     },
     usedPromoCodes: {
-        type: [String],
+        type: [mongoose.Schema.Types.Mixed],
         default: []
     }
 },{
