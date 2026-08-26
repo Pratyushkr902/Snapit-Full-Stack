@@ -132,6 +132,9 @@ function QtyControl({ qty, onAdd, onIncrease, onDecrease }) {
 // ── Solo Food Item Card ───────────────────────────────────────────────────────
 function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(item.image ? item.image : FALLBACK_IMG)
+  useEffect(() => {
+    setImgSrc(item.image ? item.image : FALLBACK_IMG)
+  }, [item.image])
   const effectivePrice = item.discountedPrice > 0 ? item.discountedPrice : item.price
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
@@ -173,6 +176,9 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
 // ── Inline Variant Card (for pizza sizes via item.variants array) ────────────
 function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(item.image ? item.image : FALLBACK_IMG)
+  useEffect(() => {
+    setImgSrc(item.image ? item.image : FALLBACK_IMG)
+  }, [item.image])
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = item.variants[selectedIdx]
   const price = selectedVariant.price ?? item.price
@@ -242,6 +248,9 @@ function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
 // ── Grouped Variant Card (Half/Full suffix style) ─────────────────────────────
 function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(group.image ? group.image : FALLBACK_IMG)
+  useEffect(() => {
+    setImgSrc(group.image ? group.image : FALLBACK_IMG)
+  }, [group.image])
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = group.variants[selectedIdx]
   const selectedItem = selectedVariant.item
