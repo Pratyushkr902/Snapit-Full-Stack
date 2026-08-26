@@ -58,7 +58,7 @@ const menuItemSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true, suppressReservedKeysWarning: true }
 )
 
 menuItemSchema.index(
