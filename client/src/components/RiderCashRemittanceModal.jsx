@@ -54,6 +54,21 @@ const RiderCashRemittanceModal = ({ isOpen, onClose, onDepositSuccess }) => {
   const upiLink = `upi://pay?pa=${SUPER_ADMIN_UPI}&pn=${encodeURIComponent(SUPER_ADMIN_NAME)}&am=${depositAmt}&cu=INR&tn=${encodeURIComponent('Rider Cash Remittance')}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}`
 
+  const handleOpenUpiApp = (e) => {
+    e?.preventDefault?.()
+    if (!depositAmt || depositAmt <= 0) {
+      toast.error('Please enter an amount to deposit')
+      return
+    }
+
+    try {
+      navigator.clipboard?.writeText(SUPER_ADMIN_UPI)
+    } catch {}
+
+    toast.success(`Opening UPI payment app for ${fmtINR(depositAmt)}…`, { icon: '💳' })
+    window.location.href = upiLink
+  }
+
   // Handle Receipt Upload
   const handleReceiptUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -245,13 +260,19 @@ const RiderCashRemittanceModal = ({ isOpen, onClose, onDepositSuccess }) => {
                 </div>
 
                 {depositAmt > 0 && (
-                  <a
-                    href={upiLink}
-                    className='w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20'
-                  >
-                    <FaExternalLinkAlt size={11} />
-                    <span>Open in UPI App to Pay {fmtINR(depositAmt)}</span>
-                  </a>
+                  <div className='space-y-1.5'>
+                    <button
+                      type='button'
+                      onClick={handleOpenUpiApp}
+                      className='w-full py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/25 ring-1 ring-white/10'
+                    >
+                      <FaExternalLinkAlt size={12} />
+                      <span>Open in UPI App to Pay {fmtINR(depositAmt)}</span>
+                    </button>
+                    <p className='text-[10px] text-center text-slate-400 font-medium'>
+                      Opens Google Pay, PhonePe, Paytm or BHIM directly
+                    </p>
+                  </div>
                 )}
               </div>
 
