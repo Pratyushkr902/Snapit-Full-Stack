@@ -10,7 +10,8 @@ import AxiosToastError from '../utils/AxiosToastError'
 const AdminTreasury = () => {
   const navigate = useNavigate()
   const user = useSelector(state => state.user)
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+  const role = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
+  const isSuperAdmin = role === 'SUPER_ADMIN'
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
