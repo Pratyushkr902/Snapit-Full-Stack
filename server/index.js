@@ -64,6 +64,7 @@ import sellerAdminRouter    from './route/sellerAdmin.routes.js' // ✅ NEW
 import dailyAccountRouter   from './route/dailyAccount.route.js' // ✅ NEW
 import festiveOfferRouter   from './route/festiveOffer.route.js' // ✅ Festive Offers
 import treasuryRouter       from './route/treasury.route.js'       // ✅ COD Cash Treasury & Partner Split
+import appVersionRouter     from './route/appVersion.route.js'     // ✅ In-App Update & Version Check
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -390,6 +391,7 @@ app.use('/api/admin/accounts',  dailyAccountRouter)       // ✅ NEW
 app.use('/api/admin-management', adminManagementRouter)
 app.use('/api/festive-offer',    festiveOfferRouter)       // ✅ Festive Offers
 app.use('/api/treasury',         treasuryRouter)           // ✅ COD Cash Treasury & Partner Split
+app.use('/api/app-version',      appVersionRouter)         // ✅ In-App Update & Version Check
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

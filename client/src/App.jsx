@@ -10,6 +10,7 @@ import DisplayCartItem from './components/DisplayCartItem';
 import WhatsAppButton from './components/WhatsAppButton'
 import ChatBox from './components/ChatBox'
 import StoreClosedOverlay from './components/StoreClosedOverlay'
+import AppUpdateModal from './components/AppUpdateModal'
 
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails } from './store/userSlice';
@@ -239,6 +240,7 @@ function App() {
     <RemoteConfigProvider>
       <GlobalProvider>
         <div className="App">
+          <AppUpdateModal />
           {!isDashboard && !isFoodPage && <StoreClosedOverlay />}
           {!isDashboard && <Header openCart={() => setShowCart(true)} />}
           
