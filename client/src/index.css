@@ -17,7 +17,9 @@ html {
   /* MOBILE: Prevent text size bump on orientation change (iOS) */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* MOBILE: Disable pinch-zoom on the page (PWA should feel native) */
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
 }
 
 body {
@@ -27,6 +29,16 @@ body {
   @apply bg-white text-neutral-700 scroll-smooth;
   /* MOBILE: Stop bounce/pull-to-refresh feel */
   overscroll-behavior-x: none;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
+#root {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  min-height: 100vh;
 }
 
 /* MOBILE: Remove tap highlight (Android blue flash on tap) */

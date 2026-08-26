@@ -15,9 +15,12 @@ const Dashboard = () => {
   const isFullScreen =
     location.pathname.includes('seller-dashboard') ||
     location.pathname.includes('rider-panel')      ||
+    location.pathname.includes('rider-fleet')      ||
     location.pathname.includes('resto-dashboard')  ||
     location.pathname.includes('restaurant-admin') ||
-    location.pathname.includes('admin-summary')
+    location.pathname.includes('admin-summary')    ||
+    location.pathname.includes('super-admin')      ||
+    location.pathname.includes('treasury')
 
   if (isFullScreen) {
     return <Outlet />

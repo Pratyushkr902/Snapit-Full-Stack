@@ -342,10 +342,10 @@ const RiderDashboard = () => {
     );
 
     return (
-        <div className='min-h-screen bg-slate-950 text-white'>
+        <div className='min-h-screen bg-slate-950 text-white w-full max-w-full overflow-x-hidden'>
 
             {/* ── TOP HEADER BAR ── */}
-            <div className='sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-3 sm:px-4 py-3'>
+            <div className='sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-3 sm:px-4 py-3 w-full'>
                 <div className='max-w-5xl mx-auto space-y-2.5'>
                     
                     {/* Top Row: Navigation + Duty Switcher + Refresh */}
@@ -363,23 +363,23 @@ const RiderDashboard = () => {
                             </div>
                         </div>
 
-                        <div className='flex items-center gap-2 flex-shrink-0'>
+                        <div className='flex items-center gap-1.5 sm:gap-2 flex-shrink-0'>
                             <button
                                 onClick={handleToggleDuty}
                                 disabled={togglingDuty}
-                                className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-md ${
+                                className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 shadow-md ${
                                     isDutyOn
                                         ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/30 animate-pulse'
                                         : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30'
                                 }`}
                             >
-                                <FaPowerOff size={11} />
+                                <FaPowerOff size={10} />
                                 <span>{togglingDuty ? 'Updating…' : isDutyOn ? '🟢 ON DUTY' : '🔴 OFF DUTY'}</span>
                             </button>
 
                             <button
                                 onClick={() => fetchRiderOrders(true)}
-                                className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'
+                                className='w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'
                                 title='Refresh'
                             >
                                 🔄
@@ -388,7 +388,7 @@ const RiderDashboard = () => {
                     </div>
 
                     {/* Secondary Row: Live Shift Hours + Cash in Hand Cards */}
-                    <div className='grid grid-cols-2 gap-2 pt-1'>
+                    <div className='grid grid-cols-2 gap-2 pt-1 w-full'>
                         {/* Duty Shift Card */}
                         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between'>
                             <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1'>
@@ -419,7 +419,7 @@ const RiderDashboard = () => {
                                     Deposit ➔
                                 </span>
                             </div>
-                            <p className='text-sm sm:text-base font-black text-amber-400 group-hover:text-amber-300 transition mt-1'>
+                            <p className='text-sm sm:text-base font-black text-amber-400 group-hover:text-amber-300 transition mt-1 truncate'>
                                 {fmtINR(unremittedCash || totalInHand)}
                             </p>
                         </div>
@@ -427,12 +427,12 @@ const RiderDashboard = () => {
                 </div>
             </div>
 
-            <div className='max-w-5xl mx-auto px-3 sm:px-4 py-4'>
+            <div className='max-w-5xl mx-auto px-3 sm:px-4 py-4 w-full max-w-full overflow-x-hidden'>
 
                 {/* ── TABS ── */}
-                <div className='flex gap-2 mb-4 bg-slate-900 rounded-2xl p-1 border border-slate-800'>
+                <div className='flex gap-1.5 sm:gap-2 mb-4 bg-slate-900 rounded-2xl p-1 border border-slate-800 w-full'>
                     <button onClick={() => setActiveTab('orders')}
-                        className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${
+                        className={`flex-1 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs transition-all truncate ${
                             activeTab === 'orders'
                                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                                 : 'text-slate-400 hover:text-white'
@@ -440,7 +440,7 @@ const RiderDashboard = () => {
                         🛵 Orders ({orders.filter(o => o.delivery_status !== 'Delivered' && o.delivery_status !== 'Cancelled').length})
                     </button>
                     <button onClick={() => setActiveTab('earnings')}
-                        className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${
+                        className={`flex-1 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs transition-all truncate ${
                             activeTab === 'earnings'
                                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                                 : 'text-slate-400 hover:text-white'
@@ -448,9 +448,9 @@ const RiderDashboard = () => {
                         💰 Earnings
                     </button>
                     <button onClick={() => setShowRemittanceModal(true)}
-                        className='px-3.5 py-2.5 rounded-xl font-black text-xs bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all flex items-center gap-1.5'>
-                        <FaMoneyBillWave size={12} />
-                        <span>Deposit Cash</span>
+                        className='px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all flex items-center gap-1 flex-shrink-0'>
+                        <FaMoneyBillWave size={11} />
+                        <span>Deposit</span>
                     </button>
                 </div>
 
