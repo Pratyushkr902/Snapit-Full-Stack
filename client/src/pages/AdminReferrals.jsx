@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import AxiosToastError from '../utils/AxiosToastError'
-import SuperAdminPermision from '../layouts/SuperAdminPermision'
+import AdminPermision from '../layouts/AdminPermision'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 
 const AdminReferrals = () => {
@@ -26,11 +26,11 @@ const AdminReferrals = () => {
   }, [])
 
   return (
-    <SuperAdminPermision>
+    <AdminPermision>
       <div style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
-        <button onClick={() => navigate('/dashboard/super-admin')}
+        <button onClick={() => navigate(-1)}
           style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '800', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '14px', padding: 0 }}>
-          ← Back to Super Admin Panel
+          ← Back
         </button>
         <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', marginBottom: '4px' }}>
           Referral Program
@@ -69,7 +69,7 @@ const AdminReferrals = () => {
           </div>
         )}
       </div>
-    </SuperAdminPermision>
+    </AdminPermision>
   )
 }
 

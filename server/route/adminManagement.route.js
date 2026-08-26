@@ -1,6 +1,6 @@
 import express from 'express'
 import auth from '../middleware/auth.js'
-import { superAdmin } from '../middleware/Admin.js'
+import { superAdmin, admin } from '../middleware/Admin.js'
 import {
     createAdminController,
     listAdminsController,
@@ -21,6 +21,6 @@ router.delete('/:adminId', auth, superAdmin, removeAdminController)
 router.get('/frozen-ips', auth, superAdmin, listFrozenIPsController)
 router.delete('/frozen-ips/:ip', auth, superAdmin, unfreezeIPController)
 
-router.get('/referrals', auth, superAdmin, listReferralsController)
+router.get('/referrals', auth, admin, listReferralsController)
 
 export default router

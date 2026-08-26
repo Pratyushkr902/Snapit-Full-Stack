@@ -100,7 +100,7 @@ const ReferAndEarn = () => {
   const fetchReferralInfo = async () => {
     try {
       const res = await Axios({ ...SummaryApi.getReferralInfo })
-      if (res.data.success) setInfo(res.data.data)
+      if (res.data?.success) setInfo(res.data.data)
     } catch (err) {
       console.log(err)
     } finally {
@@ -110,18 +110,21 @@ const ReferAndEarn = () => {
 
   // ── Original handlers preserved ──
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(info.referralCode)
+    if (!info?.referralCode) return toast.error('Log in to view your referral code')
+    navigator.clipboard?.writeText?.(info.referralCode)
     setCopied(true)
     toast.success('Referral code copied! 🎉')
     setTimeout(() => setCopied(false), 2500)
   }
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(info.referralLink)
+    if (!info?.referralLink) return toast.error('Log in to view your referral link')
+    navigator.clipboard?.writeText?.(info.referralLink)
     toast.success('Link copied to clipboard!')
   }
 
   const handleShare = () => {
+    if (!info?.referralCode) return toast.error('Log in to share your referral link')
     if (navigator.share) {
       navigator.share({
         title: 'Join Snapit!',
@@ -135,6 +138,7 @@ const ReferAndEarn = () => {
 
   // ── WhatsApp share (new) ──
   const handleWhatsApp = () => {
+    if (!info?.referralCode) return toast.error('Log in to share your referral link')
     const msg = `🛒 Come order fresh groceries on *Snapit*!\n\nSign up with my code: *${info?.referralCode}*\n\n👉 ${info?.referralLink}`
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
   }
