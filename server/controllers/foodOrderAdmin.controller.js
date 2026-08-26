@@ -1,5 +1,6 @@
 import OrderModel from '../models/order.model.js'
 import RestaurantModel from '../models/restaurant.model.js'
+import { sendOrderDeliveredEmail } from '../utils/sendDeliveryEmail.js'
 
 // GET /api/order/admin/restaurant-orders  (admin — all food orders)
 export async function getRestaurantOrdersController(req, res) {
@@ -64,6 +65,10 @@ export async function updateFoodOrderStatusController(req, res) {
       { new: true }
     )
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' })
+
+    if (delivery_status === 'Delivered') {
+      sendOrderDeliveredEmail(order).catch(() => {})
+    }
 
     return res.json({ success: true, data: order })
   } catch (err) {

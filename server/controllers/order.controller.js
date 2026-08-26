@@ -49,6 +49,7 @@ import {
     notifySellersOfNewOrder,
 } from '../utils/notificationService.js'
 import sendEmail        from './sendEmail.js'
+import { sendOrderDeliveredEmail } from '../utils/sendDeliveryEmail.js'
 
 const RIDER_ETA_DEFAULT_MIN = 20 // no live ETA field yet — placeholder
 
@@ -912,6 +913,7 @@ export const updateOrderStatusController = async (request, response) => {
                     ).catch(() => {})
                 } else if (status === 'Delivered') {
                     notifyUserOrderDelivered(updatedOrder.userId, orderId, token).catch(() => {})
+                    sendOrderDeliveredEmail(updatedOrder).catch(() => {})
                 } else if (status === 'Cancelled') {
                     const refund = updatedOrder.payment_status === 'PAID' ? updatedOrder.totalAmt : 0
                     notifyUserOrderCancelled(updatedOrder.userId, orderId, refund, token).catch(() => {})
@@ -965,11 +967,12 @@ export const verifyDeliveryOtpController = async (request, response) => {
         )
 
         try {
-            const customer = await UserModel.findById(updatedOrder.userId).select('fcmToken')
+            const customer = await UserModel.findById(updatedOrder.userId).select('fcmToken name email')
             const token = customer?.fcmToken
             if (token) {
                 notifyUserOrderDelivered(updatedOrder.userId, orderId, token).catch(() => {})
             }
+            sendOrderDeliveredEmail(updatedOrder, customer).catch(() => {})
         } catch (e) {
             console.error('Delivery notify failed (non-fatal):', e.message)
         }
