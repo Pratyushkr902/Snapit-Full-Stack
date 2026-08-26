@@ -509,7 +509,7 @@ const RiderDashboard = () => {
                                         {fmtINR(unremittedCash || totalInHand)}
                                     </p>
                                     <p className='text-[11px] text-slate-400 mt-0.5'>
-                                        Deposit collected COD cash online to Super Admin UPI (`00pr1199-1@oksbi`)
+                                        Deposit collected COD cash online to Super Admin
                                     </p>
                                 </div>
                                 <button
