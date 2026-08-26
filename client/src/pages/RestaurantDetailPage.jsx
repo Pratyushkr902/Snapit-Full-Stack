@@ -410,19 +410,16 @@ export default function RestaurantDetailPage() {
   const [activeCategory, setActiveCategory] = useState('')
   const [bannerSrc, setBannerSrc] = useState(BANNER_FALLBACK)
   const [userLocation, setUserLocation] = useState(null)
+  const [conflictModal, setConflictModal] = useState(null)
 
-  // ── Persistent, cross-restaurant cart (see utils/foodCartStore.js) ─────────
-  // restaurantLat/Lng falls back between the plain lat/lng shape (used
-  // elsewhere) and the GeoJSON coordinates shape (used by LocationBar above),
-  // since the restaurant doc has been observed with either depending on when
-  // it was seeded.
+  // ── Single-restaurant food cart (see utils/foodCartStore.js) ─────────
   const restaurantMeta = {
     restaurantId: id,
     restaurantName: restaurant?.name || '',
     restaurantLat: restaurant?.location?.lat ?? restaurant?.location?.coordinates?.[1] ?? null,
     restaurantLng: restaurant?.location?.lng ?? restaurant?.location?.coordinates?.[0] ?? null,
   }
-  const { foodCart, cartCount, cartTotal, handleAdd, handleIncrease, handleDecrease } =
+  const { foodCart, cartCount, cartTotal, handleAdd, replaceAndAdd, handleIncrease, handleDecrease } =
     useRestaurantCart(restaurantMeta)
 
   // Request location on mount
@@ -456,8 +453,12 @@ export default function RestaurantDetailPage() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const wrappedAdd = (item) => {
-    handleAdd(item)
-    toast.success(`${item.name} added!`, { duration: 1200, icon: '🛒' })
+    const res = handleAdd(item)
+    if (res?.conflict) {
+      setConflictModal({ item, existingRestaurant: res.existingRestaurant })
+    } else {
+      toast.success(`${item.name} added!`, { duration: 1200, icon: '🛒' })
+    }
   }
 
   const activeSection = menu.find(m => m.category === activeCategory)
@@ -671,6 +672,41 @@ export default function RestaurantDetailPage() {
         totalPrice={cartTotal}
         onViewCart={() => navigate('/food-checkout')}
       />
+
+      {/* ── Zomato-style Replace Cart Modal ── */}
+      {conflictModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-gray-100">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mb-4">
+              ⚠️
+            </div>
+            <h3 className="text-lg font-black text-gray-900 mb-1">Replace cart items?</h3>
+            <p className="text-xs text-gray-500 leading-relaxed mb-6">
+              Your cart contains dishes from <strong className="text-gray-800">{conflictModal.existingRestaurant?.name || 'another restaurant'}</strong>. Do you want to discard them and add dishes from <strong className="text-green-700">{restaurant?.name}</strong>?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setConflictModal(null)}
+                className="py-3 px-4 rounded-xl border border-gray-200 font-bold text-gray-700 text-xs hover:bg-gray-50 transition active:scale-95"
+              >
+                No, Keep
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  replaceAndAdd(conflictModal.item)
+                  setConflictModal(null)
+                  toast.success(`${conflictModal.item.name} added!`, { icon: '🛒' })
+                }}
+                className="py-3 px-4 rounded-xl bg-red-600 font-bold text-white text-xs hover:bg-red-700 transition shadow-md shadow-red-200 active:scale-95"
+              >
+                Discard & Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

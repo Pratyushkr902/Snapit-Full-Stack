@@ -63,13 +63,35 @@ function setState(updater) {
 /**
  * restaurantMeta: { restaurantId, restaurantName, restaurantLat, restaurantLng }
  * item: the menu item object (must have _id)
+ * forceReplace: if true, discard items from any other restaurant and start new cart
  */
-function addItem(restaurantMeta, item) {
+function addItem(restaurantMeta, item, forceReplace = false) {
   const { restaurantId } = restaurantMeta
-  if (!restaurantId || !item?._id) return
+  if (!restaurantId || !item?._id) return { success: false }
+
+  const currentSnapshot = getSnapshot()
+  const otherRestaurantIds = Object.keys(currentSnapshot.restaurants).filter(
+    (id) => id !== restaurantId && Object.keys(currentSnapshot.restaurants[id]?.items || {}).length > 0
+  )
+
+  if (otherRestaurantIds.length > 0 && !forceReplace) {
+    const existingId = otherRestaurantIds[0]
+    const existingRestaurant = currentSnapshot.restaurants[existingId]
+    return {
+      success: false,
+      conflict: true,
+      existingRestaurant: {
+        id: existingId,
+        name: existingRestaurant?.restaurantName || 'another restaurant',
+      },
+    }
+  }
 
   setState((prev) => {
-    const existingRestaurant = prev.restaurants[restaurantId] || {
+    // If replacing, wipe out all previous restaurants
+    const baseRestaurants = (otherRestaurantIds.length > 0 && forceReplace) ? {} : prev.restaurants
+
+    const existingRestaurant = baseRestaurants[restaurantId] || {
       restaurantId,
       restaurantName: restaurantMeta.restaurantName || '',
       restaurantLat: restaurantMeta.restaurantLat ?? null,
@@ -82,7 +104,7 @@ function addItem(restaurantMeta, item) {
     return {
       ...prev,
       restaurants: {
-        ...prev.restaurants,
+        ...baseRestaurants,
         [restaurantId]: {
           ...existingRestaurant,
           // keep meta fresh in case name/location changed since first add
@@ -97,6 +119,8 @@ function addItem(restaurantMeta, item) {
       },
     }
   })
+
+  return { success: true, conflict: false }
 }
 
 function increaseQty(restaurantId, item) {
@@ -223,12 +247,13 @@ export function useRestaurantCart(restaurantMeta) {
   const cartCount = restaurant ? restaurantCount(restaurant) : 0
   const cartTotal = restaurant ? restaurantSubtotal(restaurant) : 0
 
-  const handleAdd = useCallback((item) => addItem(restaurantMeta, item), [restaurantMeta])
+  const handleAdd = useCallback((item) => addItem(restaurantMeta, item, false), [restaurantMeta])
+  const replaceAndAdd = useCallback((item) => addItem(restaurantMeta, item, true), [restaurantMeta])
   const handleIncrease = useCallback((item) => increaseQty(restaurantId, item), [restaurantId])
   const handleDecrease = useCallback((item) => decreaseQty(restaurantId, item), [restaurantId])
   const clearThisRestaurant = useCallback(() => clearRestaurant(restaurantId), [restaurantId])
 
-  return { foodCart, cartCount, cartTotal, handleAdd, handleIncrease, handleDecrease, clearThisRestaurant }
+  return { foodCart, cartCount, cartTotal, handleAdd, replaceAndAdd, handleIncrease, handleDecrease, clearThisRestaurant }
 }
 
 /**

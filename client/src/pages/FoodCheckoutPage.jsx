@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
-import { useFullCart } from '../utils/foodCartStore'
+import { useFullCart, foodCartStore } from '../utils/foodCartStore'
 import { isStoreOpen } from '../components/StoreClosedOverlay'
 
 const TIP_PRESETS = [
@@ -150,6 +150,10 @@ const FoodCheckoutPage = () => {
   const unserviceableResto = restaurantPricing.find(r => r.info && !r.info.serviceable)
 
   const checkServiceArea = () => {
+    if (restaurants.length > 1) {
+      toast.error('You can only order from 1 restaurant at a time. Please select which restaurant to keep.', { duration: 5000 })
+      return false
+    }
     for (const r of restaurantPricing) {
       if (r.info && !r.info.serviceable) {
         if (r.info.isEveningClosed) {
@@ -416,6 +420,38 @@ const FoodCheckoutPage = () => {
           </p>
         </div>
       </div>
+
+      {/* ── Multi-restaurant cart warning (if user had items from multiple restos) ── */}
+      {restaurants.length > 1 && (
+        <div className="bg-amber-50 border border-amber-300 text-amber-900 p-4 mx-4 mt-3 rounded-2xl text-xs font-medium shadow-sm">
+          <div className="flex items-center gap-2 mb-1.5 font-bold text-sm text-amber-950">
+            <span>⚠️</span>
+            <span>Single Restaurant Policy</span>
+          </div>
+          <p className="mb-3 text-xs leading-relaxed text-amber-900">
+            Snapit food delivery only supports ordering from <strong>1 restaurant per order</strong> (Zomato style). Please select which restaurant's order you want to proceed with:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {restaurants.map(r => (
+              <button
+                key={r.restaurantId}
+                type="button"
+                onClick={() => {
+                  restaurants.forEach(other => {
+                    if (other.restaurantId !== r.restaurantId) {
+                      foodCartStore.clearRestaurant(other.restaurantId)
+                    }
+                  })
+                  toast.success(`Active restaurant: ${r.restaurantName}`, { icon: '🍽️' })
+                }}
+                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-xs"
+              >
+                Keep {r.restaurantName}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Items, grouped by restaurant ────────────────────────────────── */}
       {restaurantPricing.map((r) => (

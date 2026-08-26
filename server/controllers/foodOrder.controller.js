@@ -78,6 +78,12 @@ const buildGroupsByRestaurant = async (items) => {
     groups.get(restaurantId).cartItems.push(cartItem)
   }
 
+  if (groups.size > 1) {
+    const err = new Error('You can only order from one restaurant at a time. Please remove items from other restaurants.')
+    err.statusCode = 400
+    throw err
+  }
+
   return [...groups.values()]
 }
 
