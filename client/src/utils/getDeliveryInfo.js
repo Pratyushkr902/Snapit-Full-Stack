@@ -59,11 +59,22 @@ const HIMALAYA_MIN_ORDER = 499
 // Does NOT apply to the Chikasi flat-fee zone or the 0–6km zone.
 const MIN_ORDER_ABOVE_6KM = 499
 
+// 7:30 PM IST cutoff rule: After 7:30 PM (19:30 IST), delivery beyond 5 km is closed.
+export const isAfterEveningCutoff = () => {
+  const now = new Date()
+  const istMs = now.getTime() + 5.5 * 3600000
+  const istDate = new Date(istMs)
+  const hours = istDate.getUTCHours()
+  const minutes = istDate.getUTCMinutes()
+  return hours > 19 || (hours === 19 && minutes >= 30)
+}
+
 // ── Snapit Plus free-delivery rules ─────────────────────────────────────────
 // 0–6 km  : non-Plus always pays ₹12/₹19 (distance fee) | Plus free if cart >= ₹149, else pays distance fee
 // 6–14 km : non-Plus always pays ₹49                    | Plus free if cart >= ₹399, else pays ₹49
 // Chikasi : non-Plus always pays ₹49                    | Plus free if cart >= ₹399, else pays ₹49
 // >14 km  : not serviceable
+// >5 km after 7:30 PM : delivery closed for rider safety
 // Generalized version — computes delivery info from ANY origin point
 // (grocery store OR a restaurant's own location). Used by getDeliveryInfo()
 // below for grocery, and directly by food checkout for restaurant orders.
@@ -74,8 +85,36 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   const himalayaDist = getDistanceKm(HIMALAYA_LAT, HIMALAYA_LNG, customerLat, customerLng)
   const isHimalaya = himalayaDist <= HIMALAYA_RADIUS_KM
 
+  const isEvening = isAfterEveningCutoff()
+
+  // After 7:30 PM, deliveries beyond 5km are closed
+  if (dist > 5 && isEvening) {
+    return {
+      serviceable: false,
+      distanceKm: Math.round(dist * 10) / 10,
+      charge: 0,
+      eta: null,
+      label: 'Closed (>5km after 7:30 PM)',
+      isEveningClosed: true,
+      reason: 'EVENING_DISTANCE_LIMIT',
+      isChikasi: false,
+      isHimalaya: false,
+      minOrder: 0
+    }
+  }
+
   if (!isChikasi && !isHimalaya && dist > 14) {
-    return { serviceable: false, distanceKm: dist, charge: 0, eta: null, label: 'Outside delivery range', isChikasi: false, isHimalaya: false, minOrder: 0 }
+    return {
+      serviceable: false,
+      distanceKm: Math.round(dist * 10) / 10,
+      charge: 0,
+      eta: null,
+      label: 'Outside delivery range',
+      isEveningClosed: false,
+      isChikasi: false,
+      isHimalaya: false,
+      minOrder: 0
+    }
   }
 
   const charge = isChikasi ? 49 : isHimalaya ? HIMALAYA_FLAT_FEE : getDeliveryCharge(dist)

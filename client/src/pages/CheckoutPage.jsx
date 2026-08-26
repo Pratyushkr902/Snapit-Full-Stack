@@ -88,7 +88,11 @@ const CheckoutPage = () => {
   const checkServiceArea = () => {
     if (!selectedAddress) return true
     if (deliveryInfo && !deliveryInfo.serviceable) {
-      toast.error('Your location is outside our 12 km delivery range.', { duration: 5000 })
+      if (deliveryInfo.isEveningClosed) {
+        toast.error(`🌙 Delivery beyond 5 km is closed after 7:30 PM (${deliveryInfo.distanceKm} km away). Deliveries resume tomorrow at 8:00 AM!`, { duration: 6000 })
+      } else {
+        toast.error(`Your address is ${deliveryInfo.distanceKm} km away and outside our 14 km delivery range.`, { duration: 5000 })
+      }
       return false
     }
     if (deliveryInfo && deliveryInfo.minOrder > 0 && totalPrice < deliveryInfo.minOrder) {
@@ -369,13 +373,20 @@ const CheckoutPage = () => {
           </div>
 
           <div className='w-full flex flex-col gap-3 p-4'>
-            <button disabled={cartItemsList.length === 0}
+            {deliveryInfo && !deliveryInfo.serviceable && (
+              <div className='bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-xs font-bold leading-relaxed shadow-sm'>
+                {deliveryInfo.isEveningClosed
+                  ? `🌙 Delivery beyond 5 km is closed after 7:30 PM for rider safety (${deliveryInfo.distanceKm} km away). Please select an address within 5 km or order tomorrow morning!`
+                  : `📍 Your address is ${deliveryInfo.distanceKm} km away and outside our 14 km serviceable delivery area.`}
+              </div>
+            )}
+            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
               className='py-4 bg-green-700 text-white rounded-2xl font-black uppercase disabled:opacity-40'
               onClick={handleWalletPayment}>Pay via Wallet</button>
-            <button disabled={cartItemsList.length === 0}
+            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
               className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase disabled:opacity-40'
               onClick={handleOnlinePayment}>Online Payment</button>
-            <button disabled={cartItemsList.length === 0}
+            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
               className='py-4 border-2 border-slate-900 text-slate-950 rounded-2xl font-black uppercase disabled:opacity-40'
               onClick={handleCashOnDelivery}>Cash on Delivery</button>
           </div>

@@ -2,8 +2,14 @@ import OrderModel from '../models/order.model.js'
 import UserModel  from '../models/user.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
-import { verifyRazorpaySignature } from '../utils/verifyRazorpaySignature.js'
-import { calcDeliveryFeeFromOrigin, getMinOrderAmountFromOrigin } from '../utils/deliveryFee.js'
+import {
+  calcDeliveryFeeFromOrigin,
+  getMinOrderAmountFromOrigin,
+  isOutOfDeliveryRangeFromOrigin,
+  getDistanceFromOrigin,
+  isAfterEveningCutoff,
+  MAX_DELIVERY_RADIUS_KM
+} from '../utils/deliveryFee.js'
 import RestaurantModel from '../models/restaurant.model.js'
 import FestiveOfferModel from '../models/festiveOffer.model.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
@@ -117,6 +123,20 @@ const priceGroup = async (group, deliveryLocation, user) => {
 
   const { lat, lng } = deliveryLocation || {}
   const subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
+
+  if (lat && lng) {
+    const dist = getDistanceFromOrigin(restaurant.location.lat, restaurant.location.lng, lat, lng)
+    if (dist > MAX_DELIVERY_RADIUS_KM) {
+      const err = new Error(`Sorry, ${restaurant.name} doesn't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km yet.`)
+      err.statusCode = 400
+      throw err
+    }
+    if (dist > 5 && isAfterEveningCutoff()) {
+      const err = new Error(`Deliveries to locations beyond 5 km are closed after 7:30 PM for rider safety (${dist.toFixed(1)} km from ${restaurant.name}). Please select an address within 5 km or order tomorrow morning!`)
+      err.statusCode = 400
+      throw err
+    }
+  }
 
   const deliveryFee = calcDeliveryFeeFromOrigin(
     restaurant.location.lat, restaurant.location.lng, lat, lng

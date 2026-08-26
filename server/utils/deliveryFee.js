@@ -72,6 +72,16 @@ const isHimalayaZone = (lat, lng) => {
 // Does NOT apply to the Chikasi flat-fee zone or the 0–6km zone.
 const MIN_ORDER_ABOVE_6KM = 499
 
+// 7:30 PM IST cutoff rule: After 7:30 PM (19:30 IST), delivery beyond 5 km is closed.
+export const isAfterEveningCutoff = () => {
+  const now = new Date()
+  const istMs = now.getTime() + 5.5 * 3600000
+  const istDate = new Date(istMs)
+  const hours = istDate.getUTCHours()
+  const minutes = istDate.getUTCMinutes()
+  return hours > 19 || (hours === 19 && minutes >= 30)
+}
+
 // Returns the minimum cart subtotal required to place an order at this
 // location. 0 means no extra minimum beyond normal checkout rules.
 // isSnapitPlus exempts the customer from both the 6-14km and Himalaya minimums.
@@ -83,9 +93,12 @@ export const getMinOrderAmount = (lat, lng, isSnapitPlus = false) => {
 }
 
 // Returns true if the coordinates fall outside the serviceable delivery radius.
+// Deliveries >5km are also unserviceable after 7:30 PM IST.
 export const isOutOfDeliveryRange = (lat, lng) => {
   const dist = getDistanceFromStore(lat, lng)
-  return dist > MAX_DELIVERY_RADIUS_KM
+  if (dist > MAX_DELIVERY_RADIUS_KM) return true
+  if (dist > 5 && isAfterEveningCutoff()) return true
+  return false
 }
 
 // Returns the flat delivery fee (number) for an order.
@@ -134,5 +147,7 @@ export const getMinOrderAmountFromOrigin = (originLat, originLng, customerLat, c
 // this specific restaurant (not the grocery store)?
 export const isOutOfDeliveryRangeFromOrigin = (originLat, originLng, customerLat, customerLng) => {
   const dist = getDistanceFromOrigin(originLat, originLng, customerLat, customerLng)
-  return dist > MAX_DELIVERY_RADIUS_KM
+  if (dist > MAX_DELIVERY_RADIUS_KM) return true
+  if (dist > 5 && isAfterEveningCutoff()) return true
+  return false
 }

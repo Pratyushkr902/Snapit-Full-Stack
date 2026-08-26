@@ -88,9 +88,22 @@ import {
   calcDeliveryFee,
   isOutOfDeliveryRange,
   getMinOrderAmount,
+  getDistanceFromStore,
+  isAfterEveningCutoff,
   MAX_DELIVERY_RADIUS_KM,
   EXPRESS_DELIVERY_FEE,
 } from '../utils/deliveryFee.js'
+
+const checkDeliveryServiceability = (lat, lng) => {
+  const dist = getDistanceFromStore(lat, lng)
+  if (dist > MAX_DELIVERY_RADIUS_KM) {
+    return `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`
+  }
+  if (dist > 5 && isAfterEveningCutoff()) {
+    return `Deliveries to locations beyond 5 km are closed after 7:30 PM for rider safety (${dist.toFixed(1)} km away). Please select an address within 5 km or order tomorrow morning!`
+  }
+  return null
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RIDER ASSIGNMENT — picks the active rider with the fewest current live orders
@@ -344,9 +357,10 @@ export async function CashOnDeliveryOrderController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
-        if (isOutOfDeliveryRange(verifiedLat, verifiedLng)) {
+        const serviceabilityError = checkDeliveryServiceability(verifiedLat, verifiedLng)
+        if (serviceabilityError) {
             return response.status(400).json({
-                message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
+                message: serviceabilityError,
                 error: true,
                 success: false
             })
@@ -481,9 +495,10 @@ export async function WalletPaymentOrderController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
-        if (isOutOfDeliveryRange(verifiedLat, verifiedLng)) {
+        const serviceabilityError = checkDeliveryServiceability(verifiedLat, verifiedLng)
+        if (serviceabilityError) {
             return response.status(400).json({
-                message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
+                message: serviceabilityError,
                 error: true,
                 success: false
             })
@@ -693,9 +708,10 @@ export async function verifyPaymentController(request, response) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
-        if (isOutOfDeliveryRange(verifiedLat, verifiedLng)) {
+        const serviceabilityError = checkDeliveryServiceability(verifiedLat, verifiedLng)
+        if (serviceabilityError) {
             return response.status(400).json({
-                message: `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`,
+                message: serviceabilityError,
                 error: true,
                 success: false
             })

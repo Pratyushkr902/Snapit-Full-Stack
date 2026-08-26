@@ -135,7 +135,7 @@ const FoodCheckoutPage = () => {
       : (isSnapitPlus ? 0 : FALLBACK_DELIVERY_FEE)
     const minOrder = info?.minOrder ?? 0
 
-    return { ...r, subtotal, fee, minOrder }
+    return { ...r, subtotal, fee, minOrder, info }
   })
 
   const subTotal    = restaurantPricing.reduce((s, r) => s + r.subtotal, 0)
@@ -147,8 +147,18 @@ const FoodCheckoutPage = () => {
   const grandTotal  = Math.max(0, preWallet - walletDeduct)
   const totalSaved  = 48 + couponDiscount + walletDeduct
 
-  const checkMinOrder = () => {
+  const unserviceableResto = restaurantPricing.find(r => r.info && !r.info.serviceable)
+
+  const checkServiceArea = () => {
     for (const r of restaurantPricing) {
+      if (r.info && !r.info.serviceable) {
+        if (r.info.isEveningClosed) {
+          toast.error(`🌙 Delivery beyond 5 km is closed after 7:30 PM (${r.info.distanceKm} km from ${r.restaurantName}).`, { duration: 6000 })
+        } else {
+          toast.error(`Your address is ${r.info.distanceKm} km away and outside the 14 km delivery range for ${r.restaurantName}.`, { duration: 5000 })
+        }
+        return false
+      }
       if (r.minOrder > 0 && r.subtotal < r.minOrder) {
         toast.error(`Minimum order of ₹${r.minOrder} required for ${r.restaurantName} at this location.`, { duration: 5000 })
         return false
@@ -270,7 +280,7 @@ const FoodCheckoutPage = () => {
   const handleCOD = async () => {
     if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
-    if (!checkMinOrder()) return
+    if (!checkServiceArea()) return
     setPlacing(true)
     const t = toast.loading('Placing order...')
     try {
@@ -289,7 +299,7 @@ const FoodCheckoutPage = () => {
   const handleWalletPay = async () => {
     if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
-    if (!checkMinOrder()) return
+    if (!checkServiceArea()) return
     if (walletBal < grandTotal) return toast.error(`Insufficient wallet balance. Need ₹${grandTotal}, have ₹${walletBal.toFixed(0)}`)
     setPlacing(true)
     const t = toast.loading('Processing wallet payment...')
@@ -311,7 +321,7 @@ const FoodCheckoutPage = () => {
     const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
     if (!RAZORPAY_KEY) return toast.error('Razorpay key missing')
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
-    if (!checkMinOrder()) return
+    if (!checkServiceArea()) return
 
     let RazorpayClass
     const gt = toast.loading('Loading payment gateway...')
@@ -728,24 +738,31 @@ const FoodCheckoutPage = () => {
             </p>
           </div>
         </div>
+        {unserviceableResto && (
+          <div className='bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-xl text-xs font-bold leading-relaxed mb-2.5 text-center'>
+            {unserviceableResto.info?.isEveningClosed
+              ? `🌙 Delivery beyond 5 km is closed after 7:30 PM for rider safety (${unserviceableResto.info?.distanceKm} km away).`
+              : `📍 Your address is ${unserviceableResto.info?.distanceKm} km away and outside the 14 km delivery range.`}
+          </div>
+        )}
         <div className='grid grid-cols-2 gap-2'>
           <button
             onClick={handleCOD}
-            disabled={placing}
+            disabled={placing || !!unserviceableResto}
             className='h-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition'
           >
             💵 Cash
           </button>
           <button
             onClick={handleWalletPay}
-            disabled={placing}
+            disabled={placing || !!unserviceableResto}
             className='h-12 rounded-xl border border-green-200 bg-green-50 text-green-800 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition'
           >
             💸 Wallet
           </button>
           <button
             onClick={handleOnlinePayment}
-            disabled={placing}
+            disabled={placing || !!unserviceableResto}
             className='col-span-2 h-12 rounded-xl bg-red-500 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition shadow-md shadow-red-200'
           >
             💳 Pay online — ₹{grandTotal}
