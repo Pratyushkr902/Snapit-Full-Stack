@@ -158,9 +158,9 @@ export const getAdminLiveRidersController = async (req, res) => {
   try {
     const today = getTodayDateIST();
 
-    // 1. Fetch all riders
+    // 1. Fetch ONLY actual delivery riders (role === 'RIDER')
     const riders = await UserModel.find({
-      role: { $in: ['RIDER', 'ADMIN', 'SUPER_ADMIN'] }
+      role: 'RIDER'
     }).select('name email mobile role avatar').lean();
 
     // 2. Fetch today's duty records for all riders
