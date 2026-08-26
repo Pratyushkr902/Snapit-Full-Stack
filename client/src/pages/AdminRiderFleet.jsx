@@ -222,7 +222,7 @@ const AdminRiderFleet = () => {
             <p className='text-slate-300 font-bold text-sm'>No riders in this view</p>
           </div>
         ) : (
-          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-full'>
             {filteredFleet.map(rider => {
               const hasGps = Boolean(rider.lastLocation?.latitude && rider.lastLocation?.longitude)
               const mapsUrl = hasGps
@@ -232,7 +232,7 @@ const AdminRiderFleet = () => {
               return (
                 <div
                   key={rider.riderId}
-                  className={`bg-slate-900 border rounded-3xl p-5 transition-all flex flex-col justify-between ${
+                  className={`bg-slate-900 border rounded-3xl p-5 transition-all flex flex-col justify-between w-full max-w-full overflow-hidden box-border ${
                     rider.isDutyOn
                       ? 'border-emerald-500/40 shadow-lg shadow-emerald-950/20'
                       : 'border-slate-800 opacity-90'

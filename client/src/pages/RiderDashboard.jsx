@@ -345,81 +345,92 @@ const RiderDashboard = () => {
         <div className='min-h-screen bg-slate-950 text-white'>
 
             {/* ── TOP HEADER BAR ── */}
-            <div className='sticky top-0 z-30 bg-slate-950/90 backdrop-blur border-b border-slate-800 px-4 py-3'>
-                <div className='max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-3'>
-                    <div className='flex items-center gap-3 min-w-0'>
-                        <button
-                            onClick={() => navigate(-1)}
-                            className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90 flex-shrink-0'>
-                            <IoArrowBack size={16}/>
-                        </button>
-                        <div className='min-w-0'>
-                            <div className='flex items-center gap-2'>
-                                <h1 className='text-lg font-black text-white leading-none truncate'>RIDER COMMAND</h1>
-                                <button
-                                    onClick={handleToggleDuty}
-                                    disabled={togglingDuty}
-                                    className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-md ${
-                                        isDutyOn
-                                            ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/30 animate-pulse'
-                                            : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30'
-                                    }`}
-                                >
-                                    <FaPowerOff size={9} />
-                                    <span>{togglingDuty ? 'Updating…' : isDutyOn ? 'ON DUTY' : 'OFF DUTY'}</span>
-                                </button>
+            <div className='sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-3 sm:px-4 py-3'>
+                <div className='max-w-5xl mx-auto space-y-2.5'>
+                    
+                    {/* Top Row: Navigation + Duty Switcher + Refresh */}
+                    <div className='flex items-center justify-between gap-2'>
+                        <div className='flex items-center gap-2.5 min-w-0'>
+                            <button
+                                onClick={() => navigate(-1)}
+                                className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90 flex-shrink-0'
+                            >
+                                <IoArrowBack size={16}/>
+                            </button>
+                            <div className='min-w-0'>
+                                <p className='text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] truncate'>Snapit Logistics · Bihar</p>
+                                <h1 className='text-base sm:text-lg font-black text-white leading-tight truncate'>RIDER COMMAND</h1>
                             </div>
-                            <div className='flex items-center gap-2 mt-1'>
-                                <p className='text-[10px] text-slate-400 font-bold flex items-center gap-1'>
-                                    <FaClock size={9} className={isDutyOn ? 'text-emerald-400' : 'text-slate-500'} />
-                                    <span>Duty Today: <strong className='text-white'>{formatDutyDuration(dutyMinutes)}</strong></span>
-                                </p>
-                                {lastSynced && (
-                                    <span className='text-[8px] text-slate-600 hidden sm:inline'>
-                                        · Synced {lastSynced.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                )}
-                            </div>
+                        </div>
+
+                        <div className='flex items-center gap-2 flex-shrink-0'>
+                            <button
+                                onClick={handleToggleDuty}
+                                disabled={togglingDuty}
+                                className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-md ${
+                                    isDutyOn
+                                        ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/30 animate-pulse'
+                                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30'
+                                }`}
+                            >
+                                <FaPowerOff size={11} />
+                                <span>{togglingDuty ? 'Updating…' : isDutyOn ? '🟢 ON DUTY' : '🔴 OFF DUTY'}</span>
+                            </button>
+
+                            <button
+                                onClick={() => fetchRiderOrders(true)}
+                                className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'
+                                title='Refresh'
+                            >
+                                🔄
+                            </button>
                         </div>
                     </div>
 
-                    <div className='flex gap-2 items-center flex-shrink-0'>
-                        {/* Cash in Hand Pill with 1-tap Deposit */}
+                    {/* Secondary Row: Live Shift Hours + Cash in Hand Cards */}
+                    <div className='grid grid-cols-2 gap-2 pt-1'>
+                        {/* Duty Shift Card */}
+                        <div className='bg-slate-900 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between'>
+                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1'>
+                                <FaClock size={9} className={isDutyOn ? 'text-emerald-400' : 'text-slate-500'} />
+                                <span>Duty Today</span>
+                            </p>
+                            <div className='flex items-baseline justify-between mt-1'>
+                                <span className='text-sm sm:text-base font-black text-white'>
+                                    {formatDutyDuration(dutyMinutes)}
+                                </span>
+                                <span className={`text-[9px] font-black ${isDutyOn ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                    {isDutyOn ? '● Active' : 'Off'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Cash in Hand & Remit Card */}
                         <div
                             onClick={() => setShowRemittanceModal(true)}
-                            className='bg-slate-900 border border-amber-500/30 hover:border-amber-500/60 rounded-xl px-3 py-1.5 text-center cursor-pointer transition-all active:scale-95 group'
-                            title='Click to Deposit Cash to Super Admin'
+                            className='bg-gradient-to-br from-amber-950/40 to-slate-900 border border-amber-500/40 hover:border-amber-500/70 rounded-2xl p-2.5 flex flex-col justify-between cursor-pointer transition-all active:scale-95 group'
                         >
-                            <div className='flex items-center justify-center gap-1 text-[8px] font-black text-amber-400 uppercase tracking-wider'>
-                                <span>💵 Cash in Hand</span>
+                            <div className='flex items-center justify-between'>
+                                <p className='text-[9px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1'>
+                                    <FaMoneyBillWave size={9} />
+                                    <span>Cash in Hand</span>
+                                </p>
+                                <span className='text-[9px] font-black text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-md'>
+                                    Deposit ➔
+                                </span>
                             </div>
-                            <p className='text-base font-black text-amber-400 group-hover:text-amber-300 transition'>
+                            <p className='text-sm sm:text-base font-black text-amber-400 group-hover:text-amber-300 transition mt-1'>
                                 {fmtINR(unremittedCash || totalInHand)}
                             </p>
                         </div>
-
-                        <button
-                            onClick={() => setShowRemittanceModal(true)}
-                            className='px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-400 font-black text-xs transition active:scale-95 flex items-center gap-1.5'
-                            title='Deposit Cash to Super Admin Online'
-                        >
-                            <FaMoneyBillWave size={12} />
-                            <span className='hidden sm:inline'>Deposit</span>
-                        </button>
-
-                        <button
-                            onClick={() => fetchRiderOrders(true)}
-                            className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'>
-                            🔄
-                        </button>
                     </div>
                 </div>
             </div>
 
-            <div className='max-w-5xl mx-auto px-4 py-5'>
+            <div className='max-w-5xl mx-auto px-3 sm:px-4 py-4'>
 
                 {/* ── TABS ── */}
-                <div className='flex gap-2 mb-5 bg-slate-900 rounded-2xl p-1 border border-slate-800'>
+                <div className='flex gap-2 mb-4 bg-slate-900 rounded-2xl p-1 border border-slate-800'>
                     <button onClick={() => setActiveTab('orders')}
                         className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all ${
                             activeTab === 'orders'
@@ -437,35 +448,61 @@ const RiderDashboard = () => {
                         💰 Earnings
                     </button>
                     <button onClick={() => setShowRemittanceModal(true)}
-                        className='px-4 py-2.5 rounded-xl font-black text-xs text-amber-400 hover:bg-amber-500/10 transition-all flex items-center gap-1.5'>
-                        <span>💵 Cash Deposit</span>
+                        className='px-3.5 py-2.5 rounded-xl font-black text-xs bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all flex items-center gap-1.5'>
+                        <FaMoneyBillWave size={12} />
+                        <span>Deposit Cash</span>
                     </button>
                 </div>
 
                 {/* ══════════════ ORDERS TAB ══════════════ */}
                 {activeTab === 'orders' && (
                     <>
-                        {/* Off Duty Notice */}
+                        {/* Off Duty Notice Banner */}
                         {!isDutyOn && (
-                            <div className='mb-4 p-4 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-200 flex items-center justify-between gap-3'>
-                                <div className='flex items-center gap-3'>
+                            <div className='mb-4 p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3'>
+                                <div className='flex items-center gap-2.5'>
                                     <span className='text-2xl'>🛑</span>
                                     <div>
                                         <p className='font-black text-sm text-white'>You are currently OFF DUTY</p>
-                                        <p className='text-xs text-rose-300/80'>Switch ON DUTY above to accept orders and broadcast live GPS.</p>
+                                        <p className='text-xs text-rose-300/80'>Turn ON DUTY to accept orders & stream live GPS.</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleToggleDuty}
                                     disabled={togglingDuty}
-                                    className='px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition'
+                                    className='w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition'
                                 >
                                     Go ON DUTY
                                 </button>
                             </div>
                         )}
 
-                        <div className='flex gap-2 mb-5 overflow-x-auto pb-1 scrollbar-hide'>
+                        {/* Large Cash Remittance Banner on Top of Orders */}
+                        {(unremittedCash > 0 || totalInHand > 0) && (
+                            <div className='mb-4 p-4 rounded-3xl bg-gradient-to-r from-amber-950/60 via-slate-900 to-slate-900 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg'>
+                                <div>
+                                    <div className='flex items-center gap-2 text-amber-400 text-xs font-black uppercase tracking-wider'>
+                                        <FaMoneyBillWave size={14} />
+                                        <span>Unremitted COD Cash in Hand</span>
+                                    </div>
+                                    <p className='text-2xl font-black text-amber-400 mt-1'>
+                                        {fmtINR(unremittedCash || totalInHand)}
+                                    </p>
+                                    <p className='text-[11px] text-slate-400 mt-0.5'>
+                                        Send online to Super Admin UPI (`00pr1199-1@oksbi`)
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowRemittanceModal(true)}
+                                    className='w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black text-xs rounded-2xl shadow-xl shadow-amber-500/20 transition flex items-center justify-center gap-2'
+                                >
+                                    <FaMoneyBillWave size={13} />
+                                    <span>Deposit to Super Admin</span>
+                                </button>
+                            </div>
+                        )}
+
+                        <div className='flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide'>
                             {['All', 'Confirmed', 'Out for Delivery', 'Delivered'].map(t => (
                                 <button key={t} onClick={() => setFilter(t)}
                                     className={`px-4 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all border ${
@@ -478,9 +515,9 @@ const RiderDashboard = () => {
                             ))}
                         </div>
 
-                        <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+                        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full max-w-full'>
                             {filteredOrders.length === 0 ? (
-                                <div className='col-span-full py-20 text-center bg-slate-900 rounded-3xl border-2 border-dashed border-slate-700'>
+                                <div className='col-span-full py-16 text-center bg-slate-900 rounded-3xl border-2 border-dashed border-slate-700 p-6'>
                                     <p className='text-5xl mb-3'>🛵</p>
                                     <p className='text-slate-400 font-black'>No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders</p>
                                     <p className='text-slate-600 text-xs mt-1'>Auto-refreshes every 30 seconds</p>
@@ -493,16 +530,12 @@ const RiderDashboard = () => {
                                     const hasMultiStores = order.involved_stores?.length > 1;
                                     const ageMinutes     = (Date.now() - new Date(order.createdAt)) / 60000;
                                     const isSellerDelayed = order.delivery_status === 'Pending' && ageMinutes >= 3;
-                                    // ✅ NEW: a rider can cancel a duplicate/mistaken order either while
-                                    // it's Confirmed (ready for pickup) or while it's still stuck awaiting
-                                    // seller response (isSellerDelayed) — previously only the former showed
-                                    // a cancel option, leaving delayed-pending duplicates uncancellable.
                                     const canCancel      = order.delivery_status === 'Confirmed' || isSellerDelayed;
                                     const isCancelling   = cancellingId === order.orderId;
 
                                     return (
                                         <div key={order._id}
-                                            className={`bg-slate-900 border rounded-3xl p-5 flex flex-col gap-4 transition-all ${
+                                            className={`bg-slate-900 border rounded-3xl p-4 sm:p-5 flex flex-col gap-3.5 transition-all w-full max-w-full overflow-hidden box-border ${
                                                 isSellerDelayed
                                                     ? 'border-amber-500/50 shadow-lg shadow-amber-500/10'
                                                     : 'border-slate-800 hover:border-slate-600'

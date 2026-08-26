@@ -3,10 +3,11 @@ import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 import { FaMoneyBillWave, FaQrcode, FaCheckCircle, FaTimesCircle, FaClock, FaCopy, FaExternalLinkAlt } from 'react-icons/fa'
+import superAdminGpayQr from '../assets/super_admin_gpay_qr.png'
 
 const SUPER_ADMIN_UPI = '00pr1199-1@oksbi'
 const SUPER_ADMIN_NAME = 'Pratyush Kumar'
-const SUPER_ADMIN_BANK = 'State Bank of India (SBI)'
+const SUPER_ADMIN_BANK = 'Bank of Baroda / SBI'
 
 const fmtINR = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
@@ -206,16 +207,19 @@ const RiderCashRemittanceModal = ({ isOpen, onClose, onDepositSuccess }) => {
               <div className='bg-slate-950 border border-slate-800 rounded-3xl p-4.5 space-y-3.5'>
                 <div className='flex items-center justify-between'>
                   <span className='text-[10px] font-black uppercase tracking-wider text-slate-400'>
-                    Super Admin Bank / UPI
+                    Super Admin Google Pay / UPI
                   </span>
-                  <span className='text-[11px] font-bold text-emerald-400'>● Official Account</span>
+                  <span className='text-[11px] font-bold text-emerald-400 flex items-center gap-1'>
+                    <span className='w-2 h-2 rounded-full bg-emerald-400 animate-pulse'></span>
+                    Verified Account
+                  </span>
                 </div>
 
                 <div className='flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl p-3'>
                   <div className='min-w-0'>
                     <p className='text-[10px] text-slate-500 uppercase font-bold'>UPI ID (Google Pay / PhonePe / Paytm)</p>
-                    <p className='text-sm font-black text-slate-200 font-mono mt-0.5 truncate'>{SUPER_ADMIN_UPI}</p>
-                    <p className='text-[10px] text-slate-400 mt-0.5'>{SUPER_ADMIN_NAME} · {SUPER_ADMIN_BANK}</p>
+                    <p className='text-sm font-black text-amber-400 font-mono mt-0.5 select-all'>{SUPER_ADMIN_UPI}</p>
+                    <p className='text-[10px] text-slate-400 mt-0.5 font-medium'>{SUPER_ADMIN_NAME} · {SUPER_ADMIN_BANK}</p>
                   </div>
                   <button
                     type='button'
@@ -230,20 +234,23 @@ const RiderCashRemittanceModal = ({ isOpen, onClose, onDepositSuccess }) => {
                   </button>
                 </div>
 
-                {depositAmt > 0 && (
-                  <div className='flex flex-col items-center p-3 bg-white rounded-2xl'>
-                    <img src={qrUrl} alt='UPI QR Code' className='w-40 h-40' />
-                    <p className='text-xs font-black text-slate-900 mt-2'>Scan to pay {fmtINR(depositAmt)}</p>
+                {/* Authentic Google Pay QR Display */}
+                <div className='flex flex-col items-center p-3 bg-slate-900 border border-slate-800 rounded-2xl'>
+                  <div className='w-48 h-auto rounded-xl overflow-hidden shadow-lg border border-slate-700 bg-black'>
+                    <img src={superAdminGpayQr} alt='Google Pay QR Code' className='w-full h-auto object-contain' />
                   </div>
-                )}
+                  <p className='text-[11px] font-bold text-slate-300 mt-2 flex items-center gap-1.5'>
+                    <span>📱</span> Scan using Google Pay, PhonePe, or Paytm
+                  </p>
+                </div>
 
                 {depositAmt > 0 && (
                   <a
                     href={upiLink}
-                    className='w-full py-3 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20'
+                    className='w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20'
                   >
                     <FaExternalLinkAlt size={11} />
-                    <span>Open in UPI App ({fmtINR(depositAmt)})</span>
+                    <span>Open in UPI App to Pay {fmtINR(depositAmt)}</span>
                   </a>
                 )}
               </div>

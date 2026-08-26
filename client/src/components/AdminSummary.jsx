@@ -4,6 +4,7 @@ import AdminRiderSimulator from '../components/AdminRiderSimulator'
 import AddStore from '../components/AddStore'
 import DailyReport from '../components/DailyReport'
 import Accounts from '../components/Accounts'
+import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
@@ -399,6 +400,9 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 lg:gap-4 mb-6">
           {statCards.map(card => <StatCard key={card.label} {...card} />)}
         </div>
+
+        {/* ── LIVE RIDER FLEET & DUTY TRACKER ── */}
+        <AdminLiveFleetWidget />
 
         {/* ── REVENUE CHART (DAILY / MONTHLY TOGGLE) ── */}
         <Card style={{ marginBottom: 24 }}>

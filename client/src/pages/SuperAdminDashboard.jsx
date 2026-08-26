@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import SuperAdminPermision from '../layouts/SuperAdminPermision'
+import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
 
 const CARDS = [
   {
@@ -81,6 +82,9 @@ const SuperAdminDashboard = () => {
             Elevated access — visible only to Super Admin accounts
           </p>
         </div>
+
+        {/* 🛵 LIVE RIDER FLEET OVERVIEW */}
+        <AdminLiveFleetWidget />
 
         <div style={{
           display: 'grid',
