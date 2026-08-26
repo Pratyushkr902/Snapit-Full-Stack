@@ -18,9 +18,10 @@ const AdminTreasury = () => {
   // Modals
   const [showDepositModal, setShowDepositModal] = useState(false)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [showDistributeModal, setShowDistributeModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Deposit Form
+  // Forms
   const [depositForm, setDepositForm] = useState({
     amount: '',
     paymentMethod: 'CASH',
@@ -28,7 +29,6 @@ const AdminTreasury = () => {
     referenceId: '',
   })
 
-  // Withdraw Form
   const [withdrawForm, setWithdrawForm] = useState({
     amount: '',
     partner: isSuperAdmin ? 'SUPER_ADMIN' : 'PARTNER_ADMIN',
@@ -36,6 +36,8 @@ const AdminTreasury = () => {
     notes: '',
     referenceId: '',
   })
+
+  const [distributeAmount, setDistributeAmount] = useState('')
 
   const fetchSummary = useCallback(async () => {
     try {
@@ -67,7 +69,7 @@ const AdminTreasury = () => {
         data: depositForm,
       })
       if (res.data?.success) {
-        toast.success(res.data.message || 'Deposit recorded successfully! 💵')
+        toast.success(res.data.message || 'Deposit credited to your Snapit Wallet! 💵')
         setShowDepositModal(false)
         setDepositForm({ amount: '', paymentMethod: 'CASH', notes: '', referenceId: '' })
         fetchSummary()
@@ -91,7 +93,7 @@ const AdminTreasury = () => {
         data: withdrawForm,
       })
       if (res.data?.success) {
-        toast.success(res.data.message || 'Withdrawal recorded successfully! 💸')
+        toast.success(res.data.message || 'Withdrawal debited from Snapit Wallet! 💸')
         setShowWithdrawModal(false)
         setWithdrawForm({
           amount: '',
@@ -100,6 +102,30 @@ const AdminTreasury = () => {
           notes: '',
           referenceId: '',
         })
+        fetchSummary()
+      }
+    } catch (err) {
+      AxiosToastError(err)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDistributeSubmit = async (e) => {
+    e.preventDefault()
+    const amt = Number(distributeAmount)
+    if (!amt || amt <= 0) return toast.error('Please enter a valid distribution amount')
+
+    try {
+      setSubmitting(true)
+      const res = await Axios({
+        ...SummaryApi.distributeCodToWallets,
+        data: { amount: amt },
+      })
+      if (res.data?.success) {
+        toast.success(res.data.message || 'COD revenue credited to partner Snapit Wallets! 🎉')
+        setShowDistributeModal(false)
+        setDistributeAmount('')
         fetchSummary()
       }
     } catch (err) {
@@ -124,18 +150,24 @@ const AdminTreasury = () => {
             ← Back to Dashboard
           </button>
           <h1 className='text-2xl sm:text-3xl font-black text-slate-900 flex items-center gap-2.5'>
-            💰 Cash on Delivery & Treasury Wallet
+            💰 COD Treasury & Real Money Wallet
           </h1>
           <p className='text-xs sm:text-sm text-slate-500 font-medium mt-1'>
-            Track real-time COD cash collections, deposits, and 50/50 partner profit distributions
+            Deposits and COD cash are directly synced and credited into Snapit App Wallets for spending or UPI withdrawal
           </p>
         </div>
 
         <div className='flex items-center gap-2'>
-          <span className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+          <button
+            onClick={() => navigate('/wallet')}
+            className='px-4 py-2 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 hover:bg-amber-100 font-black text-xs flex items-center gap-1.5 transition-all'
+          >
+            <span>👛</span> My Snapit Wallet ({DisplayPriceInRupees(summary?.currentUserWalletBalance || 0)})
+          </button>
+          <span className={`px-3 py-2 rounded-2xl text-xs font-black uppercase tracking-wider ${
             isSuperAdmin ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
           }`}>
-            {isSuperAdmin ? '👑 Super Admin Access' : '🛡️ Admin (Partner) Access'}
+            {isSuperAdmin ? '👑 Super Admin' : '🛡️ Admin'}
           </span>
         </div>
       </div>
@@ -161,21 +193,32 @@ const AdminTreasury = () => {
                   {DisplayPriceInRupees(summary?.availableCashBalance || 0)}
                 </div>
                 <p className='text-emerald-200/80 text-xs sm:text-sm mt-2 font-medium'>
-                  Calculated from Total COD collections ({summary?.codOrderCount || 0} orders) + manual cash deposits − partner withdrawals
+                  Live COD Cash ({summary?.codOrderCount || 0} orders) + Manual Deposits − Partner Withdrawals
                 </p>
               </div>
 
               {/* Action Buttons */}
-              <div className='flex flex-wrap items-center gap-3'>
+              <div className='flex flex-wrap items-center gap-2.5'>
                 <button
                   onClick={() => setShowDepositModal(true)}
-                  className='flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-white text-emerald-800 hover:bg-emerald-50 font-black text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2'
+                  className='flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-white text-emerald-800 hover:bg-emerald-50 font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5'
                 >
-                  <span>➕</span> Deposit Cash
+                  <span>➕</span> Deposit Cash to Wallet
                 </button>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => {
+                      setDistributeAmount(String(summary?.availableCashBalance || ''))
+                      setShowDistributeModal(true)
+                    }}
+                    className='flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5'
+                  >
+                    <span>⚡</span> 50/50 COD Wallet Credit
+                  </button>
+                )}
                 <button
                   onClick={() => setShowWithdrawModal(true)}
-                  className='flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2'
+                  className='flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5'
                 >
                   <span>💸</span> Withdraw / Settle Share
                 </button>
@@ -220,7 +263,7 @@ const AdminTreasury = () => {
                 {DisplayPriceInRupees(summary?.totalDeposits || 0)}
               </div>
               <p className='text-[11px] text-slate-400 font-semibold mt-1'>
-                Logged partner cash inputs
+                Credited directly to Snapit App Wallets
               </p>
             </div>
 
@@ -233,7 +276,7 @@ const AdminTreasury = () => {
                 {DisplayPriceInRupees(summary?.totalWithdrawals || 0)}
               </div>
               <p className='text-[11px] text-slate-400 font-semibold mt-1'>
-                Profit shares taken out
+                Partner payouts processed
               </p>
             </div>
           </div>
@@ -243,7 +286,7 @@ const AdminTreasury = () => {
             <div className='flex items-center justify-between mb-4'>
               <div>
                 <h2 className='text-lg font-black text-slate-800 flex items-center gap-2'>
-                  <span>🤝</span> 50/50 Partner Profit Partition
+                  <span>🤝</span> 50/50 Partner Profit Partition & Real Wallet Balances
                 </h2>
                 <p className='text-xs text-slate-400 font-medium'>
                   Live equal distribution of all cash inflows between you and your business partner
@@ -278,7 +321,7 @@ const AdminTreasury = () => {
                 </div>
 
                 <div className='mt-4 pt-3 border-t border-slate-200 flex justify-between items-center'>
-                  <span className='text-xs font-bold text-slate-700 uppercase tracking-wide'>Available to Withdraw:</span>
+                  <span className='text-xs font-bold text-slate-700 uppercase tracking-wide'>Available to Withdraw / Settle:</span>
                   <span className='text-xl font-black text-emerald-700'>
                     {DisplayPriceInRupees(summary?.partnerSplit?.superAdmin?.available || 0)}
                   </span>
@@ -311,7 +354,7 @@ const AdminTreasury = () => {
                 </div>
 
                 <div className='mt-4 pt-3 border-t border-slate-200 flex justify-between items-center'>
-                  <span className='text-xs font-bold text-slate-700 uppercase tracking-wide'>Available to Withdraw:</span>
+                  <span className='text-xs font-bold text-slate-700 uppercase tracking-wide'>Available to Withdraw / Settle:</span>
                   <span className='text-xl font-black text-emerald-700'>
                     {DisplayPriceInRupees(summary?.partnerSplit?.partnerAdmin?.available || 0)}
                   </span>
@@ -323,7 +366,7 @@ const AdminTreasury = () => {
           {/* AUDIT LEDGER TABLE */}
           <div className='bg-white rounded-3xl p-6 border border-slate-100 shadow-sm'>
             <h3 className='text-base font-black text-slate-800 mb-4 flex items-center gap-2'>
-              <span>📋</span> Treasury Audit Ledger
+              <span>📋</span> Treasury & Snapit Wallet Transaction Ledger
             </h3>
 
             {transactions.length === 0 ? (
@@ -351,7 +394,7 @@ const AdminTreasury = () => {
                           <span className={`px-2.5 py-1 rounded-full font-black text-[10px] uppercase ${
                             t.type === 'DEPOSIT' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                           }`}>
-                            {t.type === 'DEPOSIT' ? '➕ Deposit' : '💸 Withdrawal'}
+                            {t.type === 'DEPOSIT' ? '➕ Deposit (Credited)' : '💸 Withdrawal (Debited)'}
                           </span>
                         </td>
                         <td className='py-3 font-black text-sm text-slate-800'>
@@ -390,7 +433,7 @@ const AdminTreasury = () => {
           <div className='bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95'>
             <div className='flex justify-between items-center mb-4'>
               <h3 className='text-lg font-black text-slate-900 flex items-center gap-2'>
-                <span>💵</span> Deposit Cash to Treasury
+                <span>💵</span> Deposit Cash to Snapit Wallet
               </h3>
               <button
                 onClick={() => setShowDepositModal(false)}
@@ -399,6 +442,10 @@ const AdminTreasury = () => {
                 ✕
               </button>
             </div>
+
+            <p className='text-xs text-slate-500 mb-4'>
+              This amount will be recorded in Treasury and <strong>credited directly into your Snapit App Wallet balance</strong> as real spendable money.
+            </p>
 
             <form onSubmit={handleDepositSubmit} className='space-y-4'>
               <div>
@@ -469,7 +516,73 @@ const AdminTreasury = () => {
                   disabled={submitting}
                   className='flex-1 h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm disabled:opacity-50 flex items-center justify-center'
                 >
-                  {submitting ? 'Recording...' : 'Confirm Deposit 💵'}
+                  {submitting ? 'Crediting Wallet...' : 'Confirm Deposit 💵'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 50/50 DISTRIBUTE COD TO WALLETS MODAL */}
+      {showDistributeModal && (
+        <div className='fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4'>
+          <div className='bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95'>
+            <div className='flex justify-between items-center mb-4'>
+              <h3 className='text-lg font-black text-slate-900 flex items-center gap-2'>
+                <span>⚡</span> Distribute COD Cash to Wallets
+              </h3>
+              <button
+                onClick={() => setShowDistributeModal(false)}
+                className='text-slate-400 hover:text-slate-600 font-black text-lg p-1'
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className='text-xs text-slate-500 mb-4'>
+              This will split the specified COD cash 50/50 and <strong>deposit real money directly into both Super Admin and Partner Admin Snapit App Wallets</strong>!
+            </p>
+
+            <form onSubmit={handleDistributeSubmit} className='space-y-4'>
+              <div>
+                <label className='block text-xs font-black uppercase text-slate-500 mb-1.5'>
+                  Total Amount to Distribute (₹) *
+                </label>
+                <input
+                  type='number'
+                  required
+                  min='1'
+                  value={distributeAmount}
+                  onChange={(e) => setDistributeAmount(e.target.value)}
+                  placeholder='e.g. 56000'
+                  className='w-full h-12 border-2 border-slate-200 focus:border-amber-500 rounded-2xl px-4 text-base font-bold text-slate-800 outline-none transition-colors'
+                />
+              </div>
+
+              {Number(distributeAmount) > 0 && (
+                <div className='p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs space-y-1'>
+                  <div className='font-bold text-amber-900'>Each Partner will receive:</div>
+                  <div className='text-emerald-700 font-black text-sm'>
+                    +{DisplayPriceInRupees(Math.round(Number(distributeAmount) / 2))} in Snapit Wallet
+                  </div>
+                </div>
+              )}
+
+              <div className='flex gap-2 pt-2'>
+                <button
+                  type='button'
+                  onClick={() => setShowDistributeModal(false)}
+                  className='flex-1 h-12 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50'
+                >
+                  Cancel
+                </button>
+                <button
+                  type='submit'
+                  disabled={submitting}
+                  className='flex-1 h-12 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm disabled:opacity-50 flex items-center justify-center'
+                >
+                  {submitting ? 'Depositing...' : 'Confirm 50/50 Credit 🚀'}
                 </button>
               </div>
             </form>

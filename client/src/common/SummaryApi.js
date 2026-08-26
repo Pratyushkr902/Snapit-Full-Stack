@@ -442,6 +442,10 @@ const SummaryApi = {
         url: '/api/treasury/withdraw',
         method: 'post'
     },
+    distributeCodToWallets: {
+        url: '/api/treasury/distribute-cod',
+        method: 'post'
+    },
 }
 
 export default SummaryApi
