@@ -99,22 +99,31 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
           <div className='flex items-center gap-2'>
             <h2 className='text-sm sm:text-base font-black text-white flex items-center gap-1.5 truncate'>
               <span>🛵</span> Live Rider Fleet & Duty Status
+            </h2>
+            <span className='px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 flex-shrink-0'>
+              <span className='w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping'></span>
+              Live
             </span>
           </div>
           <p className='text-[10px] sm:text-xs text-slate-400 font-medium mt-0.5 truncate'>
+            Active rider on/off duty shifts, cash in hand & live GPS
           </p>
         </div>
         <div className='flex items-center gap-1.5 flex-shrink-0'>
           <button
             onClick={() => fetchFleet(true)}
             className='p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition'
+            title='Refresh'
+          >
             <FaSync size={11} />
           </button>
           
           <button
+            onClick={() => navigate('/dashboard/rider-fleet')}
             className='px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] sm:text-xs flex items-center gap-1 transition active:scale-95 shadow-md shadow-blue-600/20'
           >
             <span>Full Map</span>
+            <FaExternalLinkAlt size={9} />
           </button>
         </div>
       </div>
@@ -123,9 +132,12 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
         <div className='bg-slate-950/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-3'>
           <p className='text-[9px] font-black uppercase text-slate-500'>Total Fleet</p>
           <p className='text-lg sm:text-xl font-black text-white mt-0.5'>{totalRiders} <span className='text-[10px] font-normal text-slate-400'>riders</span></p>
+        </div>
 
         <div className='bg-emerald-950/40 border border-emerald-800/40 rounded-xl sm:rounded-2xl p-2.5 sm:p-3'>
           <p className='text-[9px] font-black uppercase text-emerald-400'>🟢 On Duty</p>
+          <p className='text-lg sm:text-xl font-black text-emerald-400 mt-0.5'>{onDutyCount} <span className='text-[10px] font-normal text-emerald-300/70'>active</span></p>
+        </div>
 
         <div className='bg-blue-950/40 border border-blue-800/40 rounded-xl sm:rounded-2xl p-2.5 sm:p-3'>
           <p className='text-[9px] font-black uppercase text-blue-400'>🛵 Delivering</p>
@@ -135,21 +147,32 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
         <div className='bg-amber-950/40 border border-amber-800/40 rounded-xl sm:rounded-2xl p-2.5 sm:p-3'>
           <p className='text-[9px] font-black uppercase text-amber-400'>Cash in Hand</p>
           <p className='text-base sm:text-xl font-black text-amber-400 mt-0.5 truncate'>{fmtINR(totalCashInHand)}</p>
+        </div>
+      </div>
+
       {loading ? (
         <div className='py-8 text-center text-xs text-slate-400 animate-pulse'>
           Syncing Paliganj live riders…
         </div>
       ) : fleet.length === 0 ? (
+        <div className='py-8 text-center text-xs text-slate-500 font-bold'>
+          No active delivery riders found in fleet
+        </div>
       ) : (
         <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3 max-h-[420px] overflow-y-auto pr-1'>
           {fleet.map(rider => {
             const hasGps = Boolean(rider.lastLocation?.latitude && rider.lastLocation?.longitude)
             const mapsUrl = hasGps
+              ? `https://www.google.com/maps?q=${rider.lastLocation.latitude},${rider.lastLocation.longitude}`
+              : null
             return (
               <div
                 key={rider.riderId}
                 className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between ${
                   rider.isDutyOn
+                    ? 'bg-slate-950/80 border-emerald-500/30'
+                    : 'bg-slate-950/40 border-slate-800/60'
+                }`}
               >
                 <div>
                   <div className='flex items-center justify-between gap-2 mb-2'>

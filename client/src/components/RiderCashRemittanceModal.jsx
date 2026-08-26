@@ -234,12 +234,12 @@ const RiderCashRemittanceModal = ({ isOpen, onClose, onDepositSuccess }) => {
                   </button>
                 </div>
 
-                {/* Pure Clean QR Display */}
-                <div className='flex flex-col items-center p-4 bg-white rounded-2xl shadow-xl'>
-                  <div className='w-48 h-48 bg-white flex items-center justify-center'>
-                    <img src={superAdminGpayQr} alt='Super Admin UPI QR Code' className='w-44 h-44 object-contain' />
+                {/* Google Pay QR Display */}
+                <div className='flex flex-col items-center p-3.5 bg-black border border-slate-800 rounded-2xl shadow-xl'>
+                  <div className='w-48 h-48 sm:w-52 sm:h-52 bg-black rounded-xl overflow-hidden flex items-center justify-center'>
+                    <img src={superAdminGpayQr} alt='Super Admin Google Pay QR Code' className='w-full h-full object-contain rounded-xl' />
                   </div>
-                  <p className='text-xs font-black text-slate-900 mt-2 flex items-center gap-1.5'>
+                  <p className='text-xs font-bold text-slate-300 mt-2.5 flex items-center gap-1.5'>
                     <span>📱</span> Scan with Google Pay, PhonePe or Paytm
                   </p>
                 </div>
