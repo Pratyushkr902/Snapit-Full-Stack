@@ -42,7 +42,7 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
 
         if (creditsToday >= DAILY_REFERRAL_CAP) return
 
-        // Credit ONLY the referrer (10 coins = ₹5)
+        // Credit the referrer (10 coins = ₹5)
         await UserModel.updateOne(
             { _id: referrer._id },
             {
@@ -58,10 +58,21 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
             }
         )
 
-        // Mark referred friend as bonus processed (no wallet credit to friend)
+        // Credit the referred friend too (10 coins = ₹5 welcome bonus on 1st order >= ₹149)
         await UserModel.updateOne(
             { _id: user._id },
-            { $set: { firstOrderBonusApplied: true } }
+            {
+                $inc: { walletBalance: REFERRAL_BONUS_AMOUNT },
+                $push: {
+                    walletTransactions: {
+                        type: 'credit',
+                        amount: REFERRAL_BONUS_AMOUNT,
+                        description: `Referral bonus - 10 coins (₹${REFERRAL_BONUS_AMOUNT}) for your first order!`,
+                        date: new Date()
+                    }
+                },
+                $set: { firstOrderBonusApplied: true }
+            }
         )
     } catch (error) {
         console.error('[creditFirstOrderReferralBonus] failed:', error.message)
