@@ -289,7 +289,7 @@ async function sendOrderInvoiceEmail(order, user) {
   </div>
   <div style="background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#94a3b8;">
     Snapit • Paliganj, Bihar • <a href="https://snapit.pages.dev" style="color:#16a34a;">snapit.pages.dev</a><br>
-    Need help? WhatsApp us at +91 91223 35358
+    Need help? WhatsApp us at +91 94720 26580
   </div>
 </div>
 </body></html>`

@@ -272,7 +272,7 @@ async function sendFoodOrderInvoiceEmail(order, user) {
   </div>
   <div style="background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#94a3b8;">
     Snapit Food • Paliganj, Bihar • <a href="https://snapit.pages.dev" style="color:#ea580c;">snapit.pages.dev</a><br>
-    Need help with your food order? WhatsApp us at +91 91223 35358
+    Need help with your food order? WhatsApp us at +91 94720 26580
   </div>
 </div>
 </body></html>`
