@@ -14,6 +14,7 @@ import {
     notifyUserOrderPlaced,
     notifySellersOfNewOrder,
 } from '../utils/notificationService.js'
+import sendEmail from './sendEmail.js'
 // FIX: food orders never assigned a real rider — every order silently fell back
 // to the OrderModel schema's hardcoded rider_name/rider_contact defaults
 // (a specific person's real name + personal phone number). Reuse the same
@@ -218,6 +219,74 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}) => ({
   ...extra,
 })
 
+// ── SEND FOOD ORDER INVOICE EMAIL ──────────────────────────────────────────
+async function sendFoodOrderInvoiceEmail(order, user) {
+  try {
+    if (!user?.email) return
+    const items = (order.cartItems || []).map(item => `
+      <tr>
+        <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;">
+          <strong>${item.name || item.productId?.name || 'Item'}</strong>
+          ${item.variant ? `<br><span style="font-size:11px;color:#64748b;">Variant: ${item.variant}</span>` : ''}
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:center;">${item.quantity}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:right;">₹${item.price || item.productId?.price || 0}</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700;">₹${(item.quantity * (item.price || item.productId?.price || 0))}</td>
+      </tr>`).join('')
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Snapit Food Invoice</title></head>
+<body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#1e293b;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="background:#ea580c;padding:32px;text-align:center;">
+    <div style="font-size:36px;font-weight:900;color:#fff;letter-spacing:-1px;">snap<span style="color:#fed7aa;">it</span> food</div>
+    <div style="color:#fed7aa;font-size:13px;margin-top:4px;">Delicious food is on its way! 🍽️</div>
+  </div>
+  <div style="padding:32px;">
+    <p style="font-size:15px;color:#334155;">Hi <strong>${user.name || 'Foodie'}</strong>,</p>
+    <p style="font-size:14px;color:#64748b;margin-top:8px;">
+      Your restaurant order from <strong>${order.restaurantName || order.involved_stores?.[0] || 'Restaurant'}</strong> has been received!
+    </p>
+    <div style="background:#fff7ed;border-radius:10px;padding:16px;margin:20px 0;display:flex;justify-content:space-between;">
+      <div><div style="font-size:11px;color:#9a3412;font-weight:700;text-transform:uppercase;">Order ID</div><div style="font-size:15px;font-weight:800;font-family:monospace;">#${order.orderId}</div></div>
+      <div><div style="font-size:11px;color:#9a3412;font-weight:700;text-transform:uppercase;">Date</div><div style="font-size:14px;font-weight:600;">${new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</div></div>
+      <div><div style="font-size:11px;color:#9a3412;font-weight:700;text-transform:uppercase;">Payment</div><div style="font-size:13px;font-weight:700;color:#ea580c;">${order.payment_status}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead><tr style="background:#1e293b;color:#fff;">
+        <th style="padding:10px 16px;text-align:left;font-size:12px;">Dish / Item</th>
+        <th style="padding:10px 16px;text-align:center;font-size:12px;">Qty</th>
+        <th style="padding:10px 16px;text-align:right;font-size:12px;">Price</th>
+        <th style="padding:10px 16px;text-align:right;font-size:12px;">Total</th>
+      </tr></thead>
+      <tbody>${items}</tbody>
+      <tfoot>
+        ${order.discount_amount > 0 ? `<tr><td colspan="3" style="padding:10px 16px;text-align:right;color:#64748b;">Discount</td><td style="padding:10px 16px;text-align:right;color:#ea580c;">-₹${order.discount_amount}</td></tr>` : ''}
+        <tr><td colspan="3" style="padding:10px 16px;text-align:right;color:#64748b;">Delivery Fee</td><td style="padding:10px 16px;text-align:right;">₹${order.delivery_fee || 0}</td></tr>
+        <tr style="background:#fff7ed;"><td colspan="3" style="padding:12px 16px;text-align:right;font-weight:800;font-size:15px;color:#ea580c;">Grand Total</td><td style="padding:12px 16px;text-align:right;font-weight:800;font-size:15px;color:#ea580c;">₹${order.totalAmt}</td></tr>
+      </tfoot>
+    </table>
+    <div style="text-align:center;margin-top:24px;">
+      <a href="https://snapit.pages.dev/order-details/${order.orderId}" style="background:#ea580c;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">Track Food Delivery</a>
+    </div>
+  </div>
+  <div style="background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#94a3b8;">
+    Snapit Food • Paliganj, Bihar • <a href="https://snapit.pages.dev" style="color:#ea580c;">snapit.pages.dev</a><br>
+    Need help with your food order? WhatsApp us at +91 91223 35358
+  </div>
+</div>
+</body></html>`
+
+    await sendEmail({
+      sendTo: user.email,
+      subject: `Food Order Confirmed! #${order.orderId} - Snapit Food`,
+      html
+    })
+  } catch (e) {
+    console.error('[Food Invoice Email Error]', e.message)
+  }
+}
+
 // ── Notify user + seller/restaurant + riders for one saved food order.
 // Mirrors the grocery flow in order.controller.js. Fire-and-forget (non-fatal
 // on failure) so a push-notification hiccup never blocks order placement. ──
@@ -229,6 +298,7 @@ const notifyFoodOrderPlaced = (order, user) => {
     body:  `Order ${order.orderId} is ready for pickup — ₹${order.totalAmt}`,
     data:  { orderId: order.orderId, type: 'NEW_ORDER' },
   }).catch(() => {})
+  sendFoodOrderInvoiceEmail(order, user).catch(() => {})
 }
 
 // ── Deduct wallet helper (reused across routes) ─────────────────────────────
