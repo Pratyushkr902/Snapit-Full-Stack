@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Pagination, Navigation } from 'swiper/modules';
+import { Autoplay, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
-import 'swiper/css/navigation';
 import banner1 from '../assets/banner1.webp';
 import banner2 from '../assets/banner2.webp';
 import banner3 from '../assets/banner3.webp';
@@ -85,8 +84,9 @@ const HomeBanner = () => {
   const showCountdown = offer.isActive && !timeLeft.expired;
 
   return (
-    <div className='container mx-auto px-4 mt-2 lg:mt-4'>
-      <div className='relative w-full h-44 sm:h-60 md:h-72 lg:h-80 rounded-2xl overflow-hidden shadow-sm group bg-slate-900'>
+    <div className='container mx-auto px-4 mt-2 lg:mt-3'>
+      {/* 16:9 RESPONSIVE BANNER CONTAINER (Never crops text or images) */}
+      <div className='relative w-full aspect-[16/9] max-h-[380px] rounded-2xl overflow-hidden shadow-sm group bg-slate-900'>
 
         {/* INSTANT PAINT LAYER (LCP) */}
         {!swiperReady && (
@@ -100,12 +100,12 @@ const HomeBanner = () => {
               decoding='async'
             />
             {showCountdown && (
-              <div className='absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-10'>
-                <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md bg-black/75 border border-amber-400/60 shadow-lg text-white'>
+              <div className='absolute top-2 right-2 sm:top-3.5 sm:right-3.5 z-10'>
+                <div className='flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-full backdrop-blur-md bg-black/80 border border-amber-400/60 shadow-lg text-white'>
                   <span className='text-xs animate-pulse'>
                     {timeLeft.isLive ? '🔥' : '🪢'}
                   </span>
-                  <div className='flex items-center gap-1 font-mono font-black text-[11px] sm:text-xs text-amber-200'>
+                  <div className='flex items-center gap-0.5 sm:gap-1 font-mono font-black text-[10px] sm:text-xs text-amber-200'>
                     {timeLeft.days > 0 && <span>{String(timeLeft.days).padStart(2, '0')}d : </span>}
                     <span>{String(timeLeft.hours).padStart(2, '0')}h : </span>
                     <span>{String(timeLeft.minutes).padStart(2, '0')}m : </span>
@@ -122,10 +122,9 @@ const HomeBanner = () => {
           spaceBetween={0}
           centeredSlides={true}
           loop={true}
-          autoplay={{ delay: 4500, disableOnInteraction: false }}
+          autoplay={{ delay: 4000, disableOnInteraction: false }}
           pagination={{ clickable: true, dynamicBullets: true }}
-          navigation={true}
-          modules={[Autoplay, Pagination, Navigation]}
+          modules={[Autoplay, Pagination]}
           className='mySwiper h-full w-full'
           onSwiper={() => setSwiperReady(true)}
         >
@@ -138,7 +137,7 @@ const HomeBanner = () => {
               <img
                 src={item.image}
                 alt={`Snapit Promo ${index + 1}`}
-                className='w-full h-full object-cover object-center'
+                className='w-full h-full object-cover object-center select-none pointer-events-none'
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding='async'
@@ -146,13 +145,13 @@ const HomeBanner = () => {
 
               {/* ONLY SHOW COUNTDOWN ON THE RAKSHA BANDHAN FESTIVE SLIDE */}
               {item.isFestive && showCountdown && (
-                <div className='absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-10'>
-                  <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md bg-black/75 border border-amber-400/60 shadow-lg text-white transition-all hover:scale-105'>
+                <div className='absolute top-2 right-2 sm:top-3.5 sm:right-3.5 z-10'>
+                  <div className='flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-full backdrop-blur-md bg-black/80 border border-amber-400/60 shadow-lg text-white transition-all hover:scale-105'>
                     <span className='text-xs sm:text-sm animate-pulse'>
                       {timeLeft.isLive ? '🔥' : '🪢'}
                     </span>
-                    <div className='flex items-center gap-1 font-mono font-black text-[11px] sm:text-xs text-amber-200'>
-                      <span className='font-sans text-[10px] text-amber-300 font-bold hidden xs:inline mr-0.5'>
+                    <div className='flex items-center gap-0.5 sm:gap-1 font-mono font-black text-[10px] sm:text-xs text-amber-200'>
+                      <span className='font-sans text-[9px] sm:text-[10px] text-amber-300 font-bold hidden xs:inline mr-0.5'>
                         {timeLeft.isLive ? 'Ends:' : 'Starts:'}
                       </span>
                       {timeLeft.days > 0 && <span>{String(timeLeft.days).padStart(2, '0')}d : </span>}
