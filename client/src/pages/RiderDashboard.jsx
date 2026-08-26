@@ -342,24 +342,27 @@ const RiderDashboard = () => {
     );
 
     return (
-        <div className='min-h-screen bg-slate-950 text-white w-full max-w-full overflow-x-hidden'>
+        <div className='min-h-screen bg-slate-950 text-white w-full max-w-full overflow-x-hidden pb-12 font-sans'>
 
             {/* ── TOP HEADER BAR ── */}
-            <div className='sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-3 sm:px-4 py-3 w-full'>
-                <div className='max-w-5xl mx-auto space-y-2.5'>
+            <header className='sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-4 py-2.5 w-full'>
+                <div className='max-w-5xl mx-auto space-y-2'>
                     
                     {/* Top Row: Navigation + Duty Switcher + Refresh */}
                     <div className='flex items-center justify-between gap-2'>
                         <div className='flex items-center gap-2.5 min-w-0'>
                             <button
                                 onClick={() => navigate(-1)}
-                                className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90 flex-shrink-0'
+                                className='w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90 flex-shrink-0'
                             >
                                 <IoArrowBack size={16}/>
                             </button>
                             <div className='min-w-0'>
-                                <p className='text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] truncate'>Snapit Logistics · Bihar</p>
-                                <h1 className='text-base sm:text-lg font-black text-white leading-tight truncate'>RIDER COMMAND</h1>
+                                <div className='flex items-center gap-1.5'>
+                                    <span className='w-2 h-2 rounded-full bg-emerald-400'></span>
+                                    <p className='text-[9px] font-black text-slate-400 uppercase tracking-widest truncate'>Snapit Logistics · Paliganj</p>
+                                </div>
+                                <h1 className='text-base sm:text-lg font-black text-white leading-tight truncate tracking-tight'>RIDER COMMAND</h1>
                             </div>
                         </div>
 
@@ -367,10 +370,10 @@ const RiderDashboard = () => {
                             <button
                                 onClick={handleToggleDuty}
                                 disabled={togglingDuty}
-                                className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 shadow-md ${
+                                className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-md ${
                                     isDutyOn
-                                        ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/30 animate-pulse'
-                                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30'
+                                        ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/25 ring-2 ring-emerald-400/40 animate-pulse'
+                                        : 'bg-rose-950/60 text-rose-300 border border-rose-800/60 hover:bg-rose-900/60'
                                 }`}
                             >
                                 <FaPowerOff size={10} />
@@ -379,7 +382,7 @@ const RiderDashboard = () => {
 
                             <button
                                 onClick={() => fetchRiderOrders(true)}
-                                className='w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'
+                                className='w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'
                                 title='Refresh'
                             >
                                 🔄
@@ -387,20 +390,20 @@ const RiderDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Secondary Row: Live Shift Hours + Cash in Hand Cards */}
-                    <div className='grid grid-cols-2 gap-2 pt-1 w-full'>
+                    {/* Secondary Row: Quick Stats HUD */}
+                    <div className='grid grid-cols-2 sm:grid-cols-3 gap-2 pt-0.5 w-full'>
                         {/* Duty Shift Card */}
-                        <div className='bg-slate-900 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between'>
-                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1'>
-                                <FaClock size={9} className={isDutyOn ? 'text-emerald-400' : 'text-slate-500'} />
+                        <div className='bg-slate-900/90 border border-slate-800/90 rounded-2xl p-2.5 flex flex-col justify-between shadow-sm'>
+                            <p className='text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1'>
+                                <FaClock size={10} className={isDutyOn ? 'text-emerald-400' : 'text-slate-500'} />
                                 <span>Duty Today</span>
                             </p>
                             <div className='flex items-baseline justify-between mt-1'>
-                                <span className='text-sm sm:text-base font-black text-white'>
+                                <span className='text-sm sm:text-base font-black text-white tracking-tight'>
                                     {formatDutyDuration(dutyMinutes)}
                                 </span>
-                                <span className={`text-[9px] font-black ${isDutyOn ? 'text-emerald-400' : 'text-slate-500'}`}>
-                                    {isDutyOn ? '● Active' : 'Off'}
+                                <span className={`text-[9px] font-black px-1.5 py-0.2 rounded ${isDutyOn ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+                                    {isDutyOn ? 'Active' : 'Off'}
                                 </span>
                             </div>
                         </div>
@@ -408,11 +411,11 @@ const RiderDashboard = () => {
                         {/* Cash in Hand & Remit Card */}
                         <div
                             onClick={() => setShowRemittanceModal(true)}
-                            className='bg-gradient-to-br from-amber-950/40 to-slate-900 border border-amber-500/40 hover:border-amber-500/70 rounded-2xl p-2.5 flex flex-col justify-between cursor-pointer transition-all active:scale-95 group'
+                            className='bg-gradient-to-br from-amber-950/50 via-slate-900 to-slate-900 border border-amber-500/40 hover:border-amber-500/70 rounded-2xl p-2.5 flex flex-col justify-between cursor-pointer transition-all active:scale-95 group shadow-sm'
                         >
                             <div className='flex items-center justify-between'>
                                 <p className='text-[9px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1'>
-                                    <FaMoneyBillWave size={9} />
+                                    <FaMoneyBillWave size={10} />
                                     <span>Cash in Hand</span>
                                 </p>
                                 <span className='text-[9px] font-black text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-md'>
@@ -423,34 +426,51 @@ const RiderDashboard = () => {
                                 {fmtINR(unremittedCash || totalInHand)}
                             </p>
                         </div>
+
+                        {/* Total Delivered Today */}
+                        <div className='hidden sm:flex bg-slate-900/90 border border-slate-800/90 rounded-2xl p-2.5 flex-col justify-between shadow-sm'>
+                            <p className='text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1'>
+                                <span>📦</span> Delivered Today
+                            </p>
+                            <div className='flex items-baseline justify-between mt-1'>
+                                <span className='text-base font-black text-white'>
+                                    {deliveredOrders.length}
+                                </span>
+                                <span className='text-[9px] font-bold text-emerald-400'>
+                                    {fmtINR(totalEarned)} earned
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className='max-w-5xl mx-auto px-3 sm:px-4 py-4 w-full max-w-full overflow-x-hidden'>
+            <main className='max-w-5xl mx-auto px-3 sm:px-4 py-4 w-full max-w-full overflow-x-hidden'>
 
-                {/* ── TABS ── */}
-                <div className='flex gap-1.5 sm:gap-2 mb-4 bg-slate-900 rounded-2xl p-1 border border-slate-800 w-full'>
+                {/* ── SEGMENTED NAVIGATION TABS ── */}
+                <div className='flex gap-1.5 sm:gap-2 mb-4 bg-slate-900/90 rounded-2xl p-1.5 border border-slate-800 w-full shadow-inner'>
                     <button onClick={() => setActiveTab('orders')}
-                        className={`flex-1 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs transition-all truncate ${
+                        className={`flex-1 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs transition-all truncate flex items-center justify-center gap-1.5 ${
                             activeTab === 'orders'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
                                 : 'text-slate-400 hover:text-white'
                         }`}>
-                        🛵 Orders ({orders.filter(o => o.delivery_status !== 'Delivered' && o.delivery_status !== 'Cancelled').length})
+                        <span>🛵</span>
+                        <span>Orders ({orders.filter(o => o.delivery_status !== 'Delivered' && o.delivery_status !== 'Cancelled').length})</span>
                     </button>
                     <button onClick={() => setActiveTab('earnings')}
-                        className={`flex-1 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs transition-all truncate ${
+                        className={`flex-1 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs transition-all truncate flex items-center justify-center gap-1.5 ${
                             activeTab === 'earnings'
-                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25'
                                 : 'text-slate-400 hover:text-white'
                         }`}>
-                        💰 Earnings
+                        <span>💰</span>
+                        <span>Earnings</span>
                     </button>
                     <button onClick={() => setShowRemittanceModal(true)}
-                        className='px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all flex items-center gap-1 flex-shrink-0'>
-                        <FaMoneyBillWave size={11} />
-                        <span>Deposit</span>
+                        className='px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-black text-[11px] sm:text-xs bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all flex items-center gap-1.5 flex-shrink-0 active:scale-95'>
+                        <FaMoneyBillWave size={12} />
+                        <span>Deposit Cash</span>
                     </button>
                 </div>
 
@@ -459,18 +479,18 @@ const RiderDashboard = () => {
                     <>
                         {/* Off Duty Notice Banner */}
                         {!isDutyOn && (
-                            <div className='mb-4 p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3'>
-                                <div className='flex items-center gap-2.5'>
-                                    <span className='text-2xl'>🛑</span>
+                            <div className='mb-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-rose-950/60 to-slate-900 border border-rose-800/60 text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md'>
+                                <div className='flex items-center gap-3'>
+                                    <span className='text-2xl sm:text-3xl'>🛑</span>
                                     <div>
                                         <p className='font-black text-sm text-white'>You are currently OFF DUTY</p>
-                                        <p className='text-xs text-rose-300/80'>Turn ON DUTY to accept orders & stream live GPS.</p>
+                                        <p className='text-xs text-rose-300/80'>Switch ON DUTY to accept delivery orders and stream live GPS location.</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleToggleDuty}
                                     disabled={togglingDuty}
-                                    className='w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition'
+                                    className='w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition whitespace-nowrap'
                                 >
                                     Go ON DUTY
                                 </button>
@@ -479,22 +499,22 @@ const RiderDashboard = () => {
 
                         {/* Large Cash Remittance Banner on Top of Orders */}
                         {(unremittedCash > 0 || totalInHand > 0) && (
-                            <div className='mb-4 p-4 rounded-3xl bg-gradient-to-r from-amber-950/60 via-slate-900 to-slate-900 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg'>
+                            <div className='mb-4 p-4 rounded-3xl bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg'>
                                 <div>
                                     <div className='flex items-center gap-2 text-amber-400 text-xs font-black uppercase tracking-wider'>
                                         <FaMoneyBillWave size={14} />
-                                        <span>Unremitted COD Cash in Hand</span>
+                                        <span>Unremitted Cash in Hand</span>
                                     </div>
-                                    <p className='text-2xl font-black text-amber-400 mt-1'>
+                                    <p className='text-2xl font-black text-amber-400 mt-1 tracking-tight'>
                                         {fmtINR(unremittedCash || totalInHand)}
                                     </p>
                                     <p className='text-[11px] text-slate-400 mt-0.5'>
-                                        Send online to Super Admin UPI (`00pr1199-1@oksbi`)
+                                        Deposit collected COD cash online to Super Admin UPI (`00pr1199-1@oksbi`)
                                     </p>
                                 </div>
                                 <button
                                     onClick={() => setShowRemittanceModal(true)}
-                                    className='w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black text-xs rounded-2xl shadow-xl shadow-amber-500/20 transition flex items-center justify-center gap-2'
+                                    className='w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black text-xs rounded-2xl shadow-xl shadow-amber-500/20 transition flex items-center justify-center gap-2 whitespace-nowrap'
                                 >
                                     <FaMoneyBillWave size={13} />
                                     <span>Deposit to Super Admin</span>
@@ -502,25 +522,32 @@ const RiderDashboard = () => {
                             </div>
                         )}
 
-                        <div className='flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide'>
-                            {['All', 'Confirmed', 'Out for Delivery', 'Delivered'].map(t => (
-                                <button key={t} onClick={() => setFilter(t)}
-                                    className={`px-4 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all border ${
-                                        filter === t
-                                            ? 'bg-white text-slate-900 border-white'
-                                            : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500'
+                        {/* Filter Chips */}
+                        <div className='flex gap-1.5 sm:gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide w-full'>
+                            {[
+                                { key: 'Confirmed', label: '📦 Ready for Pickup' },
+                                { key: 'Out for Delivery', label: '🛵 Out for Delivery' },
+                                { key: 'Delivered', label: '✅ Delivered' },
+                                { key: 'All', label: '📋 All Orders' },
+                            ].map(t => (
+                                <button key={t.key} onClick={() => setFilter(t.key)}
+                                    className={`px-3.5 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all border ${
+                                        filter === t.key
+                                            ? 'bg-white text-slate-900 border-white shadow-md'
+                                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
                                     }`}>
-                                    {t === 'Confirmed' ? '📦 Ready for Pickup' : t === 'Out for Delivery' ? '🛵 Out for Delivery' : t === 'Delivered' ? '✅ Delivered' : '📋 All'}
+                                    {t.label}
                                 </button>
                             ))}
                         </div>
 
+                        {/* Order Cards Grid */}
                         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full max-w-full'>
                             {filteredOrders.length === 0 ? (
-                                <div className='col-span-full py-16 text-center bg-slate-900 rounded-3xl border-2 border-dashed border-slate-700 p-6'>
-                                    <p className='text-5xl mb-3'>🛵</p>
-                                    <p className='text-slate-400 font-black'>No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders</p>
-                                    <p className='text-slate-600 text-xs mt-1'>Auto-refreshes every 30 seconds</p>
+                                <div className='col-span-full py-16 text-center bg-slate-900/80 rounded-3xl border-2 border-dashed border-slate-800 p-6'>
+                                    <p className='text-4xl mb-2'>🛵</p>
+                                    <p className='text-slate-300 font-black text-sm'>No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders</p>
+                                    <p className='text-slate-500 text-xs mt-1'>Auto-refreshes every 30 seconds</p>
                                     <button onClick={() => fetchRiderOrders(true)} className='mt-3 text-xs text-blue-400 font-black underline'>Refresh Now</button>
                                 </div>
                             ) : (
@@ -535,42 +562,53 @@ const RiderDashboard = () => {
 
                                     return (
                                         <div key={order._id}
-                                            className={`bg-slate-900 border rounded-3xl p-4 sm:p-5 flex flex-col gap-3.5 transition-all w-full max-w-full overflow-hidden box-border ${
+                                            className={`bg-slate-900 border rounded-3xl p-4 sm:p-5 flex flex-col gap-3.5 transition-all w-full max-w-full overflow-hidden box-border shadow-lg ${
                                                 isSellerDelayed
-                                                    ? 'border-amber-500/50 shadow-lg shadow-amber-500/10'
-                                                    : 'border-slate-800 hover:border-slate-600'
+                                                    ? 'border-amber-500/50 shadow-amber-500/10'
+                                                    : 'border-slate-800 hover:border-slate-700'
                                             }`}>
 
-                                            {isSellerDelayed && (
-                                                <div className='bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center gap-2'>
-                                                    <span>⚠️</span>
-                                                    <p className='text-[10px] font-black text-amber-400'>
-                                                        Seller not responded — auto-confirming soon
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                            <div className='flex justify-between items-start'>
-                                                <div className='flex-1'>
-                                                    <span className='text-[9px] font-black bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full uppercase tracking-wider'>
-                                                        {order.orderId}
+                                            {/* Order Top Bar: ID + Status + Time */}
+                                            <div className='flex items-start justify-between gap-2'>
+                                                <div className='min-w-0'>
+                                                    <span className='text-[10px] font-mono font-black bg-slate-800 text-slate-300 px-2 py-0.5 rounded-lg uppercase tracking-wider'>
+                                                        #{order.orderId?.slice(-8) || order.orderId}
                                                     </span>
                                                     {fmtOrderTime(order.createdAt) && (
-                                                        <p className='text-[9px] text-slate-500 font-bold mt-1'>
-                                                            🕒 {fmtOrderTime(order.createdAt)}
+                                                        <p className='text-[10px] text-slate-500 font-bold mt-1 flex items-center gap-1'>
+                                                            <FaClock size={9} /> {fmtOrderTime(order.createdAt)}
                                                         </p>
                                                     )}
-                                                    <h2 className='text-sm font-bold text-white mt-2.5 leading-tight'>
+                                                </div>
+
+                                                <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider flex-shrink-0 ${
+                                                    order.delivery_status === 'Confirmed'        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                                    order.delivery_status === 'Out for Delivery' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse'  :
+                                                    isSellerDelayed                              ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+                                                    'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                                }`}>
+                                                    {isSellerDelayed ? '⏳ Awaiting Seller' : order.delivery_status === 'Confirmed' ? 'Ready for Pickup' : order.delivery_status}
+                                                </span>
+                                            </div>
+
+                                            {/* Customer Address & Contact Box */}
+                                            <div className='bg-slate-950/70 rounded-2xl p-3 border border-slate-800/80 flex items-start justify-between gap-3'>
+                                                <div className='min-w-0'>
+                                                    <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider'>Deliver To</p>
+                                                    <h3 className='text-sm font-bold text-white mt-0.5 leading-snug break-words'>
                                                         {order.delivery_address?.address_line || "📍 Address not provided"}
-                                                    </h2>
-                                                    <p className='text-xs text-slate-500 font-medium mt-0.5'>
+                                                    </h3>
+                                                    <p className='text-xs text-slate-400 font-medium mt-0.5'>
                                                         {order.userId?.name || "Snapit User"}
                                                     </p>
                                                 </div>
-                                                <div className='flex gap-2 ml-3 flex-shrink-0'>
+
+                                                <div className='flex gap-1.5 flex-shrink-0'>
                                                     <a href={`tel:${order.delivery_address?.mobile || order.userId?.mobile}`}
-                                                        className='p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white transition-all'>
-                                                        <FaPhone size={15}/>
+                                                        className='w-8 h-8 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
+                                                        title='Call Customer'
+                                                    >
+                                                        <FaPhone size={13}/>
                                                     </a>
                                                     <a href={
                                                         order.delivery_lat && order.delivery_lng
@@ -580,97 +618,83 @@ const RiderDashboard = () => {
                                                                 : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`
                                                     }
                                                         target="_blank" rel="noreferrer"
-                                                        className='p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500 hover:text-white transition-all'>
-                                                        <FaMapMarkedAlt size={15}/>
+                                                        className='w-8 h-8 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
+                                                        title='Customer Location Map'
+                                                    >
+                                                        <FaMapMarkedAlt size={13}/>
                                                     </a>
                                                 </div>
                                             </div>
 
-                                            <div className='bg-slate-800/60 rounded-2xl p-3 border border-slate-700/50'>
-                                                <div className='flex items-center justify-between'>
-                                                    <div className='flex items-center gap-2.5'>
-                                                        <span className='text-xl'>{storeEmoji(store?.name)}</span>
-                                                        <div>
-                                                            <p className='text-[9px] font-black text-amber-500/80 uppercase flex items-center gap-1'>
-                                                                <FaStore size={7}/> Pickup From
+                                            {/* Store Pickup Box */}
+                                            <div className='bg-slate-950/70 rounded-2xl p-3 border border-slate-800/80'>
+                                                <div className='flex items-center justify-between gap-2'>
+                                                    <div className='flex items-center gap-2.5 min-w-0'>
+                                                        <span className='text-xl flex-shrink-0'>{storeEmoji(store?.name)}</span>
+                                                        <div className='min-w-0'>
+                                                            <p className='text-[9px] font-black text-amber-400/90 uppercase flex items-center gap-1'>
+                                                                <FaStore size={8}/> Pickup Store
                                                             </p>
-                                                            <p className='text-sm font-black text-white'>{store?.name || "Pali Mega Mart"}</p>
-                                                            {store?.address && <p className='text-[10px] text-slate-400'>{store.address}</p>}
+                                                            <p className='text-xs sm:text-sm font-black text-white truncate'>{store?.name || "Pali Mega Mart"}</p>
+                                                            {store?.address && <p className='text-[10px] text-slate-400 truncate'>{store.address}</p>}
                                                         </div>
                                                     </div>
                                                     {mapLink && (
                                                         <a href={mapLink} target="_blank" rel="noreferrer"
-                                                            className='flex flex-col items-center bg-amber-500 text-slate-900 px-2.5 py-1.5 rounded-xl text-[9px] font-black gap-0.5 hover:bg-amber-400 transition-all'>
-                                                            <FaMapMarkedAlt size={12}/>MAP
+                                                            className='flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1.5 rounded-xl text-[10px] font-black transition-all active:scale-90 flex-shrink-0'>
+                                                            <FaMapMarkedAlt size={11}/>
+                                                            <span>Map</span>
                                                         </a>
                                                     )}
                                                 </div>
-                                                {hasMultiStores && (
-                                                    <div className='mt-2 pt-2 border-t border-slate-700'>
-                                                        <p className='text-[9px] font-black text-purple-400 uppercase mb-1'>⚡ Multi-Store — collect all:</p>
-                                                        <div className='flex flex-wrap gap-1'>
-                                                            {order.involved_stores.map((s, i) => (
-                                                                <span key={i} className='bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[9px] font-bold px-2 py-0.5 rounded-full'>
-                                                                    {storeEmoji(s)} {s}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
 
-                                            <div className='bg-slate-800/40 rounded-2xl p-3'>
-                                                <p className='text-[9px] font-black text-slate-500 uppercase flex items-center gap-1 mb-2'>
-                                                    <FaShoppingBasket size={9}/> Items
+                                            {/* Items List */}
+                                            <div className='bg-slate-950/40 rounded-2xl p-3 border border-slate-800/50'>
+                                                <p className='text-[9px] font-black text-slate-500 uppercase flex items-center gap-1 mb-1.5'>
+                                                    <FaShoppingBasket size={9}/> Items ({order.cartItems?.length || 0})
                                                 </p>
-                                                {order.cartItems?.map((item, i) => (
-                                                    <div key={i} className='flex justify-between text-xs py-1 font-bold text-slate-300'>
-                                                        <span className='line-clamp-1 mr-2'>
-                                                            {hasMultiStores && item.seller_store_name
-                                                                ? <span className='text-purple-400'>{storeEmoji(item.seller_store_name)} </span>
-                                                                : null}
-                                                            {item.productId?.name || item.name}
-                                                            {item.productId?.unit && (
-                                                                <span className='text-slate-500 font-normal'> ({item.productId.unit})</span>
-                                                            )}
-                                                        </span>
-                                                        <span className='text-blue-400 flex-shrink-0'>
-                                                            ×{item.quantity}
-                                                            {item.productId?.price != null && (
-                                                                <span className='text-slate-500 ml-1'>· {fmtINR(item.productId.price)}</span>
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                ))}
+                                                <div className='divide-y divide-slate-800/60'>
+                                                    {order.cartItems?.map((item, i) => (
+                                                        <div key={i} className='flex justify-between text-xs py-1 font-medium text-slate-300'>
+                                                            <span className='line-clamp-1 mr-2'>
+                                                                {item.productId?.name || item.name}
+                                                                {item.productId?.unit && (
+                                                                    <span className='text-slate-500 font-normal'> ({item.productId.unit})</span>
+                                                                )}
+                                                            </span>
+                                                            <span className='text-blue-400 font-bold flex-shrink-0'>
+                                                                ×{item.quantity}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
 
-                                            <div className='flex justify-between items-end'>
+                                            {/* Financial Summary */}
+                                            <div className='flex items-center justify-between pt-1 border-t border-slate-800'>
                                                 <div>
-                                                    <p className='text-[9px] font-black text-slate-500 uppercase'>Collect</p>
-                                                    <p className='text-2xl font-black text-white'>{fmtINR(order.totalAmt)}</p>
-                                                    <p className='text-[9px] text-slate-500 mt-0.5'>
-                                                        {order.payment_status === 'CASH ON DELIVERY' ? '💵 Cash' : '✅ Paid Online'}
+                                                    <p className='text-[9px] font-black text-slate-500 uppercase'>Payment Mode</p>
+                                                    <p className='text-xs font-bold text-slate-300 mt-0.5'>
+                                                        {order.payment_status === 'CASH ON DELIVERY' ? '💵 Cash on Delivery' : '✅ Online Paid'}
                                                     </p>
                                                 </div>
-                                                <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase ${
-                                                    order.delivery_status === 'Confirmed'        ? 'bg-amber-500/20 text-amber-400' :
-                                                    order.delivery_status === 'Out for Delivery' ? 'bg-blue-500/20 text-blue-400'  :
-                                                    isSellerDelayed                              ? 'bg-orange-500/20 text-orange-400' :
-                                                    'bg-emerald-500/20 text-emerald-400'
-                                                }`}>
-                                                    {isSellerDelayed ? '⏳ Awaiting Seller' : order.delivery_status === 'Confirmed' ? 'Ready' : order.delivery_status}
-                                                </span>
+                                                <div className='text-right'>
+                                                    <p className='text-[9px] font-black text-slate-500 uppercase'>Collect Amount</p>
+                                                    <p className='text-xl font-black text-white'>{fmtINR(order.totalAmt)}</p>
+                                                </div>
                                             </div>
 
+                                            {/* Primary Action Buttons */}
                                             {(order.delivery_status === 'Confirmed') && (
                                                 <button onClick={() => handlePickup(order)}
-                                                    className='w-full py-3.5 rounded-2xl font-black text-sm text-white bg-amber-500 hover:bg-amber-400 shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
+                                                    className='w-full py-3.5 rounded-2xl font-black text-xs sm:text-sm text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-lg shadow-amber-400/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
                                                     <FaCheckCircle/> PICKUP FROM {store?.name?.toUpperCase() || 'STORE'}
                                                 </button>
                                             )}
                                             {isSellerDelayed && (
                                                 <button onClick={() => handlePickup(order)}
-                                                    className='w-full py-3.5 rounded-2xl font-black text-sm text-white bg-orange-500 hover:bg-orange-400 shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
+                                                    className='w-full py-3.5 rounded-2xl font-black text-xs sm:text-sm text-white bg-orange-500 hover:bg-orange-400 shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
                                                     <FaCheckCircle/> PICKUP ANYWAY (Seller Delayed)
                                                 </button>
                                             )}
@@ -678,19 +702,19 @@ const RiderDashboard = () => {
                                                 <button
                                                     onClick={() => handleCancel(order)}
                                                     disabled={isCancelling}
-                                                    className='w-full py-2.5 rounded-2xl font-black text-xs text-red-400 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 active:scale-95'>
+                                                    className='w-full py-2.5 rounded-xl font-black text-[11px] text-red-400 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5 active:scale-95'>
                                                     {isCancelling ? '⏳ CANCELLING…' : '✕ CANCEL ORDER'}
                                                 </button>
                                             )}
                                             {order.delivery_status === 'Out for Delivery' && (
                                                 <button onClick={() => setPaymentOrder(order)}
-                                                    className='w-full py-3.5 rounded-2xl font-black text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
-                                                    <MdPayment size={18}/> COLLECT PAYMENT
+                                                    className='w-full py-3.5 rounded-2xl font-black text-xs sm:text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 active:scale-95'>
+                                                    <MdPayment size={18}/> COLLECT PAYMENT & DELIVER
                                                 </button>
                                             )}
                                             {order.delivery_status === 'Delivered' && (
-                                                <div className='w-full py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-black text-sm text-center'>
-                                                    ✅ Delivered
+                                                <div className='w-full py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-black text-xs text-center'>
+                                                    ✅ Delivered Successfully
                                                 </div>
                                             )}
                                         </div>
@@ -795,7 +819,7 @@ const RiderDashboard = () => {
                         </div>
                     </div>
                 )}
-            </div>
+            </main>
 
             {paymentOrder && (
                 <CollectPayment
