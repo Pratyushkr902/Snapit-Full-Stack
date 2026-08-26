@@ -286,7 +286,7 @@ const ReferAndEarn = () => {
                   { icon:'📤', step:'1', title:'Share your code', desc:'Send your unique code to friends via WhatsApp, SMS, or any app.' },
                   { icon:'📲', step:'2', title:'Friend signs up', desc:'They create their Snapit account using your referral code.' },
                   { icon:'🛒', step:'3', title:'They order ₹149+', desc:'Your friend places their first qualifying order.' },
-                  { icon:'💰', step:'4', title:'You both earn 10 coins!', desc:'Worth ₹5 each, credited to your wallets instantly!' },
+                  { icon:'💰', step:'4', title:'You earn 10 coins!', desc:'Worth ₹5, credited to your wallet instantly!' },
                 ].map((s, i) => (
                   <div key={i} style={{ display:'flex', gap:'14px', alignItems:'flex-start', marginBottom: i < 2 ? '18px' : 0 }}>
                     <div style={{
@@ -310,7 +310,7 @@ const ReferAndEarn = () => {
                 {/* T&C note */}
                 <div style={{ background:'#f8fafc', borderRadius:'12px', padding:'10px 12px', marginTop:'18px' }}>
                   <p style={{ fontSize:'11px', color:'#94a3b8', margin:0, lineHeight:1.6 }}>
-                    * 10 coins (₹5) credited to both your wallets when your friend places their first order of ₹149 or more. 1 coin = ₹0.5. One reward per friend. Snapit reserves the right to reverse fraudulent referrals.
+                    * 10 coins (₹5) credited to your wallet when your friend places their first order of ₹149 or more. 1 coin = ₹0.5. One reward per friend. Snapit reserves the right to reverse fraudulent referrals.
                   </p>
                 </div>
               </div>
