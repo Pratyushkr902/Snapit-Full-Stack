@@ -40,12 +40,27 @@ const AdminTreasury = () => {
 
   const [distributeAmount, setDistributeAmount] = useState('')
 
+  // Rider Remittances State
+  const [remittances, setRemittances] = useState([])
+  const [remittanceFilter, setRemittanceFilter] = useState('PENDING')
+  const [approvingId, setApprovingId] = useState(null)
+  const [rejectingId, setRejectingId] = useState(null)
+  const [rejectNote, setRejectNote] = useState('')
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [selectedReceipt, setSelectedReceipt] = useState(null)
+
   const fetchSummary = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await Axios({ ...SummaryApi.getTreasurySummary })
-      if (res.data?.success) {
-        setData(res.data.data)
+      const [treasuryRes, remittanceRes] = await Promise.allSettled([
+        Axios({ ...SummaryApi.getTreasurySummary }),
+        Axios({ ...SummaryApi.getAllRemittancesAdmin })
+      ])
+      if (treasuryRes.status === 'fulfilled' && treasuryRes.value.data?.success) {
+        setData(treasuryRes.value.data.data)
+      }
+      if (remittanceRes.status === 'fulfilled' && remittanceRes.value.data?.success) {
+        setRemittances(remittanceRes.value.data.data.remittances || [])
       }
     } catch (err) {
       AxiosToastError(err)
@@ -57,6 +72,47 @@ const AdminTreasury = () => {
   useEffect(() => {
     fetchSummary()
   }, [fetchSummary])
+
+  const handleApproveRemittance = async (remittanceId) => {
+    try {
+      setApprovingId(remittanceId)
+      const res = await Axios({
+        ...SummaryApi.approveRiderRemittance,
+        data: { remittanceId }
+      })
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Deposit approved & settled!')
+        fetchSummary()
+      }
+    } catch (err) {
+      AxiosToastError(err)
+    } finally {
+      setApprovingId(null)
+    }
+  }
+
+  const handleRejectRemittance = async (e) => {
+    e.preventDefault()
+    if (!rejectNote.trim()) return toast.error('Please enter a rejection reason')
+    try {
+      setApprovingId(rejectingId)
+      const res = await Axios({
+        ...SummaryApi.rejectRiderRemittance,
+        data: { remittanceId: rejectingId, adminNote: rejectNote.trim() }
+      })
+      if (res.data?.success) {
+        toast.success('Remittance rejected.')
+        setShowRejectModal(false)
+        setRejectNote('')
+        setRejectingId(null)
+        fetchSummary()
+      }
+    } catch (err) {
+      AxiosToastError(err)
+    } finally {
+      setApprovingId(null)
+    }
+  }
 
   const handleDepositSubmit = async (e) => {
     e.preventDefault()
@@ -362,6 +418,143 @@ const AdminTreasury = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* 🛵 RIDER CASH REMITTANCE & DEPOSIT APPROVALS */}
+          <div className='bg-white rounded-3xl p-6 border border-slate-100 shadow-sm mb-6'>
+            <div className='flex flex-wrap items-center justify-between gap-4 mb-4'>
+              <div>
+                <h3 className='text-base font-black text-slate-800 flex items-center gap-2'>
+                  <span>🛵</span> Rider COD Cash Remittances to Super Admin
+                  {remittances.filter(r => r.status === 'PENDING').length > 0 && (
+                    <span className='px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-black text-[11px] animate-pulse'>
+                      {remittances.filter(r => r.status === 'PENDING').length} Pending
+                    </span>
+                  )}
+                </h3>
+                <p className='text-xs text-slate-400 font-medium'>
+                  Verify UTR numbers transferred by riders to Super Admin account and click Approve to settle
+                </p>
+              </div>
+
+              <div className='flex gap-1.5 bg-slate-50 p-1 rounded-2xl border border-slate-100 text-xs font-bold'>
+                {['PENDING', 'APPROVED', 'ALL'].map(tab => (
+                  <button
+                    key={tab}
+                    type='button'
+                    onClick={() => setRemittanceFilter(tab)}
+                    className={`px-3 py-1 rounded-xl transition ${
+                      remittanceFilter === tab
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {tab === 'PENDING' ? '🟡 Pending' : tab === 'APPROVED' ? '🟢 Approved' : '📋 All'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {remittances.filter(r => remittanceFilter === 'ALL' ? true : r.status === remittanceFilter).length === 0 ? (
+              <div className='text-center py-8 text-slate-400 font-medium text-xs bg-slate-50/50 rounded-2xl border border-slate-100'>
+                No {remittanceFilter.toLowerCase()} rider remittances found.
+              </div>
+            ) : (
+              <div className='overflow-x-auto'>
+                <table className='w-full text-left text-xs'>
+                  <thead>
+                    <tr className='text-slate-400 uppercase font-black border-b border-slate-100 pb-2'>
+                      <th className='pb-3'>Rider</th>
+                      <th className='pb-3'>Amount</th>
+                      <th className='pb-3'>Payment Mode</th>
+                      <th className='pb-3'>UTR / Transaction Ref</th>
+                      <th className='pb-3'>Receipt</th>
+                      <th className='pb-3'>Date</th>
+                      <th className='pb-3'>Status</th>
+                      {isSuperAdmin && <th className='pb-3 text-right'>Action</th>}
+                    </tr>
+                  </thead>
+                  <tbody className='divide-y divide-slate-50'>
+                    {remittances
+                      .filter(r => remittanceFilter === 'ALL' ? true : r.status === remittanceFilter)
+                      .map((r) => (
+                        <tr key={r._id} className='hover:bg-slate-50/50 transition-colors'>
+                          <td className='py-3'>
+                            <p className='font-bold text-slate-800'>{r.riderId?.name || 'Rider'}</p>
+                            <p className='text-[10px] text-slate-400 font-mono'>{r.riderId?.mobile}</p>
+                          </td>
+                          <td className='py-3 font-black text-sm text-emerald-700'>
+                            {DisplayPriceInRupees(r.amount)}
+                          </td>
+                          <td className='py-3 font-semibold text-slate-600'>{r.paymentMethod}</td>
+                          <td className='py-3 font-mono font-bold text-slate-700 select-all'>
+                            {r.transactionId}
+                          </td>
+                          <td className='py-3'>
+                            {r.receiptImage ? (
+                              <button
+                                type='button'
+                                onClick={() => setSelectedReceipt(r.receiptImage)}
+                                className='px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black transition'
+                              >
+                                View Proof 📷
+                              </button>
+                            ) : (
+                              <span className='text-slate-300'>—</span>
+                            )}
+                          </td>
+                          <td className='py-3 text-slate-400 font-mono'>
+                            {new Date(r.createdAt).toLocaleDateString('en-IN', {
+                              day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </td>
+                          <td className='py-3'>
+                            <span className={`px-2.5 py-1 rounded-full font-black text-[10px] uppercase ${
+                              r.status === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : r.status === 'REJECTED'
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {r.status}
+                            </span>
+                          </td>
+                          {isSuperAdmin && (
+                            <td className='py-3 text-right'>
+                              {r.status === 'PENDING' ? (
+                                <div className='flex items-center justify-end gap-1.5'>
+                                  <button
+                                    type='button'
+                                    disabled={approvingId === r._id}
+                                    onClick={() => handleApproveRemittance(r._id)}
+                                    className='px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-[11px] rounded-xl shadow-xs transition disabled:opacity-50'
+                                  >
+                                    {approvingId === r._id ? 'Approving…' : '✓ Approve'}
+                                  </button>
+                                  <button
+                                    type='button'
+                                    onClick={() => {
+                                      setRejectingId(r._id)
+                                      setShowRejectModal(true)
+                                    }}
+                                    className='px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 font-black text-[11px] rounded-xl transition'
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className='text-[10px] text-slate-400 font-medium'>
+                                  {r.status === 'APPROVED' ? `Settled (${r.reviewedBy?.name || 'Super Admin'})` : 'Rejected'}
+                                </span>
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* AUDIT LEDGER TABLE */}
@@ -697,6 +890,85 @@ const AdminTreasury = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* RIDER REMITTANCE REJECT MODAL */}
+      {showRejectModal && (
+        <div className='fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4'>
+          <div className='bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95'>
+            <div className='flex justify-between items-center mb-4'>
+              <h3 className='text-base font-black text-rose-800 flex items-center gap-2'>
+                <span>❌</span> Reject Rider Cash Remittance
+              </h3>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false)
+                  setRejectingId(null)
+                  setRejectNote('')
+                }}
+                className='text-slate-400 hover:text-slate-600 font-black text-lg p-1'
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleRejectRemittance} className='space-y-4'>
+              <div>
+                <label className='block text-xs font-black uppercase text-slate-500 mb-1.5'>
+                  Reason for Rejection *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={rejectNote}
+                  onChange={(e) => setRejectNote(e.target.value)}
+                  placeholder='e.g. UTR number not found in bank statement, amount mismatch, etc.'
+                  className='w-full border-2 border-slate-200 focus:border-rose-500 rounded-2xl p-3 text-xs font-medium text-slate-800 outline-none'
+                />
+              </div>
+
+              <div className='flex gap-2 pt-2'>
+                <button
+                  type='button'
+                  onClick={() => {
+                    setShowRejectModal(false)
+                    setRejectingId(null)
+                    setRejectNote('')
+                  }}
+                  className='flex-1 h-11 rounded-2xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50'
+                >
+                  Cancel
+                </button>
+                <button
+                  type='submit'
+                  className='flex-1 h-11 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs'
+                >
+                  Confirm Reject
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* RECEIPT PREVIEW MODAL */}
+      {selectedReceipt && (
+        <div className='fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4' onClick={() => setSelectedReceipt(null)}>
+          <div className='bg-white rounded-3xl max-w-lg w-full p-4 overflow-hidden shadow-2xl' onClick={(e) => e.stopPropagation()}>
+            <div className='flex items-center justify-between mb-3 px-2'>
+              <h4 className='font-black text-slate-900 text-sm'>Payment Proof Receipt</h4>
+              <button
+                onClick={() => setSelectedReceipt(null)}
+                className='text-slate-400 hover:text-slate-700 font-bold text-lg'
+              >
+                ✕
+              </button>
+            </div>
+            <div className='rounded-2xl overflow-hidden max-h-[70vh] bg-slate-950 flex items-center justify-center'>
+              <img src={selectedReceipt} alt='Receipt Proof' className='max-h-[68vh] w-auto object-contain' />
+            </div>
           </div>
         </div>
       )}

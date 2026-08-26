@@ -65,10 +65,14 @@ import dailyAccountRouter   from './route/dailyAccount.route.js' // ✅ NEW
 import festiveOfferRouter   from './route/festiveOffer.route.js' // ✅ Festive Offers
 import treasuryRouter       from './route/treasury.route.js'       // ✅ COD Cash Treasury & Partner Split
 import appVersionRouter     from './route/appVersion.route.js'     // ✅ In-App Update & Version Check
+import riderDutyRouter      from './route/riderDuty.route.js'      // ✅ Rider Duty Shift & Fleet Tracking
+import riderRemittanceRouter from './route/riderRemittance.route.js' // ✅ Rider Cash Remittance
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
 import UserModel  from './models/user.model.js'
+import RiderDutyModel from './models/riderDuty.model.js'
+import { getTodayDateIST } from './controllers/riderDuty.controller.js'
 
 import adminManagementRouter from './route/adminManagement.route.js'
 import path from 'path'
@@ -84,6 +88,9 @@ const server = http.createServer(app)
 
 // In-memory cache: latest GPS fix per orderId
 const latestPositions = new Map()
+
+// In-memory cache: latest GPS fix and duty status per riderId for Admin Fleet tracking
+const latestRiderFleetPositions = new Map()
 
 // ─── ABUSE / ANOMALY DETECTION ────────────────────────────────────────────────
 // Runs before CORS/helmet/routes so it can short-circuit frozen IPs as early
@@ -335,6 +342,59 @@ io.on('connection', (socket) => {
         console.log(`[Socket] rider_moved → room:${orderId} | lat:${Number(latitude).toFixed(5)} lon:${Number(longitude).toFixed(5)}`)
     })
 
+    // ── Rider Live Location Stream (for all on-duty riders) ───────────────────
+    socket.on('rider_live_location', (data) => {
+        const { riderId, latitude, longitude, heading, speed, battery, isDutyOn, riderName, riderMobile } = data || {}
+        if (!riderId || !latitude || !longitude) return
+
+        const payload = {
+            riderId,
+            riderName: riderName || 'Snapit Rider',
+            riderMobile: riderMobile || '',
+            latitude: Number(latitude),
+            longitude: Number(longitude),
+            heading: heading !== undefined ? Number(heading) : null,
+            speed: speed !== undefined ? Number(speed) : null,
+            battery: battery !== undefined ? Number(battery) : null,
+            isDutyOn: Boolean(isDutyOn),
+            timestamp: Date.now()
+        }
+
+        latestRiderFleetPositions.set(String(riderId), payload)
+        io.to('admin_live_fleet').emit('rider_fleet_updated', payload)
+
+        // Async persist to today's RiderDuty doc
+        const today = getTodayDateIST()
+        RiderDutyModel.findOneAndUpdate(
+            { riderId, date: today },
+            {
+                $set: {
+                    'lastLocation.latitude':  Number(latitude),
+                    'lastLocation.longitude': Number(longitude),
+                    'lastLocation.heading':   heading !== undefined ? Number(heading) : null,
+                    'lastLocation.speed':     speed !== undefined ? Number(speed) : null,
+                    'lastLocation.battery':   battery !== undefined ? Number(battery) : null,
+                    'lastLocation.updatedAt': new Date()
+                }
+            },
+            { upsert: true }
+        ).catch(err => console.warn('[Socket] RiderDuty persist warning:', err.message))
+    })
+
+    // ── Admin Live Fleet Room Subscription ───────────────────────────────────
+    socket.on('join_admin_fleet', () => {
+        socket.join('admin_live_fleet')
+        console.log(`[Socket] Admin ${socket.id} joined room: admin_live_fleet`)
+        // Send initial in-memory snapshot
+        const snapshot = Array.from(latestRiderFleetPositions.values())
+        socket.emit('admin_fleet_snapshot', snapshot)
+    })
+
+    socket.on('leave_admin_fleet', () => {
+        socket.leave('admin_live_fleet')
+        console.log(`[Socket] Admin ${socket.id} left room: admin_live_fleet`)
+    })
+
     socket.on('leave_order', (orderId) => {
         if (!orderId) return
         socket.leave(orderId)
@@ -392,6 +452,8 @@ app.use('/api/admin-management', adminManagementRouter)
 app.use('/api/festive-offer',    festiveOfferRouter)       // ✅ Festive Offers
 app.use('/api/treasury',         treasuryRouter)           // ✅ COD Cash Treasury & Partner Split
 app.use('/api/app-version',      appVersionRouter)         // ✅ In-App Update & Version Check
+app.use('/api/rider-duty',       riderDutyRouter)          // ✅ Rider Duty Shift & Fleet Tracking
+app.use('/api/rider-remittance', riderRemittanceRouter)    // ✅ Rider Cash Remittance
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

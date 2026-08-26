@@ -446,6 +446,46 @@ const SummaryApi = {
         url: '/api/treasury/distribute-cod',
         method: 'post'
     },
+
+    // ── Rider Duty Shift & Live Fleet Tracking ────────────────
+    toggleRiderDuty: {
+        url: '/api/rider-duty/toggle',
+        method: 'post'
+    },
+    getRiderDutyStatus: {
+        url: '/api/rider-duty/status',
+        method: 'get'
+    },
+    updateRiderLocation: {
+        url: '/api/rider-duty/location',
+        method: 'post'
+    },
+    getAdminLiveRiderFleet: {
+        url: '/api/rider-duty/admin/live-fleet',
+        method: 'get'
+    },
+
+    // ── Rider Cash Remittance to Super Admin ──────────────────
+    submitRiderRemittance: {
+        url: '/api/rider-remittance/submit',
+        method: 'post'
+    },
+    getRiderRemittanceHistory: {
+        url: '/api/rider-remittance/my-history',
+        method: 'get'
+    },
+    getAllRemittancesAdmin: {
+        url: '/api/rider-remittance/admin/all',
+        method: 'get'
+    },
+    approveRiderRemittance: {
+        url: '/api/rider-remittance/admin/approve',
+        method: 'post'
+    },
+    rejectRiderRemittance: {
+        url: '/api/rider-remittance/admin/reject',
+        method: 'post'
+    },
 }
 
 export default SummaryApi

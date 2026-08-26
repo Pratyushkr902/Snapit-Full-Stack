@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
-import { FaMapMarkedAlt, FaCheckCircle, FaShoppingBasket, FaPhone, FaMotorcycle, FaStore } from "react-icons/fa";
+import { FaMapMarkedAlt, FaCheckCircle, FaShoppingBasket, FaPhone, FaMotorcycle, FaStore, FaClock, FaPowerOff, FaMoneyBillWave } from "react-icons/fa";
 import { MdPayment } from "react-icons/md";
 import { IoArrowBack } from "react-icons/io5";
 import { io } from 'socket.io-client';
 import CollectPayment from '../components/CollectPayment';
+import RiderCashRemittanceModal from '../components/RiderCashRemittanceModal';
 
 const STORE_EMOJI = {
     'Pali Mega Mart':                 '🛒',
@@ -32,7 +34,15 @@ const getDeliveryFee = (o) => {
 };
 
 const fmt = (n) => Number(n).toFixed(2);
-const fmtINR = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtINR = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+const formatDutyDuration = (totalMinutes) => {
+    const m = Number(totalMinutes || 0);
+    const hrs = Math.floor(m / 60);
+    const mins = m % 60;
+    if (hrs === 0) return `${mins}m`;
+    return `${hrs}h ${mins}m`;
+};
 
 // e.g. "5 Jul at 12:58 PM" — same format used in the admin History view
 const fmtOrderTime = (dateVal) => {
@@ -46,6 +56,7 @@ const fmtOrderTime = (dateVal) => {
 
 const RiderDashboard = () => {
     const navigate = useNavigate();
+    const user = useSelector(state => state.user);
     const [orders, setOrders]               = useState([]);
     const [loading, setLoading]             = useState(true);
     const [filter, setFilter]               = useState('Confirmed');
@@ -54,20 +65,83 @@ const RiderDashboard = () => {
     const [activeTab, setActiveTab]         = useState('orders');
     const [earningFilter, setEarningFilter] = useState('all');
     const [lastSynced, setLastSynced]       = useState(null);
-    // ✅ NEW: tracks which order's cancel request is currently in flight, so we
-    // can disable that button and block duplicate taps while it resolves.
     const [cancellingId, setCancellingId]   = useState(null);
 
-    // ✅ FIX: socket now lives in a ref, created once inside a useEffect on
-    // mount (not at module scope). Module-level sockets connect immediately
-    // on import and never get cleaned up between page visits.
-    const socketRef = useRef(null);
+    // ── Duty Shift State ──
+    const [isDutyOn, setIsDutyOn]           = useState(false);
+    const [dutyMinutes, setDutyMinutes]     = useState(0);
+    const [currentShiftStart, setCurrentShiftStart] = useState(null);
+    const [togglingDuty, setTogglingDuty]   = useState(false);
 
-    // Keep a ref mirror of orders so the GPS watchPosition callback (registered
-    // once in its own effect) always reads the latest order list without
-    // needing to be re-subscribed every time `orders` changes.
+    // ── Remittance Modal & Cash in Hand State ──
+    const [showRemittanceModal, setShowRemittanceModal] = useState(false);
+    const [unremittedCash, setUnremittedCash] = useState(0);
+
+    const socketRef = useRef(null);
     const ordersRef = useRef(orders);
     useEffect(() => { ordersRef.current = orders; }, [orders]);
+
+    // ── Fetch Duty Status ──
+    const fetchDutyStatus = useCallback(async () => {
+        try {
+            const res = await Axios({ ...SummaryApi.getRiderDutyStatus });
+            if (res.data?.success && res.data?.data) {
+                setIsDutyOn(Boolean(res.data.data.isDutyOn));
+                setDutyMinutes(Number(res.data.data.totalDutyMinutes) || 0);
+                setCurrentShiftStart(res.data.data.currentShiftStart ? new Date(res.data.data.currentShiftStart) : null);
+            }
+        } catch (err) {
+            console.warn('[RiderDuty] fetch error:', err?.message);
+        }
+    }, []);
+
+    // ── Fetch Unremitted Cash ──
+    const fetchCashSummary = useCallback(async () => {
+        try {
+            const res = await Axios({ ...SummaryApi.getRiderRemittanceHistory });
+            if (res.data?.success && res.data?.data?.cashSummary) {
+                setUnremittedCash(Number(res.data.data.cashSummary.cashInHand) || 0);
+            }
+        } catch (err) {
+            console.warn('[RiderRemittance] fetch error:', err?.message);
+        }
+    }, []);
+
+    // ── Toggle Duty Handler ──
+    const handleToggleDuty = async () => {
+        try {
+            setTogglingDuty(true);
+            const target = !isDutyOn;
+            const res = await Axios({
+                ...SummaryApi.toggleRiderDuty,
+                data: { status: target }
+            });
+            if (res.data?.success && res.data?.data) {
+                setIsDutyOn(Boolean(res.data.data.isDutyOn));
+                setDutyMinutes(Number(res.data.data.totalDutyMinutes) || 0);
+                setCurrentShiftStart(res.data.data.currentShiftStart ? new Date(res.data.data.currentShiftStart) : null);
+                if (target) {
+                    toast.success('🟢 ON DUTY! You can now accept deliveries and stream live GPS.', { duration: 4000 });
+                } else {
+                    toast('🔴 OFF DUTY. Shift hours logged successfully.', { icon: '🛑', duration: 4000 });
+                }
+            }
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Failed to toggle duty');
+        } finally {
+            setTogglingDuty(false);
+        }
+    };
+
+    // ── Live Duty Stopwatch Timer ──
+    useEffect(() => {
+        if (!isDutyOn || !currentShiftStart) return;
+        const timer = setInterval(() => {
+            const liveMinutes = Math.max(0, Math.round((Date.now() - new Date(currentShiftStart).getTime()) / 60000));
+            // Keep timer fresh
+        }, 10000);
+        return () => clearInterval(timer);
+    }, [isDutyOn, currentShiftStart]);
 
     const fetchRiderOrders = useCallback(async (silent = false) => {
         try {
@@ -95,11 +169,16 @@ const RiderDashboard = () => {
 
     useEffect(() => {
         fetchRiderOrders();
-        const interval = setInterval(() => fetchRiderOrders(true), 30000);
+        fetchDutyStatus();
+        fetchCashSummary();
+        const interval = setInterval(() => {
+            fetchRiderOrders(true);
+            fetchCashSummary();
+        }, 30000);
         return () => clearInterval(interval);
-    }, [fetchRiderOrders]);
+    }, [fetchRiderOrders, fetchDutyStatus, fetchCashSummary]);
 
-    // ─── Socket connection — created once on mount ────────────────────────────
+    // ─── Socket connection ───────────────────────────────────────────────────
     useEffect(() => {
         const socket = io(
             import.meta.env.VITE_API_URL || 'https://snapit-full-stack-production.up.railway.app',
@@ -126,27 +205,45 @@ const RiderDashboard = () => {
         };
     }, [fetchRiderOrders]);
 
-    // ─── GPS tracking — emits to backend while isTracking is true ────────────
+    // ─── GPS tracking & Fleet broadcasting while ON DUTY ────────────────────
     useEffect(() => {
         let watchId;
-        if (isTracking) {
+        if (isDutyOn) {
             watchId = navigator.geolocation.watchPosition((pos) => {
-                const activeOrder = ordersRef.current.find(o => o.delivery_status === "Out for Delivery");
-                if (activeOrder && socketRef.current) {
-                    // ✅ FIX: was 'update_location' — backend only listens for
-                    // 'send_location', so every GPS update was previously
-                    // dropped silently and never reached the customer.
-                    socketRef.current.emit('send_location', {
-                        orderId:   activeOrder.orderId,
-                        latitude:  pos.coords.latitude,
-                        longitude: pos.coords.longitude
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                const heading = pos.coords.heading;
+                const speed = pos.coords.speed;
+
+                // 1. Broadcast to Admin Fleet Tracker
+                if (socketRef.current) {
+                    socketRef.current.emit('rider_live_location', {
+                        riderId: user?._id,
+                        riderName: user?.name,
+                        riderMobile: user?.mobile,
+                        latitude: lat,
+                        longitude: lng,
+                        heading,
+                        speed,
+                        isDutyOn: true
                     });
                 }
-            }, (err) => console.error(err), { enableHighAccuracy: true });
-            toast.success("Live tracking active!");
+
+                // 2. Broadcast to specific active customer order (if Out for Delivery)
+                const activeOrder = ordersRef.current.find(o => o.delivery_status === "Out for Delivery");
+                if (activeOrder && socketRef.current) {
+                    socketRef.current.emit('send_location', {
+                        orderId: activeOrder.orderId,
+                        latitude: lat,
+                        longitude: lng
+                    });
+                }
+            }, (err) => console.warn('[RiderGPS] watch error:', err.message), { enableHighAccuracy: true });
         }
-        return () => navigator.geolocation.clearWatch(watchId);
-    }, [isTracking]);
+        return () => {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+        };
+    }, [isDutyOn, user]);
 
     const handlePickup = async (order) => {
         try {
@@ -257,35 +354,63 @@ const RiderDashboard = () => {
                             <IoArrowBack size={16}/>
                         </button>
                         <div className='min-w-0'>
-                            <p className='text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] truncate'>Snapit Logistics · Bihar</p>
-                            <h1 className='text-lg font-black text-white leading-none truncate'>RIDER COMMAND</h1>
-                            {lastSynced && (
-                                <p className='text-[8px] text-slate-600'>
-                                    Synced {lastSynced.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            <div className='flex items-center gap-2'>
+                                <h1 className='text-lg font-black text-white leading-none truncate'>RIDER COMMAND</h1>
+                                <button
+                                    onClick={handleToggleDuty}
+                                    disabled={togglingDuty}
+                                    className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-md ${
+                                        isDutyOn
+                                            ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/30 animate-pulse'
+                                            : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30'
+                                    }`}
+                                >
+                                    <FaPowerOff size={9} />
+                                    <span>{togglingDuty ? 'Updating…' : isDutyOn ? 'ON DUTY' : 'OFF DUTY'}</span>
+                                </button>
+                            </div>
+                            <div className='flex items-center gap-2 mt-1'>
+                                <p className='text-[10px] text-slate-400 font-bold flex items-center gap-1'>
+                                    <FaClock size={9} className={isDutyOn ? 'text-emerald-400' : 'text-slate-500'} />
+                                    <span>Duty Today: <strong className='text-white'>{formatDutyDuration(dutyMinutes)}</strong></span>
                                 </p>
-                            )}
+                                {lastSynced && (
+                                    <span className='text-[8px] text-slate-600 hidden sm:inline'>
+                                        · Synced {lastSynced.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
+
                     <div className='flex gap-2 items-center flex-shrink-0'>
-                        <div className='bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-center'>
-                            <p className='text-[8px] font-black text-slate-400 uppercase'>Cash in Hand</p>
-                            <p className='text-base font-black text-amber-400'>{fmtINR(totalInHand)}</p>
+                        {/* Cash in Hand Pill with 1-tap Deposit */}
+                        <div
+                            onClick={() => setShowRemittanceModal(true)}
+                            className='bg-slate-900 border border-amber-500/30 hover:border-amber-500/60 rounded-xl px-3 py-1.5 text-center cursor-pointer transition-all active:scale-95 group'
+                            title='Click to Deposit Cash to Super Admin'
+                        >
+                            <div className='flex items-center justify-center gap-1 text-[8px] font-black text-amber-400 uppercase tracking-wider'>
+                                <span>💵 Cash in Hand</span>
+                            </div>
+                            <p className='text-base font-black text-amber-400 group-hover:text-amber-300 transition'>
+                                {fmtINR(unremittedCash || totalInHand)}
+                            </p>
                         </div>
+
+                        <button
+                            onClick={() => setShowRemittanceModal(true)}
+                            className='px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-400 font-black text-xs transition active:scale-95 flex items-center gap-1.5'
+                            title='Deposit Cash to Super Admin Online'
+                        >
+                            <FaMoneyBillWave size={12} />
+                            <span className='hidden sm:inline'>Deposit</span>
+                        </button>
+
                         <button
                             onClick={() => fetchRiderOrders(true)}
                             className='w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90'>
                             🔄
-                        </button>
-                        <button
-                            onClick={() => setIsTracking(!isTracking)}
-                            className={`px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 transition-all ${
-                                isTracking
-                                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse'
-                                    : 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                            }`}
-                        >
-                            <FaMotorcycle size={14}/>
-                            {isTracking ? "STOP GPS" : "GPS"}
                         </button>
                     </div>
                 </div>
@@ -311,11 +436,35 @@ const RiderDashboard = () => {
                         }`}>
                         💰 Earnings
                     </button>
+                    <button onClick={() => setShowRemittanceModal(true)}
+                        className='px-4 py-2.5 rounded-xl font-black text-xs text-amber-400 hover:bg-amber-500/10 transition-all flex items-center gap-1.5'>
+                        <span>💵 Cash Deposit</span>
+                    </button>
                 </div>
 
                 {/* ══════════════ ORDERS TAB ══════════════ */}
                 {activeTab === 'orders' && (
                     <>
+                        {/* Off Duty Notice */}
+                        {!isDutyOn && (
+                            <div className='mb-4 p-4 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-200 flex items-center justify-between gap-3'>
+                                <div className='flex items-center gap-3'>
+                                    <span className='text-2xl'>🛑</span>
+                                    <div>
+                                        <p className='font-black text-sm text-white'>You are currently OFF DUTY</p>
+                                        <p className='text-xs text-rose-300/80'>Switch ON DUTY above to accept orders and broadcast live GPS.</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleToggleDuty}
+                                    disabled={togglingDuty}
+                                    className='px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition'
+                                >
+                                    Go ON DUTY
+                                </button>
+                            </div>
+                        )}
+
                         <div className='flex gap-2 mb-5 overflow-x-auto pb-1 scrollbar-hide'>
                             {['All', 'Confirmed', 'Out for Delivery', 'Delivered'].map(t => (
                                 <button key={t} onClick={() => setFilter(t)}
@@ -619,9 +768,18 @@ const RiderDashboard = () => {
                 <CollectPayment
                     order={paymentOrder}
                     onClose={() => setPaymentOrder(null)}
-                    onSuccess={() => { setPaymentOrder(null); setIsTracking(false); fetchRiderOrders(true); }}
+                    onSuccess={() => { setPaymentOrder(null); setIsTracking(false); fetchRiderOrders(true); fetchCashSummary(); }}
                 />
             )}
+
+            <RiderCashRemittanceModal
+                isOpen={showRemittanceModal}
+                onClose={() => setShowRemittanceModal(false)}
+                onDepositSuccess={() => {
+                    fetchCashSummary();
+                    fetchRiderOrders(true);
+                }}
+            />
         </div>
     );
 };

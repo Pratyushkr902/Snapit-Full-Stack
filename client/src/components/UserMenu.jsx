@@ -60,6 +60,10 @@ const UserMenu = ({close}) => {
             {/* ADMIN ONLY LINKS */}
             {(role === "ADMIN" || role === "SUPER_ADMIN") && (
               <>
+                <Link onClick={handleClose} to={"/dashboard/rider-fleet"}
+                  className='px-2 bg-blue-50 hover:bg-blue-100 py-1 font-bold text-blue-700 border-l-4 border-blue-500'>
+                  🛵 Live Rider Fleet Tracker
+                </Link>
                 <Link onClick={handleClose} to={"/dashboard/treasury"}
                   className='px-2 bg-emerald-50 hover:bg-emerald-100 py-1 font-bold text-emerald-700 border-l-4 border-emerald-500'>
                   💰 COD Treasury & Partner Split

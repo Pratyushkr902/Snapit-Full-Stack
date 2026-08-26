@@ -54,6 +54,9 @@ const UserMenuMobile = () => {
       {/* ADMIN & SUPER ADMIN ONLY */}
       {(role === "ADMIN" || role === "SUPER_ADMIN") && (
         <>
+          <Link to={"/dashboard/rider-fleet"} className='px-3 py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600'>
+            🛵 Live Rider Fleet Tracker
+          </Link>
           <Link to={"/dashboard/treasury"} className='px-3 py-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 font-bold text-emerald-700 border-l-4 border-emerald-500'>
             💰 COD Treasury & Partner Split
           </Link>

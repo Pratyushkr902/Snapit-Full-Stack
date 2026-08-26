@@ -61,6 +61,7 @@ const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'
 const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
 const PharmacyPage           = lazy(() => import('../pages/PharmacyPage'))
 const FoodCheckoutPage       = lazy(() => import('../pages/FoodCheckoutPage'))
+const AdminRiderFleet        = lazy(() => import('../pages/AdminRiderFleet'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -204,6 +205,7 @@ const router = createHashRouter([
           { path: "super-admin", element: <S><SuperAdminDashboard /></S> },
           { path: "super-admin/treasury", element: <S><AdminTreasury /></S> },
           { path: "treasury", element: <S><AdminPermision><AdminTreasury /></AdminPermision></S> },
+          { path: "rider-fleet", element: <S><AdminPermision><AdminRiderFleet /></AdminPermision></S> },
           { path: "super-admin/withdrawals", element: <S><AdminWithdrawals /></S> },
           { path: "super-admin/referrals", element: <S><AdminReferrals /></S> },
           { path: "super-admin/manage-admins", element: <S><AdminManageAdmins /></S> },
