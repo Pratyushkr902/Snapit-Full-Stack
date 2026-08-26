@@ -15,7 +15,6 @@ import { normalizeEmail } from './emailNormalize.js'
 
 const REFERRAL_BONUS_AMOUNT = 5      // ₹5 (shown to users as "10 coins")
 const MIN_ORDER_AMOUNT      = 149    // friend's order must be >= this
-const DAILY_REFERRAL_CAP    = 5      // max referral credits per referrer per day (anti-fraud)
 
 export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
     try {
@@ -32,17 +31,7 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
         if (normalizeEmail(referrer.email) === normalizeEmail(user.email)) return
         if (referrer.mobile && user.mobile && String(referrer.mobile) === String(user.mobile)) return
 
-        const startOfDay = new Date()
-        startOfDay.setHours(0, 0, 0, 0)
-        const creditsToday = (referrer.walletTransactions || []).filter(
-            t => t.type === 'credit' &&
-                 t.description?.startsWith('Referral bonus') &&
-                 new Date(t.date) >= startOfDay
-        ).length
-
-        if (creditsToday >= DAILY_REFERRAL_CAP) return
-
-        // Credit the referrer (10 coins = ₹5)
+        // Credit the referrer (10 coins = ₹5, unlimited per day)
         await UserModel.updateOne(
             { _id: referrer._id },
             {
