@@ -218,6 +218,23 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
                       <p className='truncate text-slate-400 mt-0.5'>{rider.activeOrder.delivery_address?.address_line || 'Customer Address'}</p>
                     </div>
                   )}
+
+                  {/* Exact Lat / Long Coordinates & Speed */}
+                  {hasGps && (
+                    <div className='flex items-center justify-between text-[10px] text-slate-400 bg-slate-950/60 border border-slate-800/60 rounded-xl px-2.5 py-1.5 mb-2'>
+                      <span className='flex items-center gap-1.5 font-mono text-slate-300'>
+                        <FaMapMarkerAlt size={10} className='text-rose-400 flex-shrink-0' />
+                        <span>{rider.lastLocation.latitude.toFixed(5)}, {rider.lastLocation.longitude.toFixed(5)}</span>
+                      </span>
+                      {rider.lastLocation.speed !== null && rider.lastLocation.speed > 0 ? (
+                        <span className='font-bold text-emerald-400'>
+                          {Math.round(rider.lastLocation.speed * 3.6)} km/h
+                        </span>
+                      ) : (
+                        <span className='text-[9px] text-slate-500 font-bold'>GPS Live</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className='flex items-center gap-1.5 pt-2 border-t border-slate-900'>

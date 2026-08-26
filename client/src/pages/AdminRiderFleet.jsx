@@ -309,14 +309,25 @@ const AdminRiderFleet = () => {
 
                     {/* Live Location Coordinates & Speed */}
                     {hasGps && (
-                      <div className='text-[11px] text-slate-400 flex items-center justify-between mb-3 px-1'>
-                        <span className='flex items-center gap-1.5'>
-                          <FaMapMarkerAlt size={12} className='text-rose-400' />
-                          {rider.lastLocation.latitude.toFixed(4)}, {rider.lastLocation.longitude.toFixed(4)}
-                        </span>
-                        {rider.lastLocation.speed !== null && rider.lastLocation.speed > 0 && (
-                          <span className='font-bold text-slate-300'>
-                            {Math.round(rider.lastLocation.speed * 3.6)} km/h
+                      <div className='bg-slate-950/70 border border-slate-800/80 rounded-2xl p-2.5 mb-3 flex items-center justify-between gap-2 text-xs'>
+                        <div className='min-w-0'>
+                          <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1'>
+                            <FaMapMarkerAlt size={10} className='text-rose-400' /> Live GPS Coordinates
+                          </p>
+                          <p className='font-mono font-bold text-slate-200 mt-0.5 truncate text-[11px] select-all'>
+                            Lat: {rider.lastLocation.latitude.toFixed(5)}, Lng: {rider.lastLocation.longitude.toFixed(5)}
+                          </p>
+                        </div>
+                        {rider.lastLocation.speed !== null && rider.lastLocation.speed > 0 ? (
+                          <div className='text-right flex-shrink-0'>
+                            <p className='text-[9px] font-bold text-slate-500 uppercase'>Speed</p>
+                            <p className='font-black text-emerald-400 text-xs'>
+                              {Math.round(rider.lastLocation.speed * 3.6)} km/h
+                            </p>
+                          </div>
+                        ) : (
+                          <span className='text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex-shrink-0'>
+                            ● Live Fix
                           </span>
                         )}
                       </div>
