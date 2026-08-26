@@ -9,7 +9,7 @@ const Footer = () => {
                 <p>© {new Date().getFullYear()} Snapit. All Rights Reserved.</p>
                 <span className='hidden sm:inline text-slate-300'>•</span>
                 <p className='font-medium text-slate-600 flex items-center gap-1'>
-                    Co-powered by <span className='font-bold text-slate-800 tracking-wide'>Piyazo</span>
+                    Co-powered by <span className='font-bold text-slate-800 tracking-wide'>PiyaZo</span>
                 </p>
             </div>
             <div className='flex items-center gap-4 justify-center text-xl text-slate-400'>

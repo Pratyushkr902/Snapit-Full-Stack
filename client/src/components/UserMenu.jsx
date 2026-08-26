@@ -60,6 +60,10 @@ const UserMenu = ({close}) => {
             {/* ADMIN ONLY LINKS */}
             {(role === "ADMIN" || role === "SUPER_ADMIN") && (
               <>
+                <Link onClick={handleClose} to={"/dashboard/treasury"}
+                  className='px-2 bg-emerald-50 hover:bg-emerald-100 py-1 font-bold text-emerald-700 border-l-4 border-emerald-500'>
+                  💰 COD Treasury & Partner Split
+                </Link>
                 <Link onClick={handleClose} to={"/dashboard/admin-summary"} className='px-2 hover:bg-orange-200 py-1 font-bold text-secondary-100'>Admin Dashboard</Link>
                 <Link onClick={handleClose} to={"/dashboard/category"} className='px-2 hover:bg-orange-200 py-1'>Category</Link>
                 <Link onClick={handleClose} to={"/dashboard/subcategory"} className='px-2 hover:bg-orange-200 py-1'>Sub Category</Link>

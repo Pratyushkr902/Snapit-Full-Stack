@@ -42,6 +42,7 @@ const SuperAdminDashboard    = lazy(() => import('../pages/SuperAdminDashboard')
 const StoreOrders            = lazy(() => import('../pages/StoreOrders'))
 const Wallet                 = lazy(() => import('../pages/Wallet'))
 const AdminSummary           = lazy(() => import('../components/AdminSummary'))
+const AdminTreasury          = lazy(() => import('../pages/AdminTreasury'))
 const ReferAndEarn           = lazy(() => import('../pages/ReferAndEarn'))
 const WishlistPage           = lazy(() => import('../pages/WishlistPage'))
 const TrackingPage           = lazy(() => import('../pages/TrackingPage'))
@@ -201,6 +202,8 @@ const router = createHashRouter([
           },
           { path: "refunds", element: <S><AdminPermision><AdminRefunds /></AdminPermision></S> },
           { path: "super-admin", element: <S><SuperAdminDashboard /></S> },
+          { path: "super-admin/treasury", element: <S><AdminTreasury /></S> },
+          { path: "treasury", element: <S><AdminPermision><AdminTreasury /></AdminPermision></S> },
           { path: "super-admin/withdrawals", element: <S><AdminWithdrawals /></S> },
           { path: "super-admin/referrals", element: <S><AdminReferrals /></S> },
           { path: "super-admin/manage-admins", element: <S><AdminManageAdmins /></S> },

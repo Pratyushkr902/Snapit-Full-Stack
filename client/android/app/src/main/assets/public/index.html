@@ -3,10 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Snapit - Hyperlocal Grocery</title>
 
-    <!-- Preconnect to your Railway backend API -->
+    <!-- iOS PWA Meta Tags & Icons -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Snapit" />
+    <link rel="apple-touch-icon" href="/snapit-icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/snapit-icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/snapit-icon-512.png" />
+
+    <!-- Theme & App Styling -->
+    <meta name="theme-color" content="#F0D296" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Preconnect to Railway backend API -->
     <link rel="preconnect" href="https://snapit-full-stack-production.up.railway.app" crossorigin>
 
     <link rel="manifest" href="/manifest.json">
@@ -20,21 +33,21 @@
       }
     </script>
 
-    <!-- Deferred: was blocking initial render before -->
+    <!-- Deferred: Razorpay Checkout -->
     <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
-    <script type="module" crossorigin src="/assets/index-BBvodBPB.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/chunk-vendor-CUN0_2rv.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-react-dom-D3buDFjb.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-router-DOYk_9Md.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-immer-DjZ3-QBq.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-redux-Brrnp5qq.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-axios-B8_nURbH.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-icons-DZC6YtIh.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-firebase-C6B82U1g.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-socket-CzqC0RpN.js">
-    <link rel="modulepreload" crossorigin href="/assets/chunk-swiper-gAFqMr3J.js">
-    <link rel="stylesheet" crossorigin href="/assets/chunk-swiper-BIKjf0OP.css">
-    <link rel="stylesheet" crossorigin href="/assets/index-DvZFuibj.css">
+    <script type="module" crossorigin src="/assets/index-CFQsjtI5.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/chunk-vendor-uZ9FXxvn.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-react-dom-VR__2tN6.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-router-CxFf5DFh.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-immer-BS8l2Eg_.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-redux-NOXAkLl9.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-axios-CzApALvg.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-icons-DYFBAFcQ.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-firebase-CG57cD3T.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-socket-B5Tj1ejj.js">
+    <link rel="modulepreload" crossorigin href="/assets/chunk-swiper-Bwun_8x_.js">
+    <link rel="stylesheet" crossorigin href="/assets/chunk-swiper-BHcSP5WY.css">
+    <link rel="stylesheet" crossorigin href="/assets/index-DX0PCc9s.css">
   </head>
   <body>
     <div id="root"></div>

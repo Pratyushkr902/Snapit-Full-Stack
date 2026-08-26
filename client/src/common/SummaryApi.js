@@ -428,6 +428,20 @@ const SummaryApi = {
         url: '/api/restaurant/:id/menu',
         method: 'get'
     },
+
+    // ── COD Cash Treasury & Partner Split ─────────────────────
+    getTreasurySummary: {
+        url: '/api/treasury/summary',
+        method: 'get'
+    },
+    recordTreasuryDeposit: {
+        url: '/api/treasury/deposit',
+        method: 'post'
+    },
+    recordTreasuryWithdrawal: {
+        url: '/api/treasury/withdraw',
+        method: 'post'
+    },
 }
 
 export default SummaryApi

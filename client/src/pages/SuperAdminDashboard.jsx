@@ -3,6 +3,15 @@ import SuperAdminPermision from '../layouts/SuperAdminPermision'
 
 const CARDS = [
   {
+    key: 'treasury',
+    title: '💰 COD Cash Treasury & Partner Split',
+    desc: 'Live COD cash collected, cash deposits, withdrawals & 50/50 partner distribution',
+    icon: '💵',
+    path: '/dashboard/super-admin/treasury',
+    color: '#059669',
+    bg: '#ecfdf5',
+  },
+  {
     key: 'withdrawals',
     title: 'Withdrawal Requests',
     desc: 'Approve or reject pending UPI wallet withdrawals',
