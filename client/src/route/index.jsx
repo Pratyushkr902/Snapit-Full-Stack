@@ -84,46 +84,91 @@ const S = ({ children }) => <Suspense fallback={<PageLoader />}>{children}</Susp
 const ErrorPage = () => {
   const error = useRouteError()
   const navigate = useNavigate()
+  const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
-    console.warn("Route error caught by ErrorPage:", error?.message || error)
+    console.error("Route error caught by ErrorPage:", error)
+    
+    // Auto-recover from stale dynamic chunk imports on new deployments
+    const errMsg = String(error?.message || error || '').toLowerCase()
+    if (
+      errMsg.includes('dynamically imported module') ||
+      errMsg.includes('loading chunk') ||
+      errMsg.includes('failed to fetch') ||
+      errMsg.includes('chunkloaderror')
+    ) {
+      const reloadKey = 'snapit_chunk_reload_' + (window.location.hash || window.location.pathname)
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, '1')
+        window.location.reload()
+      }
+    }
   }, [error])
-
 
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', minHeight: '100vh', padding: '24px',
-      background: '#fff', textAlign: 'center'
+      background: '#fff', textAlign: 'center', fontFamily: 'sans-serif'
     }}>
       <div style={{ fontSize: 56, marginBottom: 16 }}>😕</div>
       <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
         Something went wrong
       </h1>
-      <p style={{ color: '#64748b', fontSize: 14, marginBottom: 28, maxWidth: 320 }}>
-        The page ran into an unexpected error. Tap below to go back home.
+      <p style={{ color: '#64748b', fontSize: 14, marginBottom: 24, maxWidth: 320 }}>
+        The page ran into an unexpected error. Tap below to refresh or return home.
       </p>
-      <button
-        onClick={() => {
-          navigate('/', { replace: true })
-          window.location.reload()
-        }}
-        style={{
-          background: '#16a34a', color: '#fff', border: 'none',
-          borderRadius: 12, padding: '12px 32px', fontSize: 15,
-          fontWeight: 700, cursor: 'pointer'
-        }}
-      >
-        Go to Home
-      </button>
-      {import.meta.env.DEV && error && (
-        <pre style={{
-          marginTop: 24, padding: 16, background: '#fef2f2', borderRadius: 8,
-          fontSize: 11, color: '#dc2626', textAlign: 'left',
-          maxWidth: 480, overflowX: 'auto', whiteSpace: 'pre-wrap'
-        }}>
-          {error?.message || String(error)}
-        </pre>
+      
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <button
+          onClick={() => {
+            window.location.reload()
+          }}
+          style={{
+            background: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1',
+            borderRadius: 12, padding: '12px 24px', fontSize: 14,
+            fontWeight: 700, cursor: 'pointer'
+          }}
+        >
+          🔄 Try Again
+        </button>
+        <button
+          onClick={() => {
+            navigate('/', { replace: true })
+            window.location.hash = '#/'
+            window.location.reload()
+          }}
+          style={{
+            background: '#16a34a', color: '#fff', border: 'none',
+            borderRadius: 12, padding: '12px 28px', fontSize: 14,
+            fontWeight: 700, cursor: 'pointer'
+          }}
+        >
+          Go to Home
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 24, maxWidth: 440, width: '100%' }}>
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            style={{
+              background: 'transparent', border: 'none', color: '#94a3b8',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline'
+            }}
+          >
+            {showDetails ? 'Hide Error Details' : 'View Error Details'}
+          </button>
+          {showDetails && (
+            <pre style={{
+              marginTop: 12, padding: 12, background: '#fef2f2', borderRadius: 8,
+              fontSize: 11, color: '#dc2626', textAlign: 'left',
+              overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word'
+            }}>
+              {error?.stack || error?.message || String(error)}
+            </pre>
+          )}
+        </div>
       )}
     </div>
   )
@@ -218,13 +263,6 @@ const router = createHashRouter([
         ]
       },
       { path: "track/:orderId", element: <S><TrackingPage /></S> },
-      {
-        path: ":category",
-        children: [
-          { index: true, element: <S><ProductListPage /></S> },
-          { path: ":subCategory", element: <S><ProductListPage /></S> }
-        ]
-      },
       { path: "product/:product", element: <S><ProductDisplayPage /></S> },
       { path: "cart", element: <S><CartMobile /></S> },
       { path: "checkout", element: <S><CheckoutPage /></S> },
@@ -235,6 +273,13 @@ const router = createHashRouter([
       { path: "restaurant/:id", element: <S><RestaurantDetailPage /></S> },
       { path: "grocery", element: <S><GroceryPage /></S> },
       { path: "pharmacy", element: <S><PharmacyPage /></S> },
+      {
+        path: ":category",
+        children: [
+          { index: true, element: <S><ProductListPage /></S> },
+          { path: ":subCategory", element: <S><ProductListPage /></S> }
+        ]
+      },
     ]
   }
 ])
