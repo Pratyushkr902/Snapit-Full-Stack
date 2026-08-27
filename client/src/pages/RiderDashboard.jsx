@@ -81,6 +81,21 @@ const RiderDashboard = () => {
     const ordersRef = useRef(orders);
     useEffect(() => { ordersRef.current = orders; }, [orders]);
 
+    // ── Auth Guard for Rider Panel ──
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            toast.error('Please login with your Rider account to access the panel', { icon: '🔐' });
+            navigate('/login');
+            return;
+        }
+        if (user?._id && !['RIDER', 'ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
+            toast.error('Rider access required. Please login with a delivery partner account.', { icon: '🚫' });
+            navigate('/');
+            return;
+        }
+    }, [user?._id, user?.role, navigate]);
+
     // ── Fetch Duty Status ──
     const fetchDutyStatus = useCallback(async () => {
         try {
@@ -109,6 +124,13 @@ const RiderDashboard = () => {
 
     // ── Toggle Duty Handler ──
     const handleToggleDuty = async () => {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            toast.error('Please login with your Rider account', { icon: '🔐' });
+            navigate('/login');
+            return;
+        }
+
         try {
             setTogglingDuty(true);
             const target = !isDutyOn;
@@ -127,7 +149,13 @@ const RiderDashboard = () => {
                 }
             }
         } catch (err) {
-            toast.error(err?.response?.data?.message || 'Failed to toggle duty');
+            const errMsg = err?.response?.data?.message || err?.message || 'Failed to toggle duty';
+            if (err?.response?.status === 401) {
+                toast.error('Session expired. Please login again.', { icon: '🔐' });
+                navigate('/login');
+            } else {
+                toast.error(errMsg);
+            }
         } finally {
             setTogglingDuty(false);
         }
