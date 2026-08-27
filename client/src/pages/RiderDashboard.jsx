@@ -96,7 +96,34 @@ const RiderDashboard = () => {
         }
     }, [user?._id, user?.role, navigate]);
 
-    // ── Fetch Duty Status ──
+    // ── 1. Fetch Orders Callback ──
+    const fetchRiderOrders = useCallback(async (silent = false) => {
+        try {
+            if (!silent) setLoading(true);
+            const response = await Axios({ ...SummaryApi.getOrderItems });
+            if (response.data?.success) {
+                const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
+
+                const visibleOrders = allOrders.filter(o => {
+                    if (!o) return false;
+                    if (['Confirmed', 'Out for Delivery', 'Delivered'].includes(o.delivery_status)) return true;
+                    const ageMinutes = (Date.now() - new Date(o.createdAt)) / 60000;
+                    if (o.delivery_status === 'Pending' && ageMinutes >= 3) return true;
+                    return false;
+                });
+
+                setOrders(visibleOrders);
+                setLastSynced(new Date());
+            }
+        } catch (err) {
+            console.warn('[RiderOrders] fetch error:', err?.message);
+            if (!silent) toast.error("Failed to sync with server");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // ── 2. Fetch Duty Status Callback ──
     const fetchDutyStatus = useCallback(async () => {
         try {
             const res = await Axios({ ...SummaryApi.getRiderDutyStatus });
@@ -110,7 +137,7 @@ const RiderDashboard = () => {
         }
     }, []);
 
-    // ── Fetch Unremitted Cash ──
+    // ── 3. Fetch Unremitted Cash Callback ──
     const fetchCashSummary = useCallback(async () => {
         try {
             const res = await Axios({ ...SummaryApi.getRiderRemittanceHistory });
@@ -122,27 +149,7 @@ const RiderDashboard = () => {
         }
     }, []);
 
-    // ── Online / Offline Connectivity Tracker ──
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-    useEffect(() => {
-        const handleOnline = () => {
-            setIsOnline(true);
-            toast.success('🌐 Online: Synced with Paliganj server');
-            fetchRiderOrders(true);
-        };
-        const handleOffline = () => {
-            setIsOnline(false);
-            toast.error('⚠️ Offline: Lost network connection. Reconnecting…', { duration: 5000 });
-        };
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, [fetchRiderOrders]);
-
-    // ── Audio Alert Sound for Incoming Orders ──
+    // ── 4. Audio Alert Sound Callback ──
     const playOrderAlertSound = useCallback(() => {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -172,7 +179,39 @@ const RiderDashboard = () => {
         }
     }, []);
 
-    // ── Toggle Duty Handler ──
+    // ── 5. Online / Offline Connectivity Tracker ──
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true);
+            toast.success('🌐 Online: Synced with Paliganj server');
+            fetchRiderOrders(true);
+        };
+        const handleOffline = () => {
+            setIsOnline(false);
+            toast.error('⚠️ Offline: Lost network connection. Reconnecting…', { duration: 5000 });
+        };
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [fetchRiderOrders]);
+
+    // ── 6. Initial Load & Polling Interval ──
+    useEffect(() => {
+        fetchRiderOrders();
+        fetchDutyStatus();
+        fetchCashSummary();
+        const interval = setInterval(() => {
+            fetchRiderOrders(true);
+            fetchCashSummary();
+        }, 20000);
+        return () => clearInterval(interval);
+    }, [fetchRiderOrders, fetchDutyStatus, fetchCashSummary]);
+
+    // ── 7. Toggle Duty Handler ──
     const handleToggleDuty = async () => {
         const token = localStorage.getItem('accessToken');
         if (!token) {
@@ -224,7 +263,7 @@ const RiderDashboard = () => {
         }
     };
 
-    // ── Live Duty Stopwatch Timer ──
+    // ── 8. Live Duty Stopwatch Timer ──
     useEffect(() => {
         if (!isDutyOn || !currentShiftStart) return;
         const timer = setInterval(() => {
@@ -234,42 +273,7 @@ const RiderDashboard = () => {
         return () => clearInterval(timer);
     }, [isDutyOn, currentShiftStart]);
 
-    const fetchRiderOrders = useCallback(async (silent = false) => {
-        try {
-            if (!silent) setLoading(true);
-            const response = await Axios({ ...SummaryApi.getOrderItems });
-            if (response.data.success) {
-                const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
-
-                const visibleOrders = allOrders.filter(o => {
-                    if (['Confirmed', 'Out for Delivery', 'Delivered'].includes(o.delivery_status)) return true;
-                    const ageMinutes = (Date.now() - new Date(o.createdAt)) / 60000;
-                    if (o.delivery_status === 'Pending' && ageMinutes >= 3) return true;
-                    return false;
-                });
-
-                setOrders(visibleOrders);
-                setLastSynced(new Date());
-            }
-        } catch {
-            if (!silent) toast.error("Failed to sync with server");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchRiderOrders();
-        fetchDutyStatus();
-        fetchCashSummary();
-        const interval = setInterval(() => {
-            fetchRiderOrders(true);
-            fetchCashSummary();
-        }, 20000);
-        return () => clearInterval(interval);
-    }, [fetchRiderOrders, fetchDutyStatus, fetchCashSummary]);
-
-    // ─── Socket connection ───────────────────────────────────────────────────
+    // ── 9. Socket Connection ──
     useEffect(() => {
         const socket = io(
             import.meta.env.VITE_API_URL || 'https://snapit-full-stack-production.up.railway.app',
