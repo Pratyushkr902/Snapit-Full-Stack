@@ -16,18 +16,7 @@ const useNotifications = () => {
       try {
         // ── 1. NATIVE ANDROID / IOS PLATFORMS ──────────────────────────────
         if (Capacitor.isNativePlatform()) {
-          let permStatus = await PushNotifications.checkPermissions()
-
-          if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
-            permStatus = await PushNotifications.requestPermissions()
-          }
-
-          if (permStatus.receive === 'granted') {
-            // Register with Google FCM / Apple APNS
-            await PushNotifications.register()
-          }
-
-          // Listen for token generation
+          // Listeners MUST be attached BEFORE calling PushNotifications.register()
           await PushNotifications.removeAllListeners()
 
           PushNotifications.addListener('registration', async (token) => {
@@ -59,6 +48,16 @@ const useNotifications = () => {
               window.location.hash = url
             }
           })
+
+          let permStatus = await PushNotifications.checkPermissions()
+          if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
+            permStatus = await PushNotifications.requestPermissions()
+          }
+
+          if (permStatus.receive === 'granted') {
+            // Register with Google FCM
+            await PushNotifications.register()
+          }
         } else {
           // ── 2. WEB BROWSER / PWA PLATFORM ────────────────────────────────
           const token = await requestNotificationPermission()

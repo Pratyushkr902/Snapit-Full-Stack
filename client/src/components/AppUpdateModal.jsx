@@ -16,6 +16,19 @@ const AppUpdateModal = () => {
     if (!Capacitor.isNativePlatform()) return
 
     try {
+      let installedVersionCode = CURRENT_VERSION_CODE
+      try {
+        const appInfo = await CapacitorApp.getInfo()
+        if (appInfo?.build) {
+          const parsedBuild = parseInt(appInfo.build, 10)
+          if (!isNaN(parsedBuild) && parsedBuild > 0) {
+            installedVersionCode = parsedBuild
+          }
+        }
+      } catch (infoErr) {
+        console.warn('[AppUpdate] info read fallback:', infoErr?.message)
+      }
+
       const res = await Axios({
         method: 'GET',
         url: '/api/app-version',
@@ -26,11 +39,10 @@ const AppUpdateModal = () => {
         const data = res.data.data
         const latestCode = Number(data.latestVersionCode || 0)
         const minCode = Number(data.minRequiredVersionCode || 0)
-        const isNative = Capacitor.isNativePlatform()
 
         // For Native Android / iOS apps:
-        if (isNative && latestCode > CURRENT_VERSION_CODE) {
-          const force = Boolean(data.forceUpdate || CURRENT_VERSION_CODE < minCode)
+        if (latestCode > installedVersionCode) {
+          const force = Boolean(data.forceUpdate || installedVersionCode < minCode)
           setIsForced(force)
 
           if (force) {
@@ -51,7 +63,6 @@ const AppUpdateModal = () => {
         }
       }
     } catch (err) {
-      // Non-intrusive fail — app continues normally
       console.warn('[AppUpdate] Version check bypassed:', err?.message)
     }
   }, [])

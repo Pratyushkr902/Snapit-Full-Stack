@@ -492,7 +492,38 @@ const FoodCheckoutPage = () => {
                 </div>
               )
             })}
+
+            {/* ── MGD PIZZA FREE MARGHERITA REWARD ── */}
+            {r.restaurantName?.toLowerCase().includes('mgd') && r.subtotal >= 599 && (
+              <div className='flex items-center gap-3 py-3 bg-gradient-to-r from-amber-500/10 via-red-500/10 to-amber-500/10 rounded-2xl px-3 my-2 border border-amber-400/40'>
+                <VegDot isVeg={true} />
+                <div className='w-12 h-12 rounded-xl overflow-hidden bg-amber-100 flex items-center justify-center text-2xl flex-shrink-0'>
+                  🍕
+                </div>
+                <div className='flex-1 min-w-0'>
+                  <div className='flex items-center gap-1.5'>
+                    <p className='font-black text-amber-950 text-sm truncate'>🎁 Free Margherita Pizza</p>
+                    <span className='px-1.5 py-0.5 bg-red-600 text-white text-[9px] font-black rounded-full uppercase'>UNLOCKED</span>
+                  </div>
+                  <p className='text-[11px] text-amber-800 mt-0.5 font-medium'>Worth ₹99 • Special Offer Included</p>
+                </div>
+                <div className='flex flex-col items-end'>
+                  <span className='text-[11px] text-gray-400 line-through'>₹99</span>
+                  <span className='font-black text-green-600 text-sm'>₹0</span>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* MGD Pizza Freebie Progress if below ₹599 */}
+          {r.restaurantName?.toLowerCase().includes('mgd') && r.subtotal < 599 && (
+            <div className='mt-3 p-2.5 bg-amber-50 border border-amber-200/80 rounded-xl text-left'>
+              <p className='text-xs font-bold text-amber-900'>
+                Add <span className='text-red-600 font-black'>₹{599 - r.subtotal}</span> more to get a <span className='text-red-700 font-black'>FREE ₹99 Margherita Pizza</span>!
+              </p>
+            </div>
+          )}
+
           <div className='mt-3 flex justify-between text-xs text-gray-400'>
             <span>Subtotal</span>
             <span className='font-semibold text-gray-600'>₹{r.subtotal}</span>

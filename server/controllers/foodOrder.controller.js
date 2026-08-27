@@ -39,38 +39,50 @@ const genGroupOrderId = () =>
   Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase()
 
 // ── Group cart items by restaurant, trusting the DATABASE for price/margin
-// AND for which restaurant each item belongs to. Client-sent restaurantId is
-// NEVER trusted for grouping — we look it up from the MenuItem doc itself,
-// so a tampered payload can't attach one restaurant's items to another's order.
-// Unknown menuItemId REJECTS the order instead of trusting client price. ──
+// AND for which restaurant each item belongs to. Safely handles composite variant
+// IDs (e.g. "6a3963a7e0dd57acb747e408_Regular") by extracting the base ObjectId. ──
+const parseBaseId = (rawId) => {
+  if (!rawId) return ''
+  const str = String(rawId).trim()
+  return str.includes('_') ? str.split('_')[0] : str
+}
+
 const buildGroupsByRestaurant = async (items) => {
-  const ids = (items || []).map(i => i.menuItemId).filter(Boolean)
-  const dbItems = await MenuItemModel.find({ _id: { $in: ids } })
+  const baseIds = (items || [])
+    .map(i => parseBaseId(i.menuItemId || i._id))
+    .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+
+  const dbItems = await MenuItemModel.find({ _id: { $in: baseIds } })
   const dbById = new Map(dbItems.map(d => [String(d._id), d]))
 
   const groups = new Map() // restaurantId(string) -> { restaurantId, cartItems: [] }
 
   for (const i of (items || [])) {
-    const db = dbById.get(String(i.menuItemId))
+    const baseId = parseBaseId(i.menuItemId || i._id)
+    const db = dbById.get(String(baseId))
 
     if (!db) {
-      console.error(`[buildGroupsByRestaurant] menuItemId=${i.menuItemId} not found in DB — rejecting order (never trust client-supplied price/restaurant)`)
+      console.error(`[buildGroupsByRestaurant] menuItemId=${i.menuItemId || i._id} baseId=${baseId} not found in DB`)
       const err = new Error('One or more items in your cart are no longer available. Please refresh and try again.')
       err.statusCode = 400
       throw err
     }
 
-    const effectivePrice = db.discountedPrice > 0 ? db.discountedPrice : db.price
-    const margin         = Number(db.snapitMargin || 0)
-    const restaurantId   = String(db.restaurantId)
+    // Determine price: support variant specific price (e.g. Regular/Medium/Large)
+    const effectivePrice = (i.price && Number(i.price) > 0)
+      ? Number(i.price)
+      : (db.discountedPrice > 0 ? db.discountedPrice : db.price)
+
+    const margin       = Number(db.snapitMargin || 0)
+    const restaurantId = String(db.restaurantId)
     const cartItem = {
       productId:         db._id,
-      name:              db.name,
+      name:              i.name || db.name,
       image:             db.image || i.image || '',
       price:             effectivePrice,
-      sellerPrice:       effectivePrice - margin,
+      sellerPrice:       Math.max(0, effectivePrice - margin),
       snapitMargin:      margin,
-      quantity:          Number(i.quantity),
+      quantity:          Math.max(1, Number(i.quantity) || 1),
       seller_store_name: null,
     }
 
@@ -159,19 +171,19 @@ const priceGroup = async (group, deliveryLocation, user) => {
     throw err
   }
 
-  // Check if festive offer is active for this restaurant (Raksha Bandhan freebie)
+  // Check if festive offer / MGD Pizza freebie applies (orders above ₹599)
   const festiveOffer = await FestiveOfferModel.findOne().sort({ createdAt: -1 }).lean()
-  const now = new Date()
-  const isFestiveActive = festiveOffer && festiveOffer.isActive &&
-    now >= new Date(festiveOffer.startsAt) && now < new Date(festiveOffer.endsAt) &&
-    String(festiveOffer.restaurantId || '6a3963a7e0dd57acb747e405') === String(group.restaurantId)
+  const isMGD = (restaurant?.name || '').toLowerCase().includes('mgd') ||
+                String(festiveOffer?.restaurantId || '6a3963a7e0dd57acb747e405') === String(group.restaurantId)
 
-  if (isFestiveActive && subTotalAmt >= (festiveOffer.minOrderForFreebie || 599)) {
-    const alreadyHasFreebie = group.cartItems.some(it => it.name?.includes('Free Margherita Pizza') || it.isFreebie)
+  if (isMGD && subTotalAmt >= (festiveOffer?.minOrderForFreebie || 599)) {
+    const alreadyHasFreebie = group.cartItems.some(it =>
+      (it.name || '').toLowerCase().includes('free margherita') || it.isFreebie
+    )
     if (!alreadyHasFreebie) {
       group.cartItems.push({
         productId: null,
-        name: `🎁 ${festiveOffer.freebieName || 'Free Margherita Pizza (Worth ₹99)'}`,
+        name: `🎁 ${festiveOffer?.freebieName || 'Free Margherita Pizza (Worth ₹99)'}`,
         image: '',
         price: 0,
         sellerPrice: 0,

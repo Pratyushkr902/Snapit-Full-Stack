@@ -200,11 +200,25 @@ const saveAndSend = async ({
 }) => {
   let fcmMessageId = null;
 
+  // Auto-resolve FCM token from UserModel if not explicitly provided
+  let targetFcmToken = fcmToken;
+  if (!targetFcmToken && recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
+    try {
+      const UserModel = mongoose.models.User || mongoose.model("User");
+      const userDoc = await UserModel.findById(recipientId).select("fcmToken").lean();
+      if (userDoc?.fcmToken) {
+        targetFcmToken = userDoc.fcmToken;
+      }
+    } catch (e) {
+      console.warn(`[FCM Token Lookup Error] recipientId=${recipientId}:`, e.message);
+    }
+  }
+
   // ── 1. Firebase FCM push ──────────────────────
-  if (fcmToken) {
+  if (targetFcmToken) {
     try {
       const message = {
-        token: fcmToken,
+        token: targetFcmToken,
 
         // Android — high priority, custom sound
         android: {
