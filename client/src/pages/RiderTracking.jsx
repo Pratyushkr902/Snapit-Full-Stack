@@ -30,16 +30,20 @@ const LANDMARKS = [
 ];
 
 // ─── Map icons ────────────────────────────────────────────────────────────────
-const riderIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/71/71422.png',
-    iconSize: [42, 42],
-    iconAnchor: [21, 42],
+const riderIcon = new L.DivIcon({
+    className: 'snapit-osm-rider-icon',
+    html: `<div style="background:#16a34a; border:2.5px solid #ffffff; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.4); font-size:18px;">🏍️</div>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -19]
 });
 
-const houseIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/1239/1239525.png',
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
+const houseIcon = new L.DivIcon({
+    className: 'snapit-osm-house-icon',
+    html: `<div style="background:#dc2626; border:2.5px solid #ffffff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.4); font-size:16px;">🏠</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -17]
 });
 
 // ─── Smooth map re-center ─────────────────────────────────────────────────────

@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 import { io } from 'socket.io-client'
 import { FaMotorcycle, FaPhone, FaMapMarkerAlt, FaClock, FaMoneyBillWave, FaExternalLinkAlt, FaSync } from 'react-icons/fa'
+import { IoMapOutline, IoListOutline } from 'react-icons/io5'
+
+const DEFAULT_CENTER = [25.3286, 84.7997]
 
 const fmtINR = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
@@ -16,11 +22,36 @@ const formatDutyTime = (minutes) => {
   return `${hrs}h ${mins}m`
 }
 
+const createWidgetRiderIcon = (rider) => {
+  const isDelivering = Boolean(rider.activeOrder)
+  const isOnDuty = rider.isDutyOn
+  const bgColor = isDelivering ? '#2563eb' : (isOnDuty ? '#16a34a' : '#475569')
+  const ringColor = isDelivering ? '#93c5fd' : (isOnDuty ? '#86efac' : '#94a3b8')
+
+  return new L.DivIcon({
+    className: 'snapit-osm-widget-marker',
+    html: `
+      <div style="position:relative; display:flex; flex-direction:column; align-items:center; cursor:pointer; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));">
+        <div style="background:${bgColor}; border:2px solid ${ringColor}; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${ringColor}80; color:#fff; font-size:15px;">
+          🛵
+        </div>
+        <div style="background:rgba(15,23,42,0.95); color:#fff; font-weight:800; font-size:9px; padding:1px 5px; border-radius:4px; margin-top:2px; white-space:nowrap; border:1px solid rgba(255,255,255,0.2);">
+          ${(rider.name || 'Rider').split(' ')[0]}
+        </div>
+      </div>
+    `,
+    iconSize: [36, 46],
+    iconAnchor: [18, 40],
+    popupAnchor: [0, -40]
+  })
+}
+
 const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
   const navigate = useNavigate()
   const [fleet, setFleet] = useState([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [widgetView, setWidgetView] = useState('LIST') // 'LIST' | 'MAP'
   const socketRef = useRef(null)
 
   const fetchFleet = useCallback(async (silent = false) => {
@@ -90,6 +121,7 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
   const onDutyCount = fleet.filter(r => r.isDutyOn).length
   const deliveringCount = fleet.filter(r => r.activeOrder).length
   const totalCashInHand = fleet.reduce((sum, r) => sum + (Number(r.cashInHand) || 0), 0)
+  const ridersWithGps = fleet.filter(r => r.lastLocation?.latitude && r.lastLocation?.longitude)
 
   return (
     <div className='bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 text-white shadow-xl mb-6 w-full max-w-full overflow-hidden box-border'>
@@ -102,14 +134,36 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
             </h2>
             <span className='px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 flex-shrink-0'>
               <span className='w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping'></span>
-              Live
+              Live OpenStreetMap
             </span>
           </div>
           <p className='text-[10px] sm:text-xs text-slate-400 font-medium mt-0.5 truncate'>
-            Active rider on/off duty shifts, cash in hand & live GPS
+            Active rider on/off duty shifts, cash in hand & live GPS on OpenStreetMap
           </p>
         </div>
         <div className='flex items-center gap-1.5 flex-shrink-0'>
+          {/* List vs Map Switcher */}
+          <div className='bg-slate-950 border border-slate-800 rounded-xl p-0.5 flex items-center gap-0.5'>
+            <button
+              onClick={() => setWidgetView('LIST')}
+              className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                widgetView === 'LIST' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <IoListOutline size={12} />
+              <span className='hidden sm:inline'>List</span>
+            </button>
+            <button
+              onClick={() => setWidgetView('MAP')}
+              className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                widgetView === 'MAP' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <IoMapOutline size={12} />
+              <span className='hidden sm:inline'>Map</span>
+            </button>
+          </div>
+
           <button
             onClick={() => fetchFleet(true)}
             className='p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition'
@@ -127,6 +181,7 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
           </button>
         </div>
       </div>
+
       {/* Metrics Row */}
       <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 mb-4 w-full max-w-full'>
         <div className='bg-slate-950/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-3'>
@@ -150,9 +205,69 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
         </div>
       </div>
 
+      {/* Widget Content: List or Map */}
       {loading ? (
         <div className='py-8 text-center text-xs text-slate-400 animate-pulse'>
-          Syncing Paliganj live riders…
+          Syncing Paliganj live riders on OpenStreetMap…
+        </div>
+      ) : widgetView === 'MAP' ? (
+        <div className='h-[320px] rounded-2xl overflow-hidden border border-slate-800 relative'>
+          <MapContainer
+            center={ridersWithGps[0] ? [ridersWithGps[0].lastLocation.latitude, ridersWithGps[0].lastLocation.longitude] : DEFAULT_CENTER}
+            zoom={14}
+            scrollWheelZoom={false}
+            style={{ height: '100%', width: '100%' }}
+            className='z-0'
+          >
+            <TileLayer
+              attribution='&copy; OpenStreetMap'
+              url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            />
+            {/* Depot Landmark */}
+            <Marker
+              position={DEFAULT_CENTER}
+              icon={new L.DivIcon({
+                html: `<div style="background:#0f172a; border:2px solid #38bdf8; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 8px rgba(56,189,248,0.5); font-size:13px;">🏪</div>`,
+                className: '',
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+              })}
+            >
+              <Popup className='snapit-custom-popup'>
+                <div className='p-1 text-slate-900 font-bold text-xs'>
+                  🏪 Snapit Express Hub (Paliganj)
+                </div>
+              </Popup>
+            </Marker>
+
+            {/* Riders on OpenStreetMap */}
+            {ridersWithGps.map(rider => (
+              <Marker
+                key={rider.riderId}
+                position={[rider.lastLocation.latitude, rider.lastLocation.longitude]}
+                icon={createWidgetRiderIcon(rider)}
+              >
+                <Popup className='snapit-custom-popup'>
+                  <div className='p-1.5 text-slate-900 text-xs'>
+                    <p className='font-black text-sm text-slate-950 flex items-center justify-between gap-2 border-b pb-1'>
+                      <span>🛵 {rider.name}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${rider.isDutyOn ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
+                        {rider.isDutyOn ? 'ON DUTY' : 'OFF DUTY'}
+                      </span>
+                    </p>
+                    <p className='text-slate-600 mt-1'>Duty: <strong>{formatDutyTime(rider.todayDutyMinutes)}</strong></p>
+                    <p className='text-slate-600'>Cash: <strong className='text-amber-700'>{fmtINR(rider.cashInHand)}</strong></p>
+                    {rider.lastLocation?.speed !== null && rider.lastLocation?.speed > 0 && (
+                      <p className='text-emerald-600 font-bold'>Speed: {Math.round(rider.lastLocation.speed * 3.6)} km/h</p>
+                    )}
+                    {rider.mobile && (
+                      <a href={`tel:${rider.mobile}`} className='mt-1 inline-block text-blue-600 font-bold hover:underline'>📞 Call Rider</a>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
         </div>
       ) : fleet.length === 0 ? (
         <div className='py-8 text-center text-xs text-slate-500 font-bold'>
@@ -248,16 +363,14 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
                     </a>
                   )}
 
-                  {mapsUrl ? (
-                    <a
-                      href={mapsUrl}
-                      target='_blank'
-                      rel='noreferrer'
+                  {hasGps ? (
+                    <button
+                      onClick={() => navigate('/dashboard/rider-fleet')}
                       className='flex-1 py-1.5 px-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] rounded-lg flex items-center justify-center gap-1 transition'
                     >
                       <FaMapMarkerAlt size={9} />
-                      <span>Live GPS</span>
-                    </a>
+                      <span>OpenStreetMap</span>
+                    </button>
                   ) : (
                     <span className='flex-1 text-center py-1.5 text-[10px] text-slate-600 font-medium'>
                       No GPS fix
@@ -274,3 +387,5 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
 }
 
 export default AdminLiveFleetWidget
+
+
