@@ -13,7 +13,7 @@ import StoreClosedOverlay from './components/StoreClosedOverlay'
 import AppUpdateModal from './components/AppUpdateModal'
 
 import fetchUserDetails from './utils/fetchUserDetails';
-import { setUserDetails } from './store/userSlice';
+import { setUserDetails, logout } from './store/userSlice';
 import { setAllCategory, setAllSubCategory, setLoadingCategory } from './store/productSlice';
 import { setOrder } from './store/orderSlice'; 
 import Axios from './utils/Axios';
@@ -83,6 +83,7 @@ function App() {
     const token = await secureStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       setIsAuthResolving(false)
+      dispatch(logout())
       if (Capacitor.isNativePlatform()) {
         SplashScreen.hide({ fadeOutDuration: 300 }).catch(() => {})
       }
@@ -93,14 +94,15 @@ function App() {
         fetchUserDetails(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Session check timed out')), 8000))
       ])
-      if (userData?.success) {
-        const profileData = userData.data;
-        if (profileData?._id) {
-          dispatch(setUserDetails(profileData))
-        }
+      if (userData?.success && userData?.data?._id) {
+        dispatch(setUserDetails(userData.data))
+      } else if (!userData || !userData.success) {
+        // Token expired or invalid — clear state cleanly
+        dispatch(logout())
       }
     } catch (error) {
       console.log("Session Check: No active user found or timed out.", error?.message)
+      dispatch(logout())
     } finally {
       setIsAuthResolving(false)
       if (Capacitor.isNativePlatform()) {

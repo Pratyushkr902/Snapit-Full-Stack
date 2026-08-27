@@ -13,8 +13,6 @@ img {
 @tailwind utilities;
 
 html {
-  scroll-behavior: smooth;
-  /* MOBILE: Prevent text size bump on orientation change (iOS) */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -24,7 +22,7 @@ body {
   font-weight: 400;
   font-style: normal;
   @apply bg-white text-neutral-700;
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   min-height: 100vh;
 }
@@ -41,18 +39,11 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* MOBILE: Smooth momentum scrolling on iOS */
-.overflow-x-auto {
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
-}
-.overflow-y-auto {
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-}
+/* Smooth momentum scrolling on iOS */
+.overflow-x-auto,
+.overflow-y-auto,
 .overflow-scroll {
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
 }
 
 /* Scrollbar utilities */

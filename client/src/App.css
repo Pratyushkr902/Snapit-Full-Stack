@@ -4,5 +4,4 @@
 .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
-    scroll-snap-type: x mandatory; /* Makes it feel like an app */
 }
