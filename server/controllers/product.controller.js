@@ -12,6 +12,12 @@ const secureImages = (images) => {
     );
 };
 
+// Escape special characters to prevent ReDoS and RegEx injection attacks
+const escapeRegex = (str) => {
+    if (typeof str !== 'string') return '';
+    return str.trim().slice(0, 100).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
+
 // ── Helper: get seller's store name from the authed user ──────
 // IMPORTANT: only trust the canonical store_name field. Falling back to
 // storeName/shop_name/name silently matches products against a seller's
@@ -277,22 +283,31 @@ export const deleteProductDetails = async (request, response) => {
 export const searchProduct = async (request, response) => {
     try {
         let { search, page, limit } = request.body;
-        if (!page)  page  = 1;
-        if (!limit) limit = 100;
-        const query = search
-            ? { $or: [{ name: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }] }
-            : {};
-        const skip = (page - 1) * limit;
+        const pageNum = Math.max(1, parseInt(page, 10) || 1);
+        const limitNum = Math.min(Math.max(1, parseInt(limit, 10) || 20), 100);
+
+        let query = {};
+        if (typeof search === 'string' && search.trim()) {
+            const safeSearch = escapeRegex(search);
+            query = {
+                $or: [
+                    { name: { $regex: safeSearch, $options: "i" } },
+                    { description: { $regex: safeSearch, $options: "i" } }
+                ]
+            };
+        }
+        const skip = (pageNum - 1) * limitNum;
         const [data, dataCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
+            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum).populate('category subCategory').lean(),
             ProductModel.countDocuments(query)
         ]);
         return response.json({
             message: "Product data", error: false, success: true,
             data: data.map(prod => ({ ...prod, image: secureImages(prod.image) })),
             totalCount: dataCount,
-            totalPage: Math.ceil(dataCount / limit),
-            page, limit
+            totalPage: Math.ceil(dataCount / limitNum),
+            page: pageNum,
+            limit: limitNum
         });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -399,10 +414,11 @@ export const getSellerProductsController = async (request, response) => {
         }
 
         const baseQuery = { "store_inventory.store_name": storeName };
-        if (search) {
+        if (typeof search === 'string' && search.trim()) {
+            const safeSearch = escapeRegex(search);
             baseQuery.$or = [
-                { name:        { $regex: search, $options: "i" } },
-                { description: { $regex: search, $options: "i" } }
+                { name:        { $regex: safeSearch, $options: "i" } },
+                { description: { $regex: safeSearch, $options: "i" } }
             ];
         }
 

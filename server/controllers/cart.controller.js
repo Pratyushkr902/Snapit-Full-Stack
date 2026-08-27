@@ -1,21 +1,25 @@
 import CartProductModel from "../models/cartproduct.model.js";
 import UserModel from "../models/user.model.js";
 import ProductModel from "../models/product.model.js";
+import mongoose from "mongoose";
+
 export const addToCartItemController = async(request,response)=>{
     try {
-        const  userId = request.userId
+        const userId = request.userId
         const { productId } = request.body
         
-        if(!productId){
-            return response.status(402).json({
-                message : "Provide productId",
+        if(!productId || typeof productId !== 'string' || !mongoose.Types.ObjectId.isValid(productId.trim())){
+            return response.status(400).json({
+                message : "Please provide a valid productId",
                 error : true,
                 success : false
             })
         }
 
-        // ADDED: server-side stock/publish validation
-        const product = await ProductModel.findById(productId).select("stock publish").lean()
+        const validProductId = productId.trim()
+
+        // Server-side stock & publish validation
+        const product = await ProductModel.findById(validProductId).select("stock publish").lean()
         if(!product || !product.publish){
             return response.status(404).json({
                 message : "Product not available",
@@ -33,7 +37,7 @@ export const addToCartItemController = async(request,response)=>{
 
         const checkItemCart = await CartProductModel.findOne({
             userId : userId,
-            productId : productId
+            productId : validProductId
         })
         if(checkItemCart){
             return response.status(400).json({
@@ -43,12 +47,12 @@ export const addToCartItemController = async(request,response)=>{
         const cartItem = new CartProductModel({
             quantity : 1,
             userId : userId,
-            productId : productId
+            productId : validProductId
         })
         const save = await cartItem.save()
-        const updateCartUser = await UserModel.updateOne({ _id : userId},{
+        await UserModel.updateOne({ _id : userId},{
             $push : { 
-                shopping_cart : productId
+                shopping_cart : validProductId
             }
         })
         return response.json({
@@ -66,10 +70,11 @@ export const addToCartItemController = async(request,response)=>{
         })
     }
 }
+
 export const getCartItemController = async(request,response)=>{
     try {
         const userId = request.userId
-        const cartItem =  await CartProductModel.find({
+        const cartItem = await CartProductModel.find({
             userId : userId
         }).populate('productId')
         return response.json({
@@ -85,18 +90,46 @@ export const getCartItemController = async(request,response)=>{
         })
     }
 }
+
 export const updateCartItemQtyController = async(request,response)=>{
     try {
         const userId = request.userId 
-        const { _id,qty } = request.body
-        if(!_id || qty === undefined || qty === null){
+        const { _id, qty } = request.body
+
+        if(!_id || qty === undefined || qty === null || typeof _id !== 'string' || !mongoose.Types.ObjectId.isValid(_id.trim())){
             return response.status(400).json({
-                message : "provide _id, qty"
+                message : "Valid cart item _id and qty are required",
+                error: true,
+                success: false
             })
         }
 
+        const validId = _id.trim()
+        const parsedQty = Number(qty)
+
+        if(isNaN(parsedQty)){
+            return response.status(400).json({
+                message : "Qty must be a valid number",
+                error: true,
+                success: false
+            })
+        }
+
+        // If qty is zero or negative, cleanly remove the item from cart
+        if(parsedQty <= 0){
+            await CartProductModel.deleteOne({ _id: validId, userId })
+            return response.json({
+                message : "Item removed from cart",
+                success : true,
+                error : false
+            })
+        }
+
+        // Cap max quantity per item to 50
+        const finalQty = Math.min(Math.floor(parsedQty), 50)
+
         // fetch current quantity so we know the direction of the change
-        const cartItemDoc = await CartProductModel.findOne({ _id, userId }).select("productId quantity").lean()
+        const cartItemDoc = await CartProductModel.findOne({ _id: validId, userId }).select("productId quantity").lean()
         if(!cartItemDoc){
             return response.status(404).json({
                 message : "Cart item not found",
@@ -104,12 +137,11 @@ export const updateCartItemQtyController = async(request,response)=>{
                 success : false
             })
         }
-        const isIncreasing = qty > cartItemDoc.quantity
+        const isIncreasing = finalQty > cartItemDoc.quantity
 
         const product = await ProductModel.findById(cartItemDoc.productId).select("stock publish").lean()
 
         // Only block on out-of-stock/unpublished if the user is INCREASING qty.
-        // Decreasing (or removing) an out-of-stock item must always be allowed.
         if(isIncreasing && (!product || !product.publish || !product.stock || product.stock <= 0)){
             return response.status(400).json({
                 message : "Product is out of stock",
@@ -117,7 +149,7 @@ export const updateCartItemQtyController = async(request,response)=>{
                 success : false
             })
         }
-        if(isIncreasing && qty > product.stock){
+        if(isIncreasing && finalQty > product.stock){
             return response.status(400).json({
                 message : `Only ${product.stock} left in stock`,
                 error : true,
@@ -126,10 +158,10 @@ export const updateCartItemQtyController = async(request,response)=>{
         }
 
         const updateCartitem = await CartProductModel.updateOne({
-            _id : _id,
+            _id : validId,
             userId : userId
         },{
-            quantity : qty
+            quantity : finalQty
         })
         return response.json({
             message : "Update cart",
@@ -145,19 +177,20 @@ export const updateCartItemQtyController = async(request,response)=>{
         })
     }
 }
+
 export const deleteCartItemQtyController = async(request,response)=>{
     try {
-      const userId = request.userId // middleware
+      const userId = request.userId
       const { _id } = request.body 
       
-      if(!_id){
+      if(!_id || typeof _id !== 'string' || !mongoose.Types.ObjectId.isValid(_id.trim())){
         return response.status(400).json({
-            message : "Provide _id",
+            message : "Valid _id is required",
             error : true,
             success : false
         })
       }
-      const deleteCartItem  = await CartProductModel.deleteOne({_id : _id, userId : userId })
+      const deleteCartItem = await CartProductModel.deleteOne({ _id: _id.trim(), userId: userId })
       return response.json({
         message : "Item remove",
         error : false,

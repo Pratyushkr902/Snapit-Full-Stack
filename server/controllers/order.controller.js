@@ -169,8 +169,12 @@ const resolveStore = async (lat, lng) => {
 }
 
 const buildTaggedCartItems = async (list_items, storeName) => {
+    if (!Array.isArray(list_items)) return [];
     return Promise.all(list_items.map(async (item) => {
         const productId = item.productId?._id || item.productId
+        if (!productId || !isObjectId(productId)) {
+            return { ...item, _invalid: true, _reason: 'Invalid product reference in your cart.' }
+        }
         const product = await ProductModel.findById(productId)
             .select('name price sellerPrice snapitMargin discount stock unit image store_inventory')
             .lean()
@@ -180,7 +184,7 @@ const buildTaggedCartItems = async (list_items, storeName) => {
         if (!product.stock || product.stock <= 0) {
             return { ...item, _invalid: true, _reason: `${product.name} is out of stock.` }
         }
-        const requestedQty = Number(item.quantity) || 1
+        const requestedQty = Math.max(1, Math.min(Math.floor(Number(item.quantity) || 1), 50))
         if (requestedQty > product.stock) {
             return { ...item, _invalid: true, _reason: `Only ${product.stock} left of ${product.name}.` }
         }
@@ -348,8 +352,10 @@ export async function CashOnDeliveryOrderController(request, response) {
         const userId = request.userId
         const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress } = request.body
 
-        if (!list_items?.length || !addressId || !subTotalAmt || !totalAmt) {
-            return response.status(400).json({ message: 'Missing required order fields.', error: true, success: false })
+        const parsedSubTotal = Number(subTotalAmt)
+        const parsedTotal = Number(totalAmt)
+        if (!list_items?.length || !addressId || isNaN(parsedSubTotal) || isNaN(parsedTotal) || parsedSubTotal <= 0 || parsedTotal <= 0) {
+            return response.status(400).json({ message: 'Invalid or missing required order fields.', error: true, success: false })
         }
 
         const address = await AddressModel.findOne({ _id: addressId, userId })

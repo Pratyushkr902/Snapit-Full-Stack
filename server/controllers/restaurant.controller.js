@@ -5,18 +5,26 @@ import NodeCache from 'node-cache'
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 120 })
 
+const escapeRegex = (str) => {
+  if (typeof str !== 'string') return ''
+  return str.trim().slice(0, 100).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
+}
+
 // ── GET /api/restaurant/all ────────────────────────────────────────────────────
 export async function getAllRestaurants(req, res) {
   try {
     const { cuisine, search, isOpen } = req.query
-    const cacheKey = `all_${isOpen}_${cuisine}_${search}`
+    const safeSearch = typeof search === 'string' ? escapeRegex(search) : ''
+    const safeCuisine = typeof cuisine === 'string' ? escapeRegex(cuisine) : ''
+
+    const cacheKey = `all_${isOpen}_${safeCuisine}_${safeSearch}`
     const cached = cache.get(cacheKey)
     if (cached) return res.json(cached)
 
     const filter = { isActive: true }
     if (isOpen === 'true') filter.isOpen = true
-    if (cuisine) filter.cuisineTypes = { $in: [new RegExp(cuisine, 'i')] }
-    if (search) filter.name = { $regex: search, $options: 'i' }
+    if (safeCuisine) filter.cuisineTypes = { $in: [new RegExp(safeCuisine, 'i')] }
+    if (safeSearch) filter.name = { $regex: safeSearch, $options: 'i' }
 
     const restaurants = await RestaurantModel
       .find(filter)

@@ -106,15 +106,23 @@ export async function registerUserController(request, response) {
     try {
         const { name, email, password, referralCode: incomingReferralCode } = request.body
 
-        if (!name || !email || !password) {
+        if (
+            typeof name !== 'string' ||
+            typeof email !== 'string' ||
+            typeof password !== 'string' ||
+            !name.trim() ||
+            !email.trim() ||
+            !password.trim()
+        ) {
             return response.status(400).json({
-                message: "provide email, name, password",
+                message: "Please provide a valid name, email, and password.",
                 error: true,
                 success: false
             })
         }
 
-        if (isDisposableEmail(email)) {
+        const safeEmail = email.trim().toLowerCase()
+        if (isDisposableEmail(safeEmail)) {
             return response.status(400).json({
                 message: "Temporary/disposable email addresses are not allowed. Please use a valid personal email.",
                 error: true,
@@ -122,10 +130,10 @@ export async function registerUserController(request, response) {
             })
         }
 
-        const cleanEmail = normalizeEmail(email)
+        const cleanEmail = normalizeEmail(safeEmail)
 
         const user = await UserModel.findOne({
-            $or: [{ email: cleanEmail }, { email: email.trim().toLowerCase() }]
+            $or: [{ email: cleanEmail }, { email: safeEmail }]
         })
 
         if (user) {
@@ -151,10 +159,11 @@ export async function registerUserController(request, response) {
 
         // Check if incomingReferralCode matches a Campus Ambassador's code
         // (separate namespace from the general referralCode system below).
-        const ambassadorReferrer = incomingReferralCode
+        const safeAmbCode = typeof incomingReferralCode === 'string' ? incomingReferralCode.trim().toUpperCase() : ''
+        const ambassadorReferrer = safeAmbCode
             ? await UserModel.findOne({
                 role: 'CAMPUS_AMBASSADOR',
-                'campusAmbassador.referralCode': incomingReferralCode.trim().toUpperCase()
+                'campusAmbassador.referralCode': safeAmbCode
               })
             : null
         if (ambassadorReferrer && normalizeEmail(ambassadorReferrer.email) !== cleanEmail) {
@@ -168,15 +177,14 @@ export async function registerUserController(request, response) {
             )
         }
 
-        if (incomingReferralCode) {
-            const cleanCode = incomingReferralCode.trim().toUpperCase()
+        if (safeAmbCode) {
             const referrer = await UserModel.findOne({
-                referralCode: cleanCode
+                referralCode: safeAmbCode
             })
 
             // Prevent self-referral (cannot refer yourself using alias/dot tricks)
             if (referrer && normalizeEmail(referrer.email) !== cleanEmail) {
-                payload.referredBy = cleanCode
+                payload.referredBy = safeAmbCode
             }
         }
 
@@ -186,7 +194,7 @@ export async function registerUserController(request, response) {
         const VerifyEmailUrl = `${process.env.FRONTEND_URL}/#/verify-email?code=${save?._id}`
 
         await sendEmail({
-            sendTo: email,
+            sendTo: safeEmail,
             subject: "Verify email from Snapit",
             html: verifyEmailTemplate({
                 name,
@@ -218,7 +226,14 @@ export async function registerUserController(request, response) {
 export async function verifyEmailController(request, response) {
     try {
         const { code } = request.body
-        const user = await UserModel.findOne({ _id: code })
+        if (typeof code !== 'string' || !code.trim() || !mongoose.Types.ObjectId.isValid(code.trim())) {
+            return response.status(400).json({
+                message: "Invalid verification code",
+                error: true,
+                success: false
+            })
+        }
+        const user = await UserModel.findOne({ _id: code.trim() })
         if (!user) {
             return response.status(400).json({
                 message: "Invalid code",
@@ -226,11 +241,7 @@ export async function verifyEmailController(request, response) {
                 success: false
             })
         }
-        // NOTE: Referral bonus no longer credited on email verification.
-        // It now fires on the referred friend's FIRST qualifying order
-        // (>= min order amount) — see creditFirstOrderReferralBonus() in
-        // utils/referralBonus.js, called from every order-creation controller.
-        await UserModel.updateOne({ _id: code }, { verify_email: true })
+        await UserModel.updateOne({ _id: code.trim() }, { verify_email: true })
 
         return response.json({
             message: "Verify email done",
@@ -250,17 +261,23 @@ export async function loginController(request, response) {
     try {
         const { email, password } = request.body
 
-        if (!email || !password) {
+        if (
+            typeof email !== 'string' ||
+            typeof password !== 'string' ||
+            !email.trim() ||
+            !password.trim()
+        ) {
             return response.status(400).json({
-                message: "provide email, password",
+                message: "Please provide a valid email and password.",
                 error: true,
                 success: false
             })
         }
 
-        const cleanEmail = normalizeEmail(email)
+        const safeEmail = email.trim().toLowerCase()
+        const cleanEmail = normalizeEmail(safeEmail)
         const user = await UserModel.findOne({
-            $or: [{ email: cleanEmail }, { email: email.trim().toLowerCase() }]
+            $or: [{ email: cleanEmail }, { email: safeEmail }]
         })
 
         if (!user) {
@@ -417,7 +434,16 @@ export async function updateUserDetails(request, response) {
 export async function forgotPasswordController(request, response) {
     try {
         const { email } = request.body
-        const user = await UserModel.findOne({ email })
+        if (typeof email !== 'string' || !email.trim()) {
+            return response.status(400).json({
+                message: "Please provide a valid email address.",
+                error: true,
+                success: false
+            })
+        }
+
+        const safeEmail = email.trim().toLowerCase()
+        const user = await UserModel.findOne({ email: safeEmail })
 
         if (!user) {
             return response.status(400).json({
@@ -439,7 +465,7 @@ export async function forgotPasswordController(request, response) {
 
         try {
             await sendEmail({
-                sendTo: email,
+                sendTo: safeEmail,
                 subject: "Forgot password from Snapit",
                 html: forgotPasswordTemplate({ name: user.name, otp: stringOtp })
             })
@@ -470,15 +496,21 @@ export async function verifyForgotPasswordOtp(request, response) {
     try {
         const { email, otp } = request.body
 
-        if (!email || !otp) {
+        if (
+            typeof email !== 'string' ||
+            typeof otp === 'undefined' ||
+            !email.trim() ||
+            !String(otp).trim()
+        ) {
             return response.status(400).json({
-                message: "Provide required field email, otp.",
+                message: "Provide required fields email and otp.",
                 error: true,
                 success: false
             })
         }
 
-        const user = await UserModel.findOne({ email })
+        const safeEmail = email.trim().toLowerCase()
+        const user = await UserModel.findOne({ email: safeEmail })
 
         if (!user) {
             return response.status(400).json({
@@ -530,15 +562,23 @@ export async function resetpassword(request, response) {
     try {
         const { email, newPassword, confirmPassword } = request.body
 
-        if (!email || !newPassword || !confirmPassword) {
+        if (
+            typeof email !== 'string' ||
+            typeof newPassword !== 'string' ||
+            typeof confirmPassword !== 'string' ||
+            !email.trim() ||
+            !newPassword.trim() ||
+            !confirmPassword.trim()
+        ) {
             return response.status(400).json({
-                message: "provide required fields email, newPassword, confirmPassword",
+                message: "provide valid required fields email, newPassword, confirmPassword",
                 error: true,
                 success: false
             })
         }
 
-        const user = await UserModel.findOne({ email })
+        const safeEmail = email.trim().toLowerCase()
+        const user = await UserModel.findOne({ email: safeEmail })
 
         if (!user) {
             return response.status(400).json({
