@@ -12,6 +12,9 @@ const AppUpdateModal = () => {
   const [isForced, setIsForced] = useState(false)
 
   const checkVersion = useCallback(async () => {
+    // In-app Google Play store update checks only apply to native mobile apps (Android/iOS)
+    if (!Capacitor.isNativePlatform()) return
+
     try {
       const res = await Axios({
         method: 'GET',
