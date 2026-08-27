@@ -33,15 +33,14 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
     const upiLink = `upi://pay?pa=${SNAPIT_UPI_ID}&pn=${encodeURIComponent(SNAPIT_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Order ' + (order?.orderId?.slice(-6) || ''))}`
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`
 
-    // Step 1: record payment, then move to OTP step (does NOT mark Delivered anymore)
+    // Step 1: record payment, then move to photo proof step
     const handleConfirmPayment = async () => {
         try {
             setConfirming(true)
             const response = await Axios({
-                ...SummaryApi.updateOrderStatus,
+                ...SummaryApi.collectPayment,
                 data: {
                     orderId: order.orderId,
-                    status: 'Confirmed',
                     payment_status: method === 'upi' ? 'UPI' : 'CASH ON DELIVERY',
                     isSettled: method === 'upi',
                     cashReceived: method === 'cash' ? Number(cashReceived) : amount,
@@ -50,10 +49,10 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
             if (response.data.success) {
                 setShowOtpStep(true)
             } else {
-                toast.error(response.data.message || 'Update failed')
+                toast.error(response.data.message || 'Payment recording failed')
             }
         } catch (error) {
-            toast.error('Failed to update order. Try again.')
+            toast.error(error?.response?.data?.message || 'Failed to record payment. Try again.')
         } finally {
             setConfirming(false)
         }

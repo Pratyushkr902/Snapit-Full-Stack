@@ -221,16 +221,16 @@ const SummaryApi = {
         url: '/api/order/update-status',
         method: 'put'
     },
+    collectPayment: {
+        url: '/api/order/collect-payment',
+        method: 'post'
+    },
     verifyDeliveryOtp: {
         url: '/api/order/verify-delivery-otp',
         method: 'post'
     },
     updateSellerStatus: {
         url: '/api/order/update-seller-status',
-        method: 'post'
-    },
-    verifyDeliveryOtp: {
-        url: '/api/order/verify-delivery-otp',
         method: 'post'
     },
     reportOrderDispute: {

@@ -11,23 +11,58 @@ export const getTodayDateIST = () => {
   return ist.toISOString().split('T')[0];
 };
 
+// Helper: Get or create today's duty doc with seamless midnight shift rollover
+export const getOrCreateTodayDutyDoc = async (riderId) => {
+  const today = getTodayDateIST();
+  let dutyDoc = await RiderDutyModel.findOne({ riderId, date: today });
+
+  if (!dutyDoc) {
+    // Check if rider had an active shift open from a previous day
+    const lastActiveDoc = await RiderDutyModel.findOne({ riderId, isDutyOn: true }).sort({ date: -1 });
+    let carriedOverDuty = false;
+    let carriedOverStart = null;
+
+    if (lastActiveDoc && lastActiveDoc.date !== today) {
+      const midnight = new Date();
+      midnight.setHours(0, 0, 0, 0);
+      const start = lastActiveDoc.currentShiftStart || midnight;
+      const prevMinutes = Math.max(0, Math.round((midnight.getTime() - new Date(start).getTime()) / 60000));
+
+      lastActiveDoc.shifts.push({
+        startTime: start,
+        endTime: midnight,
+        durationMinutes: prevMinutes
+      });
+      lastActiveDoc.totalDutyMinutes = (Number(lastActiveDoc.totalDutyMinutes) || 0) + prevMinutes;
+      lastActiveDoc.isDutyOn = false;
+      lastActiveDoc.currentShiftStart = null;
+      await lastActiveDoc.save();
+
+      carriedOverDuty = true;
+      carriedOverStart = midnight;
+    }
+
+    dutyDoc = new RiderDutyModel({
+      riderId,
+      date: today,
+      isDutyOn: carriedOverDuty,
+      currentShiftStart: carriedOverStart,
+      totalDutyMinutes: 0,
+      shifts: []
+    });
+    await dutyDoc.save();
+  }
+
+  return dutyDoc;
+};
+
 // ── 1. Toggle Rider Duty (ON / OFF) ──────────────────────────────────────────
 export const toggleDutyController = async (req, res) => {
   try {
     const riderId = req.userId;
     const { status } = req.body; // boolean or undefined (toggle)
-    const today = getTodayDateIST();
 
-    let dutyDoc = await RiderDutyModel.findOne({ riderId, date: today });
-    if (!dutyDoc) {
-      dutyDoc = new RiderDutyModel({
-        riderId,
-        date: today,
-        isDutyOn: false,
-        totalDutyMinutes: 0,
-        shifts: []
-      });
-    }
+    let dutyDoc = await getOrCreateTodayDutyDoc(riderId);
 
     const targetStatus = typeof status === 'boolean' ? status : !dutyDoc.isDutyOn;
 
@@ -82,20 +117,7 @@ export const toggleDutyController = async (req, res) => {
 export const getRiderDutyStatusController = async (req, res) => {
   try {
     const riderId = req.userId;
-    const today = getTodayDateIST();
-
-    let dutyDoc = await RiderDutyModel.findOne({ riderId, date: today });
-    if (!dutyDoc) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          isDutyOn: false,
-          currentShiftStart: null,
-          totalDutyMinutes: 0,
-          shifts: []
-        }
-      });
-    }
+    let dutyDoc = await getOrCreateTodayDutyDoc(riderId);
 
     let effectiveTotalMinutes = Number(dutyDoc.totalDutyMinutes) || 0;
     if (dutyDoc.isDutyOn && dutyDoc.currentShiftStart) {

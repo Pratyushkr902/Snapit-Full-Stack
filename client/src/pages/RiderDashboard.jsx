@@ -122,6 +122,56 @@ const RiderDashboard = () => {
         }
     }, []);
 
+    // ── Online / Offline Connectivity Tracker ──
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true);
+            toast.success('🌐 Online: Synced with Paliganj server');
+            fetchRiderOrders(true);
+        };
+        const handleOffline = () => {
+            setIsOnline(false);
+            toast.error('⚠️ Offline: Lost network connection. Reconnecting…', { duration: 5000 });
+        };
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [fetchRiderOrders]);
+
+    // ── Audio Alert Sound for Incoming Orders ──
+    const playOrderAlertSound = useCallback(() => {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+            osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.24); // D6
+
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200, 100, 300]);
+            }
+        } catch (e) {
+            console.warn('[RiderSound] Alert sound error:', e);
+        }
+    }, []);
+
     // ── Toggle Duty Handler ──
     const handleToggleDuty = async () => {
         const token = localStorage.getItem('accessToken');
@@ -134,6 +184,19 @@ const RiderDashboard = () => {
         try {
             setTogglingDuty(true);
             const target = !isDutyOn;
+
+            // If going ON DUTY, test GPS permissions
+            if (target && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    () => {},
+                    (err) => {
+                        console.warn('[RiderGPS] Permission prompt warning:', err.message);
+                        toast('Please enable GPS Location on your device for accurate tracking', { icon: '📍' });
+                    },
+                    { enableHighAccuracy: true, timeout: 6000 }
+                );
+            }
+
             const res = await Axios({
                 ...SummaryApi.toggleRiderDuty,
                 data: { status: target }
@@ -202,7 +265,7 @@ const RiderDashboard = () => {
         const interval = setInterval(() => {
             fetchRiderOrders(true);
             fetchCashSummary();
-        }, 30000);
+        }, 20000);
         return () => clearInterval(interval);
     }, [fetchRiderOrders, fetchDutyStatus, fetchCashSummary]);
 
@@ -220,10 +283,12 @@ const RiderDashboard = () => {
 
         socket.on('new_order', () => {
             fetchRiderOrders(true);
-            toast('🛵 New order available!', { icon: '📦' });
+            playOrderAlertSound();
+            toast('🛵 New order available in Paliganj!', { icon: '📦', duration: 5000 });
         });
         socket.on('order_confirmed', () => {
             fetchRiderOrders(true);
+            playOrderAlertSound();
         });
 
         return () => {
@@ -231,7 +296,7 @@ const RiderDashboard = () => {
             socket.off('order_confirmed');
             socket.disconnect();
         };
-    }, [fetchRiderOrders]);
+    }, [fetchRiderOrders, playOrderAlertSound]);
 
     // ─── GPS tracking & Fleet broadcasting while ON DUTY ────────────────────
     useEffect(() => {
@@ -274,6 +339,10 @@ const RiderDashboard = () => {
     }, [isDutyOn, user]);
 
     const handlePickup = async (order) => {
+        if (!isDutyOn) {
+            toast.error('Please switch ON DUTY before picking up orders!', { icon: '🛑', duration: 4000 });
+            return;
+        }
         try {
             const response = await Axios({
                 ...SummaryApi.updateOrderStatus,
@@ -502,6 +571,17 @@ const RiderDashboard = () => {
                     </button>
                 </div>
 
+                {/* Offline Warning Bar */}
+                {!isOnline && (
+                    <div className='mb-4 p-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-between gap-2 text-xs font-bold'>
+                        <span className='flex items-center gap-1.5'>
+                            <span className='w-2 h-2 rounded-full bg-amber-400 animate-ping'></span>
+                            <span>Network Disconnected — working offline. Actions will sync upon reconnection.</span>
+                        </span>
+                        <button onClick={() => fetchRiderOrders(true)} className='px-2.5 py-1 bg-amber-500 text-slate-950 font-black rounded-lg text-[10px]'>Retry</button>
+                    </div>
+                )}
+
                 {/* ══════════════ ORDERS TAB ══════════════ */}
                 {activeTab === 'orders' && (
                     <>
@@ -575,7 +655,7 @@ const RiderDashboard = () => {
                                 <div className='col-span-full py-16 text-center bg-slate-900/80 rounded-3xl border-2 border-dashed border-slate-800 p-6'>
                                     <p className='text-4xl mb-2'>🛵</p>
                                     <p className='text-slate-300 font-black text-sm'>No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders</p>
-                                    <p className='text-slate-500 text-xs mt-1'>Auto-refreshes every 30 seconds</p>
+                                    <p className='text-slate-500 text-xs mt-1'>Auto-refreshes every 20 seconds</p>
                                     <button onClick={() => fetchRiderOrders(true)} className='mt-3 text-xs text-blue-400 font-black underline'>Refresh Now</button>
                                 </div>
                             ) : (
@@ -587,21 +667,31 @@ const RiderDashboard = () => {
                                     const isSellerDelayed = order.delivery_status === 'Pending' && ageMinutes >= 3;
                                     const canCancel      = order.delivery_status === 'Confirmed' || isSellerDelayed;
                                     const isCancelling   = cancellingId === order.orderId;
+                                    const isUnassigned   = !order.riderId;
 
                                     return (
                                         <div key={order._id}
                                             className={`bg-slate-900 border rounded-3xl p-4 sm:p-5 flex flex-col gap-3.5 transition-all w-full max-w-full overflow-hidden box-border shadow-lg ${
                                                 isSellerDelayed
                                                     ? 'border-amber-500/50 shadow-amber-500/10'
-                                                    : 'border-slate-800 hover:border-slate-700'
+                                                    : isUnassigned
+                                                        ? 'border-blue-500/40 shadow-blue-500/10'
+                                                        : 'border-slate-800 hover:border-slate-700'
                                             }`}>
 
                                             {/* Order Top Bar: ID + Status + Time */}
                                             <div className='flex items-start justify-between gap-2'>
                                                 <div className='min-w-0'>
-                                                    <span className='text-[10px] font-mono font-black bg-slate-800 text-slate-300 px-2 py-0.5 rounded-lg uppercase tracking-wider'>
-                                                        #{order.orderId?.slice(-8) || order.orderId}
-                                                    </span>
+                                                    <div className='flex items-center gap-1.5'>
+                                                        <span className='text-[10px] font-mono font-black bg-slate-800 text-slate-300 px-2 py-0.5 rounded-lg uppercase tracking-wider'>
+                                                            #{order.orderId?.slice(-8) || order.orderId}
+                                                        </span>
+                                                        {isUnassigned && (
+                                                            <span className='bg-blue-500/20 border border-blue-500/30 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-black uppercase'>
+                                                                ⚡ Open to Claim
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     {fmtOrderTime(order.createdAt) && (
                                                         <p className='text-[10px] text-slate-500 font-bold mt-1 flex items-center gap-1'>
                                                             <FaClock size={9} /> {fmtOrderTime(order.createdAt)}
@@ -717,7 +807,7 @@ const RiderDashboard = () => {
                                             {(order.delivery_status === 'Confirmed') && (
                                                 <button onClick={() => handlePickup(order)}
                                                     className='w-full py-3.5 rounded-2xl font-black text-xs sm:text-sm text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-lg shadow-amber-400/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
-                                                    <FaCheckCircle/> PICKUP FROM {store?.name?.toUpperCase() || 'STORE'}
+                                                    <FaCheckCircle/> {isUnassigned ? '⚡ CLAIM & PICKUP' : `PICKUP FROM ${store?.name?.toUpperCase() || 'STORE'}`}
                                                 </button>
                                             )}
                                             {isSellerDelayed && (

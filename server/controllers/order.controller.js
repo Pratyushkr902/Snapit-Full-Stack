@@ -36,6 +36,8 @@ import CartProductModel from '../models/cartproduct.model.js'
 import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
+import RiderDutyModel  from '../models/riderDuty.model.js'
+import { getTodayDateIST } from './riderDuty.controller.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
 import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { shouldQueueOrder } from '../middleware/abuseGuard.js'
@@ -106,36 +108,59 @@ const checkDeliveryServiceability = (lat, lng) => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RIDER ASSIGNMENT — picks the active rider with the fewest current live orders
+// RIDER ASSIGNMENT — picks the on-duty active rider with the fewest current live orders
 // ─────────────────────────────────────────────────────────────────────────────
 export async function assignAvailableRider() {
-    const activeRiders = await UserModel.find({ role: 'RIDER', status: 'Active' })
-        .select('name mobile _id').lean()
+    try {
+        const today = getTodayDateIST()
 
-    if (activeRiders.length === 0) return null
-    if (activeRiders.length === 1) return activeRiders[0]
+        // 1. Prioritize riders who are actively ON DUTY today
+        const onDutyDocs = await RiderDutyModel.find({ date: today, isDutyOn: true }).select('riderId').lean()
+        const onDutyRiderIds = onDutyDocs.map(d => d.riderId)
 
-    const riderIds = activeRiders.map(r => r._id)
-
-    const loadCounts = await OrderModel.aggregate([
-        { $match: { riderId: { $in: riderIds }, delivery_status: { $nin: ['Delivered', 'Cancelled'] } } },
-        { $group: { _id: '$riderId', count: { $sum: 1 } } }
-    ])
-
-    const countMap = new Map(loadCounts.map(c => [c._id.toString(), c.count]))
-
-    let chosen = activeRiders[0]
-    let lowest = countMap.get(chosen._id.toString()) || 0
-
-    for (const rider of activeRiders) {
-        const count = countMap.get(rider._id.toString()) || 0
-        if (count < lowest) {
-            chosen = rider
-            lowest = count
+        let candidateRiders = []
+        if (onDutyRiderIds.length > 0) {
+            candidateRiders = await UserModel.find({
+                _id: { $in: onDutyRiderIds },
+                role: 'RIDER',
+                status: 'Active'
+            }).select('name mobile _id').lean()
         }
-    }
 
-    return chosen
+        // 2. Fallback if no rider is currently marked on duty
+        if (candidateRiders.length === 0) {
+            candidateRiders = await UserModel.find({ role: 'RIDER', status: 'Active' })
+                .select('name mobile _id').lean()
+        }
+
+        if (candidateRiders.length === 0) return null
+        if (candidateRiders.length === 1) return candidateRiders[0]
+
+        const riderIds = candidateRiders.map(r => r._id)
+
+        const loadCounts = await OrderModel.aggregate([
+            { $match: { riderId: { $in: riderIds }, delivery_status: { $nin: ['Delivered', 'Cancelled'] } } },
+            { $group: { _id: '$riderId', count: { $sum: 1 } } }
+        ])
+
+        const countMap = new Map(loadCounts.map(c => [c._id.toString(), c.count]))
+
+        let chosen = candidateRiders[0]
+        let lowest = countMap.get(chosen._id.toString()) || 0
+
+        for (const rider of candidateRiders) {
+            const count = countMap.get(rider._id.toString()) || 0
+            if (count < lowest) {
+                chosen = rider
+                lowest = count
+            }
+        }
+
+        return chosen
+    } catch (err) {
+        console.error('assignAvailableRider error:', err.message)
+        return null
+    }
 }
 
 
@@ -874,10 +899,19 @@ export const updateOrderStatusController = async (request, response) => {
         const order = await OrderModel.findOne({ orderId })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
+        let assignedRiderInfo = null
         if (request.userRole === 'RIDER') {
-            if (!order.riderId || order.riderId.toString() !== userId) {
+            if (!order.riderId) {
+                // Auto-claim unassigned order when rider picks it up
+                const riderUser = await UserModel.findById(userId).select('name mobile').lean()
+                assignedRiderInfo = {
+                    riderId: userId,
+                    rider_name: riderUser?.name || 'Rider',
+                    rider_contact: riderUser?.mobile || ''
+                }
+            } else if (order.riderId.toString() !== userId) {
                 console.warn(`RIDER_IDOR | user=${userId} | orderId=${orderId} | ip=${request.ip}`)
-                return response.status(403).json({ message: 'This order is not assigned to you.', error: true, success: false })
+                return response.status(403).json({ message: 'This order is assigned to another rider.', error: true, success: false })
             }
             if (status === 'Delivered') {
                 return response.status(400).json({ message: 'Use the delivery confirmation step to mark this order Delivered.', error: true, success: false })
@@ -902,11 +936,11 @@ export const updateOrderStatusController = async (request, response) => {
 
         const updateFields = {
             delivery_status: status,
+            ...(assignedRiderInfo       && assignedRiderInfo),
             ...(payment_status          && { payment_status, payment_collected: true }),
             ...(isSettled !== undefined && { isSettled, settledAt: isSettled ? new Date() : null }),
             ...(cashReceived            && { cashReceived: Number(cashReceived) }),
         }
-
 
         const updatedOrder = await OrderModel.findOneAndUpdate(
             { orderId },
@@ -978,6 +1012,7 @@ export const verifyDeliveryOtpController = async (request, response) => {
                 deliveredAt: new Date(),
                 deliveryProofPhoto,
                 otpVerifiedAt: new Date(),
+                payment_collected: true
             },
             { new: true }
         )
@@ -1181,9 +1216,21 @@ export async function getOrderItems(request, response) {
         const userId   = request.userId
         const userRole = request.userRole
 
-        const filter = (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN')
-            ? {}
-            : { riderId: userId, delivery_status: { $nin: ['Cancelled'] } }
+        let filter = {}
+        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+            filter = {}
+        } else if (userRole === 'RIDER') {
+            // Show assigned orders + unassigned orders ready for pickup
+            filter = {
+                $or: [
+                    { riderId: userId },
+                    { riderId: null, delivery_status: { $in: ['Confirmed', 'Pending'] } }
+                ],
+                delivery_status: { $nin: ['Cancelled'] }
+            }
+        } else {
+            filter = { userId }
+        }
 
         const orders = await populateOrder(
             OrderModel.find(filter).sort({ createdAt: -1 })
