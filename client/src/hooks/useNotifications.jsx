@@ -16,6 +16,32 @@ const useNotifications = () => {
       try {
         // ── 1. NATIVE ANDROID / IOS PLATFORMS ──────────────────────────────
         if (Capacitor.isNativePlatform()) {
+          // Create Android High-Priority Notification Channels for heads-up alerts
+          try {
+            await PushNotifications.createChannel({
+              id: 'snapit_orders',
+              name: 'Snapit Orders & Delivery',
+              description: 'Real-time order alerts, status updates, and rider notifications',
+              importance: 5, // MAX importance (heads-up pop-up + sound)
+              visibility: 1, // PUBLIC on lockscreen
+              sound: 'default',
+              vibration: true,
+              lights: true,
+              lightColor: '#ea580c',
+            })
+            await PushNotifications.createChannel({
+              id: 'default',
+              name: 'General Alerts',
+              description: 'General updates and offers',
+              importance: 4,
+              visibility: 1,
+              sound: 'default',
+              vibration: true,
+            })
+          } catch (channelErr) {
+            console.warn('[PushNotifications] Channel creation note:', channelErr?.message)
+          }
+
           // Listeners MUST be attached BEFORE calling PushNotifications.register()
           await PushNotifications.removeAllListeners()
 
@@ -23,6 +49,7 @@ const useNotifications = () => {
             if (token?.value) {
               console.log('📱 Native FCM Token generated:', token.value)
               try {
+                localStorage.setItem('snapit_native_fcm_token', token.value)
                 await Axios({
                   ...SummaryApi.saveFcmToken,
                   data: { fcmToken: token.value }

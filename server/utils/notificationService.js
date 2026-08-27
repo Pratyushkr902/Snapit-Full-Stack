@@ -220,6 +220,12 @@ const saveAndSend = async ({
       const message = {
         token: targetFcmToken,
 
+        // Standard notification payload for background/system trays
+        notification: {
+          title: payload.title,
+          body:  payload.shayari || payload.body || payload.title,
+        },
+
         // Android — high priority, custom sound
         android: {
           priority: "high",
@@ -227,8 +233,10 @@ const saveAndSend = async ({
             title:       payload.title,
             body:        payload.shayari,   // shayari as push body
             sound:       "default",
-            channelId:   "snapit_orders",   // create this channel in React Native app
+            channelId:   "snapit_orders",   // high-priority notification channel
             clickAction: "OPEN_NOTIFICATION_SCREEN",
+            priority:    "max",
+            visibility:  "public",
           },
         },
 
@@ -268,13 +276,7 @@ const saveAndSend = async ({
       console.log(`[FCM ✅] ${recipientType.toUpperCase()} | ${type} | messageId: ${response}`);
 
     } catch (fcmErr) {
-      // Token expired / unregistered — log but don't crash
       console.warn(`[FCM ⚠️] Push failed for ${recipientId}: ${fcmErr.message}`);
-
-      // If token is invalid, optionally clear it from your User model:
-      // if (fcmErr.code === "messaging/registration-token-not-registered") {
-      //   await User.findByIdAndUpdate(recipientId, { fcmToken: null });
-      // }
     }
   }
 
@@ -285,15 +287,11 @@ const saveAndSend = async ({
       recipientType,
       type,
       title:        payload.title,
-      // FIX: schema requires `message` — it was never being set, so every
-      // notification failed validation and was silently never saved.
       message:      payload.body || payload.shayari || payload.title,
       shayari:      payload.shayari,
       body:         payload.body,
-      // FIX: schema field is `data`, not `metadata` — was being silently
-      // dropped by Mongoose strict mode (orderId etc. never persisted).
       data:         metadata,
-      fcmToken:     fcmToken || null,
+      fcmToken:     targetFcmToken || null,
       fcmMessageId: fcmMessageId || null,
     });
 
@@ -330,30 +328,53 @@ export const notifySellerNewOrder = (sellerId, orderId, amount, fcmToken) =>
     metadata: { orderId, amount }, fcmToken,
   });
 
-// Looks up every SELLER whose store_name is one of the order's
-// involved_stores and fires notifySellerNewOrder() for each of them.
-// Fire-and-forget from the caller's side (wrap in .catch(() => {})).
+// Looks up every SELLER whose store_name matches, restaurant owners, and admins
+// to notify them instantly when a new order arrives.
 export const notifySellersOfNewOrder = async (order) => {
   try {
     const { default: UserModel } = await import("../models/user.model.js");
-    const storeNames = order?.involved_stores || [];
-    if (storeNames.length === 0) return;
+    const { default: RestaurantModel } = await import("../models/restaurant.model.js");
+    const storeNames = [
+      ...(order?.involved_stores || []),
+      ...(order?.store_details?.name ? [order.store_details.name] : []),
+      ...((order?.cartItems || []).map(i => i.seller_store_name || i.store_name).filter(Boolean))
+    ].filter(Boolean);
+
+    const storeRegexes = storeNames.map(s => new RegExp(`^${s.trim()}$`, "i"));
+
+    const queryFilters = [
+      { role: { $in: ["SELLER", "RESTO_SELLER"] }, store_name: { $in: storeRegexes } },
+      { role: { $in: ["SUPER_ADMIN", "ADMIN"] } },
+    ];
+
+    if (order?.restaurantId && mongoose.Types.ObjectId.isValid(String(order.restaurantId))) {
+      queryFilters.push({ restaurantId: order.restaurantId });
+      try {
+        const resto = await RestaurantModel.findById(order.restaurantId).select("ownerId").lean();
+        if (resto?.ownerId) {
+          queryFilters.push({ _id: resto.ownerId });
+        }
+      } catch (rErr) {}
+    }
 
     const sellers = await UserModel.find({
-      role: { $in: ["SELLER", "RESTO_SELLER"] },
-      store_name: { $in: storeNames },
+      $or: queryFilters,
       fcmToken: { $exists: true, $ne: null, $ne: "" },
-    }).select("fcmToken store_name").lean();
+    }).select("fcmToken store_name name role").lean();
 
     if (sellers.length === 0) {
-      console.log(`[notifySellersOfNewOrder] No sellers with fcmToken for stores: ${storeNames.join(", ")}`);
+      console.log(`[notifySellersOfNewOrder] No sellers/admins with fcmToken for stores: ${storeNames.join(", ")}`);
       return;
     }
 
+    console.log(`[notifySellersOfNewOrder] Notifying ${sellers.length} sellers/admins for order ${order.orderId}`);
+    const notifiedTokens = new Set();
     await Promise.allSettled(
-      sellers.map(seller =>
-        notifySellerNewOrder(seller._id, order.orderId, order.totalAmt, seller.fcmToken)
-      )
+      sellers.map(seller => {
+        if (!seller.fcmToken || notifiedTokens.has(seller.fcmToken)) return Promise.resolve();
+        notifiedTokens.add(seller.fcmToken);
+        return notifySellerNewOrder(seller._id, order.orderId, order.totalAmt || order.subTotalAmt, seller.fcmToken);
+      })
     );
   } catch (error) {
     console.error("[notifySellersOfNewOrder] failed:", error.message);

@@ -48,7 +48,25 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
             data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
             android: {
                 priority: 'high',
-                notification: { sound: 'default', channelId: 'snapit_orders' }
+                notification: {
+                    title,
+                    body,
+                    sound: 'default',
+                    channelId: 'snapit_orders',
+                    priority: 'max',
+                    visibility: 'public',
+                    defaultSound: true,
+                    defaultVibrateTimings: true,
+                }
+            },
+            apns: {
+                payload: {
+                    aps: {
+                        alert: { title, body },
+                        sound: 'default',
+                        badge: 1
+                    }
+                }
             },
             webpush: {
                 notification: { icon: '/snapit-icon-192.png', badge: '/snapit-icon-192.png', vibrate: [200, 100, 200] },
@@ -65,8 +83,9 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
 
 export async function sendPushToMultiple({ tokens, title, body, data = {} }) {
     if (!tokens || tokens.length === 0) return
+    const uniqueTokens = [...new Set(tokens.filter(Boolean))]
     const results = await Promise.allSettled(
-        tokens.map(token => sendPushNotification({ token, title, body, data }))
+        uniqueTokens.map(token => sendPushNotification({ token, title, body, data }))
     )
     return results
 }
@@ -75,16 +94,16 @@ export async function notifyAllRiders({ title, body, data = {} }) {
     try {
         const { default: UserModel } = await import('../models/user.model.js')
         const riders = await UserModel.find({
-            role: 'RIDER',
+            role: { $in: ['RIDER', 'rider', 'SUPER_ADMIN', 'ADMIN'] },
             fcmToken: { $exists: true, $ne: null, $ne: '' }
-        }).select('fcmToken name')
+        }).select('fcmToken name role').lean()
 
         if (riders.length === 0) {
-            console.log('No riders with FCM tokens found')
+            console.log('No riders/admins with FCM tokens found')
             return
         }
-        const tokens = riders.map(r => r.fcmToken)
-        console.log(`📢 Notifying ${tokens.length} riders`)
+        const tokens = riders.map(r => r.fcmToken).filter(Boolean)
+        console.log(`📢 Notifying ${tokens.length} riders/admins`)
         return await sendPushToMultiple({ tokens, title, body, data })
     } catch (error) {
         console.error('❌ notifyAllRiders failed:', error.message)
