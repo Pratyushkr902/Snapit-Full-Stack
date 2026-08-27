@@ -46,27 +46,36 @@ export const submitRemittanceController = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please enter a valid deposit amount.' });
     }
 
-    if (!transactionId || !transactionId.trim()) {
-      return res.status(400).json({ success: false, message: 'Transaction ID / UTR number is required.' });
+    const method = ['CASH', 'BANK_TRANSFER'].includes(paymentMethod) ? paymentMethod : 'UPI';
+    let finalTxId = (transactionId || '').trim();
+
+    if (method === 'CASH') {
+      if (!finalTxId) {
+        finalTxId = `CASH-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+    } else {
+      if (!finalTxId) {
+        return res.status(400).json({ success: false, message: 'UPI UTR or Bank Transaction Reference is required for online deposit.' });
+      }
     }
 
     // Check for duplicate transaction ID
     const existing = await RiderRemittanceModel.findOne({
-      transactionId: transactionId.trim(),
+      transactionId: finalTxId,
       status: { $in: ['PENDING', 'APPROVED'] }
     });
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: 'This Transaction ID / UTR has already been submitted.'
+        message: 'This Transaction ID / Reference has already been submitted.'
       });
     }
 
     const remittance = new RiderRemittanceModel({
       riderId,
       amount: numAmount,
-      paymentMethod: paymentMethod === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'UPI',
-      transactionId: transactionId.trim(),
+      paymentMethod: method,
+      transactionId: finalTxId,
       receiptImage: receiptImage || '',
       riderNote: riderNote || '',
       status: 'PENDING'
@@ -78,7 +87,9 @@ export const submitRemittanceController = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Remittance submitted successfully! Super Admin will verify and approve.',
+      message: method === 'CASH' 
+        ? 'Cash handover request submitted! Super Admin will confirm receipt of physical cash.' 
+        : 'Online remittance submitted! Super Admin will verify UPI UTR and approve.',
       data: {
         remittance,
         cashSummary
@@ -182,8 +193,10 @@ export const approveRemittanceController = async (req, res) => {
         type: 'DEPOSIT',
         amount: remittance.amount,
         partner: 'SUPER_ADMIN',
-        source: `Rider Cash Remittance (${riderName}) - UTR: ${remittance.transactionId}`,
-        note: adminNote || `Approved cash deposit from ${riderName}`
+        source: remittance.paymentMethod === 'CASH'
+          ? `Rider Physical Cash Handover (${riderName}) - Ref: ${remittance.transactionId}`
+          : `Rider Online UPI Remittance (${riderName}) - UTR: ${remittance.transactionId}`,
+        note: adminNote || `Approved ${remittance.paymentMethod === 'CASH' ? 'cash handover' : 'UPI deposit'} from ${riderName}`
       });
     } catch (treasuryErr) {
       console.warn('[approveRemittanceController] Treasury log warning:', treasuryErr.message);

@@ -14,7 +14,7 @@ const riderRemittanceSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['UPI', 'BANK_TRANSFER'],
+    enum: ['UPI', 'BANK_TRANSFER', 'CASH'],
     default: 'UPI'
   },
   transactionId: {
