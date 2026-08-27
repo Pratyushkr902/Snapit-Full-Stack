@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    sourcemap: true, // ✅ TEMP: enables real file/line numbers in production error logs
+    sourcemap: false, // 🔒 Production secure: hides raw source code & node_modules from DevTools
     rollupOptions: {
       output: {
         manualChunks(id) {
