@@ -6,7 +6,13 @@
                 "androidScheme": "https",
                 "cleartext": true,
                 "allowNavigation": [
-                        "snapit-full-stack-production.up.railway.app"
+                        "snapit-full-stack-production.up.railway.app",
+                        "*.tile.openstreetmap.org",
+                        "*.openstreetmap.org",
+                        "api.qrserver.com",
+                        "checkout.razorpay.com",
+                        "*.razorpay.com",
+                        "*.r2.dev"
                 ]
         },
         "android": {

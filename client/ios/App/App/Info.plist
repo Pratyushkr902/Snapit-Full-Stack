@@ -47,5 +47,21 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Snapit needs your location to provide 10-minute grocery delivery to your doorstep and track delivery riders.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Snapit needs your location to provide accurate live delivery tracking and hyperlocal grocery services.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Snapit needs camera access to capture delivery proof photos and product images.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Snapit needs photo library access to upload proof photos and product images.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>upi</string>
+		<string>phonepe</string>
+		<string>gpay</string>
+		<string>paytm</string>
+		<string>bhim</string>
+	</array>
 </dict>
 </plist>

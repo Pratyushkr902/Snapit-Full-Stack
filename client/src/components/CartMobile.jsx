@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import { FaCartShopping } from 'react-icons/fa6'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
@@ -6,12 +7,13 @@ import { FaCaretRight } from 'react-icons/fa'
 import { useSelector } from 'react-redux'
 
 const CartMobileComponent = () => {
+    const navigate = useNavigate()
     const { totalPrice = 0, totalQty = 0 } = useGlobalContext() || {}
     const cartItem = useSelector(state => state.cartItem.cart)
 
     const handleViewCartClick = (e) => {
         e.preventDefault();
-        window.location.hash = '#/cart';
+        navigate('/cart');
     }
 
     return (
