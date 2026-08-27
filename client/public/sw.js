@@ -1,5 +1,4 @@
-const CACHE_NAME = 'snapit-v5'
-const IMAGE_CACHE = 'snapit-images-v3'
+const CACHE_NAME = 'snapit-v6'
 
 self.addEventListener('install', e => {
   self.skipWaiting()

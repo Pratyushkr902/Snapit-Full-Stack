@@ -238,6 +238,7 @@ const router = createHashRouter([
             element: <S><SellerPermission><UploadProduct /></SellerPermission></S>
           },
           { path: "order-tracking/:id", element: <S><RiderTracking /></S> },
+          { path: "rider-panel", element: <S><RiderDashboard /></S> },
           {
             path: "category",
             element: <S><AdminPermision><CategoryPage /></AdminPermision></S>

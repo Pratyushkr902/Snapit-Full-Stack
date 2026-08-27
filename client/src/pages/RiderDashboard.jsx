@@ -395,40 +395,44 @@ const RiderDashboard = () => {
 
     // ── Earnings ──────────────────────────────────────────────
     const now = new Date();
-    const filterByDate = (list) => list.filter(o => {
-        // FIX: was filtering by createdAt (order placement time) instead of
-        // deliveredAt (when the rider actually completed it) — an order placed
-        // yesterday but delivered today never counted toward "Today's earnings".
+    const filterByDate = (list) => (Array.isArray(list) ? list : []).filter(o => {
+        if (!o) return false;
         const deliveryTime = new Date(o.deliveredAt || o.createdAt);
+        if (isNaN(deliveryTime.getTime())) return false;
         if (earningFilter === 'today') return deliveryTime.toDateString() === now.toDateString();
         if (earningFilter === 'week')  { const w = new Date(now); w.setDate(now.getDate()-7); return deliveryTime >= w; }
         if (earningFilter === 'month') return deliveryTime.getMonth() === now.getMonth() && deliveryTime.getFullYear() === now.getFullYear();
         return true; // 'all'
     });
 
-    const deliveredOrders  = orders.filter(o => o.delivery_status === 'Delivered');
+    const safeOrders       = Array.isArray(orders) ? orders : [];
+    const deliveredOrders  = safeOrders.filter(o => o && o.delivery_status === 'Delivered');
     const filteredEarnings = filterByDate(deliveredOrders);
-    const totalEarned      = filteredEarnings.reduce((acc, o) => acc + getDeliveryFee(o), 0);
+    const totalEarned      = filteredEarnings.reduce((acc, o) => acc + getDeliveryFee(o || {}), 0);
     const totalDelivered   = filteredEarnings.length;
     const avgFee           = totalDelivered > 0 ? totalEarned / totalDelivered : 0;
 
     const earningsByDate = filteredEarnings.reduce((acc, o) => {
-        const date = new Date(o.deliveredAt || o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        if (!o) return acc;
+        const rawDate = o.deliveredAt || o.createdAt;
+        const d = new Date(rawDate);
+        const date = !isNaN(d.getTime()) ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Unknown';
         if (!acc[date]) acc[date] = { total: 0, count: 0 };
-        acc[date].total += getDeliveryFee(o);
+        acc[date].total += getDeliveryFee(o || {});
         acc[date].count += 1;
         return acc;
     }, {});
 
-    const filteredOrders = orders.filter(o => {
+    const filteredOrders = safeOrders.filter(o => {
+        if (!o) return false;
         if (filter === 'Delivered') return o.delivery_status === 'Delivered';
         if (o.delivery_status === 'Delivered' || o.delivery_status === 'Cancelled') return false;
         if (filter === 'All') return true;
         return o.delivery_status === filter;
     });
 
-    const totalInHand = orders
-        .filter(o => o.delivery_status === 'Out for Delivery')
+    const totalInHand = safeOrders
+        .filter(o => o && o.delivery_status === 'Out for Delivery')
         .reduce((acc, curr) => acc + (Number(curr?.totalAmt) || 0), 0);
 
     if (loading) return (
