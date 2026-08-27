@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import sendEmail from './sendEmail.js'
 import UserModel from '../models/user.model.js'
 import bcryptjs from 'bcryptjs'
