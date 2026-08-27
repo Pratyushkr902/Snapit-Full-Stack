@@ -54,21 +54,6 @@ const RiderCashRemittanceModal = ({ isOpen, onClose, onDepositSuccess }) => {
   const upiLink = `upi://pay?pa=${SUPER_ADMIN_UPI}&pn=${encodeURIComponent(SUPER_ADMIN_NAME)}&am=${depositAmt}&cu=INR&tn=${encodeURIComponent('Rider Cash Remittance')}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}`
 
-  const handleOpenUpiApp = (e) => {
-    e?.preventDefault?.()
-    if (!depositAmt || depositAmt <= 0) {
-      toast.error('Please enter an amount to deposit')
-      return
-    }
-
-    try {
-      navigator.clipboard?.writeText(SUPER_ADMIN_UPI)
-    } catch {}
-
-    toast.success(`Opening UPI payment app for ${fmtINR(depositAmt)}…`, { icon: '💳' })
-    window.location.href = upiLink
-  }
-
   // Handle Receipt Upload
   const handleReceiptUpload = async (e) => {
     const file = e.target.files?.[0]
