@@ -2,6 +2,7 @@
 // Server-side source of truth for "is ordering allowed right now".
 // Never trust client-sent open/closed state — this recomputes everything.
 
+import mongoose from 'mongoose'
 import ProductModel from '../models/product.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import RestaurantModel from '../models/restaurant.model.js'
@@ -19,14 +20,20 @@ function isWithinGlobalHours() {
   return h >= 8 && h < 21
 }
 
+const parseBaseId = (rawId) => {
+  if (!rawId) return ''
+  const str = String(rawId).trim()
+  return str.includes('_') ? str.split('_')[0] : str
+}
+
 /**
  * Grocery guard: reject if a product has zero available store_inventory entries.
  * Cart items only carry productId — availability is "sellable from ANY store now".
  */
 async function assertGroceryItemsAvailable(list_items) {
-  const productIds = list_items
-    .map(item => item.productId?._id || item.productId)
-    .filter(Boolean)
+  const productIds = (list_items || [])
+    .map(item => parseBaseId(item.productId?._id || item.productId || item._id))
+    .filter(id => id && mongoose.Types.ObjectId.isValid(id))
   if (productIds.length === 0) return
 
   const products = await ProductModel.find({ _id: { $in: productIds } }).select('name store_inventory publish stock')
@@ -54,13 +61,13 @@ async function assertGroceryItemsAvailable(list_items) {
  * restaurantId directly — so look up via MenuItemModel first.
  */
 async function assertRestaurantItemsAvailable(list_items) {
-  const menuItemIds = list_items
-    .map(item => item.menuItemId?._id || item.menuItemId)
-    .filter(Boolean)
+  const menuItemIds = (list_items || [])
+    .map(item => parseBaseId(item.menuItemId?._id || item.menuItemId || item._id))
+    .filter(id => id && mongoose.Types.ObjectId.isValid(id))
   if (menuItemIds.length === 0) return
 
   const menuItems = await MenuItemModel.find({ _id: { $in: menuItemIds } }).select('restaurantId isAvailable name')
-  const restaurantIds = [...new Set(menuItems.map(m => String(m.restaurantId)))]
+  const restaurantIds = [...new Set(menuItems.map(m => String(m.restaurantId)).filter(id => mongoose.Types.ObjectId.isValid(id)))]
 
   for (const mi of menuItems) {
     if (mi.isAvailable === false) {
