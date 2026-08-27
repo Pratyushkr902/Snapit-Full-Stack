@@ -5,9 +5,9 @@ export const getAppVersionController = async (req, res) => {
       success: true,
       error: false,
       data: {
-        latestVersion: "2.6.26",
-        latestVersionCode: 65,
-        minRequiredVersionCode: 64,
+        latestVersion: "2.6.27",
+        latestVersionCode: 66,
+        minRequiredVersionCode: 65,
         forceUpdate: true,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit.pages.dev/app-release.apk",
