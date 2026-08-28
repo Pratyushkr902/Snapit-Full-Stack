@@ -13,7 +13,21 @@ const AppUpdateModal = () => {
 
   const checkVersion = useCallback(async () => {
     // In-app Google Play store update checks only apply to native mobile apps (Android/iOS)
-    if (!Capacitor.isNativePlatform()) return
+    let isNative = false
+    try {
+      isNative = Capacitor.isNativePlatform() || 
+                 Capacitor.getPlatform() === 'android' || 
+                 Capacitor.getPlatform() === 'ios' ||
+                 (typeof window !== 'undefined' && (
+                   window.location.protocol === 'capacitor:' ||
+                   window.location.hostname === 'localhost' ||
+                   (navigator.userAgent && /android.*wv|capacitor/i.test(navigator.userAgent))
+                 ))
+    } catch {
+      isNative = false
+    }
+
+    if (!isNative) return
 
     try {
       let installedVersionCode = CURRENT_VERSION_CODE
@@ -84,18 +98,20 @@ const AppUpdateModal = () => {
 
   useEffect(() => {
     checkVersion()
+    const timer = setTimeout(checkVersion, 1500)
 
     // Re-check when app is brought back to foreground
     let listener = null
-    if (Capacitor.isNativePlatform()) {
+    try {
       CapacitorApp.addListener('appStateChange', (state) => {
         if (state.isActive) {
           checkVersion()
         }
       }).then(l => { listener = l }).catch(() => {})
-    }
+    } catch {}
 
     return () => {
+      clearTimeout(timer)
       if (listener && typeof listener.remove === 'function') {
         listener.remove()
       }
