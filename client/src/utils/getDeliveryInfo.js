@@ -130,12 +130,15 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
 
   const eta = getDeliveryETA(dist)
 
-  // Min order applies to the 6–14km bracket and the Himalaya zone (its own,
-  // lower minimum), not Chikasi. Snapit Plus members are exempt from both.
+  // Min order applies only to grocery orders from main store in 6–14km / Himalaya bracket.
+  // Food / restaurant orders do not enforce a minOrder limit so customers can order meals at any price.
+  const isFoodOrder = (originLat !== STORE_LAT || originLng !== STORE_LNG)
   let minOrder = 0
-  if (isHimalaya) minOrder = HIMALAYA_MIN_ORDER
-  else if (dist > 6) minOrder = MIN_ORDER_ABOVE_6KM
-  if (isSnapitPlus) minOrder = 0
+  if (!isFoodOrder) {
+    if (isHimalaya) minOrder = HIMALAYA_MIN_ORDER
+    else if (dist > 6) minOrder = MIN_ORDER_ABOVE_6KM
+    if (isSnapitPlus) minOrder = 0
+  }
 
   return {
     serviceable:    true,
