@@ -350,6 +350,16 @@ export const notifySellersOfNewOrder = async (order) => {
       { role: { $in: ["SUPER_ADMIN", "ADMIN"] } },
     ];
 
+    if (storeRegexes.length > 0) {
+      try {
+        const matchingRestos = await RestaurantModel.find({ name: { $in: storeRegexes } }).select("_id ownerId").lean();
+        matchingRestos.forEach(r => {
+          if (r._id) queryFilters.push({ restaurantId: r._id });
+          if (r.ownerId) queryFilters.push({ _id: r.ownerId });
+        });
+      } catch (err) {}
+    }
+
     if (order?.restaurantId && mongoose.Types.ObjectId.isValid(String(order.restaurantId))) {
       queryFilters.push({ restaurantId: order.restaurantId });
       try {
