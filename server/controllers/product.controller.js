@@ -38,8 +38,9 @@ export const createProductController = async (request, response) => {
             return response.status(400).json({ message: "Enter required fields", error: true, success: false });
         }
 
-        // FIX: use the authenticated seller's store name, not a hardcoded string
-        const storeName = getStoreName(request.user);
+        // FIX: use the authenticated seller's store name, or allow ADMIN/SUPER_ADMIN fallback
+        const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(request.user?.role);
+        const storeName = getStoreName(request.user) || (isAdmin ? (request.body.store_name || "Snapit Main Store - Paliganj") : '');
         if (!storeName) {
             return response.status(400).json({ message: "Seller store name not found on account", error: true, success: false });
         }
@@ -222,13 +223,20 @@ export const updateProductDetails = async (request, response) => {
         if (!_id || !mongoose.Types.ObjectId.isValid(_id))
             return response.status(400).json({ message: "provide valid product _id", error: true, success: false });
 
-        // FIX: sellers can only update their own products
-        const isAdmin = request.user?.role === 'ADMIN';
+        // FIX: SUPER_ADMIN and ADMIN can update any product, sellers can only update their own
+        const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(request.user?.role);
         if (!isAdmin) {
             const storeName = getStoreName(request.user);
+            const sellerId = request.user?._id?.toString();
             const product = await ProductModel.findById(_id).lean();
             if (!product) return response.status(404).json({ message: "Product not found", error: true, success: false });
-            const ownsProduct = (product.store_inventory || []).some(s => s.store_name === storeName);
+            
+            const ownsProduct = (product.store_inventory || []).some(s => 
+                (storeName && s.store_name?.trim()?.toLowerCase() === storeName.trim()?.toLowerCase()) ||
+                (sellerId && s.sellerId?.toString() === sellerId)
+            ) || (product.sellerId && product.sellerId.toString() === sellerId)
+              || (product.userId && product.userId.toString() === sellerId);
+
             if (!ownsProduct) return response.status(403).json({ message: "You can only update your own products", error: true, success: false });
         }
 
@@ -263,13 +271,20 @@ export const deleteProductDetails = async (request, response) => {
         if (!_id || !mongoose.Types.ObjectId.isValid(_id))
             return response.status(400).json({ message: "provide valid _id", error: true, success: false });
 
-        // FIX: sellers can only delete their own products
-        const isAdmin = request.user?.role === 'ADMIN';
+        // FIX: SUPER_ADMIN and ADMIN can delete any product, sellers can only delete their own
+        const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(request.user?.role);
         if (!isAdmin) {
             const storeName = getStoreName(request.user);
+            const sellerId = request.user?._id?.toString();
             const product = await ProductModel.findById(_id).lean();
             if (!product) return response.status(404).json({ message: "Product not found", error: true, success: false });
-            const ownsProduct = (product.store_inventory || []).some(s => s.store_name === storeName);
+            
+            const ownsProduct = (product.store_inventory || []).some(s => 
+                (storeName && s.store_name?.trim()?.toLowerCase() === storeName.trim()?.toLowerCase()) ||
+                (sellerId && s.sellerId?.toString() === sellerId)
+            ) || (product.sellerId && product.sellerId.toString() === sellerId)
+              || (product.userId && product.userId.toString() === sellerId);
+
             if (!ownsProduct) return response.status(403).json({ message: "You can only delete your own products", error: true, success: false });
         }
 
@@ -406,14 +421,19 @@ export const getSellerProductsController = async (request, response) => {
         if (!limit) limit = 100;
         const skip = (page - 1) * limit;
 
-        // FIX: get store_name from the authenticated user, not req.body
-        //      (req.body store_name was never sent by the frontend)
-        const storeName = getStoreName(request.user);
-        if (!storeName) {
+        const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(request.user?.role);
+        const storeName = getStoreName(request.user) || (isAdmin ? request.body.store_name : null);
+        const sellerId = request.user?._id;
+
+        const baseQuery = {};
+        if (storeName) {
+            baseQuery["$or"] = [
+                { "store_inventory.store_name": { $regex: new RegExp(`^${escapeRegex(storeName)}$`, 'i') } },
+                ...(sellerId ? [{ "store_inventory.sellerId": sellerId }, { sellerId }] : [])
+            ];
+        } else if (!isAdmin) {
             return response.status(400).json({ message: "Seller store name not found on account", error: true, success: false });
         }
-
-        const baseQuery = { "store_inventory.store_name": storeName };
         if (typeof search === 'string' && search.trim()) {
             const safeSearch = escapeRegex(search);
             baseQuery.$or = [
