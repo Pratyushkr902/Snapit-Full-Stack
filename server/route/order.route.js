@@ -27,6 +27,7 @@ import {
     claimSurpriseBoxController,
     getOrderInvoiceController,
     reportOrderDisputeController,
+    customerCancelOrderController,
 } from "../controllers/order.controller.js"
 import {
     getRestaurantOrdersController,
@@ -39,6 +40,7 @@ const orderRouter = Router()
 // ── Customer ──────────────────────────────────────────────────────────────────
 orderRouter.post("/cash-on-delivery",   auth,        CashOnDeliveryOrderController)
 orderRouter.post("/wallet-order",       auth,        WalletPaymentOrderController)
+orderRouter.post("/cancel-order",       auth,        customerCancelOrderController)
 orderRouter.post("/checkout",           auth,        paymentController)
 orderRouter.post("/verify-payment",     auth,        verifyPaymentController)
 orderRouter.post("/webhook",                         webhookStripe)

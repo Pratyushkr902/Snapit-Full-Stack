@@ -230,6 +230,9 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}) => ({
   cartItems:        group.cartItems,
   product_details:  { name: group.restaurantName || 'Food Order', image: [] },
   delivery_address: fields.addressId,
+  delivery_distance_km: group.distanceKm || 0,
+  delivery_lat: fields.deliveryLocation?.lat || null,
+  delivery_lng: fields.deliveryLocation?.lng || null,
   subTotalAmt:      group.subTotalAmt,
   delivery_fee:     group.deliveryFee,
   totalAmt:         group.totalAmt,
@@ -254,6 +257,7 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}) => ({
   // of every single new order.
   involved_stores:  [group.restaurantName || 'Restaurant'],
   delivery_status:   'Pending',
+  seller_status:     'Pending',
   isRestaurantOrder: true,
   ...extra,
 })

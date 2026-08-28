@@ -56,6 +56,9 @@ const orderSchema = new mongoose.Schema(
         // ── Delivery fee — ✅ REQUIRED for rider & seller earnings ──
         delivery_fee: { type: Number, default: 0 },
 
+        // ── Delivery distance in km (store/resto to customer drop) ──
+        delivery_distance_km: { type: Number, default: 0 },
+
         // ── Actual checkout-time coords — used for rider Maps link (NOT the saved Address doc, which can go stale) ──
         delivery_lat: { type: Number, default: null },
         delivery_lng: { type: Number, default: null },
@@ -67,6 +70,9 @@ const orderSchema = new mongoose.Schema(
             enum:    ["Pending", "Packing", "Ready for Pickup"],
             default: "Pending",
         },
+
+        cancellation_reason: { type: String, default: "" },
+        cancelledBy:         { type: String, default: null },
 
         store_details: {
             storeId:  { type: mongoose.Schema.ObjectId, ref: "store" },

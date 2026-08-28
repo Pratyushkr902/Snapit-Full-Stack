@@ -49,6 +49,7 @@ import {
     notifyUserOrderDelivered,
     notifyUserOrderCancelled,
     notifySellersOfNewOrder,
+    notifySellersOfOrderCancelled,
 } from '../utils/notificationService.js'
 import sendEmail        from './sendEmail.js'
 import { sendOrderDeliveredEmail } from '../utils/sendDeliveryEmail.js'
@@ -433,6 +434,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             paymentId:        '',
             payment_status:   'CASH ON DELIVERY',
             delivery_address: addressId,
+            delivery_distance_km: Math.round(getDistanceFromStore(verifiedLat, verifiedLng) * 10) / 10,
             delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : null,
             delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : null,
             subTotalAmt:      Number(subTotalAmt),
@@ -608,6 +610,7 @@ export async function WalletPaymentOrderController(request, response) {
             paymentId:        transactionId,
             payment_status:   'PAID',
             delivery_address: addressId,
+            delivery_distance_km: Math.round(getDistanceFromStore(verifiedLat, verifiedLng) * 10) / 10,
             delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : null,
             delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : null,
             subTotalAmt:      Number(subTotalAmt),
@@ -983,6 +986,142 @@ export const updateOrderStatusController = async (request, response) => {
     } catch (error) {
         console.error('updateOrderStatusController:', error.message)
         return response.status(500).json({ message: 'Status update failed.', error: true, success: false })
+    }
+}
+
+// ── CUSTOMER ORDER CANCELLATION (ZOMATO STYLE) ──────────────────────────────
+// Customers can only cancel when order is in 'Pending' state and seller has not
+// accepted/started packing. Once accepted or packing, the option is locked.
+export async function customerCancelOrderController(request, response) {
+    try {
+        const userId = request.userId
+        const { orderId, reason } = request.body
+
+        if (!orderId) {
+            return response.status(400).json({
+                message: 'Order ID is required.',
+                error: true,
+                success: false
+            })
+        }
+
+        const isHexId = mongoose.Types.ObjectId.isValid(orderId)
+        const order = await OrderModel.findOne({
+            $or: [
+                { orderId },
+                ...(isHexId ? [{ _id: orderId }] : [])
+            ],
+            userId
+        })
+
+        if (!order) {
+            return response.status(404).json({
+                message: 'Order not found or you are not authorized to cancel it.',
+                error: true,
+                success: false
+            })
+        }
+
+        // Zomato Rule: Order can ONLY be cancelled while in Pending state and seller has not accepted / packed yet.
+        const unacceptedStatuses = ['Pending', 'Queued']
+        const isSellerPending = !order.seller_status || order.seller_status === 'Pending'
+        if (!unacceptedStatuses.includes(order.delivery_status) || !isSellerPending) {
+            return response.status(400).json({
+                message: 'Order has already been accepted and is being prepared. It can no longer be cancelled.',
+                error: true,
+                success: false
+            })
+        }
+
+        if (order.delivery_status === 'Cancelled') {
+            return response.status(400).json({
+                message: 'Order is already cancelled.',
+                error: true,
+                success: false
+            })
+        }
+
+        // Update status to Cancelled
+        order.delivery_status = 'Cancelled'
+        order.cancellation_reason = reason || 'Cancelled by customer'
+        order.cancelledBy = 'CUSTOMER'
+
+        // Auto refund if paid online / via wallet
+        let refundAmount = 0
+        const isPaidOnline = order.payment_status === 'PAID' || order.payment_status === 'CASHFREE_PAID' || order.payment_status === 'RAZORPAY_PAID'
+        if (isPaidOnline) {
+            refundAmount += (order.totalAmt || 0)
+        } else if (order.walletAmountUsed > 0) {
+            refundAmount += order.walletAmountUsed
+        }
+
+        if (refundAmount > 0) {
+            // Credit to user's wallet
+            await UserModel.findByIdAndUpdate(userId, {
+                $inc: { walletBalance: refundAmount },
+                $push: {
+                    walletTransactions: {
+                        type:        'CREDIT',
+                        amount:      refundAmount,
+                        description: `Instant refund for cancelled order #${order.orderId}`,
+                        date:        new Date()
+                    }
+                }
+            })
+        }
+
+        // Restore inventory / product stock
+        try {
+            if (order.cartItems && order.cartItems.length > 0) {
+                for (const item of order.cartItems) {
+                    if (item.productId) {
+                        await ProductModel.findByIdAndUpdate(item.productId, {
+                            $inc: { stock: item.quantity || 1 }
+                        })
+                    }
+                }
+            }
+        } catch (sErr) {
+            console.warn('[Stock Restore Error on Cancel]', sErr.message)
+        }
+
+        await order.save()
+
+        // Realtime Socket broadcast
+        try {
+            const { getIO } = await import('../index.js')
+            const io = getIO ? getIO() : global.io
+            if (io) {
+                io.to(order.orderId).emit('order_status_updated', {
+                    orderId: order.orderId,
+                    delivery_status: 'Cancelled',
+                    cancellation_reason: order.cancellation_reason
+                })
+                io.emit('order_cancelled', { orderId: order.orderId })
+            }
+        } catch (sErr) {}
+
+        // Push Notifications
+        notifyUserOrderCancelled(order.userId, order.orderId, refundAmount).catch(() => {})
+        notifySellersOfOrderCancelled(order).catch(() => {})
+
+        return response.json({
+            message: refundAmount > 0 
+                ? `Order cancelled successfully. ₹${refundAmount} has been refunded to your Snapit Wallet.` 
+                : 'Order cancelled successfully.',
+            refundAmount,
+            error: false,
+            success: true,
+            data: order
+        })
+
+    } catch (error) {
+        console.error('[customerCancelOrderController Error]', error)
+        return response.status(500).json({
+            message: error.message || 'Failed to cancel order.',
+            error: true,
+            success: false
+        })
     }
 }
 

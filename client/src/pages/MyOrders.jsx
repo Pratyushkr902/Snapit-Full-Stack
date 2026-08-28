@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { IoArrowBack } from 'react-icons/io5'
 import NoData from '../components/NoData'
 import OrderInvoice from '../components/OrderInvoice'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
+import { setOrder } from '../store/orderSlice'
 import toast from 'react-hot-toast'
 
 const REASONS = ['Wrong item delivered', 'Item damaged', 'Item missing', 'Poor quality', 'Other']
@@ -13,8 +14,12 @@ const REASONS = ['Wrong item delivered', 'Item damaged', 'Item missing', 'Poor q
 const MyOrders = () => {
   const orders   = useSelector(state => state.orders.order)
   const navigate = useNavigate()
+  const dispatch = useDispatch()
 
   const [refundModal, setRefundModal]       = useState(null)
+  const [cancelModal, setCancelModal]       = useState(null)
+  const [cancelReason, setCancelReason]     = useState('Changed my mind')
+  const [cancelling, setCancelling]         = useState(false)
   const [myRefunds, setMyRefunds]           = useState([])
   const [loadingRefunds, setLoadingRefunds] = useState(false)
   const [submitting, setSubmitting]         = useState(false)
@@ -22,6 +27,35 @@ const MyOrders = () => {
   const [form, setForm] = useState({ reason: '', description: '', refundAmount: '' })
 
   useEffect(() => { fetchMyRefunds() }, [])
+
+  const handleCancelOrder = async () => {
+    if (!cancelModal) return
+    try {
+      setCancelling(true)
+      const res = await Axios({
+        ...SummaryApi.cancelOrder,
+        data: {
+          orderId: cancelModal.orderId || cancelModal._id,
+          reason: cancelReason
+        }
+      })
+      if (res.data.success) {
+        toast.success(res.data.message || 'Order cancelled successfully')
+        setCancelModal(null)
+        // Update local Redux order state
+        dispatch(setOrder(orders.map(o => (o._id === cancelModal._id || o.orderId === cancelModal.orderId)
+          ? { ...o, delivery_status: 'Cancelled', cancellation_reason: cancelReason }
+          : o
+        )))
+      } else {
+        toast.error(res.data.message || 'Failed to cancel order')
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Error cancelling order')
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   const fetchMyRefunds = async () => {
     try {
@@ -121,12 +155,20 @@ const MyOrders = () => {
 
                   <div className='flex justify-between items-center border-b pb-3'>
                     <div className='flex flex-col'>
-                      <p className='text-[10px] uppercase tracking-widest text-neutral-400 font-bold'>Order ID</p>
+                      <div className='flex items-center gap-2'>
+                        <p className='text-[10px] uppercase tracking-widest text-neutral-400 font-bold'>Order ID</p>
+                        {order.delivery_distance_km > 0 && (
+                          <span className='bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-200'>
+                            📍 {order.delivery_distance_km} km
+                          </span>
+                        )}
+                      </div>
                       <p className='text-neutral-700 font-mono font-semibold'>{order?.orderId}</p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                       order.delivery_status === 'Delivered'        ? 'bg-emerald-100 text-emerald-700' :
                       order.delivery_status === 'Out for Delivery' ? 'bg-orange-100 text-orange-700 animate-pulse' :
+                      order.delivery_status === 'Cancelled'        ? 'bg-rose-100 text-rose-700' :
                       'bg-blue-100 text-blue-700'
                     }`}>
                       {order.delivery_status || 'Processing'}
@@ -156,6 +198,17 @@ const MyOrders = () => {
                       📍 Track Live
                     </button>
                     <OrderInvoice order={order} />
+
+                    {/* Zomato-Style Cancellation: Only visible when Pending and unaccepted */}
+                    {order.delivery_status === 'Pending' && (!order.seller_status || order.seller_status === 'Pending') && (
+                      <button
+                        onClick={() => setCancelModal(order)}
+                        className='flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-1.5'
+                      >
+                        ❌ Cancel
+                      </button>
+                    )}
+
                     {order.delivery_status === 'Delivered' && (
                       alreadyRefunded(order._id) ? (
                         <span className='flex-1 text-center py-2.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200'>
@@ -266,6 +319,56 @@ const MyOrders = () => {
               <button onClick={submitRefund} disabled={submitting}
                 className='flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm disabled:opacity-50 transition-all active:scale-95'>
                 {submitting ? 'Submitting...' : 'Submit Refund'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Order Modal (Zomato Style) */}
+      {cancelModal && (
+        <div className='fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4'>
+          <div className='bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200'>
+            <div className='text-center'>
+              <div className='w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-3'>
+                ❌
+              </div>
+              <h3 className='font-black text-slate-800 text-lg'>Cancel Order?</h3>
+              <p className='text-xs text-slate-500 mt-1'>
+                Are you sure you want to cancel order #{cancelModal.orderId}?
+                {cancelModal.payment_status === 'PAID' && ' Any payment made will be refunded to your wallet immediately.'}
+              </p>
+            </div>
+
+            <div className='mt-4'>
+              <label className='text-xs font-bold text-slate-700 block mb-1.5'>Reason for cancellation:</label>
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className='w-full p-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:border-rose-500 focus:outline-none bg-slate-50'
+              >
+                <option value='Changed my mind'>Changed my mind</option>
+                <option value='Ordered by mistake'>Ordered by mistake</option>
+                <option value='Want to change items/address'>Want to change items/address</option>
+                <option value='Delivery time is too long'>Delivery time is too long</option>
+                <option value='Other'>Other</option>
+              </select>
+            </div>
+
+            <div className='flex gap-2 mt-5'>
+              <button
+                disabled={cancelling}
+                onClick={() => setCancelModal(null)}
+                className='flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all'
+              >
+                Keep Order
+              </button>
+              <button
+                disabled={cancelling}
+                onClick={handleCancelOrder}
+                className='flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs active:scale-95 transition-all shadow-md shadow-rose-200 flex items-center justify-center gap-1.5'
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
               </button>
             </div>
           </div>

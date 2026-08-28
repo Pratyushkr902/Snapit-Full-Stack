@@ -9,6 +9,7 @@ import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { FaPhone } from 'react-icons/fa'
 import { IoArrowBack } from 'react-icons/io5'
+import toast from 'react-hot-toast'
 
 // Fix Leaflet default marker icons
 delete L.Icon.Default.prototype._getIconUrl
@@ -80,7 +81,9 @@ const TrackingPage = () => {
   const [etaSource, setEtaSource] = useState('')
   const socketRef = useRef(null)
 
-  const storeLocation = [SHOP_LAT, SHOP_LNG]
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason]       = useState('Changed my mind')
+  const [cancelling, setCancelling]           = useState(false)
 
   // ── Fetch order ──────────────────────────────────────────────
   const fetchOrder = async () => {
@@ -96,6 +99,31 @@ const TrackingPage = () => {
       console.error('Order fetch error', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // ── Cancel Order Handler (Zomato style) ──────────────────────
+  const handleCancelOrder = async () => {
+    try {
+      setCancelling(true)
+      const res = await Axios({
+        ...SummaryApi.cancelOrder,
+        data: {
+          orderId: order?.orderId || order?._id,
+          reason: cancelReason
+        }
+      })
+      if (res.data.success) {
+        toast.success(res.data.message || 'Order cancelled successfully')
+        setShowCancelModal(false)
+        setOrder(prev => prev ? ({ ...prev, delivery_status: 'Cancelled', cancellation_reason: cancelReason }) : null)
+      } else {
+        toast.error(res.data.message || 'Failed to cancel order')
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Error cancelling order')
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -264,6 +292,20 @@ const TrackingPage = () => {
         </div>
       )}
 
+      {/* Cancelled Banner */}
+      {order.delivery_status === 'Cancelled' && (
+        <div className='bg-rose-600 text-white px-4 py-3 flex items-center justify-between'>
+          <div>
+            <p className='text-[11px] font-bold opacity-80 uppercase tracking-wider'>Status</p>
+            <p className='text-xl font-black'>Order Cancelled ❌</p>
+            {order.cancellation_reason && (
+              <p className='text-xs opacity-90 mt-0.5'>{order.cancellation_reason}</p>
+            )}
+          </div>
+          <div className='text-3xl'>🚫</div>
+        </div>
+      )}
+
       {/* Map */}
       <div className='h-64 lg:h-96 w-full z-0'>
         <MapContainer
@@ -277,7 +319,7 @@ const TrackingPage = () => {
             url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
           />
           <Marker position={storeLocation} icon={storeIcon}>
-            <Popup>🏪 Snapit Store — Paliganj</Popup>
+            <Popup>🏪 {order.store_details?.name || 'Snapit Store'}</Popup>
           </Marker>
           {riderPos && (
             <>
@@ -303,7 +345,14 @@ const TrackingPage = () => {
 
       {/* Status Steps */}
       <div className='bg-white mx-4 mt-4 rounded-2xl p-4 shadow-sm border border-slate-100'>
-        <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider mb-4'>Order Progress</h3>
+        <div className='flex items-center justify-between mb-4'>
+          <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider'>Order Progress</h3>
+          {order.delivery_distance_km > 0 && (
+            <span className='bg-emerald-50 text-emerald-700 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-200'>
+              📍 {order.delivery_distance_km} km
+            </span>
+          )}
+        </div>
         <div className='flex items-center justify-between relative'>
           <div className='absolute top-4 left-4 right-4 h-0.5 bg-slate-100 z-0'></div>
           <div
@@ -340,7 +389,7 @@ const TrackingPage = () => {
             <p className='font-black text-slate-800'>{order.rider_name || 'Snapit Rider'}</p>
             <p className='text-xs text-slate-400'>Delivery Partner</p>
           </div>
-<a
+          <a
             href={`tel:${order.rider_contact || '9576467701'}`}
             className='bg-green-600 text-white p-3 rounded-full shadow-md active:scale-95 transition-all'
           >
@@ -373,7 +422,72 @@ const TrackingPage = () => {
             <p className='font-bold text-slate-700 mt-0.5'>{new Date(order.createdAt).toLocaleDateString()}</p>
           </div>
         </div>
+
+        {/* Zomato-Style Cancel Order Action (Visible ONLY when Pending & Unaccepted by Vendor) */}
+        {order.delivery_status === 'Pending' && (!order.seller_status || order.seller_status === 'Pending') && (
+          <div className='mt-4 pt-3 border-t border-slate-100'>
+            <button
+              onClick={() => setShowCancelModal(true)}
+              className='w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm'
+            >
+              ❌ Cancel Order
+            </button>
+            <p className='text-[10px] text-center text-slate-400 mt-1.5'>
+              You can cancel this order before the vendor accepts and starts preparing it.
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Cancel Order Modal */}
+      {showCancelModal && (
+        <div className='fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50'>
+          <div className='bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200'>
+            <div className='text-center'>
+              <div className='w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-3'>
+                ❌
+              </div>
+              <h3 className='font-black text-slate-800 text-lg'>Cancel Order?</h3>
+              <p className='text-xs text-slate-500 mt-1'>
+                Are you sure you want to cancel order #{order.orderId}?
+                {order.payment_status === 'PAID' && ' Any payment made will be refunded to your wallet immediately.'}
+              </p>
+            </div>
+
+            <div className='mt-4'>
+              <label className='text-xs font-bold text-slate-700 block mb-1.5'>Reason for cancellation:</label>
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className='w-full p-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:border-rose-500 focus:outline-none bg-slate-50'
+              >
+                <option value='Changed my mind'>Changed my mind</option>
+                <option value='Ordered by mistake'>Ordered by mistake</option>
+                <option value='Want to change items/address'>Want to change items/address</option>
+                <option value='Delivery time is too long'>Delivery time is too long</option>
+                <option value='Other'>Other</option>
+              </select>
+            </div>
+
+            <div className='flex gap-2 mt-5'>
+              <button
+                disabled={cancelling}
+                onClick={() => setShowCancelModal(false)}
+                className='flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all'
+              >
+                Keep Order
+              </button>
+              <button
+                disabled={cancelling}
+                onClick={handleCancelOrder}
+                className='flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs active:scale-95 transition-all shadow-md shadow-rose-200 flex items-center justify-center gap-1.5'
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

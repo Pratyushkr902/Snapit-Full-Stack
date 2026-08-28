@@ -193,6 +193,10 @@ const SummaryApi = {
         url : "/api/order/cash-on-delivery",
         method : 'post'
     },
+    cancelOrder: {
+        url: '/api/order/cancel-order',
+        method: 'post'
+    },
     payment_url : {
         url : "/api/order/checkout",
         method : 'post'

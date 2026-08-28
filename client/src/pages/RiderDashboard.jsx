@@ -541,8 +541,10 @@ const RiderDashboard = () => {
                                 <span className='text-base font-black text-white'>
                                     {deliveredOrders.length}
                                 </span>
-                                <span className='text-[9px] font-bold text-emerald-400'>
-                                    {fmtINR(totalEarned)} earned
+                                <span className='text-[9px] font-bold text-emerald-400 flex items-center gap-1'>
+                                    <span>📍 {(deliveredOrders.reduce((sum, o) => sum + (Number(o.delivery_distance_km) || 0), 0)).toFixed(1)} km</span>
+                                    <span>•</span>
+                                    <span>{fmtINR(totalEarned)}</span>
                                 </span>
                             </div>
                         </div>
@@ -690,10 +692,15 @@ const RiderDashboard = () => {
                                             {/* Order Top Bar: ID + Status + Time */}
                                             <div className='flex items-start justify-between gap-2'>
                                                 <div className='min-w-0'>
-                                                    <div className='flex items-center gap-1.5'>
+                                                    <div className='flex items-center gap-1.5 flex-wrap'>
                                                         <span className='text-[10px] font-mono font-black bg-slate-800 text-slate-300 px-2 py-0.5 rounded-lg uppercase tracking-wider'>
                                                             #{order.orderId?.slice(-8) || order.orderId}
                                                         </span>
+                                                        {order.delivery_distance_km > 0 && (
+                                                            <span className='bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-lg text-[10px] font-black'>
+                                                                📍 {order.delivery_distance_km} km
+                                                            </span>
+                                                        )}
                                                         {isUnassigned && (
                                                             <span className='bg-blue-500/20 border border-blue-500/30 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-black uppercase'>
                                                                 ⚡ Open to Claim

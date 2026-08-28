@@ -395,6 +395,61 @@ export const notifySellersOfNewOrder = async (order) => {
 };
 
 
+export const notifySellersOfOrderCancelled = async (order) => {
+  try {
+    const { default: UserModel } = await import("../models/user.model.js");
+    const { default: RestaurantModel } = await import("../models/restaurant.model.js");
+    const storeNames = [
+      ...(order?.involved_stores || []),
+      ...(order?.store_details?.name ? [order.store_details.name] : []),
+      ...((order?.cartItems || []).map(i => i.seller_store_name || i.store_name).filter(Boolean))
+    ].filter(Boolean);
+
+    const storeRegexes = storeNames.map(s => new RegExp(`^${s.trim()}$`, "i"));
+
+    const queryFilters = [
+      { role: { $in: ["SELLER", "RESTO_SELLER"] }, store_name: { $in: storeRegexes } },
+      { role: { $in: ["SUPER_ADMIN", "ADMIN"] } },
+    ];
+
+    if (storeRegexes.length > 0) {
+      try {
+        const matchingRestos = await RestaurantModel.find({ name: { $in: storeRegexes } }).select("_id ownerId").lean();
+        matchingRestos.forEach(r => {
+          if (r._id) queryFilters.push({ restaurantId: r._id });
+          if (r.ownerId) queryFilters.push({ _id: r.ownerId });
+        });
+      } catch (err) {}
+    }
+
+    if (order?.restaurantId && mongoose.Types.ObjectId.isValid(String(order.restaurantId))) {
+      queryFilters.push({ restaurantId: order.restaurantId });
+      try {
+        const resto = await RestaurantModel.findById(order.restaurantId).select("ownerId").lean();
+        if (resto?.ownerId) {
+          queryFilters.push({ _id: resto.ownerId });
+        }
+      } catch (rErr) {}
+    }
+
+    const sellers = await UserModel.find({
+      $or: queryFilters,
+      fcmToken: { $exists: true, $ne: null, $ne: "" },
+    }).select("fcmToken store_name name role").lean();
+
+    const notifiedTokens = new Set();
+    await Promise.allSettled(
+      sellers.map(seller => {
+        if (!seller.fcmToken || notifiedTokens.has(seller.fcmToken)) return Promise.resolve();
+        notifiedTokens.add(seller.fcmToken);
+        return notifySellerOrderCancelled(seller._id, order.orderId, seller.fcmToken);
+      })
+    );
+  } catch (error) {
+    console.error("[notifySellersOfOrderCancelled] failed:", error.message);
+  }
+};
+
 export const notifySellerPayment = (sellerId, amount, fcmToken) =>
   saveAndSend({
     recipientId: sellerId, recipientType: "seller", type: "PAYMENT_RECEIVED",
