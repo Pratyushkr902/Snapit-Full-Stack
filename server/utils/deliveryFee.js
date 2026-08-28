@@ -129,11 +129,16 @@ export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, cus
   return charge === null ? 49 : charge
 }
 
+const RESTAURANT_MIN_ORDER_ABOVE_6KM = 199
+
 // Restaurant/food orders — minimum order amount.
-// Food orders do not enforce a ₹499 distance-based minimum order limit so customers
-// can order meals at any cart size while paying the standard distance delivery fee.
+// Orders within 6km have no minimum order limit (₹0).
+// Orders above 6km (6-14km) require a minimum order of ₹199.
+// Snapit Plus members are exempt.
 export const getMinOrderAmountFromOrigin = (originLat, originLng, customerLat, customerLng, isSnapitPlus = false) => {
-  return 0
+  if (isSnapitPlus) return 0
+  const dist = getDistanceFromOrigin(originLat, originLng, customerLat, customerLng)
+  return dist > 6 ? RESTAURANT_MIN_ORDER_ABOVE_6KM : 0
 }
 
 // Restaurant/food orders — is this customer within serviceable range of

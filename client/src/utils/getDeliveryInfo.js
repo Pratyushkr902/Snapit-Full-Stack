@@ -130,11 +130,17 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
 
   const eta = getDeliveryETA(dist)
 
-  // Min order applies only to grocery orders from main store in 6–14km / Himalaya bracket.
-  // Food / restaurant orders do not enforce a minOrder limit so customers can order meals at any price.
+  // Min order:
+  // - For food/restaurant orders: under 6km has no minimum order (₹0); above 6km requires ₹199 minimum order.
+  // - For grocery orders: 6-14km / Himalaya has ₹499 minimum order.
+  // - Snapit Plus members are exempt (minOrder = 0).
+  const RESTAURANT_MIN_ORDER_ABOVE_6KM = 199
   const isFoodOrder = (originLat !== STORE_LAT || originLng !== STORE_LNG)
   let minOrder = 0
-  if (!isFoodOrder) {
+  if (isFoodOrder) {
+    if (dist > 6) minOrder = RESTAURANT_MIN_ORDER_ABOVE_6KM
+    if (isSnapitPlus) minOrder = 0
+  } else {
     if (isHimalaya) minOrder = HIMALAYA_MIN_ORDER
     else if (dist > 6) minOrder = MIN_ORDER_ABOVE_6KM
     if (isSnapitPlus) minOrder = 0
