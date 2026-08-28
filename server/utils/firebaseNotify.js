@@ -57,6 +57,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     visibility: 'public',
                     defaultSound: true,
                     defaultVibrateTimings: true,
+                    tag: data?.orderId ? `order_${data.orderId}` : undefined,
                 }
             },
             apns: {

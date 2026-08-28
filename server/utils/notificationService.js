@@ -226,17 +226,20 @@ const saveAndSend = async ({
           body:  payload.shayari || payload.body || payload.title,
         },
 
-        // Android — high priority, custom sound
+        // Android — high priority, heads-up lockscreen banner (Zomato/Swiggy style)
         android: {
           priority: "high",
           notification: {
-            title:       payload.title,
-            body:        payload.shayari,   // shayari as push body
-            sound:       "default",
-            channelId:   "snapit_orders",   // high-priority notification channel
-            clickAction: "OPEN_NOTIFICATION_SCREEN",
-            priority:    "max",
-            visibility:  "public",
+            title:                 payload.title,
+            body:                  payload.shayari || payload.body,
+            sound:                 "default",
+            channelId:             "snapit_orders",
+            clickAction:           "OPEN_NOTIFICATION_SCREEN",
+            priority:              "max",
+            visibility:            "public",
+            defaultSound:          true,
+            defaultVibrateTimings: true,
+            tag:                   metadata?.orderId ? `order_${metadata.orderId}` : undefined,
           },
         },
 

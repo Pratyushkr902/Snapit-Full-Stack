@@ -16,6 +16,16 @@ const useNotifications = () => {
       try {
         // ── 1. NATIVE ANDROID / IOS PLATFORMS ──────────────────────────────
         if (Capacitor.isNativePlatform()) {
+          // Sync existing cached native token immediately upon login
+          const cachedNativeToken = localStorage.getItem('snapit_native_fcm_token')
+          if (cachedNativeToken) {
+            console.log('📱 Syncing cached native FCM token for user:', user._id)
+            Axios({
+              ...SummaryApi.saveFcmToken,
+              data: { fcmToken: cachedNativeToken }
+            }).catch(err => console.warn('Failed to sync cached native FCM token:', err?.message))
+          }
+
           // Create Android High-Priority Notification Channels for heads-up alerts
           try {
             await PushNotifications.createChannel({
@@ -23,7 +33,7 @@ const useNotifications = () => {
               name: 'Snapit Orders & Delivery',
               description: 'Real-time order alerts, status updates, and rider notifications',
               importance: 5, // MAX importance (heads-up pop-up + sound)
-              visibility: 1, // PUBLIC on lockscreen
+              visibility: 1, // PUBLIC on lockscreen (shows full card like Zomato/Swiggy)
               sound: 'default',
               vibration: true,
               lights: true,
@@ -87,9 +97,18 @@ const useNotifications = () => {
           }
         } else {
           // ── 2. WEB BROWSER / PWA PLATFORM ────────────────────────────────
+          const cachedWebToken = localStorage.getItem('snapit_web_fcm_token')
+          if (cachedWebToken) {
+            Axios({
+              ...SummaryApi.saveFcmToken,
+              data: { fcmToken: cachedWebToken }
+            }).catch(() => {})
+          }
+
           const token = await requestNotificationPermission()
           if (token) {
             console.log('🌐 Web FCM Token generated:', token)
+            localStorage.setItem('snapit_web_fcm_token', token)
             await Axios({
               ...SummaryApi.saveFcmToken,
               data: { fcmToken: token }
