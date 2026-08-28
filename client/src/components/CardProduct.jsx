@@ -5,34 +5,10 @@ import { valideURLConvert } from '../utils/valideURLConvert'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import AddToCartButton from './AddToCartButton'
 
-// Inline SVG fallback — never fails, no network needed
-const FALLBACK_IMG =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Crect x='90' y='80' width='120' height='100' rx='8' fill='%23e5e7eb'/%3E%3Ccircle cx='150' cy='210' r='18' fill='%23e5e7eb'/%3E%3Ctext x='150' y='255' text-anchor='middle' fill='%239ca3af' font-size='13' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
-
-const optimizeImage = (url) => {
-    if (!url) return FALLBACK_IMG
-    if (url.includes('res.cloudinary.com')) {
-        return url.replace('/upload/', '/upload/w_400,f_auto,q_auto/')
-    }
-    if (url.includes('unsplash.com')) {
-        return url.includes('?') ? url + '&w=400&q=60' : url + '?w=400&q=60'
-    }
-    return url
-}
+import { FALLBACK_IMAGE, getPrimaryImage } from '../utils/optimizeImageUrl'
 
 const getImageSrc = (image, imageThumbnail) => {
-    // Prefer the small pre-generated thumbnail for grid/list cards — falls
-    // back to the full image for older products that don't have one yet.
-    if (Array.isArray(imageThumbnail) && imageThumbnail.length > 0 && typeof imageThumbnail[0] === 'string' && imageThumbnail[0].startsWith('http')) {
-        return optimizeImage(imageThumbnail[0])
-    }
-    if (Array.isArray(image) && image.length > 0 && typeof image[0] === 'string' && image[0].startsWith('http')) {
-        return optimizeImage(image[0])
-    }
-    if (typeof image === 'string' && image.startsWith('http')) {
-        return optimizeImage(image)
-    }
-    return FALLBACK_IMG
+    return getPrimaryImage(image, imageThumbnail, 360)
 }
 
 // Derived once at render time — no state, no re-render
@@ -94,13 +70,10 @@ const CardProduct = ({ data }) => {
                     alt={data?.name || "Product"}
                     width={300}
                     height={300}
-                    onError={(e) => { e.currentTarget.src = FALLBACK_IMG }}
+                    onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
                     loading="lazy"
                     decoding="async"
-                    fetchPriority="low"
-                    // FIX 3: no opacity transition — static class, no JS toggle,
-                    // no re-render. The image simply paints over the bg-slate-100
-                    // skeleton naturally when it loads.
+                    fetchPriority="auto"
                     className='w-full h-full object-contain'
                 />
 

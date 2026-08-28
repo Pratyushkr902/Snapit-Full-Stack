@@ -10,10 +10,7 @@ import StoreClosedOverlay from '../components/StoreClosedOverlay'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { setAllCategory, setAllSubCategory, setLoadingCategory } from '../store/productSlice'
-
-// ✅ Inline SVG fallback — no network request, never fails
-const FALLBACK_IMG =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='80' text-anchor='middle' fill='%239ca3af' font-size='11' font-family='sans-serif'%3ENo Image%3C/text%3E%3C/svg%3E"
+import { FALLBACK_IMAGE, optimizeImageUrl } from '../utils/optimizeImageUrl'
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
@@ -158,7 +155,7 @@ const Home = () => {
                 if (!cat) return null;
 
                 const rawImg = cat?.imageThumbnail || cat?.icon || cat?.image || cat?.imageUrl || '';
-                let finalSrc = FALLBACK_IMG;
+                let finalSrc = FALLBACK_IMAGE;
 
                 if (typeof rawImg === 'string' && rawImg.trim().length > 0) {
                   const cleanPath = rawImg.trim();
@@ -180,9 +177,11 @@ const Home = () => {
                   } else if (arrayPath.startsWith('/')) {
                     finalSrc = `${BACKEND_URL}${arrayPath}`;
                   } else {
-                    finalSrc = arrayPath || FALLBACK_IMG;
+                    finalSrc = arrayPath || FALLBACK_IMAGE;
                   }
                 }
+
+                const optimizedCategorySrc = optimizeImageUrl(finalSrc, 160, 75);
 
                 return (
                   <div
@@ -192,13 +191,15 @@ const Home = () => {
                   >
                     <div className='bg-white border border-slate-100 rounded-xl p-2 w-full aspect-square flex items-center justify-center transition-all duration-200 active:scale-90 group-hover:border-green-200 group-hover:bg-green-50'>
                       <img
-                        src={finalSrc}
+                        src={optimizedCategorySrc}
                         alt={cat?.name || "Category"}
                         className='w-full h-full object-scale-down group-hover:scale-105 transition-transform duration-200'
                         loading={catIndex < 8 ? "eager" : "lazy"}
+                        fetchPriority={catIndex < 4 ? "high" : "auto"}
+                        decoding="async"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = FALLBACK_IMG;
+                          e.target.src = FALLBACK_IMAGE;
                         }}
                       />
                     </div>

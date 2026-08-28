@@ -23,8 +23,14 @@ self.addEventListener('fetch', e => {
   if (url.includes('onrender.com')) return
   if (url.includes('socket.io')) return
 
-  // Cache R2 images with cache-first strategy
-  if (url.includes('r2.dev') || url.includes('pub-af292132196c4b93bf56272675b82149')) {
+  // Cache CDN images (Cloudflare R2, Unsplash, Cloudinary) with cache-first strategy
+  if (
+    url.includes('r2.dev') ||
+    url.includes('pub-af292132196c4b93bf56272675b82149') ||
+    url.includes('images.unsplash.com') ||
+    url.includes('res.cloudinary.com') ||
+    url.includes('cloudinary.com')
+  ) {
     e.respondWith(
       caches.open(IMAGE_CACHE).then(async cache => {
         const cached = await cache.match(e.request)

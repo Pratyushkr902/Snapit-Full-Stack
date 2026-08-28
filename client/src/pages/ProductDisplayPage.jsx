@@ -16,6 +16,7 @@ import SmartSuggestions from '../components/SmartSuggestions'
 import WishlistButton from '../components/WishlistButton'
 import ProductReviews from '../components/ProductReviews'
 import toast from 'react-hot-toast'
+import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
 
 // ─── Subscribe & Save Modal ───────────────────────────────────────────────────
 const SubscribeModal = ({ product, onClose }) => {
@@ -407,9 +408,13 @@ const ProductDisplayPage = () => {
                     onClick={() => { if (Math.abs(touchDeltaX.current) < 5) setImageZoom(!imageZoom) }}
                   >
                     <img
-                      src={img}
+                      src={optimizeImageUrl(img, 700, 80)}
                       className={`w-full h-full object-contain p-3 sm:p-4 transition-transform duration-300 ${imageZoom && idx === image ? 'scale-150' : 'scale-100'}`}
                       alt={data.name}
+                      loading={idx === 0 ? 'eager' : 'lazy'}
+                      fetchPriority={idx === 0 ? 'high' : 'auto'}
+                      decoding='async'
+                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
                       draggable={false}
                     />
                   </div>
@@ -431,7 +436,14 @@ const ProductDisplayPage = () => {
               {data?.image?.map((img, index) => (
                 <button key={img+index} onClick={() => { setIsAnimating(true); setImage(index) }}
                   className={`min-w-20 w-20 h-20 rounded-2xl border-2 transition-all overflow-hidden ${index === image ? 'border-green-500 shadow-md scale-105' : 'border-transparent opacity-60 bg-white p-1'}`}>
-                  <img src={img} alt='thumb' className='w-full h-full object-contain p-1' />
+                  <img
+                    src={optimizeImageUrl(img, 160, 75)}
+                    alt='thumb'
+                    className='w-full h-full object-contain p-1'
+                    loading='lazy'
+                    decoding='async'
+                    onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
+                  />
                 </button>
               ))}
             </div>

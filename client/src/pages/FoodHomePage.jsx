@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
+import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
 
 // ── Haversine distance (km) ───────────────────────────────────────────────────
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -202,7 +203,14 @@ const FoodHomePage = () => {
           >
             <div className='relative h-40 bg-orange-50 overflow-hidden'>
               {r.image
-                ? <img src={r.image} alt={r.name} className='w-full h-full object-cover'/>
+                ? <img
+                    src={optimizeImageUrl(r.image, 500, 75)}
+                    alt={r.name}
+                    className='w-full h-full object-cover'
+                    loading='lazy'
+                    decoding='async'
+                    onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
+                  />
                 : <div className='w-full h-full flex items-center justify-center text-5xl'>🍽️</div>}
               {!r.isOpen && (
                 <div className='absolute inset-0 bg-black/50 flex items-center justify-center'>

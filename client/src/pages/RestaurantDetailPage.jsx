@@ -18,10 +18,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
 import { useRestaurantCart } from '../utils/foodCartStore'
+import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
 
 // ── Fallbacks ─────────────────────────────────────────────────────────────────
-const FALLBACK_IMG =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' fill='%23f3f4f6'/%3E%3Ctext x='60' y='64' text-anchor='middle' fill='%23d1d5db' font-size='11' font-family='sans-serif'%3EFood%3C/text%3E%3C/svg%3E"
+const FALLBACK_IMG = FALLBACK_IMAGE
 
 const BANNER_FALLBACK = null
 
@@ -131,9 +131,9 @@ function QtyControl({ qty, onAdd, onIncrease, onDecrease }) {
 
 // ── Solo Food Item Card ───────────────────────────────────────────────────────
 function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
-  const [imgSrc, setImgSrc] = useState(item.image ? item.image : FALLBACK_IMG)
+  const [imgSrc, setImgSrc] = useState(item.image ? optimizeImageUrl(item.image, 250, 75) : FALLBACK_IMAGE)
   useEffect(() => {
-    setImgSrc(item.image ? item.image : FALLBACK_IMG)
+    setImgSrc(item.image ? optimizeImageUrl(item.image, 250, 75) : FALLBACK_IMAGE)
   }, [item.image])
   const effectivePrice = item.discountedPrice > 0 ? item.discountedPrice : item.price
   return (
@@ -165,7 +165,7 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
       </div>
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
         <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
-          <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMG)} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+          <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMAGE)} className="w-full h-full object-cover" loading="lazy" decoding="async" />
         </div>
         <QtyControl qty={qty} onAdd={onAdd} onIncrease={onIncrease} onDecrease={onDecrease} />
       </div>
@@ -175,9 +175,9 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
 
 // ── Inline Variant Card (for pizza sizes via item.variants array) ────────────
 function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
-  const [imgSrc, setImgSrc] = useState(item.image ? item.image : FALLBACK_IMG)
+  const [imgSrc, setImgSrc] = useState(item.image ? optimizeImageUrl(item.image, 250, 75) : FALLBACK_IMAGE)
   useEffect(() => {
-    setImgSrc(item.image ? item.image : FALLBACK_IMG)
+    setImgSrc(item.image ? optimizeImageUrl(item.image, 250, 75) : FALLBACK_IMAGE)
   }, [item.image])
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = item.variants[selectedIdx]
@@ -447,7 +447,8 @@ export default function RestaurantDetailPage() {
       if (res.data?.success) {
         const { restaurant: r, menu: m } = res.data.data
         setRestaurant(r)
-        setBannerSrc(r.image ? `${r.image}&fm=webp&q=75` : null)
+        const rawBanner = r.bannerImage || r.image
+        setBannerSrc(rawBanner ? optimizeImageUrl(rawBanner, 800, 75) : null)
         setMenu(m)
         if (m.length > 0) setActiveCategory(m[0].category)
       }
