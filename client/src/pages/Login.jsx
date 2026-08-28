@@ -83,7 +83,7 @@ const Login = () => {
             <div className="w-full max-w-md">
 
                 {/* Card */}
-                <div className="bg-white rounded-2xl border border-green-100 p-8 shadow-sm">
+                <div className="bg-white rounded-2xl border border-green-100 p-6 sm:p-8 shadow-sm w-full overflow-hidden">
 
                     {/* Logo */}
                     <div className="flex items-center gap-3 mb-7">
@@ -111,14 +111,14 @@ const Login = () => {
                         <p className="text-sm text-gray-500 mt-0.5">Sign in to your account to continue</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4 w-full">
 
                         {/* Email */}
-                        <div>
+                        <div className="w-full">
                             <label htmlFor="email" className="block text-xs font-medium text-gray-600 mb-1.5">
                                 Email address
                             </label>
-                            <div className="flex items-center bg-green-50 border-[1.5px] border-green-200 rounded-xl px-3 h-12 focus-within:border-green-700 focus-within:bg-white transition-all">
+                            <div className="flex items-center bg-green-50 border-[1.5px] border-green-200 rounded-xl px-3 h-12 focus-within:border-green-700 focus-within:bg-white transition-all w-full overflow-hidden">
                                 <MdEmail className="text-green-600 text-lg mr-2.5 flex-shrink-0" />
                                 <input
                                     type="email"
@@ -127,19 +127,19 @@ const Login = () => {
                                     value={data.email}
                                     onChange={handleChange}
                                     placeholder="you@example.com"
-                                    className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-400"
+                                    className="w-full min-w-0 flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-400"
                                     required
                                 />
                             </div>
                         </div>
 
                         {/* Password */}
-                        <div>
+                        <div className="w-full">
                             <label htmlFor="password" className="block text-xs font-medium text-gray-600 mb-1.5">
                                 Password
                             </label>
-                            <div className="flex items-center bg-green-50 border-[1.5px] border-green-200 rounded-xl px-3 h-12 focus-within:border-green-700 focus-within:bg-white transition-all">
-                                <MdEmail className="text-green-600 text-lg mr-2.5 flex-shrink-0" />
+                            <div className="flex items-center bg-green-50 border-[1.5px] border-green-200 rounded-xl px-3 h-12 focus-within:border-green-700 focus-within:bg-white transition-all w-full overflow-hidden">
+                                <MdLock className="text-green-600 text-lg mr-2.5 flex-shrink-0" />
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     id="password"
@@ -147,13 +147,13 @@ const Login = () => {
                                     value={data.password}
                                     onChange={handleChange}
                                     placeholder="Enter your password"
-                                    className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-400"
+                                    className="w-full min-w-0 flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-400"
                                     required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(prev => !prev)}
-                                    className="text-green-600 hover:text-green-800 ml-2 focus:outline-none transition-colors"
+                                    className="text-green-600 hover:text-green-800 ml-2 flex-shrink-0 focus:outline-none transition-colors"
                                     aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
                                     {showPassword ? <FaRegEye className="text-base" /> : <FaRegEyeSlash className="text-base" />}

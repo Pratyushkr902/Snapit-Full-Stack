@@ -12,23 +12,6 @@ const AppUpdateModal = () => {
   const [isForced, setIsForced] = useState(false)
 
   const checkVersion = useCallback(async () => {
-    // In-app Google Play store update checks only apply to native mobile apps (Android/iOS)
-    let isNative = false
-    try {
-      isNative = Capacitor.isNativePlatform() || 
-                 Capacitor.getPlatform() === 'android' || 
-                 Capacitor.getPlatform() === 'ios' ||
-                 (typeof window !== 'undefined' && (
-                   window.location.protocol === 'capacitor:' ||
-                   window.location.hostname === 'localhost' ||
-                   (navigator.userAgent && /android.*wv|capacitor/i.test(navigator.userAgent))
-                 ))
-    } catch {
-      isNative = false
-    }
-
-    if (!isNative) return
-
     try {
       let installedVersionCode = CURRENT_VERSION_CODE
       try {
