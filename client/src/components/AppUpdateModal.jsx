@@ -150,6 +150,16 @@ const AppUpdateModal = () => {
             Update Now (Google Play)
           </button>
 
+          {updateInfo?.directApkUrl && (
+            <button
+              type='button'
+              onClick={() => window.open(updateInfo.directApkUrl, '_system')}
+              className='w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition flex items-center justify-center gap-1.5'
+            >
+              📥 Or Download APK Directly
+            </button>
+          )}
+
           {!isForced && (
             <button
               type='button'
