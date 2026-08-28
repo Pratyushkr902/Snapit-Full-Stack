@@ -245,7 +245,17 @@ const FoodCheckoutPage = () => {
   // own restaurantId (DB-derived, not trusted from client) into one order
   // per restaurant, folding tip/coupon/wallet into the first group. ────────
   const buildPayload = useCallback(async (extra = {}) => {
-    const coords = await getCoordinates()
+    const selectedAddr = addressList[selectAddress]
+    let targetLat = selectedAddr?.latitude ?? selectedAddr?.lat ?? null
+    let targetLng = selectedAddr?.longitude ?? selectedAddr?.lng ?? null
+
+    // If selected address does not have lat/lng saved, query device GPS
+    if (!targetLat || !targetLng) {
+      const coords = await getCoordinates()
+      targetLat = coords.lat
+      targetLng = coords.lng
+    }
+
     const fullInstructions = [
       ...activeTags,
       instructions.trim(),
@@ -271,7 +281,7 @@ const FoodCheckoutPage = () => {
       couponDiscount: couponDiscount || undefined,
       walletAmountUsed: walletDeduct || undefined,
       items,
-      deliveryLocation: { lat: coords.lat, lng: coords.lng },
+      deliveryLocation: { lat: targetLat, lng: targetLng },
       ...extra,
     }
   }, [
