@@ -2,7 +2,6 @@ import mongoose from 'mongoose'
 import OrderModel from '../models/order.model.js'
 import UserModel  from '../models/user.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
-import AddressModel from '../models/address.model.js'
 import Razorpay   from 'razorpay'
 import {
   calcDeliveryFeeFromOrigin,
@@ -145,19 +144,12 @@ const priceGroup = async (group, deliveryLocation, user) => {
   const subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 
   if (lat && lng) {
-    let dist = getDistanceFromOrigin(restaurant.location.lat, restaurant.location.lng, lat, lng)
-    
-    // If coordinates are obviously from a remote machine/testing device (>50km away),
-    // fallback to standard local distance rather than failing the order for Paliganj addresses
-    if (dist > 50) {
-      console.warn(`[FoodOrder] Device GPS location (${lat}, ${lng}) is ${dist.toFixed(1)}km away from ${restaurant.name}. Falling back to default service radius.`)
-      dist = 2.0
-    } else if (dist > MAX_DELIVERY_RADIUS_KM) {
+    const dist = getDistanceFromOrigin(restaurant.location.lat, restaurant.location.lng, lat, lng)
+    if (dist > MAX_DELIVERY_RADIUS_KM) {
       const err = new Error(`Sorry, ${restaurant.name} doesn't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km yet.`)
       err.statusCode = 400
       throw err
     }
-
     if (dist > 5 && isAfterEveningCutoff()) {
       const err = new Error(`Deliveries to locations beyond 5 km are closed after 7:30 PM for rider safety (${dist.toFixed(1)} km from ${restaurant.name}). Please select an address within 5 km or order tomorrow morning!`)
       err.statusCode = 400
@@ -212,25 +204,8 @@ const priceGroup = async (group, deliveryLocation, user) => {
 // Coupon discount is computed SERVER-SIDE via validateCoupon — client-supplied
 // couponDiscount is never trusted. ──
 const priceAllGroups = async (groups, fields, user) => {
-  let deliveryLoc = fields.deliveryLocation || null
-
-  // 1. Resolve coordinates from saved address if provided
-  if (fields.addressId) {
-    try {
-      const addrDoc = await AddressModel.findById(fields.addressId).lean()
-      if (addrDoc?.latitude && addrDoc?.longitude && !isNaN(addrDoc.latitude) && !isNaN(addrDoc.longitude)) {
-        deliveryLoc = { lat: Number(addrDoc.latitude), lng: Number(addrDoc.longitude) }
-      }
-    } catch {}
-  }
-
-  // 2. If deliveryLoc is missing or invalid, fallback to store coordinates so local orders stay serviceable
-  if (!deliveryLoc || !deliveryLoc.lat || !deliveryLoc.lng) {
-    deliveryLoc = { lat: 25.33121156659458, lng: 84.8006737574818 }
-  }
-
   const priced = []
-  for (const g of groups) priced.push(await priceGroup(g, deliveryLoc, user))
+  for (const g of groups) priced.push(await priceGroup(g, fields.deliveryLocation, user))
 
   const totalSubTotal = priced.reduce((s, g) => s + g.subTotalAmt, 0)
   const { code: validCouponCode, discount: couponDiscount } = validateCoupon(fields.couponCode, totalSubTotal, user._id)
