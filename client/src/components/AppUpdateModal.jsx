@@ -3,7 +3,7 @@ import Axios from '../utils/Axios'
 import { CURRENT_VERSION_CODE, CURRENT_APP_VERSION } from '../constants/appVersion'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
-import snapitLogo from '/logo.png'
+import snapitLogo from '../assets/logo.png'
 
 const DISMISS_KEY = 'snapit_update_dismissed_at'
 
@@ -134,11 +134,11 @@ const AppUpdateModal = () => {
         </span>
 
         <h3 className='text-xl font-black text-slate-900 mb-1.5'>
-          {updateInfo.title || 'Update Available'}
+          Update Available
         </h3>
 
         <p className='text-xs text-slate-500 mb-4 leading-relaxed'>
-          {updateInfo.message || 'A new version of Snapit is ready with new features and improved performance.'}
+          A new version of Snapit is ready with new features and improved performance.
         </p>
 
         {/* Clean What's New Feature List */}
@@ -147,15 +147,18 @@ const AppUpdateModal = () => {
             What's New:
           </p>
           <ul className='space-y-2'>
-            {(Array.isArray(updateInfo.releaseNotes) && updateInfo.releaseNotes.length > 0
-              ? updateInfo.releaseNotes
-              : ['New features added', 'Improved app performance & speed', 'Enhanced security & stability']
-            ).map((note, idx) => (
-              <li key={idx} className='text-xs font-semibold text-slate-700 flex items-center gap-2.5'>
-                <span className='w-1.5 h-1.5 rounded-full bg-emerald-600 flex-shrink-0' />
-                <span>{note}</span>
-              </li>
-            ))}
+            <li className='text-xs font-semibold text-slate-700 flex items-center gap-2.5'>
+              <span className='w-1.5 h-1.5 rounded-full bg-emerald-600 flex-shrink-0' />
+              <span>New features added</span>
+            </li>
+            <li className='text-xs font-semibold text-slate-700 flex items-center gap-2.5'>
+              <span className='w-1.5 h-1.5 rounded-full bg-emerald-600 flex-shrink-0' />
+              <span>Improved app performance & speed</span>
+            </li>
+            <li className='text-xs font-semibold text-slate-700 flex items-center gap-2.5'>
+              <span className='w-1.5 h-1.5 rounded-full bg-emerald-600 flex-shrink-0' />
+              <span>Enhanced security & stability</span>
+            </li>
           </ul>
         </div>
 
