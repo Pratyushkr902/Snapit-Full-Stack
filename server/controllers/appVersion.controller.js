@@ -11,13 +11,12 @@ export const getAppVersionController = async (req, res) => {
         forceUpdate: true,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit.pages.dev/app-release.apk",
-        title: "🚀 Update Available!",
-        message: "A new version of Snapit is ready with important improvements, free food offers, and bug fixes.",
+        title: "Update Available",
+        message: "A new version of Snapit is ready with new features and improved performance.",
         releaseNotes: [
-          "🍕 Free Margherita Pizza on orders above ₹599 (MGD Pizza Point)",
-          "💳 Online Razorpay payments for all restaurant food orders",
-          "🤝 Rider Cash Handover & UPI Dual Remittance",
-          "🔔 Fast push notifications & live order tracking"
+          "New features added",
+          "Improved app performance & speed",
+          "Enhanced security & stability"
         ]
       }
     });

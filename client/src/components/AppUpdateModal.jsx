@@ -3,6 +3,7 @@ import Axios from '../utils/Axios'
 import { CURRENT_VERSION_CODE, CURRENT_APP_VERSION } from '../constants/appVersion'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
+import snapitLogo from '/logo.png'
 
 const DISMISS_KEY = 'snapit_update_dismissed_at'
 
@@ -118,61 +119,58 @@ const AppUpdateModal = () => {
     <div className='fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200'>
       <div className='bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center'>
         
-        {/* Animated App Icon / Badge */}
-        <div className='w-20 h-20 rounded-3xl bg-gradient-to-tr from-green-600 via-emerald-500 to-green-400 p-0.5 shadow-lg shadow-green-600/30 mb-4 flex items-center justify-center'>
-          <div className='w-full h-full bg-white rounded-[22px] flex items-center justify-center text-3xl'>
-            🚀
-          </div>
+        {/* Official Snapit Brand Icon */}
+        <div className='w-20 h-20 rounded-3xl bg-emerald-50 border border-emerald-100 p-3 shadow-md shadow-emerald-600/10 mb-3.5 flex items-center justify-center'>
+          <img
+            src={snapitLogo}
+            alt='Snapit'
+            className='w-full h-full object-contain'
+            fetchpriority='high'
+          />
         </div>
 
-        <span className='px-3 py-1 bg-green-100 text-green-800 text-[11px] font-black uppercase tracking-wider rounded-full mb-2'>
-          v{updateInfo.latestVersion || 'New'} Available
+        <span className='px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold uppercase tracking-wider rounded-full mb-2'>
+          v{updateInfo.latestVersion || '2.6.29'} Available
         </span>
 
         <h3 className='text-xl font-black text-slate-900 mb-1.5'>
-          {updateInfo.title || 'Update Snapit!'}
+          {updateInfo.title || 'Update Available'}
         </h3>
 
         <p className='text-xs text-slate-500 mb-4 leading-relaxed'>
-          {updateInfo.message || 'A new update is available with faster delivery, new features, and bug fixes.'}
+          {updateInfo.message || 'A new version of Snapit is ready with new features and improved performance.'}
         </p>
 
-        {/* What's New Feature List */}
-        {Array.isArray(updateInfo.releaseNotes) && updateInfo.releaseNotes.length > 0 && (
-          <div className='w-full bg-slate-50 border border-slate-100 rounded-2xl p-3.5 mb-5 text-left'>
-            <p className='text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2'>
-              What's New in this update:
-            </p>
-            <ul className='space-y-1.5'>
-              {updateInfo.releaseNotes.map((note, idx) => (
-                <li key={idx} className='text-xs font-semibold text-slate-700 flex items-start gap-2'>
-                  <span className='text-green-600 font-black'>•</span>
-                  <span>{note}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* Clean What's New Feature List */}
+        <div className='w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-5 text-left'>
+          <p className='text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2.5'>
+            What's New:
+          </p>
+          <ul className='space-y-2'>
+            {(Array.isArray(updateInfo.releaseNotes) && updateInfo.releaseNotes.length > 0
+              ? updateInfo.releaseNotes
+              : ['New features added', 'Improved app performance & speed', 'Enhanced security & stability']
+            ).map((note, idx) => (
+              <li key={idx} className='text-xs font-semibold text-slate-700 flex items-center gap-2.5'>
+                <span className='w-1.5 h-1.5 rounded-full bg-emerald-600 flex-shrink-0' />
+                <span>{note}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-        {/* Action Buttons */}
+        {/* Single Professional Google Play Action Button */}
         <div className='w-full flex flex-col gap-2.5'>
           <button
             type='button'
             onClick={handleUpdateNow}
-            className='w-full py-3.5 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 active:scale-[0.98] text-white font-black text-sm rounded-2xl shadow-lg shadow-green-600/25 transition'
+            className='w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 active:scale-[0.98] text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2'
           >
-            Update Now (Google Play)
+            <svg className='w-4 h-4 fill-current' viewBox='0 0 24 24'>
+              <path d='M3.609 1.814L13.793 12 3.61 22.186a2.37 2.37 0 0 1-.61-1.638V3.452c0-.62.22-1.2.61-1.638zm11.246 11.247l2.25 2.25-11.83 6.77 9.58-9.02zm0-2.122L5.275 1.92l11.83 6.76-2.25 2.255zm1.48 1.48l3.18-1.817a1.6 1.6 0 0 0 0-2.804l-3.18-1.817-1.48 1.48 1.48 1.48z'/>
+            </svg>
+            <span>Update on Google Play</span>
           </button>
-
-          {updateInfo?.directApkUrl && (
-            <button
-              type='button'
-              onClick={() => window.open(updateInfo.directApkUrl, '_system')}
-              className='w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition flex items-center justify-center gap-1.5'
-            >
-              📥 Or Download APK Directly
-            </button>
-          )}
 
           {!isForced && (
             <button
