@@ -44,6 +44,7 @@ const publicRoutes = [
     '/api/product/search-product',
     '/api/user/login',
     '/api/user/register',
+    '/api/app-version',
 ]
 
 // ─── REQUEST INTERCEPTOR ─────────────────────────────────────────────────────

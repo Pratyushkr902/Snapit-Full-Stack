@@ -29,14 +29,29 @@ const AppUpdateModal = () => {
         console.warn('[AppUpdate] info read fallback:', infoErr?.message)
       }
 
-      const res = await Axios({
-        method: 'GET',
-        url: '/api/app-version',
-        headers: { 'Cache-Control': 'no-cache' }
-      })
+      const backendUrl = import.meta.env.VITE_API_URL || 'https://snapit-full-stack-production.up.railway.app'
+      let data = null
+      try {
+        const response = await fetch(`${backendUrl}/api/app-version?t=${Date.now()}`, {
+          cache: 'no-store'
+        })
+        const json = await response.json()
+        if (json?.success && json?.data) {
+          data = json.data
+        }
+      } catch (fErr) {
+        console.warn('[AppUpdate] fetch fallback to Axios:', fErr?.message)
+        const res = await Axios({
+          method: 'GET',
+          url: '/api/app-version',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
+        if (res.data?.success && res.data?.data) {
+          data = res.data.data
+        }
+      }
 
-      if (res.data?.success && res.data?.data) {
-        const data = res.data.data
+      if (data) {
         const latestCode = Number(data.latestVersionCode || 0)
         const minCode = Number(data.minRequiredVersionCode || 0)
 
