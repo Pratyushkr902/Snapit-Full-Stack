@@ -7,62 +7,79 @@ import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/RegisterOtp";
 
-// Lazy Loaded Pages
-const PublicTrackingPage     = lazy(() => import('../pages/PublicTrackingPage'))
-const SearchPage             = lazy(() => import('../pages/Searchpage'))
-const ForgotPassword         = lazy(() => import('../pages/ForgotPassword'))
-const VerifyEmail            = lazy(() => import('../pages/VerifyEmail'))
-const OtpVerification        = lazy(() => import('../pages/OtpVerification'))
-const ResetPassword          = lazy(() => import('../pages/ResetPassword'))
-const UserMenuMobile         = lazy(() => import('../pages/UserMenuMobile'))
-const Dashboard              = lazy(() => import('../layouts/Dashboard'))
-const Profile                = lazy(() => import('../pages/Profile'))
-const MyOrders               = lazy(() => import('../pages/MyOrders'))
-const Address                = lazy(() => import('../pages/Address'))
-const CategoryPage           = lazy(() => import('../pages/CategoryPage'))
-const SubCategoryPage        = lazy(() => import('../pages/SubCategoryPage'))
-const UploadProduct          = lazy(() => import('../pages/UploadProduct'))
-const ProductAdmin           = lazy(() => import('../pages/ProductAdmin'))
-const AdminPermision         = lazy(() => import('../layouts/AdminPermision'))
-const SellerPermission       = lazy(() => import('../layouts/SellerPermission'))
-const ProductListPage        = lazy(() => import('../pages/ProductListPage'))
-const ProductDisplayPage     = lazy(() => import('../pages/ProductDisplayPage'))
-const CartMobile             = lazy(() => import('../pages/CartMobile'))
-const CheckoutPage           = lazy(() => import('../pages/CheckoutPage'))
-const Success                = lazy(() => import('../pages/Success'))
-const Cancel                 = lazy(() => import('../pages/Cancel'))
-const RiderTracking          = lazy(() => import('../pages/RiderTracking'))
-const RiderDashboard         = lazy(() => import('../pages/RiderDashboard'))
-const AdminRefunds           = lazy(() => import('../pages/AdminRefunds'))
-const AdminWithdrawals       = lazy(() => import('../pages/AdminWithdrawals'))
-const AdminReferrals         = lazy(() => import('../pages/AdminReferrals'))
-const AdminManageAdmins      = lazy(() => import('../pages/AdminManageAdmins'))
-const AdminFrozenIps         = lazy(() => import('../pages/AdminFrozenIps'))
-const AdminBannerOffers      = lazy(() => import('../pages/AdminBannerOffers'))
-const SuperAdminDashboard    = lazy(() => import('../pages/SuperAdminDashboard'))
-const StoreOrders            = lazy(() => import('../pages/StoreOrders'))
-const Wallet                 = lazy(() => import('../pages/Wallet'))
-const AdminSummary           = lazy(() => import('../components/AdminSummary'))
-const AdminTreasury          = lazy(() => import('../pages/AdminTreasury'))
-const ReferAndEarn           = lazy(() => import('../pages/ReferAndEarn'))
-const WishlistPage           = lazy(() => import('../pages/WishlistPage'))
-const TrackingPage           = lazy(() => import('../pages/TrackingPage'))
-const AllDealsPage           = lazy(() => import('../pages/AllDealsPage'))
-const SnapitPlus             = lazy(() => import('../components/SnapitPlus'))
-const StreakTracker          = lazy(() => import('../components/StreakTracker'))
-const MySubscriptions        = lazy(() => import('../pages/MySubscriptions'))
-const SellerDashboard        = lazy(() => import('../pages/SellerDashboard'))
-const FoodHomePage           = lazy(() => import('../pages/FoodHomePage'))
-const RestaurantDetailPage   = lazy(() => import('../pages/RestaurantDetailPage'))
-const RestaurantAdminPage    = lazy(() => import('../pages/RestaurantAdminPage'))
-const AdminSellerStorePanel  = lazy(() => import('../pages/AdminSellerStorePanel'))
-const AdminCampusAmbassadors = lazy(() => import('../pages/AdminCampusAmbassadors'))
-const SellerEarnings         = lazy(() => import('../pages/SellerEarnings'))
-const RestoSellerDashboard   = lazy(() => import('../pages/RestoSellerDashboard'))
-const GroceryPage            = lazy(() => import('../pages/GroceryPage'))
-const PharmacyPage           = lazy(() => import('../pages/PharmacyPage'))
-const FoodCheckoutPage       = lazy(() => import('../pages/FoodCheckoutPage'))
-const AdminRiderFleet        = lazy(() => import('../pages/AdminRiderFleet'))
+// Helper for auto-retrying and recovering dynamic chunk loads on new deployments
+const lazyRetry = (componentImport) =>
+  lazy(async () => {
+    try {
+      return await componentImport()
+    } catch (error) {
+      console.warn('[lazyRetry] Chunk load error, attempting recovery:', error?.message)
+      const reloadKey = 'snapit_chunk_reload_' + (window.location.hash || window.location.pathname)
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, '1')
+        window.location.reload()
+        return new Promise(() => {}) // Hold until reload
+      }
+      throw error
+    }
+  })
+
+// Lazy Loaded Pages with auto-retry
+const PublicTrackingPage     = lazyRetry(() => import('../pages/PublicTrackingPage'))
+const SearchPage             = lazyRetry(() => import('../pages/Searchpage'))
+const ForgotPassword         = lazyRetry(() => import('../pages/ForgotPassword'))
+const VerifyEmail            = lazyRetry(() => import('../pages/VerifyEmail'))
+const OtpVerification        = lazyRetry(() => import('../pages/OtpVerification'))
+const ResetPassword          = lazyRetry(() => import('../pages/ResetPassword'))
+const UserMenuMobile         = lazyRetry(() => import('../pages/UserMenuMobile'))
+const Dashboard              = lazyRetry(() => import('../layouts/Dashboard'))
+const Profile                = lazyRetry(() => import('../pages/Profile'))
+const MyOrders               = lazyRetry(() => import('../pages/MyOrders'))
+const Address                = lazyRetry(() => import('../pages/Address'))
+const CategoryPage           = lazyRetry(() => import('../pages/CategoryPage'))
+const SubCategoryPage        = lazyRetry(() => import('../pages/SubCategoryPage'))
+const UploadProduct          = lazyRetry(() => import('../pages/UploadProduct'))
+const ProductAdmin           = lazyRetry(() => import('../pages/ProductAdmin'))
+const AdminPermision         = lazyRetry(() => import('../layouts/AdminPermision'))
+const SellerPermission       = lazyRetry(() => import('../layouts/SellerPermission'))
+const ProductListPage        = lazyRetry(() => import('../pages/ProductListPage'))
+const ProductDisplayPage     = lazyRetry(() => import('../pages/ProductDisplayPage'))
+const CartMobile             = lazyRetry(() => import('../pages/CartMobile'))
+const CheckoutPage           = lazyRetry(() => import('../pages/CheckoutPage'))
+const Success                = lazyRetry(() => import('../pages/Success'))
+const Cancel                 = lazyRetry(() => import('../pages/Cancel'))
+const RiderTracking          = lazyRetry(() => import('../pages/RiderTracking'))
+const RiderDashboard         = lazyRetry(() => import('../pages/RiderDashboard'))
+const AdminRefunds           = lazyRetry(() => import('../pages/AdminRefunds'))
+const AdminWithdrawals       = lazyRetry(() => import('../pages/AdminWithdrawals'))
+const AdminReferrals         = lazyRetry(() => import('../pages/AdminReferrals'))
+const AdminManageAdmins      = lazyRetry(() => import('../pages/AdminManageAdmins'))
+const AdminFrozenIps         = lazyRetry(() => import('../pages/AdminFrozenIps'))
+const AdminBannerOffers      = lazyRetry(() => import('../pages/AdminBannerOffers'))
+const SuperAdminDashboard    = lazyRetry(() => import('../pages/SuperAdminDashboard'))
+const StoreOrders            = lazyRetry(() => import('../pages/StoreOrders'))
+const Wallet                 = lazyRetry(() => import('../pages/Wallet'))
+const AdminSummary           = lazyRetry(() => import('../components/AdminSummary'))
+const AdminTreasury          = lazyRetry(() => import('../pages/AdminTreasury'))
+const ReferAndEarn           = lazyRetry(() => import('../pages/ReferAndEarn'))
+const WishlistPage           = lazyRetry(() => import('../pages/WishlistPage'))
+const TrackingPage           = lazyRetry(() => import('../pages/TrackingPage'))
+const AllDealsPage           = lazyRetry(() => import('../pages/AllDealsPage'))
+const SnapitPlus             = lazyRetry(() => import('../components/SnapitPlus'))
+const StreakTracker          = lazyRetry(() => import('../components/StreakTracker'))
+const MySubscriptions        = lazyRetry(() => import('../pages/MySubscriptions'))
+const SellerDashboard        = lazyRetry(() => import('../pages/SellerDashboard'))
+const FoodHomePage           = lazyRetry(() => import('../pages/FoodHomePage'))
+const RestaurantDetailPage   = lazyRetry(() => import('../pages/RestaurantDetailPage'))
+const RestaurantAdminPage    = lazyRetry(() => import('../pages/RestaurantAdminPage'))
+const AdminSellerStorePanel  = lazyRetry(() => import('../pages/AdminSellerStorePanel'))
+const AdminCampusAmbassadors = lazyRetry(() => import('../pages/AdminCampusAmbassadors'))
+const SellerEarnings         = lazyRetry(() => import('../pages/SellerEarnings'))
+const RestoSellerDashboard   = lazyRetry(() => import('../pages/RestoSellerDashboard'))
+const GroceryPage            = lazyRetry(() => import('../pages/GroceryPage'))
+const PharmacyPage           = lazyRetry(() => import('../pages/PharmacyPage'))
+const FoodCheckoutPage       = lazyRetry(() => import('../pages/FoodCheckoutPage'))
+const AdminRiderFleet        = lazyRetry(() => import('../pages/AdminRiderFleet'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -90,13 +107,18 @@ const ErrorPage = () => {
   useEffect(() => {
     console.error("Route error caught by ErrorPage:", error)
     
-    // Auto-recover from stale dynamic chunk imports on new deployments
+    // Auto-recover from stale dynamic chunk imports and MIME type mismatch on new deployments
     const errMsg = String(error?.message || error || '').toLowerCase()
     if (
       errMsg.includes('dynamically imported module') ||
       errMsg.includes('loading chunk') ||
       errMsg.includes('failed to fetch') ||
-      errMsg.includes('chunkloaderror')
+      errMsg.includes('chunkloaderror') ||
+      errMsg.includes('text/html') ||
+      errMsg.includes('mime type') ||
+      errMsg.includes('module script') ||
+      errMsg.includes('syntaxerror') ||
+      errMsg.includes('importing a module')
     ) {
       const reloadKey = 'snapit_chunk_reload_' + (window.location.hash || window.location.pathname)
       if (!sessionStorage.getItem(reloadKey)) {

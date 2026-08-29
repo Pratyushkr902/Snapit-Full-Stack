@@ -296,36 +296,90 @@ export const deleteProductDetails = async (request, response) => {
 };
 
 const VOICE_STOPWORDS = new Set([
-    '1', '2', '3', '4', '5', 'kilo', 'kg', 'gm', 'gram', 'litre', 'liter', 'packet', 'pack',
-    'mujhe', 'chahiye', 'dikhaye', 'dikhao', 'dijiye', 'lao', 'aur', 'ka', 'ki', 'ke', 'bhi', 'please', 'me'
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
+    'kilo', 'kg', 'kgs', 'gm', 'gms', 'gram', 'grams', 'litre', 'liter', 'packet', 'pack', 'bottle', 'box',
+    'mujhe', 'chahiye', 'dikhaye', 'dikhao', 'dijiye', 'lao', 'aur', 'ka', 'ki', 'ke', 'bhi', 'please', 'me',
+    'एक', 'दो', 'तीन', 'चार', 'पांच', 'छह', 'सात', 'आठ', 'नौ', 'दस',
+    'किलो', 'केजी', 'ग्राम', 'लीटर', 'पैकेट', 'डिब्बा', 'बोतल',
+    'मुझे', 'चाहिए', 'दिखाइए', 'दिखाओ', 'दीजिए', 'देना', 'लाओ', 'और', 'का', 'की', 'के', 'वाला', 'वाली', 'वाले', 'भी', 'कृपया'
 ]);
 
 const HINDI_SYNONYM_DICT = {
-    'chini':   ['sugar', 'chini'],
-    'cheeni':  ['sugar', 'chini'],
-    'doodh':   ['milk', 'doodh'],
-    'dudh':    ['milk', 'doodh'],
-    'tel':     ['oil', 'mustard', 'refined'],
-    'sarson':  ['mustard', 'oil'],
-    'anda':    ['egg', 'anda'],
-    'ande':    ['egg', 'eggs', 'anda'],
-    'dahi':    ['curd', 'dahi'],
-    'makhan':  ['butter', 'makhan'],
-    'paneer':  ['paneer', 'cheese'],
-    'atta':    ['atta', 'flour', 'aashirvaad'],
-    'aata':    ['atta', 'flour'],
-    'chawal':  ['rice', 'chawal', 'basmati'],
-    'namak':   ['salt', 'namak'],
-    'tamatar': ['tomato'],
-    'aalu':    ['potato', 'aloo'],
-    'aloo':    ['potato', 'aloo'],
-    'pyaaz':   ['onion', 'pyaj'],
-    'pyaj':    ['onion', 'pyaj'],
-    'chai':    ['tea', 'chai', 'patti'],
-    'biscuit': ['biscuit', 'cookie', 'rusk'],
-    'biskut':  ['biscuit', 'cookie'],
-    'maggi':   ['maggi', 'noodles'],
-    'chips':   ['chips', 'kurkure', 'lays'],
+    // Sugar
+    'chini':      ['sugar', 'chini'],
+    'cheeni':     ['sugar', 'chini'],
+    'चीनी':       ['sugar', 'chini', 'cheeni'],
+    'शक्कर':      ['sugar', 'chini'],
+    // Milk & Dairy
+    'doodh':      ['milk', 'doodh'],
+    'dudh':       ['milk', 'doodh'],
+    'दूध':        ['milk', 'doodh', 'amul'],
+    'amul':       ['amul', 'milk', 'butter', 'cheese', 'paneer'],
+    'अमूल':       ['amul', 'milk'],
+    'अमुल':       ['amul', 'milk'],
+    'dahi':       ['curd', 'dahi'],
+    'दही':        ['curd', 'dahi'],
+    'makhan':     ['butter', 'makhan'],
+    'मक्खन':      ['butter', 'makhan'],
+    'paneer':     ['paneer', 'cheese'],
+    'पनीर':       ['paneer', 'cheese'],
+    'ghee':       ['ghee'],
+    'घी':         ['ghee'],
+    // Oil
+    'tel':        ['oil', 'mustard', 'refined', 'fortune'],
+    'तेल':        ['oil', 'mustard', 'refined', 'fortune'],
+    'sarson':     ['mustard', 'oil'],
+    'सरसों':      ['mustard', 'oil'],
+    'fortune':    ['fortune', 'oil'],
+    'फॉर्च्यून':  ['fortune', 'oil'],
+    // Grains, Atta, Rice & Pulses
+    'atta':       ['atta', 'flour', 'aashirvaad', 'chakki'],
+    'aata':       ['atta', 'flour'],
+    'आटा':        ['atta', 'flour', 'aashirvaad', 'chakki'],
+    'aashirvaad': ['aashirvaad', 'atta'],
+    'आशीर्वाद':   ['aashirvaad', 'atta'],
+    'chawal':     ['rice', 'chawal', 'basmati'],
+    'चावल':       ['rice', 'chawal', 'basmati'],
+    'dal':        ['dal', 'pulses', 'chana', 'moong', 'toor'],
+    'दाल':        ['dal', 'pulses', 'chana', 'moong', 'toor'],
+    'namak':      ['salt', 'namak', 'tata'],
+    'नमक':        ['salt', 'namak', 'tata'],
+    // Veggies
+    'tamatar':    ['tomato', 'tamatar'],
+    'टमाटर':      ['tomato', 'tamatar'],
+    'aalu':       ['potato', 'aloo', 'aalu'],
+    'aloo':       ['potato', 'aloo', 'aalu'],
+    'आलू':        ['potato', 'aloo', 'aalu'],
+    'pyaaz':      ['onion', 'pyaj', 'pyaaz'],
+    'pyaj':       ['onion', 'pyaj', 'pyaaz'],
+    'प्याज':      ['onion', 'pyaj', 'pyaaz'],
+    'mirch':      ['chilli', 'mirch'],
+    'मिर्च':      ['chilli', 'mirch'],
+    'haldi':      ['turmeric', 'haldi'],
+    'हल्दी':      ['turmeric', 'haldi'],
+    // Eggs & Meat
+    'anda':       ['egg', 'anda', 'eggs'],
+    'ande':       ['egg', 'eggs', 'anda'],
+    'अंडा':       ['egg', 'anda', 'eggs'],
+    'अंडे':       ['egg', 'eggs', 'anda'],
+    // Snacks, Tea & Drinks
+    'chai':       ['tea', 'chai', 'patti', 'tata tea', 'red label'],
+    'चाय':        ['tea', 'chai', 'patti'],
+    'biscuit':    ['biscuit', 'cookie', 'rusk', 'parle', 'britannia', 'oreo'],
+    'biskut':     ['biscuit', 'cookie'],
+    'बिस्कुट':    ['biscuit', 'cookie', 'rusk', 'parle'],
+    'बिस्किट':    ['biscuit', 'cookie'],
+    'maggi':      ['maggi', 'noodles', 'nestle'],
+    'मैगी':       ['maggi', 'noodles', 'nestle'],
+    'chips':      ['chips', 'kurkure', 'lays', 'bingo'],
+    'चिप्स':      ['chips', 'kurkure', 'lays'],
+    'कुरकुरे':    ['kurkure', 'chips'],
+    'cold drink': ['cold drink', 'coca cola', 'pepsi', 'sprite', 'thums up'],
+    'कोल्ड ड्रिंक':['cold drink', 'coca cola', 'pepsi', 'sprite', 'thums up'],
+    'sabun':      ['soap', 'sabun', 'dettol', 'lux', 'dove'],
+    'साबुन':      ['soap', 'sabun', 'dettol', 'lux', 'dove'],
+    'surf':       ['detergent', 'surf', 'surf excel', 'tide', 'ariel'],
+    'सर्फ':       ['detergent', 'surf', 'surf excel', 'tide', 'ariel'],
 };
 
 export const searchProduct = async (request, response) => {
@@ -366,6 +420,30 @@ export const searchProduct = async (request, response) => {
             ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum).populate('category subCategory').lean(),
             ProductModel.countDocuments(query)
         ]);
+
+        // Blinkit-style relevance ranking: Title/Brand match first, then description
+        if (typeof search === 'string' && search.trim()) {
+            const rawTokens = search.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').split(/\s+/).filter(Boolean);
+            const filteredTokens = rawTokens.filter(t => !VOICE_STOPWORDS.has(t));
+            const activeTokens = filteredTokens.length > 0 ? filteredTokens : rawTokens;
+
+            data.sort((a, b) => {
+                const aName = (a.name || '').toLowerCase();
+                const bName = (b.name || '').toLowerCase();
+                const matchA = activeTokens.some(t => {
+                    const syns = HINDI_SYNONYM_DICT[t] || [t];
+                    return syns.some(s => aName.includes(s.toLowerCase()));
+                });
+                const matchB = activeTokens.some(t => {
+                    const syns = HINDI_SYNONYM_DICT[t] || [t];
+                    return syns.some(s => bName.includes(s.toLowerCase()));
+                });
+                if (matchA && !matchB) return -1;
+                if (!matchA && matchB) return 1;
+                return 0;
+            });
+        }
+
         return response.json({
             message: "Product data", error: false, success: true,
             data: data.map(prod => ({ ...prod, image: secureImages(prod.image) })),
