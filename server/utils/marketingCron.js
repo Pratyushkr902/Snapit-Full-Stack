@@ -32,8 +32,9 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
     const uniqueTokens = Array.from(tokenMap.keys())
     console.log(`📢 [Marketing Engine] Broadcasting "${title}" to ${uniqueTokens.length} active device(s)...`)
 
-    const BATCH_SIZE = 20
+    const BATCH_SIZE = 50
     let successCount = 0
+    const deadTokens = []
 
     for (let i = 0; i < uniqueTokens.length; i += BATCH_SIZE) {
       const batch = uniqueTokens.slice(i, i + BATCH_SIZE)
@@ -50,10 +51,28 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
               url: '/'
             }
           })
-          if (res) successCount++
-        } catch {}
+          if (res) {
+            successCount++
+          } else {
+            deadTokens.push(token)
+          }
+        } catch (err) {
+          deadTokens.push(token)
+        }
       })
       await Promise.allSettled(promises)
+    }
+
+    // Auto-clean dead tokens from database in background
+    if (deadTokens.length > 0) {
+      UserModel.updateMany(
+        { fcmTokens: { $in: deadTokens } },
+        { $pull: { fcmTokens: { $in: deadTokens } } }
+      ).catch(() => {})
+      UserModel.updateMany(
+        { fcmToken: { $in: deadTokens } },
+        { $set: { fcmToken: null } }
+      ).catch(() => {})
     }
 
     // Save in-app notification records (for recent 50 active users)
