@@ -11,6 +11,7 @@ import WhatsAppButton from './components/WhatsAppButton'
 import ChatBox from './components/ChatBox'
 import StoreClosedOverlay from './components/StoreClosedOverlay'
 import AppUpdateModal from './components/AppUpdateModal'
+import NotificationPermissionBanner from './components/NotificationPermissionBanner'
 
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails, logout } from './store/userSlice';
@@ -243,6 +244,7 @@ function App() {
       <GlobalProvider>
         <div className="App">
           <AppUpdateModal />
+          <NotificationPermissionBanner />
           {!isDashboard && !isFoodPage && <StoreClosedOverlay />}
           {!isDashboard && <Header openCart={() => setShowCart(true)} />}
           
