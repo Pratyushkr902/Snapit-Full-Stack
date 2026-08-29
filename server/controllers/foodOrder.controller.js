@@ -172,12 +172,14 @@ const priceGroup = async (group, deliveryLocation, user) => {
     throw err
   }
 
-  // Check if festive offer / MGD Pizza freebie applies (orders above ₹599)
+  // Check if festive offer / freebie applies (only when explicitly active)
   const festiveOffer = await FestiveOfferModel.findOne().sort({ createdAt: -1 }).lean()
-  const isMGD = (restaurant?.name || '').toLowerCase().includes('mgd') ||
-                String(festiveOffer?.restaurantId || '6a3963a7e0dd57acb747e405') === String(group.restaurantId)
+  const now = new Date()
+  const isFestiveLive = festiveOffer && festiveOffer.isActive &&
+    now >= new Date(festiveOffer.startsAt) && now < new Date(festiveOffer.endsAt) &&
+    String(festiveOffer.restaurantId || '6a3963a7e0dd57acb747e405') === String(group.restaurantId)
 
-  if (isMGD && subTotalAmt >= (festiveOffer?.minOrderForFreebie || 599)) {
+  if (isFestiveLive && subTotalAmt >= (festiveOffer?.minOrderForFreebie || 599)) {
     const alreadyHasFreebie = group.cartItems.some(it =>
       (it.name || '').toLowerCase().includes('free margherita') || it.isFreebie
     )

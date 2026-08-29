@@ -29,7 +29,7 @@ const AdminBannerOffers = () => {
     subtitle: '10% OFF on all pizzas + FREE Margherita Pizza on orders above ₹599!',
     bannerImage: '/mgd_rakhi_banner.jpg',
     targetUrl: '/restaurant/6a3963a7e0dd57acb747e405',
-    isActive: true,
+    isActive: false,
     startsAt: '2026-08-28T00:00',
     endsAt: '2026-08-28T23:59',
     minOrderForFreebie: 599,

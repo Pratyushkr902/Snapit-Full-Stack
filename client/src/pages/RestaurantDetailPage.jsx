@@ -547,39 +547,6 @@ export default function RestaurantDetailPage() {
 
             {/* ── Distance + Address bar (Zomato-style) ── */}
             <LocationBar restaurant={restaurant} userLocation={userLocation} />
-
-            {/* ── Raksha Bandhan Freebie Perk Tracker (MGD Pizza Point) ── */}
-            {restaurant.name?.toLowerCase().includes('mgd') && (
-              <div className="mx-4 my-3 p-3 rounded-2xl bg-gradient-to-r from-amber-500/10 via-red-500/10 to-amber-500/10 border border-amber-400/40">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-black text-amber-900 flex items-center gap-1.5">
-                    <span>🎁</span>
-                    <span>Raksha Bandhan Special (28 August)</span>
-                  </span>
-                  <span className="text-[11px] font-extrabold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
-                    28 AUG: 10% OFF ON EVERY PIZZA
-                  </span>
-                </div>
-                {cartTotal >= 599 ? (
-                  <p className="text-xs font-bold text-green-700 flex items-center gap-1">
-                    <span>🎉</span>
-                    <span>Awesome! Free ₹99 Margherita Pizza unlocked for your order!</span>
-                  </p>
-                ) : (
-                  <div>
-                    <p className="text-[11px] font-semibold text-gray-700 mb-1">
-                      Add <strong className="text-amber-700">₹{599 - cartTotal}</strong> more to get a <strong className="text-red-700">FREE ₹99 Margherita Pizza</strong>!
-                    </p>
-                    <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-gradient-to-r from-amber-500 to-red-600 h-full rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(100, Math.round((cartTotal / 599) * 100))}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* ── Category Tabs ── */}
