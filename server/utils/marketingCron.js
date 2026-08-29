@@ -51,13 +51,13 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
               url: '/'
             }
           })
-          if (res) {
+          if (res?.success) {
             successCount++
-          } else {
+          } else if (res?.isUnregistered) {
             deadTokens.push(token)
           }
         } catch (err) {
-          deadTokens.push(token)
+          // Never delete on unexpected errors
         }
       })
       await Promise.allSettled(promises)

@@ -93,9 +93,16 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
         }
         const result = await client.send(message)
         console.log('📱 Notification sent:', result)
-        return result
+        return { success: true, result }
     } catch (error) {
-        console.error('❌ Notification failed:', error.message)
+        const isUnregistered = 
+            error.code === 'messaging/registration-token-not-registered' ||
+            error.message?.includes('NotRegistered') ||
+            error.message?.includes('Device unregistered') ||
+            error.message?.includes('registration-token-not-registered')
+        
+        console.error('❌ Notification failed:', error.message, isUnregistered ? '(Unregistered)' : '')
+        return { success: false, isUnregistered, error: error.message }
     }
 }
 
