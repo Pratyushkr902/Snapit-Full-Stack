@@ -77,6 +77,14 @@ const SummaryApi = {
         url: '/api/user/test-push-notification',
         method: 'post'
     },
+    getMarketingTemplates: {
+        url: '/api/marketing/templates',
+        method: 'get'
+    },
+    broadcastMarketingCampaign: {
+        url: '/api/marketing/broadcast',
+        method: 'post'
+    },
     addCategory : {
         url : '/api/category/add-category',
         method : 'post'
