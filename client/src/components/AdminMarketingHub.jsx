@@ -108,15 +108,15 @@ const AdminMarketingHub = () => {
   }
 
   return (
-    <div className='my-6 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm'>
+    <div className='my-2 sm:my-6 bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm overflow-hidden'>
       {/* Header */}
-      <div className='flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-100'>
+      <div className='flex flex-wrap items-center justify-between gap-4 pb-4 sm:pb-5 border-b border-slate-100'>
         <div>
           <div className='flex items-center gap-2'>
             <span className='p-2 bg-gradient-to-tr from-amber-500 to-orange-500 text-white rounded-xl shadow-sm'>
               <IoMegaphoneOutline size={20} />
             </span>
-            <h3 className='font-black text-slate-900 text-lg'>
+            <h3 className='font-black text-slate-900 text-base sm:text-lg'>
               Marketing & Notification Hub
             </h3>
             <span className='px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full'>
@@ -130,7 +130,7 @@ const AdminMarketingHub = () => {
       </div>
 
       {/* ⏰ Automated Cron Schedules Status */}
-      <div className='grid grid-cols-1 md:grid-cols-4 gap-3 my-5'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4 sm:my-5'>
         {/* 1. Breakfast */}
         <div className='p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 flex flex-col justify-between gap-2'>
           <div className='flex items-start gap-2.5'>

@@ -113,12 +113,10 @@ export async function verifyOtpController(request, response) {
         })
 
         if (!user) {
-            // New account via OTP — no password required.
-            if (!name) {
-                return response.status(400).json({ message: 'Name is required for new accounts', error: true, success: false })
-            }
-            const newReferralCode = name.toUpperCase().replace(/\s/g, '').slice(0, 4) +
-                Math.floor(1000 + Math.random() * 9000)
+            // New account via OTP — seamless signup with name or email fallback
+            const displayName = (name && name.trim()) ? name.trim() : (email.split('@')[0] || 'Snapit User')
+            const cleanPrefix = displayName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || 'SNAP'
+            const newReferralCode = cleanPrefix + Math.floor(1000 + Math.random() * 9000)
 
             // Capture who referred this user, if a referral code was supplied.
             // Ensure no self-referrals via alias/dot tricks
@@ -132,7 +130,7 @@ export async function verifyOtpController(request, response) {
             }
 
             user = await UserModel.create({
-                name: name.trim(),
+                name: displayName,
                 email: cleanEmail,
                 referralCode: newReferralCode,
                 referredBy: referredByCode,

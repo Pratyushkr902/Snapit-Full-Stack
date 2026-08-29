@@ -183,16 +183,45 @@ function App() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
 
-    let listenerHandle;
+    let lastBackPress = 0
+    let listenerHandle
 
     const setupBackButton = async () => {
       try {
-        listenerHandle = await CapacitorApp.addListener('backButton', () => {
-          const hash = window.location.hash || ""
-          const isHome = !hash || hash === '#/' || hash === '#' || hash === '#/grocery' || hash === '#/food' || hash === '#/pharmacy'
+        listenerHandle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+          // 1. If cart slide-over is open, close it first
+          if (showCart) {
+            setShowCart(false)
+            return
+          }
 
-          if (!isHome && window.history.length > 1) {
-            window.history.back()
+          // 2. Check if we are on the root Home screen
+          const currentPath = window.location.pathname
+          const currentHash = window.location.hash || ""
+          const isRoot = 
+            (currentPath === '/' || currentPath === '') &&
+            (!currentHash || currentHash === '#/' || currentHash === '#')
+
+          if (!isRoot) {
+            // Smoothly navigate back in history (e.g. from /grocery, /food, /pharmacy, /restaurant/123, /search, /cart)
+            if (canGoBack || window.history.length > 1) {
+              navigate(-1)
+            } else {
+              navigate('/')
+            }
+          } else {
+            // Double-tap back on root Home to exit the app
+            const now = Date.now()
+            if (now - lastBackPress < 2000) {
+              CapacitorApp.exitApp()
+            } else {
+              lastBackPress = now
+              toast('Press back again to exit Snapit', {
+                icon: '⚡',
+                duration: 2000,
+                id: 'exit-tap'
+              })
+            }
           }
         })
       } catch (e) {
@@ -205,7 +234,7 @@ function App() {
     return () => {
       listenerHandle?.remove()
     }
-  }, [])
+  }, [showCart, navigate])
 
   // ─── Force refresh after long background suspension ───────────
   useEffect(() => {
