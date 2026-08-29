@@ -136,8 +136,8 @@ const AppUpdateModal = () => {
   if (!showModal || !updateInfo) return null
 
   return (
-    <div className='fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200'>
-      <div className='bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center'>
+    <div className='fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-opacity duration-200'>
+      <div className='bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center transform scale-100 transition-transform'>
         
         {/* Official Snapit Brand Icon */}
         <div className='w-20 h-20 rounded-3xl bg-emerald-50 border border-emerald-100 p-3 shadow-md shadow-emerald-600/10 mb-3.5 flex items-center justify-center'>
