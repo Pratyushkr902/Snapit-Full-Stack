@@ -776,6 +776,60 @@ export const updateDobController = async (request, response) => {
             data: { dob: parsedDob }
         })
     } catch (error) {
+        return response.status(500).json({ message: error.message || error, error: true, success: false })
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST PUSH NOTIFICATION (Dispatches to all active devices of the caller)
+// ─────────────────────────────────────────────────────────────────────────────
+export const testPushNotificationController = async (request, response) => {
+    try {
+        const userId = request.userId
+        const user = await UserModel.findById(userId).select('name email role fcmToken fcmTokens').lean()
+        if (!user) {
+            return response.status(404).json({ message: 'User not found.', error: true, success: false })
+        }
+
+        const allTokens = [
+            ...(user.fcmToken ? [user.fcmToken] : []),
+            ...(Array.isArray(user.fcmTokens) ? user.fcmTokens : [])
+        ].filter(t => typeof t === 'string' && t.trim().length > 10)
+
+        const uniqueTokens = [...new Set(allTokens)]
+
+        if (uniqueTokens.length === 0) {
+            return response.status(400).json({
+                message: 'No push notification token registered for this device yet. Please enable notification permissions and reopen the app.',
+                error: true,
+                success: false
+            })
+        }
+
+        const { sendPushNotification } = await import('../utils/firebaseNotify.js')
+        const results = await Promise.allSettled(
+            uniqueTokens.map(token =>
+                sendPushNotification({
+                    token,
+                    title: '⚡ Snapit Live Test Alert',
+                    body: `Hello ${user.name || 'there'}! Push notifications are active on this device. 🚀`,
+                    data: { type: 'TEST', timestamp: String(Date.now()) }
+                })
+            )
+        )
+
+        const successful = results.filter(r => r.status === 'fulfilled' && r.value).length
+
+        return response.json({
+            message: `Test push sent to ${uniqueTokens.length} device(s) (${successful} accepted).`,
+            error: false,
+            success: true,
+            devicesCount: uniqueTokens.length
+        })
+    } catch (error) {
+        return response.status(500).json({ message: error.message || error, error: true, success: false })
+    }
+}
         console.error('updateDobController:', error.message)
         return response.status(500).json({ message: 'Failed to update birthday.', error: true, success: false })
     }

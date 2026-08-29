@@ -73,6 +73,10 @@ const SummaryApi = {
         url: '/api/user/save-fcm-token',
         method: 'post'
     },
+    testPushNotification: {
+        url: '/api/user/test-push-notification',
+        method: 'post'
+    },
     addCategory : {
         url : '/api/category/add-category',
         method : 'post'

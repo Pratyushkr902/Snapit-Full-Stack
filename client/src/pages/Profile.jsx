@@ -110,6 +110,39 @@ const Profile = () => {
                     {loading ? "Loading..." : "Submit"}
                 </button>
             </form>
+
+            {/* Notification Test Utility */}
+            <div className='my-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 shadow-sm'>
+                <div className='flex items-center justify-between gap-3'>
+                    <div>
+                        <h4 className='font-bold text-sm text-emerald-950 flex items-center gap-1.5'>
+                            <span>🔔</span> Push Notifications Test
+                        </h4>
+                        <p className='text-xs text-emerald-700 mt-0.5'>
+                            Send a live test notification to verify delivery on this device.
+                        </p>
+                    </div>
+                    <button
+                        type='button'
+                        onClick={async () => {
+                            try {
+                                toast.loading('Sending test alert...', { id: 'test-push' })
+                                const res = await Axios({ ...SummaryApi.testPushNotification })
+                                if (res.data?.success) {
+                                    toast.success(res.data.message || 'Notification dispatched!', { id: 'test-push' })
+                                } else {
+                                    toast.error(res.data?.message || 'Failed to dispatch test notification.', { id: 'test-push' })
+                                }
+                            } catch (err) {
+                                toast.error(err?.response?.data?.message || err.message, { id: 'test-push' })
+                            }
+                        }}
+                        className='px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all flex-shrink-0'
+                    >
+                        Test Push 📲
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }
