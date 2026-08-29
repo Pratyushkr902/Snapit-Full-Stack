@@ -1,4 +1,4 @@
-import { broadcastToAllUsers, MORNING_TEMPLATES, EVENING_TEMPLATES, DINNER_TEMPLATES } from '../utils/marketingCron.js'
+import { broadcastToAllUsers, triggerMarketingSchedule, MORNING_TEMPLATES, EVENING_TEMPLATES, DINNER_TEMPLATES } from '../utils/marketingCron.js'
 
 export const broadcastCampaignController = async (request, response) => {
   try {
@@ -16,6 +16,34 @@ export const broadcastCampaignController = async (request, response) => {
 
     return response.json({
       message: `Campaign broadcast dispatched successfully!`,
+      error: false,
+      success: true,
+      data: result
+    })
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false
+    })
+  }
+}
+
+export const triggerScheduleController = async (request, response) => {
+  try {
+    const { scheduleType } = request.body
+    if (!scheduleType) {
+      return response.status(400).json({
+        message: 'scheduleType is required (e.g. BREAKFAST, CHAI_TIME, DINNER, CART_NUDGE)',
+        error: true,
+        success: false
+      })
+    }
+
+    const result = await triggerMarketingSchedule(scheduleType)
+
+    return response.json({
+      message: `${scheduleType} schedule executed successfully!`,
       error: false,
       success: true,
       data: result

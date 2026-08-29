@@ -146,29 +146,51 @@ export const DINNER_TEMPLATES = [
   }
 ]
 
+// In-memory debounce to prevent spamming the same user within 2 hours
+const userLastNudgeMap = new Map()
+
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. ABANDONED CART AUTO-NUDGE (Runs every 30 minutes)
+// 4. ABANDONED CART AUTO-NUDGE (Runs every 10 minutes)
 // ─────────────────────────────────────────────────────────────────────────────
-async function checkAbandonedCarts() {
+export async function checkAbandonedCarts() {
   try {
-    const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000)
-    const ninetyMinsAgo = new Date(Date.now() - 90 * 60 * 1000)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
+    // Find all cart items added/updated in the last 24 hours
     const activeCarts = await CartProductModel.find({
-      updatedAt: { $gte: ninetyMinsAgo, $lte: thirtyMinsAgo }
-    }).select('userId productId quantity').lean()
+      updatedAt: { $gte: twentyFourHoursAgo }
+    }).populate('productId', 'name price').lean()
 
-    if (activeCarts.length === 0) return
+    if (activeCarts.length === 0) {
+      console.log('ℹ️ [Abandoned Cart] No active cart items found in last 24h.')
+      return { success: true, nudgedCount: 0 }
+    }
 
-    const userIds = [...new Set(activeCarts.map(c => String(c.userId)))]
+    // Group cart items by userId
+    const userCartMap = new Map()
+    activeCarts.forEach(c => {
+      if (!c.userId) return
+      const uId = String(c.userId)
+      if (!userCartMap.has(uId)) userCartMap.set(uId, [])
+      userCartMap.get(uId).push(c)
+    })
 
-    for (const uId of userIds) {
+    let nudgedCount = 0
+    const now = Date.now()
+
+    for (const [uId, items] of userCartMap.entries()) {
+      // 1. Debounce: Don't nudge the same user more than once every 2 hours
+      const lastNudge = userLastNudgeMap.get(uId) || 0
+      if (now - lastNudge < 2 * 60 * 60 * 1000) continue
+
+      // 2. Check if user placed an order since the most recent cart update
+      const latestCartTime = new Date(Math.max(...items.map(i => new Date(i.updatedAt || i.createdAt).getTime())))
       const recentOrder = await OrderModel.findOne({
         userId: uId,
-        createdAt: { $gte: ninetyMinsAgo }
+        createdAt: { $gte: latestCartTime }
       }).lean()
 
-      if (recentOrder) continue
+      if (recentOrder) continue // User already placed order
 
       const user = await UserModel.findById(uId).select('name fcmToken fcmTokens').lean()
       if (!user) continue
@@ -180,23 +202,58 @@ async function checkAbandonedCarts() {
 
       if (tokens.length === 0) continue
 
-      const cartTitle = '🛒 Aapka cart akela intezaar kar raha hai!'
-      const cartBody = `Aapke favorite items cart mein hain. Complete order now for ₹0 Delivery Fee! ⚡`
+      const firstItemName = items[0]?.productId?.name || 'Aapke favorite items'
+      const moreCount = items.length > 1 ? ` (+${items.length - 1} aur items)` : ''
+      const cartTitle = '🛒 Aapka cart intezaar kar raha hai!'
+      const cartBody = `"${firstItemName}${moreCount}" cart mein hain. 10 min express delivery on Snapit! ⚡`
 
+      let userReceived = false
       for (const token of tokens) {
-        await sendPushNotification({
-          token,
-          title: cartTitle,
-          body: cartBody,
-          data: { type: 'ABANDONED_CART', url: '/cart' }
-        }).catch(() => {})
+        try {
+          const res = await sendPushNotification({
+            token,
+            title: cartTitle,
+            body: cartBody,
+            data: { type: 'ABANDONED_CART', url: '/cart' }
+          })
+          if (res) userReceived = true
+        } catch {}
       }
 
-      console.log(`🛒 [Abandoned Cart Nudge] Sent reminder to user: ${user.name || uId}`)
+      if (userReceived) {
+        userLastNudgeMap.set(uId, now)
+        nudgedCount++
+        console.log(`🛒 [Cart Nudge] Sent reminder to user: ${user.name || uId} (${firstItemName})`)
+      }
     }
+
+    return { success: true, nudgedCount, totalActiveCarts: userCartMap.size }
   } catch (err) {
-    console.warn('[checkAbandonedCarts] Note:', err.message)
+    console.error('❌ [checkAbandonedCarts] Error:', err.message)
+    return { success: false, error: err.message }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRIGGER MANUAL CRON SCHEDULE ON DEMAND
+// ─────────────────────────────────────────────────────────────────────────────
+export async function triggerMarketingSchedule(type) {
+  if (type === 'BREAKFAST') {
+    const template = MORNING_TEMPLATES[Math.floor(Math.random() * MORNING_TEMPLATES.length)]
+    return await broadcastToAllUsers({ ...template, type: 'BREAKFAST_PROMO', promoTag: 'MORNING_RUSH' })
+  }
+  if (type === 'CHAI_TIME') {
+    const template = EVENING_TEMPLATES[Math.floor(Math.random() * EVENING_TEMPLATES.length)]
+    return await broadcastToAllUsers({ ...template, type: 'CHAI_TIME_PROMO', promoTag: 'EVENING_SNACKS' })
+  }
+  if (type === 'DINNER') {
+    const template = DINNER_TEMPLATES[Math.floor(Math.random() * DINNER_TEMPLATES.length)]
+    return await broadcastToAllUsers({ ...template, type: 'DINNER_PROMO', promoTag: 'DINNER_RUSH' })
+  }
+  if (type === 'CART_NUDGE') {
+    return await checkAbandonedCarts()
+  }
+  throw new Error(`Unknown schedule type: ${type}`)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -208,28 +265,25 @@ export const initMarketingCron = () => {
   // 1. Morning Breakfast Rush (08:30 AM IST)
   cron.schedule('30 8 * * *', async () => {
     console.log('⏰ [Cron] Triggering Morning Breakfast Rush Notification...')
-    const template = MORNING_TEMPLATES[Math.floor(Math.random() * MORNING_TEMPLATES.length)]
-    await broadcastToAllUsers({ ...template, type: 'BREAKFAST_PROMO', promoTag: 'MORNING_RUSH' })
+    await triggerMarketingSchedule('BREAKFAST')
   }, { timezone: 'Asia/Kolkata' })
 
   // 2. Evening Chai & Snack Time (05:00 PM IST)
   cron.schedule('0 17 * * *', async () => {
     console.log('⏰ [Cron] Triggering Evening Chai Time Notification...')
-    const template = EVENING_TEMPLATES[Math.floor(Math.random() * EVENING_TEMPLATES.length)]
-    await broadcastToAllUsers({ ...template, type: 'CHAI_TIME_PROMO', promoTag: 'EVENING_SNACKS' })
+    await triggerMarketingSchedule('CHAI_TIME')
   }, { timezone: 'Asia/Kolkata' })
 
   // 3. Dinner Rush (08:30 PM IST)
   cron.schedule('30 20 * * *', async () => {
     console.log('⏰ [Cron] Triggering Dinner Rush Notification...')
-    const template = DINNER_TEMPLATES[Math.floor(Math.random() * DINNER_TEMPLATES.length)]
-    await broadcastToAllUsers({ ...template, type: 'DINNER_PROMO', promoTag: 'DINNER_RUSH' })
+    await triggerMarketingSchedule('DINNER')
   }, { timezone: 'Asia/Kolkata' })
 
-  // 4. Abandoned Cart Auto-Nudge (Every 30 mins from 09:00 AM to 11:00 PM IST)
-  cron.schedule('*/30 9-23 * * *', async () => {
+  // 4. Abandoned Cart Auto-Nudge (Every 10 mins)
+  cron.schedule('*/10 * * * *', async () => {
     await checkAbandonedCarts()
-  }, { timezone: 'Asia/Kolkata' })
+  })
 
-  console.log('✅ [Marketing Cron] Morning (8:30 AM), Chai Time (5:00 PM), Dinner (8:30 PM), and Cart Recovery active!')
+  console.log('✅ [Marketing Cron] Morning (8:30 AM), Chai Time (5:00 PM), Dinner (8:30 PM), and Cart Recovery (every 10m) active!')
 }

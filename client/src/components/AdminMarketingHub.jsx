@@ -87,6 +87,26 @@ const AdminMarketingHub = () => {
     }
   }
 
+  const handleTriggerSchedule = async (type, name) => {
+    try {
+      toast.loading(`Executing ${name}...`, { id: 'trigger-cron' })
+      const res = await Axios({
+        url: SummaryApi.triggerMarketingSchedule?.url || '/api/marketing/trigger-schedule',
+        method: SummaryApi.triggerMarketingSchedule?.method || 'post',
+        data: { scheduleType: type }
+      })
+
+      if (res.data?.success) {
+        const count = res.data.data?.deliveredCount ?? res.data.data?.nudgedCount ?? 0
+        toast.success(`✅ ${name} executed! Sent to ${count} recipient(s).`, { id: 'trigger-cron', duration: 5000 })
+      } else {
+        toast.error(res.data?.message || 'Execution failed', { id: 'trigger-cron' })
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err.message, { id: 'trigger-cron' })
+    }
+  }
+
   return (
     <div className='my-6 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm'>
       {/* Header */}
@@ -111,48 +131,88 @@ const AdminMarketingHub = () => {
 
       {/* ⏰ Automated Cron Schedules Status */}
       <div className='grid grid-cols-1 md:grid-cols-4 gap-3 my-5'>
-        <div className='p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 flex items-start gap-3'>
-          <span className='text-2xl'>🥛</span>
-          <div>
-            <div className='flex items-center gap-1.5'>
-              <p className='font-bold text-xs text-amber-950'>Breakfast Rush</p>
-              <span className='text-[10px] bg-amber-200/70 text-amber-900 px-1.5 py-0.2 rounded font-semibold'>08:30 AM</span>
+        {/* 1. Breakfast */}
+        <div className='p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 flex flex-col justify-between gap-2'>
+          <div className='flex items-start gap-2.5'>
+            <span className='text-2xl'>🥛</span>
+            <div>
+              <div className='flex items-center gap-1.5'>
+                <p className='font-bold text-xs text-amber-950'>Breakfast Rush</p>
+                <span className='text-[10px] bg-amber-200/70 text-amber-900 px-1.5 py-0.2 rounded font-semibold'>08:30 AM</span>
+              </div>
+              <p className='text-[11px] text-amber-800/90 mt-0.5'>Milk, bread, eggs & tea</p>
             </div>
-            <p className='text-[11px] text-amber-800/90 mt-0.5'>Milk, bread, eggs & tea reminders</p>
           </div>
+          <button
+            type='button'
+            onClick={() => handleTriggerSchedule('BREAKFAST', 'Breakfast Rush')}
+            className='w-full py-1 text-[11px] font-bold bg-amber-200/80 hover:bg-amber-300 text-amber-950 rounded-lg transition-all active:scale-95'
+          >
+            ⚡ Test Run Breakfast
+          </button>
         </div>
 
-        <div className='p-3.5 rounded-2xl bg-orange-50/70 border border-orange-200/70 flex items-start gap-3'>
-          <span className='text-2xl'>☕</span>
-          <div>
-            <div className='flex items-center gap-1.5'>
-              <p className='font-bold text-xs text-orange-950'>Chai & Snacks</p>
-              <span className='text-[10px] bg-orange-200/70 text-orange-900 px-1.5 py-0.2 rounded font-semibold'>05:00 PM</span>
+        {/* 2. Chai & Snacks */}
+        <div className='p-3.5 rounded-2xl bg-orange-50/70 border border-orange-200/70 flex flex-col justify-between gap-2'>
+          <div className='flex items-start gap-2.5'>
+            <span className='text-2xl'>☕</span>
+            <div>
+              <div className='flex items-center gap-1.5'>
+                <p className='font-bold text-xs text-orange-950'>Chai & Snacks</p>
+                <span className='text-[10px] bg-orange-200/70 text-orange-900 px-1.5 py-0.2 rounded font-semibold'>05:00 PM</span>
+              </div>
+              <p className='text-[11px] text-orange-800/90 mt-0.5'>Maggi, biscuits & evening</p>
             </div>
-            <p className='text-[11px] text-orange-800/90 mt-0.5'>Maggi, biscuits & evening cravings</p>
           </div>
+          <button
+            type='button'
+            onClick={() => handleTriggerSchedule('CHAI_TIME', 'Chai & Snacks')}
+            className='w-full py-1 text-[11px] font-bold bg-orange-200/80 hover:bg-orange-300 text-orange-950 rounded-lg transition-all active:scale-95'
+          >
+            ⚡ Test Run Chai Time
+          </button>
         </div>
 
-        <div className='p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200/70 flex items-start gap-3'>
-          <span className='text-2xl'>🍕</span>
-          <div>
-            <div className='flex items-center gap-1.5'>
-              <p className='font-bold text-xs text-rose-950'>Dinner Feast</p>
-              <span className='text-[10px] bg-rose-200/70 text-rose-900 px-1.5 py-0.2 rounded font-semibold'>08:30 PM</span>
+        {/* 3. Dinner */}
+        <div className='p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200/70 flex flex-col justify-between gap-2'>
+          <div className='flex items-start gap-2.5'>
+            <span className='text-2xl'>🍕</span>
+            <div>
+              <div className='flex items-center gap-1.5'>
+                <p className='font-bold text-xs text-rose-950'>Dinner Feast</p>
+                <span className='text-[10px] bg-rose-200/70 text-rose-900 px-1.5 py-0.2 rounded font-semibold'>08:30 PM</span>
+              </div>
+              <p className='text-[11px] text-rose-800/90 mt-0.5'>Pizza, Biryani & resto food</p>
             </div>
-            <p className='text-[11px] text-rose-800/90 mt-0.5'>Pizza, Biryani & resto food orders</p>
           </div>
+          <button
+            type='button'
+            onClick={() => handleTriggerSchedule('DINNER', 'Dinner Feast')}
+            className='w-full py-1 text-[11px] font-bold bg-rose-200/80 hover:bg-rose-300 text-rose-950 rounded-lg transition-all active:scale-95'
+          >
+            ⚡ Test Run Dinner
+          </button>
         </div>
 
-        <div className='p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/70 flex items-start gap-3'>
-          <span className='text-2xl'>🛒</span>
-          <div>
-            <div className='flex items-center gap-1.5'>
-              <p className='font-bold text-xs text-blue-950'>Cart Nudge</p>
-              <span className='text-[10px] bg-blue-200/70 text-blue-900 px-1.5 py-0.2 rounded font-semibold'>Every 30m</span>
+        {/* 4. Cart Nudge */}
+        <div className='p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/70 flex flex-col justify-between gap-2'>
+          <div className='flex items-start gap-2.5'>
+            <span className='text-2xl'>🛒</span>
+            <div>
+              <div className='flex items-center gap-1.5'>
+                <p className='font-bold text-xs text-blue-950'>Cart Recovery</p>
+                <span className='text-[10px] bg-blue-200/70 text-blue-900 px-1.5 py-0.2 rounded font-semibold'>Every 10m</span>
+              </div>
+              <p className='text-[11px] text-blue-800/90 mt-0.5'>Nudges users with left items</p>
             </div>
-            <p className='text-[11px] text-blue-800/90 mt-0.5'>Auto-reminds users with left items</p>
           </div>
+          <button
+            type='button'
+            onClick={() => handleTriggerSchedule('CART_NUDGE', 'Cart Recovery Sweep')}
+            className='w-full py-1 text-[11px] font-bold bg-blue-200/80 hover:bg-blue-300 text-blue-950 rounded-lg transition-all active:scale-95'
+          >
+            ⚡ Run Cart Nudge Now
+          </button>
         </div>
       </div>
 

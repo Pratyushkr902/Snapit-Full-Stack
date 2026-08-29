@@ -85,6 +85,10 @@ const SummaryApi = {
         url: '/api/marketing/broadcast',
         method: 'post'
     },
+    triggerMarketingSchedule: {
+        url: '/api/marketing/trigger-schedule',
+        method: 'post'
+    },
     addCategory : {
         url : '/api/category/add-category',
         method : 'post'
