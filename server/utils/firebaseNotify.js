@@ -42,10 +42,16 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
             return
         }
         if (!token) return
+        const dataMap = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
         const message = {
             token,
             notification: { title, body },
-            data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+            data: {
+                title,
+                body,
+                message: body,
+                ...dataMap
+            },
             android: {
                 priority: 'high',
                 notification: {
@@ -70,8 +76,19 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                 }
             },
             webpush: {
-                notification: { icon: '/snapit-icon-192.png', badge: '/snapit-icon-192.png', vibrate: [200, 100, 200] },
-                fcmOptions: { link: '/rider-panel' }
+                notification: {
+                    title,
+                    body,
+                    icon: '/snapit-icon-192.png',
+                    badge: '/snapit-icon-192.png',
+                    vibrate: [200, 100, 200]
+                },
+                data: {
+                    title,
+                    body,
+                    ...dataMap
+                },
+                fcmOptions: { link: data?.url || (data?.orderId ? `/#/dashboard/order-tracking/${data.orderId}` : '/') }
             }
         }
         const result = await client.send(message)

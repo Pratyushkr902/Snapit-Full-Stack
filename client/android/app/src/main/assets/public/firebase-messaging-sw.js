@@ -15,13 +15,18 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Background message received:', payload);
-  const { title, body, icon } = payload.notification || {};
-  self.registration.showNotification(title || 'Snapit Update', {
-    body: body || 'You have a new update',
-    icon: icon || '/snapit-icon-192.png',
+  const title = payload.notification?.title || payload.data?.title || 'Snapit Delivery';
+  const body = payload.notification?.body || payload.data?.body || payload.data?.message || 'Your order status has been updated';
+  const icon = payload.notification?.icon || payload.data?.icon || '/snapit-icon-192.png';
+  const targetUrl = payload.data?.url || (payload.data?.orderId ? `/#/dashboard/order-tracking/${payload.data.orderId}` : '/');
+
+  self.registration.showNotification(title, {
+    body,
+    icon,
     badge: '/snapit-icon-192.png',
     vibrate: [200, 100, 200],
-    data: { url: payload.data?.url || '/' },
+    tag: payload.data?.orderId ? `snapit_order_${payload.data.orderId}` : undefined,
+    data: { url: targetUrl },
     actions: [
       { action: 'track', title: '📍 Track Order' },
       { action: 'dismiss', title: 'Dismiss' }

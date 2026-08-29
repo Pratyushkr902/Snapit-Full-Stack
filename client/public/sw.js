@@ -77,9 +77,64 @@ self.addEventListener('fetch', e => {
 })
 
 self.addEventListener('push', e => {
-  const data = e.data ? e.data.json() : {}
-  e.waitUntil(self.registration.showNotification(data.title || 'Snapit', {
-    body: data.body || 'Your order has been updated',
-    icon: '/snapit-icon-192.png',
-  }))
+  let payload = {}
+  try {
+    payload = e.data ? e.data.json() : {}
+  } catch (err) {
+    try {
+      payload = { body: e.data.text() }
+    } catch {}
+  }
+
+  const title =
+    payload.notification?.title ||
+    payload.data?.title ||
+    payload.title ||
+    'Snapit Delivery'
+
+  const body =
+    payload.notification?.body ||
+    payload.data?.body ||
+    payload.data?.message ||
+    payload.body ||
+    'Your order status has been updated'
+
+  const icon =
+    payload.notification?.icon ||
+    payload.data?.icon ||
+    '/snapit-icon-192.png'
+
+  const targetUrl =
+    payload.data?.url ||
+    (payload.data?.orderId ? `/#/dashboard/order-tracking/${payload.data.orderId}` : '/')
+
+  e.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon,
+      badge: '/snapit-icon-192.png',
+      data: { url: targetUrl },
+      vibrate: [200, 100, 200],
+      tag: payload.data?.orderId ? `snapit_order_${payload.data.orderId}` : undefined,
+      renotify: true
+    })
+  )
+})
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close()
+  const targetUrl = e.notification.data?.url || '/'
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(targetUrl)
+          return client.focus()
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl)
+      }
+    })
+  )
 })

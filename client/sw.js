@@ -61,17 +61,37 @@ self.addEventListener('fetch', (event) => {
 
 // --- PUSH NOTIFICATION ENGINES ---
 self.addEventListener('push', (event) => {
-    const data = event.data
-        ? (() => { try { return event.data.json() } catch { return { title: event.data.text() } } })()
-        : {}
+    let payload = {}
+    try {
+        payload = event.data ? event.data.json() : {}
+    } catch {
+        try { payload = { body: event.data.text() } } catch {}
+    }
 
-    const title = data.title || 'Snapit Update'
+    const title =
+        payload.notification?.title ||
+        payload.data?.title ||
+        payload.title ||
+        'Snapit Delivery'
+
+    const body =
+        payload.notification?.body ||
+        payload.data?.body ||
+        payload.data?.message ||
+        payload.body ||
+        'Your order status has been updated'
+
+    const targetUrl =
+        payload.data?.url ||
+        (payload.data?.orderId ? `/#/dashboard/order-tracking/${payload.data.orderId}` : '/')
+
     const options = {
-        body: data.body || 'Your order has been updated',
-        icon: '/snapit-icon-192.png',
+        body,
+        icon: payload.notification?.icon || payload.data?.icon || '/snapit-icon-192.png',
         badge: '/snapit-icon-192.png',
         vibrate: [200, 100, 200],
-        data: { url: data.url || '/' },
+        tag: payload.data?.orderId ? `snapit_order_${payload.data.orderId}` : undefined,
+        data: { url: targetUrl },
         actions: [
             { action: 'track', title: '📍 Track Order' },
             { action: 'dismiss', title: 'Dismiss' }
