@@ -181,6 +181,15 @@ const MyOrders = () => {
                       alt={order.product_details.name} />
                     <div className='flex-1 py-1'>
                       <h3 className='font-bold text-slate-800 text-lg line-clamp-1'>{order.product_details.name}</h3>
+                      
+                      {order.recipient_name && (
+                        <p className='text-xs font-black text-amber-900 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-md inline-flex items-center gap-1 mt-1'>
+                          <span>🎁 For:</span>
+                          <span className='underline'>{order.recipient_name}</span>
+                          {order.recipient_mobile && <span className='text-slate-500 font-normal'>({order.recipient_mobile})</span>}
+                        </p>
+                      )}
+
                       <div className='flex items-center gap-3 mt-1'>
                         <p className='text-neutral-500 text-sm font-medium'>Qty: {order.quantity || 1}</p>
                         <span className='w-1 h-1 bg-neutral-300 rounded-full'></span>
@@ -197,6 +206,20 @@ const MyOrders = () => {
                       className='flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg shadow-slate-200 flex items-center justify-center gap-2'>
                       📍 Track Live
                     </button>
+
+                    {/* WhatsApp share button for recipient orders */}
+                    {order.recipient_name && order.delivery_status !== 'Cancelled' && (
+                      <a
+                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hey ${order.recipient_name}! 🛍️ Track your live Snapit delivery here: ${window.location.origin}/#/public-tracking/${order.shareable_tracking_token || order.orderId}`)}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='bg-[#25D366] hover:bg-[#1EBE5D] text-white px-3 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all'
+                        title='Share Live Tracking with Recipient'
+                      >
+                        <span>💬 Share Link</span>
+                      </a>
+                    )}
+
                     <OrderInvoice order={order} />
 
                     {/* Zomato-Style Cancellation: Only visible when Pending and unaccepted */}

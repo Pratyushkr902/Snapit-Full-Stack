@@ -66,12 +66,16 @@ export async function getPublicTrackingController(req, res) {
         contact: order.rider_contact || null,
         liveCoords: riderLiveCoords,
       },
-      items: (order.cartItems || []).map(it => ({
-        name: it.name || it.productId?.name || 'Item',
-        quantity: it.quantity || 1,
-        price: it.price || 0,
-        image: it.image || (Array.isArray(it.productId?.image) ? it.productId.image[0] : it.productId?.image) || '',
-      }))
+      items: ((order.cartItems && order.cartItems.length > 0) ? order.cartItems : (order.product_details?.name ? [order.product_details] : [])).map(it => {
+        const rawImg = it.image || it.productId?.image || (order.product_details?.image)
+        const displayImg = Array.isArray(rawImg) ? rawImg[0] : (rawImg || '')
+        return {
+          name: it.name || it.productId?.name || order.product_details?.name || 'Item',
+          quantity: it.quantity || 1,
+          price: it.price || 0,
+          image: displayImg,
+        }
+      })
     }
 
     return res.json({
