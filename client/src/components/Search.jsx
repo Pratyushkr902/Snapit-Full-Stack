@@ -119,17 +119,17 @@ const Search = () => {
 
   return (
     <div ref={wrapperRef} className='relative w-full'>
-      <div className='w-full min-w-[300px] lg:min-w-[420px] h-11 lg:h-12 rounded-xl border overflow-hidden flex items-center text-neutral-500 bg-slate-50 group focus-within:border-green-400 focus-within:bg-white transition-all'>
+      <div className='w-full h-11 lg:h-12 rounded-2xl border border-slate-200 overflow-hidden flex items-center text-neutral-500 bg-slate-50/80 group focus-within:border-emerald-500 focus-within:bg-white focus-within:shadow-md transition-all'>
 
         {/* Left icon */}
-        <div>
+        <div className='flex-shrink-0'>
           {isMobile && isSearchPage ? (
-            <Link to="/" className='flex justify-center items-center h-full p-2 m-1 group-focus-within:text-green-500 bg-white rounded-full shadow-md'>
-              <FaArrowLeft size={18} />
+            <Link to="/" className='flex justify-center items-center h-full p-2 m-1 text-slate-700 hover:text-emerald-600 bg-white rounded-xl shadow-sm'>
+              <FaArrowLeft size={16} />
             </Link>
           ) : (
             <button
-              className='flex justify-center items-center h-full p-3 group-focus-within:text-green-500'
+              className='flex justify-center items-center h-full p-3 group-focus-within:text-emerald-600'
               onClick={!isSearchPage ? handlePlaceholderClick : undefined}
             >
               <IoSearch size={20} />
@@ -138,12 +138,12 @@ const Search = () => {
         </div>
 
         {/* Input / Placeholder */}
-        <div className='w-full h-full flex items-center'>
+        <div className='flex-1 min-w-0 h-full flex items-center pr-2'>
           {!isSearchPage ? (
             // ✅ FIX: entire area is clickable to go to /search
             <div
               onClick={handlePlaceholderClick}
-              className='w-full h-full flex items-center cursor-pointer'
+              className='w-full h-full flex items-center cursor-pointer select-none'
             >
               <TypeAnimation
                 sequence={[
@@ -160,7 +160,7 @@ const Search = () => {
                 wrapper="span"
                 speed={50}
                 repeat={Infinity}
-                className='text-sm text-slate-400'
+                className='text-sm text-slate-400 truncate'
               />
             </div>
           ) : (
@@ -194,22 +194,22 @@ const Search = () => {
 
         {/* Clear button */}
         {isSearchPage && inputValue && (
-          <button onClick={handleClear} className='p-2 text-slate-400 hover:text-slate-600'>
+          <button onClick={handleClear} className='p-2 text-slate-400 hover:text-slate-600 flex-shrink-0'>
             <IoClose size={18} />
           </button>
         )}
 
-        {/* Voice Search Mic Button */}
+        {/* Glowing Voice Search Mic Button */}
         <button
           type='button'
           onClick={(e) => {
             e.stopPropagation()
             setOpenVoiceModal(true)
           }}
-          className='p-2 mr-1.5 text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all active:scale-90 flex items-center justify-center flex-shrink-0'
+          className='flex-shrink-0 mr-2 flex items-center justify-center bg-gradient-to-tr from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white p-2 rounded-xl shadow-md shadow-green-600/30 ring-2 ring-emerald-400/40 hover:scale-105 active:scale-95 transition-all'
           title='Voice Search (Hindi / English)'
         >
-          <IoMic size={18} className='animate-pulse' />
+          <IoMic size={17} className='animate-pulse' />
         </button>
       </div>
 
