@@ -294,7 +294,14 @@ const FoodCheckoutPage = () => {
       if (res.data?.success) {
         toast.success('Order placed!')
         clearAll()
-        navigate('/success', { state: { text: 'Food Order' } })
+        const chosenAddr = addressList[selectAddress]
+        const orderData = chosenAddr?.recipient_name ? {
+          recipient_name: chosenAddr.recipient_name,
+          recipient_mobile: chosenAddr.recipient_mobile,
+          order_for: 'SOMEONE_ELSE',
+          address_line: chosenAddr.address_line,
+        } : null
+        navigate('/success', { state: { text: 'Food Order', orderData } })
       }
     } catch (e) { toast.dismiss(t); AxiosToastError(e) }
     finally { setPlacing(false) }
@@ -314,7 +321,14 @@ const FoodCheckoutPage = () => {
       if (res.data?.success) {
         toast.success('Paid via wallet!')
         clearAll()
-        navigate('/success', { state: { text: 'Food Order' } })
+        const chosenAddr = addressList[selectAddress]
+        const orderData = chosenAddr?.recipient_name ? {
+          recipient_name: chosenAddr.recipient_name,
+          recipient_mobile: chosenAddr.recipient_mobile,
+          order_for: 'SOMEONE_ELSE',
+          address_line: chosenAddr.address_line,
+        } : null
+        navigate('/success', { state: { text: 'Food Order', orderData } })
       }
     } catch (e) { toast.dismiss(t); AxiosToastError(e) }
     finally { setPlacing(false) }
@@ -363,7 +377,14 @@ const FoodCheckoutPage = () => {
             if (vRes.data?.success) {
               toast.success('Order placed!')
               clearAll()
-              navigate('/success', { state: { text: 'Food Order' } })
+              const chosenAddr = addressList[selectAddress]
+              const orderData = chosenAddr?.recipient_name ? {
+                recipient_name: chosenAddr.recipient_name,
+                recipient_mobile: chosenAddr.recipient_mobile,
+                order_for: 'SOMEONE_ELSE',
+                address_line: chosenAddr.address_line,
+              } : null
+              navigate('/success', { state: { text: 'Food Order', orderData } })
             }
           } catch (e) { toast.dismiss(vt); AxiosToastError(e) }
         },
@@ -555,17 +576,36 @@ const FoodCheckoutPage = () => {
           {addressList.map((address, index) => {
             if (address.status === false) return null
             const selected = Number(selectAddress) === index
+            const isRecipient = Boolean(address.recipient_name)
             return (
-              <label key={address._id || index} className='cursor-pointer'>
-                <div className={`border-2 rounded-xl p-3 flex gap-3 transition-all ${selected ? 'border-red-500 bg-red-50' : 'border-gray-100'}`}>
-                  <div className='w-8 h-8 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0'>
-                    <span className='text-sm'>{index === 0 ? '🏠' : '💼'}</span>
+              <label key={address._id || index} className='cursor-pointer block'>
+                <div className={`border-2 rounded-2xl p-3.5 flex gap-3 transition-all ${selected ? 'border-red-500 bg-red-50/70 shadow-sm' : 'border-gray-100 bg-white'}`}>
+                  <div className='w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0 text-base'>
+                    {isRecipient ? '🎁' : address.address_type === 'WORK' ? '💼' : '🏠'}
                   </div>
-                  <div className='flex-1'>
-                    <p className='font-semibold text-gray-800 text-sm'>{address.address_line}</p>
-                    <p className='text-xs text-gray-400 mt-0.5'>{address.city}, {address.pincode}</p>
+                  <div className='flex-1 space-y-1'>
+                    <div className='flex items-center gap-2'>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                        isRecipient ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {isRecipient ? '🎁 Recipient' : address.address_type || '🏠 Home'}
+                      </span>
+                      {address.lat && <span className='text-[10px] text-green-700 font-bold'>📍 Pinned</span>}
+                    </div>
+
+                    {isRecipient && (
+                      <p className='text-xs font-black text-red-900'>
+                        {address.recipient_name} {address.recipient_mobile && `(${address.recipient_mobile})`}
+                      </p>
+                    )}
+
+                    {address.floor_door && (
+                      <p className='text-xs text-slate-700 font-semibold'>{address.floor_door}</p>
+                    )}
+                    <p className='font-semibold text-gray-800 text-xs'>{address.address_line}</p>
+                    <p className='text-[11px] text-gray-500'>{address.city}, {address.pincode}</p>
                   </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${selected ? 'border-red-500' : 'border-gray-300'}`}>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${selected ? 'border-red-500' : 'border-gray-300'}`}>
                     {selected && <div className='w-2.5 h-2.5 rounded-full bg-red-500' />}
                   </div>
                   <input

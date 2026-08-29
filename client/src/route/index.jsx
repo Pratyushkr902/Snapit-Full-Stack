@@ -1,5 +1,5 @@
 import { createHashRouter, useRouteError, useNavigate } from "react-router-dom";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import App from "../App";
 
 // Critical Pages
@@ -8,6 +8,7 @@ import Login from "../pages/Login";
 import Register from "../pages/RegisterOtp";
 
 // Lazy Loaded Pages
+const PublicTrackingPage     = lazy(() => import('../pages/PublicTrackingPage'))
 const SearchPage             = lazy(() => import('../pages/Searchpage'))
 const ForgotPassword         = lazy(() => import('../pages/ForgotPassword'))
 const VerifyEmail            = lazy(() => import('../pages/VerifyEmail'))
@@ -264,6 +265,8 @@ const router = createHashRouter([
         ]
       },
       { path: "track/:orderId", element: <S><TrackingPage /></S> },
+      { path: "public-tracking/:token", element: <S><PublicTrackingPage /></S> },
+      { path: "track-order/:token", element: <S><PublicTrackingPage /></S> },
       { path: "product/:product", element: <S><ProductDisplayPage /></S> },
       { path: "cart", element: <S><CartMobile /></S> },
       { path: "checkout", element: <S><CheckoutPage /></S> },

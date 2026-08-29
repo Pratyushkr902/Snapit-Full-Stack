@@ -23,6 +23,31 @@ const addressSchema = new mongoose.Schema({
         type : Number,
         default : null
     },
+    recipient_name : {
+        type : String,
+        default : ""
+    },
+    recipient_mobile : {
+        type : String,
+        default : ""
+    },
+    address_type : {
+        type : String,
+        enum : ['HOME', 'WORK', 'FRIENDS_FAMILY', 'OTHER'],
+        default : 'HOME'
+    },
+    landmark : {
+        type : String,
+        default : ""
+    },
+    floor_door : {
+        type : String,
+        default : ""
+    },
+    delivery_instructions : {
+        type : String,
+        default : ""
+    },
     status : {
         type : Boolean,
         default : true

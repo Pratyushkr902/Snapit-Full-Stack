@@ -63,6 +63,13 @@ const orderSchema = new mongoose.Schema(
         delivery_lat: { type: Number, default: null },
         delivery_lng: { type: Number, default: null },
 
+        // ── Deliver to Someone Else (Recipient & Delivery Instructions) ──
+        recipient_name:           { type: String, default: "" },
+        recipient_mobile:         { type: String, default: "" },
+        order_for:                { type: String, enum: ["SELF", "SOMEONE_ELSE"], default: "SELF" },
+        delivery_instructions:    { type: String, default: "" },
+        shareable_tracking_token: { type: String, unique: true, sparse: true },
+
         invoice_receipt: { type: String, default: "" },
 
         seller_status: {

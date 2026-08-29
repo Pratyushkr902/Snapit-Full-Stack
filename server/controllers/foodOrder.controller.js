@@ -1,6 +1,8 @@
+import crypto from 'crypto'
 import mongoose from 'mongoose'
 import OrderModel from '../models/order.model.js'
 import UserModel  from '../models/user.model.js'
+import AddressModel from '../models/address.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
 import {
@@ -226,43 +228,55 @@ const priceAllGroups = async (groups, fields, user) => {
 }
 
 // ── Build one order document's fields for a single restaurant group ─────────
-const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}) => ({
-  userId,
-  orderId:          genOrderId(groupOrderId),
-  cartItems:        group.cartItems,
-  product_details:  { name: group.restaurantName || 'Food Order', image: [] },
-  delivery_address: fields.addressId,
-  delivery_distance_km: group.distanceKm || 0,
-  delivery_lat: fields.deliveryLocation?.lat || null,
-  delivery_lng: fields.deliveryLocation?.lng || null,
-  subTotalAmt:      group.subTotalAmt,
-  delivery_fee:     group.deliveryFee,
-  totalAmt:         group.totalAmt,
-  tip:              group.tip,
-  offerKey:         group.offerKey,
-  couponCode:       group.couponCode,
-  couponDiscount:   group.couponDiscount,
-  walletAmountUsed: group.walletAmountUsed,
-  deliveryInstructions: fields.deliveryInstructions,
-  scheduledDelivery:    fields.scheduledDelivery,
-  restaurantId: group.restaurantId,
-  store_details: {
-    name:     group.restaurantName || 'Restaurant',
-    address:  '',
-    location: {
-      lat: fields.deliveryLocation?.lat || 25.2921,
-      lng: fields.deliveryLocation?.lng || 84.817,
+const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user = {}, addressDoc = null) => {
+  const recipientName = addressDoc?.recipient_name || user?.name || 'Customer'
+  const recipientMobile = addressDoc?.recipient_mobile || (addressDoc?.mobile ? String(addressDoc.mobile) : user?.mobile) || ''
+  const orderFor = (addressDoc?.recipient_name || addressDoc?.address_type === 'FRIENDS_FAMILY') ? 'SOMEONE_ELSE' : 'SELF'
+  const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
+
+  return {
+    userId,
+    orderId:          genOrderId(groupOrderId),
+    cartItems:        group.cartItems,
+    product_details:  { name: group.restaurantName || 'Food Order', image: [] },
+    delivery_address: fields.addressId,
+    delivery_distance_km: group.distanceKm || 0,
+    delivery_lat: fields.deliveryLocation?.lat || addressDoc?.lat || null,
+    delivery_lng: fields.deliveryLocation?.lng || addressDoc?.lng || null,
+    recipient_name:           recipientName,
+    recipient_mobile:         recipientMobile,
+    order_for:                orderFor,
+    delivery_instructions:    fields.deliveryInstructions || addressDoc?.delivery_instructions || '',
+    shareable_tracking_token: shareableToken,
+    subTotalAmt:      group.subTotalAmt,
+    delivery_fee:     group.deliveryFee,
+    totalAmt:         group.totalAmt,
+    tip:              group.tip,
+    offerKey:         group.offerKey,
+    couponCode:       group.couponCode,
+    couponDiscount:   group.couponDiscount,
+    walletAmountUsed: group.walletAmountUsed,
+    deliveryInstructions: fields.deliveryInstructions || addressDoc?.delivery_instructions || '',
+    scheduledDelivery:    fields.scheduledDelivery,
+    restaurantId: group.restaurantId,
+    store_details: {
+      name:     group.restaurantName || 'Restaurant',
+      address:  '',
+      location: {
+        lat: fields.deliveryLocation?.lat || 25.2921,
+        lng: fields.deliveryLocation?.lng || 84.817,
+      },
     },
-  },
-  // FIX: was never set, so notifySellersOfNewOrder() always found zero matching
-  // stores for food orders and silently skipped notifying the restaurant owner
-  // of every single new order.
-  involved_stores:  [group.restaurantName || 'Restaurant'],
-  delivery_status:   'Pending',
-  seller_status:     'Pending',
-  isRestaurantOrder: true,
-  ...extra,
-})
+    // FIX: was never set, so notifySellersOfNewOrder() always found zero matching
+    // stores for food orders and silently skipped notifying the restaurant owner
+    // of every single new order.
+    involved_stores:  [group.restaurantName || 'Restaurant'],
+    delivery_status:   'Pending',
+    seller_status:     'Pending',
+    isRestaurantOrder: true,
+    ...extra,
+  }
+}
 
 // ── SEND FOOD ORDER INVOICE EMAIL ──────────────────────────────────────────
 async function sendFoodOrderInvoiceEmail(order, user) {
@@ -375,6 +389,8 @@ const prepareMultiRestaurantOrder = async (req) => {
   const user = await UserModel.findById(req.userId)
   if (!user) { const e = new Error('User not found'); e.statusCode = 404; throw e }
 
+  const addressDoc = await AddressModel.findById(fields.addressId).lean()
+
   const groups = await buildGroupsByRestaurant(fields.items)
   if (!groups.length) { const e = new Error('No valid items in order'); e.statusCode = 400; throw e }
 
@@ -389,7 +405,7 @@ const prepareMultiRestaurantOrder = async (req) => {
   const { priced, grandTotal } = await priceAllGroups(groups, fields, user)
   const groupOrderId = genGroupOrderId()
 
-  return { fields, user, priced, grandTotal, groupOrderId }
+  return { fields, user, addressDoc, priced, grandTotal, groupOrderId }
 }
 
 // ── POST /api/restaurant/food-order/cash-on-delivery ───────────────────────
@@ -398,7 +414,7 @@ export async function foodOrderCOD(req, res) {
     // COD never touches wallet balance — strip any client-supplied
     // walletAmountUsed before pricing so it can't fake a discount here.
     req.body.walletAmountUsed = 0
-    const { fields, user, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const { fields, user, addressDoc, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
     const assignedRider = await assignAvailableRider()
 
     const orders = []
@@ -410,7 +426,7 @@ export async function foodOrderCOD(req, res) {
         riderId:         assignedRider?._id    || null,
         rider_name:      assignedRider?.name   || 'Unassigned',
         rider_contact:   assignedRider?.mobile || '',
-      }))
+      }, user, addressDoc))
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
@@ -429,7 +445,7 @@ export async function foodOrderCOD(req, res) {
 // ── POST /api/restaurant/food-order/wallet ─────────────────────────────────
 export async function foodOrderWallet(req, res) {
   try {
-    const { fields, user, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const { fields, user, addressDoc, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
     const walletBal = Number(user.walletBalance || 0)
     const deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : grandTotal
@@ -452,7 +468,7 @@ export async function foodOrderWallet(req, res) {
         riderId:         assignedRider?._id    || null,
         rider_name:      assignedRider?.name   || 'Unassigned',
         rider_contact:   assignedRider?.mobile || '',
-      }))
+      }, user, addressDoc))
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
@@ -508,7 +524,7 @@ export async function foodOrderVerifyPayment(req, res) {
     }
 
     req.body = rest
-    const { fields, user, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const { fields, user, addressDoc, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
 
     await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
     const assignedRider = await assignAvailableRider()
@@ -523,7 +539,7 @@ export async function foodOrderVerifyPayment(req, res) {
         riderId:         assignedRider?._id    || null,
         rider_name:      assignedRider?.name   || 'Unassigned',
         rider_contact:   assignedRider?.mobile || '',
-      }))
+      }, user, addressDoc))
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)

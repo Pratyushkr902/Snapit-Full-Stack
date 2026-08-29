@@ -27,7 +27,7 @@
  * - No live ETA field exists. RIDER_ETA_DEFAULT_MIN below is a placeholder —
  *   change that one constant when real ETA data is available.
  */
-
+import crypto           from 'crypto'
 import mongoose         from 'mongoose'
 import { verifyRazorpaySignature } from '../utils/verifyRazorpaySignature.js'
 import Razorpay         from 'razorpay'
@@ -423,6 +423,12 @@ export async function CashOnDeliveryOrderController(request, response) {
 
         const assignedRider = await assignAvailableRider()
 
+        const recipientName = address?.recipient_name || currentUser?.name || 'Customer'
+        const recipientMobile = address?.recipient_mobile || (address?.mobile ? String(address.mobile) : currentUser?.mobile) || ''
+        const orderFor = (address?.recipient_name || address?.address_type === 'FRIENDS_FAMILY') ? 'SOMEONE_ELSE' : 'SELF'
+        const deliveryInstructions = address?.delivery_instructions || ''
+        const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
+
         const payload = {
             userId,
             orderId:          `ORD-${new mongoose.Types.ObjectId()}`,
@@ -435,8 +441,13 @@ export async function CashOnDeliveryOrderController(request, response) {
             payment_status:   'CASH ON DELIVERY',
             delivery_address: addressId,
             delivery_distance_km: Math.round(getDistanceFromStore(verifiedLat, verifiedLng) * 10) / 10,
-            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : null,
-            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : null,
+            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : (verifiedLat || null),
+            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : (verifiedLng || null),
+            recipient_name:           recipientName,
+            recipient_mobile:         recipientMobile,
+            order_for:                orderFor,
+            delivery_instructions:    deliveryInstructions,
+            shareable_tracking_token: shareableToken,
             subTotalAmt:      Number(subTotalAmt),
             totalAmt:         Number(totalAmt),
             delivery_fee,
@@ -599,6 +610,12 @@ export async function WalletPaymentOrderController(request, response) {
             shopping_cart: [],
         })
 
+        const recipientName = address?.recipient_name || user?.name || 'Customer'
+        const recipientMobile = address?.recipient_mobile || (address?.mobile ? String(address.mobile) : user?.mobile) || ''
+        const orderFor = (address?.recipient_name || address?.address_type === 'FRIENDS_FAMILY') ? 'SOMEONE_ELSE' : 'SELF'
+        const deliveryInstructions = address?.delivery_instructions || ''
+        const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
+
         const payload = {
             userId,
             orderId:          transactionId,
@@ -611,8 +628,13 @@ export async function WalletPaymentOrderController(request, response) {
             payment_status:   'PAID',
             delivery_address: addressId,
             delivery_distance_km: Math.round(getDistanceFromStore(verifiedLat, verifiedLng) * 10) / 10,
-            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : null,
-            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : null,
+            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : (verifiedLat || null),
+            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : (verifiedLng || null),
+            recipient_name:           recipientName,
+            recipient_mobile:         recipientMobile,
+            order_for:                orderFor,
+            delivery_instructions:    deliveryInstructions,
+            shareable_tracking_token: shareableToken,
             subTotalAmt:      Number(subTotalAmt),
             totalAmt:         exactRequiredTotal,
             delivery_fee,
@@ -782,6 +804,12 @@ export async function verifyPaymentController(request, response) {
    }
         const assignedRider = await assignAvailableRider()
 
+        const recipientName = address?.recipient_name || user?.name || 'Customer'
+        const recipientMobile = address?.recipient_mobile || (address?.mobile ? String(address.mobile) : user?.mobile) || ''
+        const orderFor = (address?.recipient_name || address?.address_type === 'FRIENDS_FAMILY') ? 'SOMEONE_ELSE' : 'SELF'
+        const deliveryInstructions = address?.delivery_instructions || ''
+        const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
+
         const payload = {
             userId,
             orderId:          razorpay_order_id,
@@ -793,8 +821,14 @@ export async function verifyPaymentController(request, response) {
             paymentId:        razorpay_payment_id,
             payment_status:   'PAID',
             delivery_address: addressId,
-            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : null,
-            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : null,
+            delivery_distance_km: Math.round(getDistanceFromStore(verifiedLat, verifiedLng) * 10) / 10,
+            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : (verifiedLat || null),
+            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : (verifiedLng || null),
+            recipient_name:           recipientName,
+            recipient_mobile:         recipientMobile,
+            order_for:                orderFor,
+            delivery_instructions:    deliveryInstructions,
+            shareable_tracking_token: shareableToken,
             subTotalAmt:      Number(subTotalAmt),
             totalAmt:         Number(totalAmt),
             delivery_fee,

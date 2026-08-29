@@ -36,25 +36,22 @@ export const validateCreateAddress = [
     body('address_line')
         .trim()
         .notEmpty().withMessage('Address line is required.')
-        .isLength({ min: 5, max: 200 }).withMessage('Address must be 5–200 characters.'),
+        .isLength({ min: 3, max: 250 }).withMessage('Address must be 3–250 characters.'),
 
     body('city')
         .trim()
-        .notEmpty().withMessage('City is required.')
-        .isLength({ max: 100 }).withMessage('City name too long.')
-        .matches(/^[a-zA-Z\s\-'.]+$/).withMessage('City contains invalid characters.'),
+        .notEmpty().withMessage('City / Village is required.')
+        .isLength({ max: 100 }).withMessage('City name too long.'),
 
     body('state')
         .trim()
         .notEmpty().withMessage('State is required.')
-        .isLength({ max: 100 }).withMessage('State name too long.')
-        .matches(/^[a-zA-Z\s\-'.]+$/).withMessage('State contains invalid characters.'),
+        .isLength({ max: 100 }).withMessage('State name too long.'),
 
     body('country')
         .trim()
         .notEmpty().withMessage('Country is required.')
-        .isLength({ max: 100 }).withMessage('Country name too long.')
-        .matches(/^[a-zA-Z\s\-'.]+$/).withMessage('Country contains invalid characters.'),
+        .isLength({ max: 100 }).withMessage('Country name too long.'),
 
     body('pincode')
         .trim()
@@ -63,8 +60,37 @@ export const validateCreateAddress = [
 
     body('mobile')
         .trim()
-        .notEmpty().withMessage('Mobile number is required.')
+        .notEmpty().withMessage('Contact mobile number is required.')
         .matches(/^[6-9]\d{9}$/).withMessage('Mobile must be a valid 10-digit Indian number.'),
+
+    body('recipient_name')
+        .optional({ nullable: true })
+        .trim()
+        .isLength({ max: 100 }).withMessage('Recipient name too long.'),
+
+    body('recipient_mobile')
+        .optional({ nullable: true })
+        .trim()
+        .custom(val => !val || /^[6-9]\d{9}$/.test(val)).withMessage('Recipient mobile must be a valid 10-digit number.'),
+
+    body('address_type')
+        .optional({ nullable: true })
+        .isIn(['HOME', 'WORK', 'FRIENDS_FAMILY', 'OTHER']).withMessage('Invalid address type.'),
+
+    body('landmark')
+        .optional({ nullable: true })
+        .trim()
+        .isLength({ max: 150 }).withMessage('Landmark too long.'),
+
+    body('floor_door')
+        .optional({ nullable: true })
+        .trim()
+        .isLength({ max: 100 }).withMessage('Floor / House detail too long.'),
+
+    body('delivery_instructions')
+        .optional({ nullable: true })
+        .trim()
+        .isLength({ max: 250 }).withMessage('Delivery instructions too long.'),
 
     body('lat')
         .optional({ nullable: true })
@@ -109,19 +135,26 @@ export const addAddressController = async (request, response) => {
 
         const {
             address_line, city, state, pincode,
-            country, mobile, lat, lng
+            country, mobile, lat, lng,
+            recipient_name, recipient_mobile, address_type,
+            landmark, floor_door, delivery_instructions
         } = request.body
 
-        // GPS is now MANDATORY for zone enforcement. Typed city names are no
-        // longer trusted for delivery-zone verification — misspelled or
-        // fuzzy-matched village names were letting users outside the service
-        // area slip through via the old geocodeCityFallback() text-match path.
-        const finalLat = lat != null ? Number(lat) : null
-        const finalLng = lng != null ? Number(lng) : null
+        // Coords resolution: map pin, GPS, or village geocode
+        let finalLat = lat != null && !Number.isNaN(Number(lat)) ? Number(lat) : null
+        let finalLng = lng != null && !Number.isNaN(Number(lng)) ? Number(lng) : null
 
-        if (finalLat == null || finalLng == null || Number.isNaN(finalLat) || Number.isNaN(finalLng)) {
+        if (finalLat == null || finalLng == null) {
+            const geocoded = await geocodeCityFallback(city || address_line)
+            if (geocoded) {
+                finalLat = geocoded.lat
+                finalLng = geocoded.lng
+            }
+        }
+
+        if (finalLat == null || finalLng == null) {
             return response.status(400).json({
-                message: "Please enable location access and tap 'Use My Current Location' to add an address.",
+                message: "Please pin your exact delivery location on the map or pick your village.",
                 error:   true,
                 success: false,
             })
@@ -130,7 +163,7 @@ export const addAddressController = async (request, response) => {
         const zoneCheck = isInDeliveryZone(finalLat, finalLng)
         if (!zoneCheck.serviceable) {
             return response.status(400).json({
-                message: "Sorry, we don't deliver to this location yet.",
+                message: "Sorry, this address location is outside our 14km delivery service area.",
                 error:   true,
                 success: false,
             })
@@ -143,6 +176,12 @@ export const addAddressController = async (request, response) => {
             country,
             pincode,
             mobile,
+            recipient_name: recipient_name || "",
+            recipient_mobile: recipient_mobile || "",
+            address_type: address_type || (recipient_name ? 'FRIENDS_FAMILY' : 'HOME'),
+            landmark: landmark || "",
+            floor_door: floor_door || "",
+            delivery_instructions: delivery_instructions || "",
             lat: finalLat,
             lng: finalLng,
             userId,
@@ -203,15 +242,17 @@ export const updateAddressController = async (request, response) => {
 
         const {
             _id, address_line, city, state,
-            country, pincode, mobile, lat, lng
+            country, pincode, mobile, lat, lng,
+            recipient_name, recipient_mobile, address_type,
+            landmark, floor_door, delivery_instructions
         } = request.body
 
         // Use GPS coords if provided, otherwise geocode from city name
-        let finalLat = lat != null ? Number(lat) : null
-        let finalLng = lng != null ? Number(lng) : null
+        let finalLat = lat != null && !Number.isNaN(Number(lat)) ? Number(lat) : null
+        let finalLng = lng != null && !Number.isNaN(Number(lng)) ? Number(lng) : null
 
         if (!finalLat || !finalLng) {
-            const geocoded = await geocodeCityFallback(city)
+            const geocoded = await geocodeCityFallback(city || address_line)
             if (geocoded) {
                 finalLat = geocoded.lat
                 finalLng = geocoded.lng
@@ -229,6 +270,12 @@ export const updateAddressController = async (request, response) => {
                 country,
                 mobile,
                 pincode,
+                recipient_name: recipient_name !== undefined ? recipient_name : "",
+                recipient_mobile: recipient_mobile !== undefined ? recipient_mobile : "",
+                address_type: address_type || 'HOME',
+                landmark: landmark !== undefined ? landmark : "",
+                floor_door: floor_door !== undefined ? floor_door : "",
+                delivery_instructions: delivery_instructions !== undefined ? delivery_instructions : "",
                 lat: finalLat,
                 lng: finalLng,
             }

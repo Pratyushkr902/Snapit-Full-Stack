@@ -54,26 +54,57 @@ const Address = () => {
         <div className='bg-blue-50 p-2 grid gap-4'>
               {
                 addressList.map((address,index)=>{
+                  const isRecipient = Boolean(address.recipient_name)
                   return(
-                      <div key={address._id || index} className={`border rounded p-3 flex gap-3 bg-white ${!address.status && 'hidden'}`}>
-                          <div className='w-full'>
-                            <p>{address.address_line}</p>
-                            <p>{address.city}</p>
-                            <p>{address.state}</p>
-                            <p>{address.country} - {address.pincode}</p>
-                            <p>{address.mobile}</p>
+                      <div key={address._id || index} className={`border border-slate-200 rounded-2xl p-4 flex justify-between gap-3 bg-white shadow-sm hover:shadow-md transition-shadow ${!address.status && 'hidden'}`}>
+                          <div className='w-full space-y-1'>
+                            <div className='flex items-center gap-2 mb-1.5'>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                                isRecipient || address.address_type === 'FRIENDS_FAMILY'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : address.address_type === 'WORK'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                {isRecipient || address.address_type === 'FRIENDS_FAMILY' ? '🎁 Friends & Family' : address.address_type || '🏠 Home'}
+                              </span>
+
+                              {address.lat && address.lng && (
+                                <span className='text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded-md font-bold'>
+                                  📍 Pinned
+                                </span>
+                              )}
+                            </div>
+
+                            {isRecipient && (
+                              <p className='text-xs font-black text-slate-800 flex items-center gap-1.5'>
+                                <span>Recipient:</span>
+                                <span className='text-emerald-700'>{address.recipient_name}</span>
+                                {address.recipient_mobile && <span className='text-slate-500 font-medium'>({address.recipient_mobile})</span>}
+                              </p>
+                            )}
+
+                            {address.floor_door && (
+                              <p className='text-xs text-slate-600 font-semibold'>{address.floor_door}</p>
+                            )}
+                            <p className='text-xs text-slate-700 font-medium'>{address.address_line}</p>
+                            {address.landmark && (
+                              <p className='text-[11px] text-slate-500'>Landmark: {address.landmark}</p>
+                            )}
+                            <p className='text-xs font-bold text-slate-800'>{address.city}, {address.state} - {address.pincode}</p>
+                            <p className='text-xs text-slate-500'>Contact: +91 {address.mobile}</p>
                           </div>
-                          <div className=' grid gap-10'>
+                          <div className='flex flex-col gap-2 justify-center'>
                             <button onClick={()=>{
                               setOpenEdit(true)
                               setEditData(address)
-                            }} className='bg-green-200 p-1 rounded  hover:text-white hover:bg-green-600'>
-                              <MdEdit/>
+                            }} className='p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors'>
+                              <MdEdit size={16}/>
                             </button>
                             <button onClick={()=>
                               handleDisableAddress(address._id)
-                            } className='bg-red-200 p-1 rounded hover:text-white hover:bg-red-600'>
-                              <MdDelete size={20}/>  
+                            } className='p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors'>
+                              <MdDelete size={16}/>  
                             </button>
                           </div>
                       </div>

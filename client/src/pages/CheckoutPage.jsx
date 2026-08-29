@@ -102,10 +102,21 @@ const CheckoutPage = () => {
     return true
   }
 
-  const navigateToSuccess = (scratchCards) => {
+  const navigateToSuccess = (scratchCards, orderData = null) => {
     const cards = scratchCards || []
     try { sessionStorage.setItem('pending_scratch_cards', JSON.stringify(cards)) } catch (e) {}
-    navigate('/success', { state: { text: 'Order', scratch_cards: cards } })
+    navigate('/success', {
+      state: {
+        text: 'Order',
+        scratch_cards: cards,
+        orderData: orderData || (selectedAddress?.recipient_name ? {
+          recipient_name: selectedAddress.recipient_name,
+          recipient_mobile: selectedAddress.recipient_mobile,
+          order_for: 'SOMEONE_ELSE',
+          address_line: selectedAddress.address_line,
+        } : null)
+      }
+    })
   }
 
   const handleWalletPayment = async () => {
@@ -292,23 +303,49 @@ const CheckoutPage = () => {
           <h3 className='text-lg font-black uppercase text-slate-700 mb-2'>Choose address</h3>
           <div className='bg-white p-2 grid gap-3 rounded-xl shadow-sm'>
             {addressList.length > 0 ? (
-              addressList.map((address, index) => (
-                <label key={address._id || index} className={`${!address.status && 'hidden'} cursor-pointer`}>
-                  <div className={`border rounded-xl p-3 flex gap-3 hover:bg-blue-50 transition-all ${Number(selectAddress) === index ? 'border-green-400 bg-green-50 shadow-sm' : ''}`}>
-                    <input type='radio' value={index} checked={Number(selectAddress) === index}
-                      onChange={e => setSelectAddress(Number(e.target.value))} name='address' />
-                    <div className='flex-1'>
-                      <p className='font-bold text-slate-800'>{address.address_line}</p>
-                      <p className='text-sm text-slate-600'>{address.city}, {address.pincode}</p>
-                      {!address.lat && (
-                        <p className='text-[10px] text-yellow-600 font-bold mt-0.5'>
-                          📍 Re-save with "Use My Current Location" for accurate delivery fee
-                        </p>
-                      )}
+              addressList.map((address, index) => {
+                const isRecipient = Boolean(address.recipient_name)
+                return (
+                  <label key={address._id || index} className={`${!address.status && 'hidden'} cursor-pointer block`}>
+                    <div className={`border rounded-2xl p-3.5 flex gap-3 hover:bg-slate-50 transition-all ${Number(selectAddress) === index ? 'border-green-500 bg-green-50/70 shadow-md ring-1 ring-green-500' : 'border-slate-200 bg-white'}`}>
+                      <input type='radio' value={index} checked={Number(selectAddress) === index}
+                        onChange={e => setSelectAddress(Number(e.target.value))} name='address' className='mt-1 text-green-600 focus:ring-green-500' />
+                      <div className='flex-1 space-y-1'>
+                        <div className='flex items-center gap-2'>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            isRecipient || address.address_type === 'FRIENDS_FAMILY'
+                              ? 'bg-amber-100 text-amber-900'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {isRecipient || address.address_type === 'FRIENDS_FAMILY' ? '🎁 Friends & Family' : address.address_type || '🏠 Home'}
+                          </span>
+
+                          {address.lat && (
+                            <span className='text-[10px] text-green-700 font-bold'>📍 Pinned</span>
+                          )}
+                        </div>
+
+                        {isRecipient && (
+                          <p className='text-xs font-black text-emerald-800 flex items-center gap-1.5'>
+                            <span>🎁 Recipient:</span>
+                            <span className='underline'>{address.recipient_name}</span>
+                            {address.recipient_mobile && <span className='text-slate-500 font-semibold'>({address.recipient_mobile})</span>}
+                          </p>
+                        )}
+
+                        {address.floor_door && (
+                          <p className='text-xs text-slate-700 font-semibold'>{address.floor_door}</p>
+                        )}
+                        <p className='font-bold text-slate-800 text-xs'>{address.address_line}</p>
+                        <p className='text-xs text-slate-500'>{address.city}, {address.pincode}</p>
+                        {address.delivery_instructions && (
+                          <p className='text-[11px] text-slate-500 italic'>Note: {address.delivery_instructions}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </label>
-              ))
+                  </label>
+                )
+              })
             ) : (
               <p className='text-neutral-500 p-2 text-sm'>No addresses found.</p>
             )}

@@ -67,6 +67,7 @@ import treasuryRouter       from './route/treasury.route.js'       // ✅ COD Ca
 import appVersionRouter     from './route/appVersion.route.js'     // ✅ In-App Update & Version Check
 import riderDutyRouter      from './route/riderDuty.route.js'      // ✅ Rider Duty Shift & Fleet Tracking
 import riderRemittanceRouter from './route/riderRemittance.route.js' // ✅ Rider Cash Remittance
+import publicTrackingRouter  from './route/publicTracking.route.js'  // ✅ Public Live Tracking for Recipients
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -454,6 +455,7 @@ app.use('/api/treasury',         treasuryRouter)           // ✅ COD Cash Treas
 app.use('/api/app-version',      appVersionRouter)         // ✅ In-App Update & Version Check
 app.use('/api/rider-duty',       riderDutyRouter)          // ✅ Rider Duty Shift & Fleet Tracking
 app.use('/api/rider-remittance', riderRemittanceRouter)    // ✅ Rider Cash Remittance
+app.use('/api/public-tracking',  publicTrackingRouter)     // ✅ Public Live Tracking for Recipients
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

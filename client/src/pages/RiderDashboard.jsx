@@ -724,24 +724,47 @@ const RiderDashboard = () => {
                                                 </span>
                                             </div>
 
-                                            {/* Customer Address & Contact Box */}
+                                            {/* Customer / Recipient Address & Contact Box */}
                                             <div className='bg-slate-950/70 rounded-2xl p-3 border border-slate-800/80 flex items-start justify-between gap-3'>
-                                                <div className='min-w-0'>
-                                                    <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider'>Deliver To</p>
+                                                <div className='min-w-0 flex-1'>
+                                                    <div className='flex items-center gap-2'>
+                                                        <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider'>
+                                                            {order.order_for === 'SOMEONE_ELSE' || order.recipient_name || order.delivery_address?.recipient_name ? '🎁 Deliver to Recipient' : 'Deliver To'}
+                                                        </p>
+                                                        {(order.recipient_name || order.delivery_address?.recipient_name) && (
+                                                            <span className='px-1.5 py-0.2 bg-amber-500/20 text-amber-300 text-[9px] font-bold rounded-full border border-amber-500/30'>
+                                                                Friends & Family
+                                                            </span>
+                                                        )}
+                                                    </div>
+
                                                     <h3 className='text-sm font-bold text-white mt-0.5 leading-snug break-words'>
-                                                        {order.delivery_address?.address_line || "📍 Address not provided"}
+                                                        {order.recipient_name || order.delivery_address?.recipient_name || order.userId?.name || "Snapit Customer"}
                                                     </h3>
+
                                                     <p className='text-xs text-slate-400 font-medium mt-0.5'>
-                                                        {order.userId?.name || "Snapit User"}
+                                                        {order.delivery_address?.address_line || "📍 Address not provided"}
                                                     </p>
+
+                                                    {(order.delivery_address?.floor_door || order.delivery_address?.landmark) && (
+                                                        <p className='text-[11px] text-slate-500 mt-0.5'>
+                                                            {[order.delivery_address?.floor_door, order.delivery_address?.landmark].filter(Boolean).join(' • ')}
+                                                        </p>
+                                                    )}
+
+                                                    {order.delivery_instructions && (
+                                                        <p className='text-[11px] text-amber-400/90 italic mt-1 font-semibold'>
+                                                            📝 Note: {order.delivery_instructions}
+                                                        </p>
+                                                    )}
                                                 </div>
 
                                                 <div className='flex gap-1.5 flex-shrink-0'>
-                                                    <a href={`tel:${order.delivery_address?.mobile || order.userId?.mobile}`}
-                                                        className='w-8 h-8 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
-                                                        title='Call Customer'
+                                                    <a href={`tel:${order.recipient_mobile || order.delivery_address?.recipient_mobile || order.delivery_address?.mobile || order.userId?.mobile}`}
+                                                        className='w-9 h-9 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
+                                                        title='Call Recipient'
                                                     >
-                                                        <FaPhone size={13}/>
+                                                        <FaPhone size={14}/>
                                                     </a>
                                                     <a href={
                                                         order.delivery_lat && order.delivery_lng
@@ -751,10 +774,10 @@ const RiderDashboard = () => {
                                                                 : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`
                                                     }
                                                         target="_blank" rel="noreferrer"
-                                                        className='w-8 h-8 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
+                                                        className='w-9 h-9 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
                                                         title='Customer Location Map'
                                                     >
-                                                        <FaMapMarkedAlt size={13}/>
+                                                        <FaMapMarkedAlt size={14}/>
                                                     </a>
                                                 </div>
                                             </div>
