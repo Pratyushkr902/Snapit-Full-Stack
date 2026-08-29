@@ -180,7 +180,7 @@ const AdminMarketingHub = () => {
             <div>
               <div className='flex items-center gap-1.5'>
                 <p className='font-bold text-xs text-rose-950'>Dinner Feast</p>
-                <span className='text-[10px] bg-rose-200/70 text-rose-900 px-1.5 py-0.2 rounded font-semibold'>08:30 PM</span>
+                <span className='text-[10px] bg-rose-200/70 text-rose-900 px-1.5 py-0.2 rounded font-semibold'>08:00 PM</span>
               </div>
               <p className='text-[11px] text-rose-800/90 mt-0.5'>Pizza, Biryani & resto food</p>
             </div>

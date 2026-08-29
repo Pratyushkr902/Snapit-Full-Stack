@@ -83,14 +83,24 @@ const SuperAdminDashboard = () => {
 
   return (
     <SuperAdminPermision>
-      <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '28px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
-            👑 Super Admin Panel
-          </h1>
-          <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>
-            Elevated access — visible only to Super Admin accounts
-          </p>
+      <div className="pt-safe pt-12 sm:pt-6 px-3 sm:px-6 pb-28 max-w-6xl mx-auto w-full overflow-hidden">
+        {/* Mobile Header */}
+        <div className='flex items-center gap-3 mb-6'>
+          <button
+            onClick={() => navigate('/')}
+            className='flex items-center justify-center w-9 h-9 bg-white border border-slate-200 rounded-xl shadow-xs text-slate-700 hover:bg-slate-100 active:scale-95 transition-all'
+            aria-label="Home"
+          >
+            ←
+          </button>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+              👑 Super Admin Panel
+            </h1>
+            <p className="text-xs text-slate-500 font-semibold mt-0.5">
+              Elevated access — visible only to Super Admin accounts
+            </p>
+          </div>
         </div>
 
         {/* 🛵 LIVE RIDER FLEET OVERVIEW */}

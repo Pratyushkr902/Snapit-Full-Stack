@@ -274,9 +274,9 @@ export const initMarketingCron = () => {
     await triggerMarketingSchedule('CHAI_TIME')
   }, { timezone: 'Asia/Kolkata' })
 
-  // 3. Dinner Rush (08:30 PM IST)
-  cron.schedule('30 20 * * *', async () => {
-    console.log('⏰ [Cron] Triggering Dinner Rush Notification...')
+  // 3. Dinner Rush (08:00 PM IST)
+  cron.schedule('0 20 * * *', async () => {
+    console.log('⏰ [Cron] Triggering Dinner Rush Notification (08:00 PM)...')
     await triggerMarketingSchedule('DINNER')
   }, { timezone: 'Asia/Kolkata' })
 
@@ -285,5 +285,5 @@ export const initMarketingCron = () => {
     await checkAbandonedCarts()
   })
 
-  console.log('✅ [Marketing Cron] Morning (8:30 AM), Chai Time (5:00 PM), Dinner (8:30 PM), and Cart Recovery (every 10m) active!')
+  console.log('✅ [Marketing Cron] Morning (8:30 AM), Chai Time (5:00 PM), Dinner (8:00 PM), and Cart Recovery (every 10m) active!')
 }
