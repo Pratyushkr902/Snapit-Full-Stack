@@ -726,7 +726,11 @@ export async function saveFcmTokenController(request, response) {
             })
         }
 
-        await UserModel.findByIdAndUpdate(userId, { fcmToken })
+        // Save active token and add to user's device token pool
+        await UserModel.findByIdAndUpdate(userId, {
+            fcmToken,
+            $addToSet: { fcmTokens: fcmToken }
+        })
 
         return response.json({
             message: "FCM token saved successfully",

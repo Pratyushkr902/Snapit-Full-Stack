@@ -124,6 +124,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    fcmTokens: {
+        type: [String],
+        default: []
+    },
     isSnapitPlusMember: {
         type: Boolean,
         default: false

@@ -200,87 +200,94 @@ const saveAndSend = async ({
 }) => {
   let fcmMessageId = null;
 
-  // Auto-resolve FCM token from UserModel if not explicitly provided
-  let targetFcmToken = fcmToken;
-  if (!targetFcmToken && recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
+  // Auto-resolve FCM tokens from UserModel (multi-device support)
+  let targetTokens = fcmToken ? [fcmToken] : [];
+  if (recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
     try {
       const UserModel = mongoose.models.User || mongoose.model("User");
-      const userDoc = await UserModel.findById(recipientId).select("fcmToken").lean();
-      if (userDoc?.fcmToken) {
-        targetFcmToken = userDoc.fcmToken;
+      const userDoc = await UserModel.findById(recipientId).select("fcmToken fcmTokens").lean();
+      if (userDoc) {
+        if (userDoc.fcmToken) targetTokens.push(userDoc.fcmToken);
+        if (Array.isArray(userDoc.fcmTokens)) targetTokens.push(...userDoc.fcmTokens);
       }
     } catch (e) {
       console.warn(`[FCM Token Lookup Error] recipientId=${recipientId}:`, e.message);
     }
   }
 
-  // ── 1. Firebase FCM push ──────────────────────
-  if (targetFcmToken) {
-    try {
-      const message = {
-        token: targetFcmToken,
+  const uniqueTokens = [...new Set(targetTokens.filter(t => typeof t === 'string' && t.trim().length > 10))];
 
-        // Standard notification payload for background/system trays
-        notification: {
-          title: payload.title,
-          body:  payload.shayari || payload.body || payload.title,
-        },
-
-        // Android — high priority, heads-up lockscreen banner (Zomato/Swiggy style)
-        android: {
-          priority: "high",
-          notification: {
-            title:                 payload.title,
-            body:                  payload.shayari || payload.body,
-            sound:                 "default",
-            channelId:             "snapit_orders",
-            clickAction:           "OPEN_NOTIFICATION_SCREEN",
-            priority:              "max",
-            visibility:            "public",
-            defaultSound:          true,
-            defaultVibrateTimings: true,
-            tag:                   metadata?.orderId ? `order_${metadata.orderId}` : undefined,
-          },
-        },
-
-        // iOS (APNs via FCM)
-        apns: {
-          payload: {
-            aps: {
-              alert: { title: payload.title, body: payload.shayari },
-              sound: "default",
-              badge: 1,
+  // ── 1. Firebase FCM push to all user devices ───
+  if (uniqueTokens.length > 0) {
+    await Promise.allSettled(
+      uniqueTokens.map(async (token) => {
+        try {
+          const message = {
+            token,
+            notification: {
+              title: payload.title,
+              body:  payload.shayari || payload.body || payload.title,
             },
-          },
-        },
+            android: {
+              priority: "high",
+              notification: {
+                title:                 payload.title,
+                body:                  payload.shayari || payload.body,
+                sound:                 "default",
+                channelId:             "snapit_orders",
+                clickAction:           "OPEN_NOTIFICATION_SCREEN",
+                priority:              "max",
+                visibility:            "public",
+                defaultSound:          true,
+                defaultVibrateTimings: true,
+                tag:                   metadata?.orderId ? `order_${metadata.orderId}` : undefined,
+              },
+            },
+            apns: {
+              payload: {
+                aps: {
+                  alert: { title: payload.title, body: payload.shayari || payload.body },
+                  sound: "default",
+                  badge: 1,
+                },
+              },
+            },
+            webpush: {
+              notification: {
+                title: payload.title,
+                body:  payload.shayari || payload.body,
+                icon:  "/snapit-icon-192.png",
+                badge: "/snapit-icon-192.png",
+              },
+              data: {
+                title: payload.title,
+                body: payload.body || payload.shayari,
+                url: metadata?.orderId ? `/#/dashboard/order-tracking/${metadata.orderId}` : '/'
+              },
+              fcmOptions: {
+                link: metadata?.orderId ? `/#/dashboard/order-tracking/${metadata.orderId}` : '/'
+              }
+            },
+            data: {
+              type,
+              recipientId: String(recipientId),
+              title:       payload.title,
+              body:        payload.body || payload.shayari || payload.title,
+              message:     payload.body || payload.shayari || payload.title,
+              ...Object.fromEntries(
+                Object.entries(metadata).map(([k, v]) => [k, String(v)])
+              ),
+            },
+          };
 
-        // Web push
-        webpush: {
-          notification: {
-            title: payload.title,
-            body:  payload.shayari,
-            icon:  "/icons/snapit-logo.png",
-          },
-        },
-
-        // Extra data — accessible in app via getInitialNotification / onMessage
-        data: {
-          type,
-          recipientId: String(recipientId),
-          body:        payload.body,         // plain English in data payload
-          ...Object.fromEntries(
-            Object.entries(metadata).map(([k, v]) => [k, String(v)])
-          ),
-        },
-      };
-
-      const response = await getFcm().send(message);
-      fcmMessageId = response;
-      console.log(`[FCM ✅] ${recipientType.toUpperCase()} | ${type} | messageId: ${response}`);
-
-    } catch (fcmErr) {
-      console.warn(`[FCM ⚠️] Push failed for ${recipientId}: ${fcmErr.message}`);
-    }
+          const response = await getFcm().send(message);
+          fcmMessageId = response;
+          console.log(`[FCM ✅] ${recipientType.toUpperCase()} | ${type} | messageId: ${response}`);
+        } catch (fcmErr) {
+          console.warn(`[FCM ⚠️] Push failed for token: ${fcmErr.message}`);
+        }
+      })
+    );
   }
 
   // ── 2. Save to MongoDB (always) ───────────────
