@@ -64,6 +64,10 @@ const UserMenu = ({close}) => {
                   className='px-2 bg-blue-50 hover:bg-blue-100 py-1 font-bold text-blue-700 border-l-4 border-blue-500'>
                   🛵 Live Rider Fleet Tracker
                 </Link>
+                <Link onClick={handleClose} to={"/dashboard/marketing"}
+                  className='px-2 bg-amber-50 hover:bg-amber-100 py-1 font-bold text-amber-800 border-l-4 border-amber-500'>
+                  📢 Marketing & Notification Hub
+                </Link>
                 <Link onClick={handleClose} to={"/dashboard/treasury"}
                   className='px-2 bg-emerald-50 hover:bg-emerald-100 py-1 font-bold text-emerald-700 border-l-4 border-emerald-500'>
                   💰 COD Treasury & Partner Split

@@ -59,6 +59,15 @@ const CARDS = [
     bg: '#fef3c7',
   },
   {
+    key: 'marketing-hub',
+    title: '📢 Marketing & Notification Hub',
+    desc: 'Automated daily cravings, smart cart recovery & instant all-user broadcasts',
+    icon: '📢',
+    path: '/dashboard/marketing',
+    color: '#ea580c',
+    bg: '#fff7ed',
+  },
+  {
     key: 'rider-panel',
     title: 'Rider Panel',
     desc: 'View live deliveries, rider locations, and dispatch activity',

@@ -80,6 +80,7 @@ const GroceryPage            = lazyRetry(() => import('../pages/GroceryPage'))
 const PharmacyPage           = lazyRetry(() => import('../pages/PharmacyPage'))
 const FoodCheckoutPage       = lazyRetry(() => import('../pages/FoodCheckoutPage'))
 const AdminRiderFleet        = lazyRetry(() => import('../pages/AdminRiderFleet'))
+const MarketingHubPage       = lazyRetry(() => import('../pages/MarketingHubPage'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -279,6 +280,8 @@ const router = createHashRouter([
           { path: "super-admin/referrals", element: <S><AdminReferrals /></S> },
           { path: "super-admin/manage-admins", element: <S><AdminManageAdmins /></S> },
           { path: "super-admin/frozen-ips", element: <S><AdminFrozenIps /></S> },
+          { path: "marketing", element: <S><AdminPermision><MarketingHubPage /></AdminPermision></S> },
+          { path: "super-admin/marketing", element: <S><MarketingHubPage /></S> },
           { path: "super-admin/banner-offers", element: <S><AdminBannerOffers /></S> },
           {
             path: "product",
