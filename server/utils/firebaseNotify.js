@@ -95,16 +95,16 @@ export async function notifyAllRiders({ title, body, data = {} }) {
     try {
         const { default: UserModel } = await import('../models/user.model.js')
         const riders = await UserModel.find({
-            role: { $in: ['RIDER', 'rider', 'SUPER_ADMIN', 'ADMIN'] },
+            role: { $in: ['RIDER', 'rider'] },
             fcmToken: { $exists: true, $ne: null, $ne: '' }
         }).select('fcmToken name role').lean()
 
         if (riders.length === 0) {
-            console.log('No riders/admins with FCM tokens found')
+            console.log('No riders with FCM tokens found')
             return
         }
         const tokens = riders.map(r => r.fcmToken).filter(Boolean)
-        console.log(`📢 Notifying ${tokens.length} riders/admins`)
+        console.log(`📢 Notifying ${tokens.length} active riders`)
         return await sendPushToMultiple({ tokens, title, body, data })
     } catch (error) {
         console.error('❌ notifyAllRiders failed:', error.message)
