@@ -10,10 +10,17 @@ const AdminMarketingHub = () => {
   const [sending, setSending] = useState(false)
   const [lastResult, setLastResult] = useState(null)
 
+  const DEFAULT_MATCH_TEMPLATE = {
+    category: '🏏 IND vs SL (Day 5)',
+    title: '🏏 IND vs SL: Day 5 Match Thrill! 🇮🇳🔥',
+    shayari: '"Jeet ka jashn ho ya har over ka thrill,\nSnapit se snacks manga lo, mood ho jayega chill!" 🏏🍿',
+    body: 'Cold drinks, chips, samosa aur popcorn ready hain! TV ke samne se uthna mat — bas 9 minute mein delivered! 🥤🍕'
+  }
+
   const [formData, setFormData] = useState({
-    title: '🤔 Soch Kya Rahe Ho? Order Now! 🛒⚡',
-    shayari: '"Bhook lagi ho ya chai ki talab, dhoondho mat bahane,\nSnapit 10 minute mein pahunchega tere aashiyane!" ☕🍕',
-    body: 'Chai, snacks, doodh ya pizza — sab kuch bas 10 minute mein delivered! Abhi order karo Snapit se 🚀'
+    title: DEFAULT_MATCH_TEMPLATE.title,
+    shayari: DEFAULT_MATCH_TEMPLATE.shayari,
+    body: DEFAULT_MATCH_TEMPLATE.body
   })
 
   useEffect(() => {
@@ -24,11 +31,13 @@ const AdminMarketingHub = () => {
     try {
       setLoadingTemplates(true)
       const res = await Axios({ ...SummaryApi.getMarketingTemplates })
-      if (res.data?.success) {
-        setTemplates(res.data.data || [])
+      if (res.data?.success && res.data.data?.length > 0) {
+        setTemplates(res.data.data)
+      } else {
+        setTemplates([DEFAULT_MATCH_TEMPLATE])
       }
     } catch (err) {
-      console.warn('Failed to load templates:', err.message)
+      setTemplates([DEFAULT_MATCH_TEMPLATE])
     } finally {
       setLoadingTemplates(false)
     }

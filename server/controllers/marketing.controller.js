@@ -32,6 +32,12 @@ export const broadcastCampaignController = async (request, response) => {
 export const getCampaignTemplatesController = async (request, response) => {
   try {
     const templates = [
+      {
+        category: '🏏 IND vs SL (Day 5)',
+        title: '🏏 IND vs SL: Day 5 Match Thrill! 🇮🇳🔥',
+        shayari: '"Jeet ka jashn ho ya har over ka thrill,\nSnapit se snacks manga lo, mood ho jayega chill!" 🏏🍿',
+        body: 'Cold drinks, chips, samosa aur popcorn ready hain! TV ke samne se uthna mat — bas 9 minute mein delivered! 🥤🍕'
+      },
       ...MORNING_TEMPLATES.map(t => ({ ...t, category: 'Morning Breakfast' })),
       ...EVENING_TEMPLATES.map(t => ({ ...t, category: 'Evening Chai Time' })),
       ...DINNER_TEMPLATES.map(t => ({ ...t, category: 'Dinner Rush' })),
