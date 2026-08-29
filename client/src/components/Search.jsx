@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { IoSearch, IoClose } from "react-icons/io5"
+import { IoSearch, IoClose, IoMic } from "react-icons/io5"
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { TypeAnimation } from 'react-type-animation'
 import { FaArrowLeft } from "react-icons/fa"
 import useMobile from '../hooks/useMobile'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
+import VoiceSearchModal from './VoiceSearchModal'
 
 const POPULAR = ['Milk', 'Bread', 'Rice', 'Dal', 'Sugar', 'Paneer', 'Eggs', 'Atta', 'Oil', 'Maggi', 'Chips', 'Curd']
 
@@ -24,6 +25,7 @@ const Search = () => {
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [openVoiceModal, setOpenVoiceModal] = useState(false)
   const debounceRef = useRef(null)
   const wrapperRef = useRef(null)
 
@@ -192,11 +194,35 @@ const Search = () => {
 
         {/* Clear button */}
         {isSearchPage && inputValue && (
-          <button onClick={handleClear} className='p-2 mr-1 text-slate-400 hover:text-slate-600'>
+          <button onClick={handleClear} className='p-2 text-slate-400 hover:text-slate-600'>
             <IoClose size={18} />
           </button>
         )}
+
+        {/* Voice Search Mic Button */}
+        <button
+          type='button'
+          onClick={(e) => {
+            e.stopPropagation()
+            setOpenVoiceModal(true)
+          }}
+          className='p-2 mr-1.5 text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all active:scale-90 flex items-center justify-center flex-shrink-0'
+          title='Voice Search (Hindi / English)'
+        >
+          <IoMic size={18} className='animate-pulse' />
+        </button>
       </div>
+
+      {/* Voice Search Modal */}
+      <VoiceSearchModal
+        isOpen={openVoiceModal}
+        onClose={() => setOpenVoiceModal(false)}
+        onSearch={(query) => {
+          setInputValue(query)
+          setShowSuggestions(false)
+          navigate(`/search?q=${encodeURIComponent(query)}`)
+        }}
+      />
 
       {/* Suggestions dropdown */}
       {isSearchPage && showSuggestions && (

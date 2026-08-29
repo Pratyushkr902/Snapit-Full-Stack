@@ -295,6 +295,39 @@ export const deleteProductDetails = async (request, response) => {
     }
 };
 
+const VOICE_STOPWORDS = new Set([
+    '1', '2', '3', '4', '5', 'kilo', 'kg', 'gm', 'gram', 'litre', 'liter', 'packet', 'pack',
+    'mujhe', 'chahiye', 'dikhaye', 'dikhao', 'dijiye', 'lao', 'aur', 'ka', 'ki', 'ke', 'bhi', 'please', 'me'
+]);
+
+const HINDI_SYNONYM_DICT = {
+    'chini':   ['sugar', 'chini'],
+    'cheeni':  ['sugar', 'chini'],
+    'doodh':   ['milk', 'doodh'],
+    'dudh':    ['milk', 'doodh'],
+    'tel':     ['oil', 'mustard', 'refined'],
+    'sarson':  ['mustard', 'oil'],
+    'anda':    ['egg', 'anda'],
+    'ande':    ['egg', 'eggs', 'anda'],
+    'dahi':    ['curd', 'dahi'],
+    'makhan':  ['butter', 'makhan'],
+    'paneer':  ['paneer', 'cheese'],
+    'atta':    ['atta', 'flour', 'aashirvaad'],
+    'aata':    ['atta', 'flour'],
+    'chawal':  ['rice', 'chawal', 'basmati'],
+    'namak':   ['salt', 'namak'],
+    'tamatar': ['tomato'],
+    'aalu':    ['potato', 'aloo'],
+    'aloo':    ['potato', 'aloo'],
+    'pyaaz':   ['onion', 'pyaj'],
+    'pyaj':    ['onion', 'pyaj'],
+    'chai':    ['tea', 'chai', 'patti'],
+    'biscuit': ['biscuit', 'cookie', 'rusk'],
+    'biskut':  ['biscuit', 'cookie'],
+    'maggi':   ['maggi', 'noodles'],
+    'chips':   ['chips', 'kurkure', 'lays'],
+};
+
 export const searchProduct = async (request, response) => {
     try {
         let { search, page, limit } = request.body;
@@ -303,11 +336,28 @@ export const searchProduct = async (request, response) => {
 
         let query = {};
         if (typeof search === 'string' && search.trim()) {
-            const safeSearch = escapeRegex(search);
+            const rawTokens = search.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').split(/\s+/).filter(Boolean);
+            const filteredTokens = rawTokens.filter(t => !VOICE_STOPWORDS.has(t));
+            const activeTokens = filteredTokens.length > 0 ? filteredTokens : rawTokens;
+
+            const tokenQueries = activeTokens.map(token => {
+                const synonyms = HINDI_SYNONYM_DICT[token] || [token];
+                const tokenPatterns = synonyms.map(s => escapeRegex(s));
+                const pattern = tokenPatterns.join('|');
+                return {
+                    $or: [
+                        { name: { $regex: pattern, $options: "i" } },
+                        { description: { $regex: pattern, $options: "i" } }
+                    ]
+                };
+            });
+
+            // Match all meaningful keywords ($and), or phrase regex as fallback
             query = {
                 $or: [
-                    { name: { $regex: safeSearch, $options: "i" } },
-                    { description: { $regex: safeSearch, $options: "i" } }
+                    { name: { $regex: escapeRegex(search.trim()), $options: "i" } },
+                    { description: { $regex: escapeRegex(search.trim()), $options: "i" } },
+                    ...(tokenQueries.length > 0 ? [{ $and: tokenQueries }] : [])
                 ]
             };
         }
