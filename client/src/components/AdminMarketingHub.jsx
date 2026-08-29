@@ -30,7 +30,10 @@ const AdminMarketingHub = () => {
   const fetchTemplates = async () => {
     try {
       setLoadingTemplates(true)
-      const res = await Axios({ ...SummaryApi.getMarketingTemplates })
+      const res = await Axios({
+        url: SummaryApi.getMarketingTemplates?.url || '/api/marketing/templates',
+        method: SummaryApi.getMarketingTemplates?.method || 'get'
+      })
       if (res.data?.success && res.data.data?.length > 0) {
         setTemplates(res.data.data)
       } else {
@@ -66,7 +69,8 @@ const AdminMarketingHub = () => {
       setSending(true)
       toast.loading('Broadcasting push notification to all users...', { id: 'broadcast' })
       const res = await Axios({
-        ...SummaryApi.broadcastMarketingCampaign,
+        url: SummaryApi.broadcastMarketingCampaign?.url || '/api/marketing/broadcast',
+        method: SummaryApi.broadcastMarketingCampaign?.method || 'post',
         data: formData
       })
 
