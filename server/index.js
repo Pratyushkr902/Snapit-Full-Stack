@@ -68,6 +68,8 @@ import appVersionRouter     from './route/appVersion.route.js'     // ✅ In-App
 import riderDutyRouter      from './route/riderDuty.route.js'      // ✅ Rider Duty Shift & Fleet Tracking
 import riderRemittanceRouter from './route/riderRemittance.route.js' // ✅ Rider Cash Remittance
 import publicTrackingRouter  from './route/publicTracking.route.js'  // ✅ Public Live Tracking for Recipients
+import marketingRouter       from './route/marketing.route.js'       // ✅ Automated Marketing Engine
+import { initMarketingCron } from './utils/marketingCron.js'         // ✅ Daily Craving Crons
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -456,6 +458,7 @@ app.use('/api/app-version',      appVersionRouter)         // ✅ In-App Update 
 app.use('/api/rider-duty',       riderDutyRouter)          // ✅ Rider Duty Shift & Fleet Tracking
 app.use('/api/rider-remittance', riderRemittanceRouter)    // ✅ Rider Cash Remittance
 app.use('/api/public-tracking',  publicTrackingRouter)     // ✅ Public Live Tracking for Recipients
+app.use('/api/marketing',        marketingRouter)          // ✅ Automated Marketing Engine
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
@@ -540,11 +543,13 @@ const PORT = process.env.PORT || 8080
 connectDB().then(() => {
     console.log("✅ Database Connected")
     initSubscriptionCron()
+    initMarketingCron()
     startAutoConfirmCron()
     startScheduledOrdersCron()
     server.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Snapit running on port ${PORT}`)
         console.log(`⏰ MRP cron: daily midnight IST`)
+        console.log(`⏰ Marketing cron: daily breakfast, chai time, dinner & cart recovery`)
         console.log(`⏰ Auto-confirm cron: every 2 min`)
         console.log(`⏰ Scheduled orders cron: daily 6 AM IST`)
     })
