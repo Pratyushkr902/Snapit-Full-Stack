@@ -166,11 +166,13 @@ const Search = () => {
           ) : (
             // ✅ Real input shown on /search page
             <input
-              type='search' inputMode='search' enterKeyHint='search'
+              type='text'
+              inputMode='search'
+              enterKeyHint='search'
               placeholder='Search for atta, dal and more...'
               autoFocus
               value={inputValue}
-              className='bg-transparent w-full h-full outline-none text-sm text-slate-800'
+              className='bg-transparent w-full h-full outline-none text-sm text-slate-800 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden'
               onChange={handleOnChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -192,9 +194,14 @@ const Search = () => {
           )}
         </div>
 
-        {/* Clear button */}
+        {/* Custom Clear button (only one displayed) */}
         {isSearchPage && inputValue && (
-          <button onClick={handleClear} className='p-2 text-slate-400 hover:text-slate-600 flex-shrink-0'>
+          <button
+            type='button'
+            onClick={handleClear}
+            className='p-1.5 mr-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition-all flex-shrink-0'
+            title='Clear search'
+          >
             <IoClose size={18} />
           </button>
         )}
