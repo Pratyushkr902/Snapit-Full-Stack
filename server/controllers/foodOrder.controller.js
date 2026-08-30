@@ -162,7 +162,7 @@ const priceGroup = async (group, deliveryLocation, user) => {
   }
 
   const deliveryFee = calcDeliveryFeeFromOrigin(
-    restaurant.location.lat, restaurant.location.lng, lat, lng
+    restaurant.location.lat, restaurant.location.lng, lat, lng, subTotalAmt, user
   )
 
   const isPlusForMinOrder = Boolean(
