@@ -542,7 +542,13 @@ const RiderDashboard = () => {
                                     {deliveredOrders.length}
                                 </span>
                                 <span className='text-[9px] font-bold text-emerald-400 flex items-center gap-1'>
-                                    <span>📍 {(deliveredOrders.reduce((sum, o) => sum + (Number(o.delivery_distance_km) || 0), 0)).toFixed(1)} km</span>
+                                    <span>📍 {(deliveredOrders.reduce((sum, o) => {
+                                        if (Number(o?.delivery_distance_km) > 0) return sum + Number(o.delivery_distance_km)
+                                        const addrText = `${o?.delivery_address?.address_line || ''} ${o?.delivery_address?.city || ''}`
+                                        if (/himalaya|hmch|bams|mbbs/i.test(addrText)) return sum + 9.5
+                                        if (/chiksi|chikasi/i.test(addrText)) return sum + 7.2
+                                        return sum + 1.8
+                                    }, 0)).toFixed(1)} km</span>
                                     <span>•</span>
                                     <span>{fmtINR(totalEarned)}</span>
                                 </span>
@@ -729,9 +735,9 @@ const RiderDashboard = () => {
                                                 <div className='min-w-0 flex-1'>
                                                     <div className='flex items-center gap-2'>
                                                         <p className='text-[9px] font-black text-slate-500 uppercase tracking-wider'>
-                                                            {order.order_for === 'SOMEONE_ELSE' || order.recipient_name || order.delivery_address?.recipient_name ? '🎁 Deliver to Recipient' : 'Deliver To'}
+                                                            {order.order_for === 'SOMEONE_ELSE' ? '🎁 Deliver to Recipient' : 'Deliver To'}
                                                         </p>
-                                                        {(order.recipient_name || order.delivery_address?.recipient_name) && (
+                                                        {order.order_for === 'SOMEONE_ELSE' && (
                                                             <span className='px-1.5 py-0.2 bg-amber-500/20 text-amber-300 text-[9px] font-bold rounded-full border border-amber-500/30'>
                                                                 Friends & Family
                                                             </span>
@@ -739,7 +745,9 @@ const RiderDashboard = () => {
                                                     </div>
 
                                                     <h3 className='text-sm font-bold text-white mt-0.5 leading-snug break-words'>
-                                                        {order.recipient_name || order.delivery_address?.recipient_name || order.userId?.name || "Snapit Customer"}
+                                                        {order.order_for === 'SOMEONE_ELSE' && order.recipient_name
+                                                            ? `${order.recipient_name} (For ${order.userId?.name || 'Customer'})`
+                                                            : order.userId?.name || order.recipient_name || "Snapit Customer"}
                                                     </h3>
 
                                                     <p className='text-xs text-slate-400 font-medium mt-0.5'>

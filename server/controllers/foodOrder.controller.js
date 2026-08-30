@@ -145,8 +145,10 @@ const priceGroup = async (group, deliveryLocation, user) => {
   const { lat, lng } = deliveryLocation || {}
   const subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 
+  let distanceKm = 0
   if (lat && lng) {
     const dist = getDistanceFromOrigin(restaurant.location.lat, restaurant.location.lng, lat, lng)
+    distanceKm = Math.round(dist * 10) / 10
     if (dist > MAX_DELIVERY_RADIUS_KM) {
       const err = new Error(`Sorry, ${restaurant.name} doesn't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km yet.`)
       err.statusCode = 400
@@ -200,7 +202,7 @@ const priceGroup = async (group, deliveryLocation, user) => {
     }
   }
 
-  return { ...group, restaurantName: restaurant.name, subTotalAmt, deliveryFee }
+  return { ...group, restaurantName: restaurant.name, subTotalAmt, deliveryFee, distanceKm }
 }
 
 // ── Price every restaurant group, then fold tip/coupon/wallet into the FIRST
@@ -229,9 +231,10 @@ const priceAllGroups = async (groups, fields, user) => {
 
 // ── Build one order document's fields for a single restaurant group ─────────
 const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user = {}, addressDoc = null) => {
-  const recipientName = addressDoc?.recipient_name || user?.name || 'Customer'
-  const recipientMobile = addressDoc?.recipient_mobile || (addressDoc?.mobile ? String(addressDoc.mobile) : user?.mobile) || ''
-  const orderFor = (addressDoc?.recipient_name || addressDoc?.address_type === 'FRIENDS_FAMILY') ? 'SOMEONE_ELSE' : 'SELF'
+  const isGift = Boolean(addressDoc?.recipient_name || (addressDoc?.address_type === 'FRIENDS_FAMILY' && addressDoc?.recipient_name))
+  const recipientName = isGift ? addressDoc.recipient_name : ''
+  const recipientMobile = isGift ? (addressDoc.recipient_mobile || '') : ''
+  const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
   const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
 
   return {

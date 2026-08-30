@@ -432,11 +432,10 @@ export async function CashOnDeliveryOrderController(request, response) {
        })
    }
 
-        const assignedRider = await assignAvailableRider()
-
-        const recipientName = address?.recipient_name || currentUser?.name || 'Customer'
-        const recipientMobile = address?.recipient_mobile || (address?.mobile ? String(address.mobile) : currentUser?.mobile) || ''
-        const orderFor = (address?.recipient_name || address?.address_type === 'FRIENDS_FAMILY') ? 'SOMEONE_ELSE' : 'SELF'
+        const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
+        const recipientName = isGift ? address.recipient_name : ''
+        const recipientMobile = isGift ? (address.recipient_mobile || '') : ''
+        const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
 
@@ -632,9 +631,10 @@ export async function WalletPaymentOrderController(request, response) {
             shopping_cart: [],
         })
 
-        const recipientName = address?.recipient_name || user?.name || 'Customer'
-        const recipientMobile = address?.recipient_mobile || (address?.mobile ? String(address.mobile) : user?.mobile) || ''
-        const orderFor = (address?.recipient_name || address?.address_type === 'FRIENDS_FAMILY') ? 'SOMEONE_ELSE' : 'SELF'
+        const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
+        const recipientName = isGift ? address.recipient_name : ''
+        const recipientMobile = isGift ? (address.recipient_mobile || '') : ''
+        const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
 
@@ -835,11 +835,10 @@ export async function verifyPaymentController(request, response) {
            success: false
        })
    }
-        const assignedRider = await assignAvailableRider()
-
-        const recipientName = address?.recipient_name || user?.name || 'Customer'
-        const recipientMobile = address?.recipient_mobile || (address?.mobile ? String(address.mobile) : user?.mobile) || ''
-        const orderFor = (address?.recipient_name || address?.address_type === 'FRIENDS_FAMILY') ? 'SOMEONE_ELSE' : 'SELF'
+        const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
+        const recipientName = isGift ? address.recipient_name : ''
+        const recipientMobile = isGift ? (address.recipient_mobile || '') : ''
+        const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
 
