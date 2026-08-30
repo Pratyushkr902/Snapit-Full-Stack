@@ -30,11 +30,14 @@ const userRouter = Router()
 userRouter.post('/register',                   authLimiter, validateRegister, registerUserController)
 userRouter.post('/login',                      authLimiter, validateLogin, loginController)
 userRouter.post('/forgot-password',            otpLimiter, validateForgotPassword, forgotPasswordController)
+userRouter.put('/forgot-password',             otpLimiter, validateForgotPassword, forgotPasswordController)
 userRouter.put('/verify-forgot-password-otp',  otpLimiter, verifyForgotPasswordOtp)
+userRouter.post('/verify-forgot-password-otp', otpLimiter, verifyForgotPasswordOtp)
 
 // ── Standard public routes ────────────────────────────────────
 userRouter.post('/verify-email',               verifyEmailController)
 userRouter.put('/reset-password',             resetpassword)
+userRouter.post('/reset-password',            resetpassword)
 userRouter.post('/refresh-token',             refreshToken)
 
 // ── Anonymous / Authenticated token registration ──────────────

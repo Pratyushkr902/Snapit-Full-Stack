@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import sendEmail from './sendEmail.js'
+import sendEmailResend from './sendEmailResend.js'
 import UserModel from '../models/user.model.js'
 import DeviceTokenModel from '../models/deviceToken.model.js'
 import bcryptjs from 'bcryptjs'
@@ -445,11 +446,16 @@ export async function forgotPasswordController(request, response) {
         }
 
         const safeEmail = email.trim().toLowerCase()
-        const user = await UserModel.findOne({ email: safeEmail })
+        const user = await UserModel.findOne({
+            $or: [
+                { email: safeEmail },
+                { email: new RegExp(`^${safeEmail}$`, 'i') }
+            ]
+        })
 
         if (!user) {
             return response.status(400).json({
-                message: "Email not available",
+                message: "No account found with this email address.",
                 error: true,
                 success: false
             })
@@ -457,31 +463,41 @@ export async function forgotPasswordController(request, response) {
 
         const rawOtp = generatedOtp()
         const stringOtp = String(rawOtp).trim()
-
-        const expireTime = new Date(Date.now() + 60 * 60 * 1000);
+        const expireTime = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
         await UserModel.findByIdAndUpdate(user._id, {
             forgot_password_otp: stringOtp,
             forgot_password_expiry: expireTime
         })
 
+        // Dispatch OTP via fast Resend primary transporter, with fallback to Brevo
+        let sent = false
         try {
-            await sendEmail({
+            const resendResult = await sendEmailResend({
                 sendTo: safeEmail,
-                subject: "Forgot password from Snapit",
-                html: forgotPasswordTemplate({ name: user.name, otp: stringOtp })
+                subject: `Snapit Password Reset Code: ${stringOtp}`,
+                html: forgotPasswordTemplate({ name: user.name || 'Customer', otp: stringOtp })
             })
-        } catch (emailError) {
-            console.error("🚨 Core Email Transport System Fail:", emailError.message);
-            return response.status(500).json({
-                message: "Failed to transmit OTP notification out to your mail delivery cluster. Check SMTP configurations.",
-                error: true,
-                success: false
-            });
+            if (resendResult?.id) sent = true
+        } catch (resendErr) {
+            console.warn('⚠️ Resend primary failed, falling back to Brevo:', resendErr.message)
+        }
+
+        if (!sent) {
+            try {
+                await sendEmail({
+                    sendTo: safeEmail,
+                    subject: `Snapit Password Reset Code: ${stringOtp}`,
+                    html: forgotPasswordTemplate({ name: user.name || 'Customer', otp: stringOtp })
+                })
+                sent = true
+            } catch (brevoErr) {
+                console.error("🚨 Core Email Transport System Fail:", brevoErr.message);
+            }
         }
 
         return response.json({
-            message: "check your email",
+            message: "OTP code sent to your email successfully.",
             error: false,
             success: true
         })
