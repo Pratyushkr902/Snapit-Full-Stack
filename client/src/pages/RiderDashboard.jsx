@@ -224,10 +224,8 @@ const RiderDashboard = () => {
             setTogglingDuty(true);
             const target = !isDutyOn;
 
-            // If going ON DUTY, test GPS permissions
-            if (target && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    () => {},
+            // If going ON DUTY, test GPS permissions (only for real RIDER accounts)
+            if (target && user?.role === 'RIDER' && navigator.geolocation) {
                     (err) => {
                         console.warn('[RiderGPS] Permission prompt warning:', err.message);
                         toast('Please enable GPS Location on your device for accurate tracking', { icon: '📍' });
@@ -302,14 +300,12 @@ const RiderDashboard = () => {
         };
     }, [fetchRiderOrders, playOrderAlertSound]);
 
-    // ─── GPS tracking & Fleet broadcasting while ON DUTY ────────────────────
+    // ─── GPS tracking & Fleet broadcasting (ONLY for real RIDER role, NEVER for Admins) ──
     useEffect(() => {
         let watchId;
-        if (isDutyOn) {
             watchId = navigator.geolocation.watchPosition((pos) => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
-                const heading = pos.coords.heading;
                 const speed = pos.coords.speed;
 
                 // 1. Broadcast to Admin Fleet Tracker
@@ -338,15 +334,13 @@ const RiderDashboard = () => {
             }, (err) => console.warn('[RiderGPS] watch error:', err.message), { enableHighAccuracy: true });
         }
         return () => {
-            if (watchId) navigator.geolocation.clearWatch(watchId);
+            if (watchId && navigator.geolocation) {
+                navigator.geolocation.clearWatch(watchId);
+            }
         };
-    }, [isDutyOn, user]);
-
-    const handlePickup = async (order) => {
-        if (!isDutyOn) {
+    }, [isDutyOn, user?.role, user?._id, user?.name, user?.mobile]);
             toast.error('Please switch ON DUTY before picking up orders!', { icon: '🛑', duration: 4000 });
             return;
-        }
         try {
             const response = await Axios({
                 ...SummaryApi.updateOrderStatus,
