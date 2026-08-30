@@ -394,20 +394,41 @@ const RiderDashboard = () => {
     };
 
     // ── Earnings ──────────────────────────────────────────────
+    const isDeliveredToday = (o) => {
+        if (!o || o.delivery_status !== 'Delivered') return false;
+        const rawDate = o.deliveredAt || o.updatedAt || o.createdAt;
+        if (!rawDate) return false;
+        const d = new Date(rawDate);
+        if (isNaN(d.getTime())) return false;
+        const orderIST = new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);
+        const todayIST = new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
+        return orderIST === todayIST;
+    };
+
     const now = new Date();
     const filterByDate = (list) => (Array.isArray(list) ? list : []).filter(o => {
         if (!o) return false;
         const deliveryTime = new Date(o.deliveredAt || o.createdAt);
         if (isNaN(deliveryTime.getTime())) return false;
-        if (earningFilter === 'today') return deliveryTime.toDateString() === now.toDateString();
+        if (earningFilter === 'today') return isDeliveredToday(o);
         if (earningFilter === 'week')  { const w = new Date(now); w.setDate(now.getDate()-7); return deliveryTime >= w; }
         if (earningFilter === 'month') return deliveryTime.getMonth() === now.getMonth() && deliveryTime.getFullYear() === now.getFullYear();
         return true; // 'all'
     });
 
-    const safeOrders       = Array.isArray(orders) ? orders : [];
-    const deliveredOrders  = safeOrders.filter(o => o && o.delivery_status === 'Delivered');
-    const filteredEarnings = filterByDate(deliveredOrders);
+    const safeOrders             = Array.isArray(orders) ? orders : [];
+    const allDeliveredOrders     = safeOrders.filter(o => o && o.delivery_status === 'Delivered');
+    const deliveredTodayOrders   = allDeliveredOrders.filter(isDeliveredToday);
+    const deliveredTodayEarned   = deliveredTodayOrders.reduce((acc, o) => acc + getDeliveryFee(o || {}), 0);
+    const deliveredTodayDistance = deliveredTodayOrders.reduce((sum, o) => {
+        if (Number(o?.delivery_distance_km) > 0) return sum + Number(o.delivery_distance_km);
+        const addrText = `${o?.delivery_address?.address_line || ''} ${o?.delivery_address?.city || ''}`;
+        if (/himalaya|hmch|bams|mbbs/i.test(addrText)) return sum + 9.5;
+        if (/chiksi|chikasi/i.test(addrText)) return sum + 7.2;
+        return sum + 1.8;
+    }, 0);
+
+    const filteredEarnings = filterByDate(allDeliveredOrders);
     const totalEarned      = filteredEarnings.reduce((acc, o) => acc + getDeliveryFee(o || {}), 0);
     const totalDelivered   = filteredEarnings.length;
     const avgFee           = totalDelivered > 0 ? totalEarned / totalDelivered : 0;
@@ -539,18 +560,12 @@ const RiderDashboard = () => {
                             </p>
                             <div className='flex items-baseline justify-between mt-1'>
                                 <span className='text-base font-black text-white'>
-                                    {deliveredOrders.length}
+                                    {deliveredTodayOrders.length}
                                 </span>
                                 <span className='text-[9px] font-bold text-emerald-400 flex items-center gap-1'>
-                                    <span>📍 {(deliveredOrders.reduce((sum, o) => {
-                                        if (Number(o?.delivery_distance_km) > 0) return sum + Number(o.delivery_distance_km)
-                                        const addrText = `${o?.delivery_address?.address_line || ''} ${o?.delivery_address?.city || ''}`
-                                        if (/himalaya|hmch|bams|mbbs/i.test(addrText)) return sum + 9.5
-                                        if (/chiksi|chikasi/i.test(addrText)) return sum + 7.2
-                                        return sum + 1.8
-                                    }, 0)).toFixed(1)} km</span>
+                                    <span>📍 {deliveredTodayDistance.toFixed(1)} km</span>
                                     <span>•</span>
-                                    <span>{fmtINR(totalEarned)}</span>
+                                    <span>{fmtINR(deliveredTodayEarned)}</span>
                                 </span>
                             </div>
                         </div>
