@@ -773,6 +773,37 @@ const FoodCheckoutPage = () => {
 
       {/* ── Bill details ─────────────────────────────────────────────── */}
       <div className='bg-white mt-2 px-4 py-4'>
+        {/* Long Distance Delivery Tier Explanation Banner for Food */}
+        {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.isLongDistance && (
+          restaurantPricing[0]?.info?.longDistanceTier === 'FLAT_ABOVE_499' ? (
+            <div className='mb-3.5 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl'>
+              <div className='flex items-center justify-between text-xs font-black text-emerald-900'>
+                <span className='flex items-center gap-1.5'>
+                  <span className='text-sm'>✨</span> High-Value Order Benefit ({restaurantPricing[0].info.distanceKm} km)
+                </span>
+                <span className='bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>Flat ₹60</span>
+              </div>
+              <p className='text-[11px] text-emerald-700 font-semibold mt-1'>
+                Subsidized <strong>Flat ₹60 delivery fee</strong> applied for orders ₹499 and above!
+              </p>
+            </div>
+          ) : (
+            <div className='mb-3.5 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl'>
+              <div className='flex items-center justify-between text-xs font-black text-blue-900'>
+                <span className='flex items-center gap-1.5'>
+                  <span className='text-sm'>📍</span> Long-Distance Delivery ({restaurantPricing[0].info.distanceKm} km)
+                </span>
+                <span className='bg-blue-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>₹7 / km</span>
+              </div>
+              {restaurantPricing[0].info.amountNeededForFlatRate > 0 && (
+                <p className='text-[11px] text-blue-700 font-semibold mt-1'>
+                  💡 Add food worth <strong>₹{restaurantPricing[0].info.amountNeededForFlatRate}</strong> more (Cart ₹499+) to get <strong>Flat ₹60 Delivery</strong>!
+                </p>
+              )}
+            </div>
+          )
+        )}
+
         <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2'>Bill details</p>
         <div className='space-y-1.5'>
           <div className='flex justify-between text-sm'>
@@ -791,11 +822,24 @@ const FoodCheckoutPage = () => {
               <span className='font-semibold text-green-600'>−₹{walletDeduct}</span>
             </div>
           )}
-          <div className='flex justify-between text-sm'>
-            <span className='text-gray-500'>🛵 Delivery fee{restaurantPricing.length > 1 ? ` (${restaurantPricing.length} restaurants)` : ''}</span>
+          <div className='flex justify-between text-sm items-start'>
+            <div>
+              <span className='text-gray-500'>🛵 Delivery fee{restaurantPricing.length > 1 ? ` (${restaurantPricing.length} restaurants)` : ''}</span>
+              {restaurantPricing[0]?.info?.serviceable && (
+                <p className='text-[10px] text-gray-400 font-medium'>
+                  {restaurantPricing[0].info.distanceKm <= 3
+                    ? '0–3 km local rate (₹12)'
+                    : restaurantPricing[0].info.distanceKm <= 6
+                    ? '3–6 km rate (₹29)'
+                    : restaurantPricing[0].info.longDistanceTier === 'FLAT_ABOVE_499'
+                    ? `Flat ₹60 for ₹499+ orders (${restaurantPricing[0].info.distanceKm} km)`
+                    : `${restaurantPricing[0].info.distanceKm} km @ ₹7/km`}
+                </p>
+              )}
+            </div>
             <span className='font-semibold'>
               {deliveryFee === 0
-                ? <><span className='line-through text-gray-300 mr-1'>₹30</span><span className='text-green-600'>Free</span></>
+                ? <><span className='line-through text-gray-300 mr-1'>₹30</span><span className='text-green-600 font-bold'>Free</span></>
                 : `₹${deliveryFee}`
               }
             </span>

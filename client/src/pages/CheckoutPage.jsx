@@ -398,6 +398,37 @@ const CheckoutPage = () => {
             )}
           </div>
 
+          {/* Long Distance Delivery Tier Explanation Banner */}
+          {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.isLongDistance && (
+            deliveryInfo.longDistanceTier === 'FLAT_ABOVE_499' ? (
+              <div className='mx-4 mb-4 p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl shadow-sm'>
+                <div className='flex items-center justify-between text-xs font-black text-emerald-900'>
+                  <span className='flex items-center gap-1.5'>
+                    <span className='text-sm'>✨</span> High-Value Order Benefit ({deliveryInfo.distanceKm} km)
+                  </span>
+                  <span className='bg-emerald-600 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black'>Flat ₹60</span>
+                </div>
+                <p className='text-[11px] text-emerald-700 font-semibold mt-1'>
+                  Subsidized <strong>Flat ₹60 delivery fee</strong> applied for orders ₹499 and above!
+                </p>
+              </div>
+            ) : (
+              <div className='mx-4 mb-4 p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl shadow-sm'>
+                <div className='flex items-center justify-between text-xs font-black text-blue-900'>
+                  <span className='flex items-center gap-1.5'>
+                    <span className='text-sm'>📍</span> Long-Distance Delivery ({deliveryInfo.distanceKm} km)
+                  </span>
+                  <span className='bg-blue-600 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black'>₹7 / km</span>
+                </div>
+                {deliveryInfo.amountNeededForFlatRate > 0 && (
+                  <p className='text-[11px] text-blue-700 font-semibold mt-1'>
+                    💡 Add items worth <strong>₹{deliveryInfo.amountNeededForFlatRate}</strong> more (Cart ₹499+) to get <strong>Flat ₹60 Delivery</strong>!
+                  </p>
+                )}
+              </div>
+            )
+          )}
+
           <h3 className='text-lg font-black px-4 uppercase text-slate-800'>Bill Summary</h3>
           <div className='p-4 space-y-3'>
             <div className='flex justify-between'>
@@ -405,8 +436,21 @@ const CheckoutPage = () => {
               <p>{DisplayPriceInRupees(totalPrice)}</p>
             </div>
             <div className='flex justify-between items-center'>
-              <p>Delivery Charge</p>
-              <p className={deliveryFee === 0 ? 'text-green-600 font-bold' : ''}>
+              <div>
+                <p className='font-medium text-slate-800 text-sm'>Delivery Charge</p>
+                {deliveryInfo && deliveryInfo.serviceable && (
+                  <p className='text-[10px] text-slate-500 font-medium'>
+                    {deliveryInfo.distanceKm <= 3
+                      ? '0–3 km local rate (₹12)'
+                      : deliveryInfo.distanceKm <= 6
+                      ? '3–6 km rate (₹29)'
+                      : deliveryInfo.longDistanceTier === 'FLAT_ABOVE_499'
+                      ? `Flat ₹60 for ₹499+ orders (${deliveryInfo.distanceKm} km)`
+                      : `${deliveryInfo.distanceKm} km @ ₹7/km`}
+                  </p>
+                )}
+              </div>
+              <p className={deliveryFee === 0 ? 'text-green-600 font-black' : 'font-bold text-slate-900'}>
                 {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
               </p>
             </div>

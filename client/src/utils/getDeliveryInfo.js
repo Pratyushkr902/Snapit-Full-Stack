@@ -21,14 +21,20 @@ export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
 export const getDistanceFromStore = (customerLat, customerLng) =>
   getDistanceKm(STORE_LAT, STORE_LNG, customerLat, customerLng)
 
-// 0–3 km   → ₹12   ┐
-// 3–6 km   → ₹29   ┘  0–6km zone
-// 6–14 km  → ₹49       flat zone
+// Base charge by distance (for cartTotal >= 499 or standard brackets)
+// 0–3 km   → ₹12
+// 3–6 km   → ₹29
+// 6–14 km:
+//   - below ₹499  → ₹7/km (Math.round(distance * 7))
+//   - ₹499 & above → Flat ₹60
 // >14 km   → not serviceable
-export const getDeliveryCharge = (distanceKm) => {
-  if (distanceKm <= 3)  return 12
-  if (distanceKm <= 6)  return 29
-  if (distanceKm <= 14) return 49
+export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
+  if (distanceKm <= 3) return 12
+  if (distanceKm <= 6) return 29
+  if (distanceKm <= 14) {
+    if (Number(cartTotal) >= 499) return 60
+    return Math.round(distanceKm * 7)
+  }
   return null
 }
 
@@ -38,26 +44,6 @@ export const getDeliveryETA = (distanceKm) => {
   if (distanceKm <= 14) return '30–40 min'
   return null
 }
-
-// Chikasi zone spans across the 6km boundary, which would otherwise cause
-// different Chikasi addresses to get charged different fees. Override to a
-// flat ₹49 for the whole zone instead (same treatment as 6–14km bracket).
-const CHIKASI_LAT = 25.28091606583264
-const CHIKASI_LNG = 84.87069734970407
-const CHIKASI_RADIUS_KM = 1.78
-
-// Himalaya Medical College & Hospital — own flat-fee zone (same ₹49 treatment
-// as Chikasi) plus its own, lower minimum order since it's a captive
-// hospital/campus audience likely to place smaller, more frequent orders.
-const HIMALAYA_LAT = 25.2639198
-const HIMALAYA_LNG = 84.8545598
-const HIMALAYA_RADIUS_KM = 0.45
-const HIMALAYA_FLAT_FEE = 49
-const HIMALAYA_MIN_ORDER = 499
-
-// Minimum order value required for deliveries in the 6–14km bracket.
-// Does NOT apply to the Chikasi flat-fee zone or the 0–6km zone.
-const MIN_ORDER_ABOVE_6KM = 499
 
 // 7:30 PM IST cutoff rule: After 7:30 PM (19:30 IST), delivery beyond 5 km is closed.
 export const isAfterEveningCutoff = () => {
@@ -69,25 +55,13 @@ export const isAfterEveningCutoff = () => {
   return hours > 19 || (hours === 19 && minutes >= 30)
 }
 
-// ── Snapit Plus free-delivery rules ─────────────────────────────────────────
-// 0–6 km  : non-Plus always pays ₹12/₹19 (distance fee) | Plus free if cart >= ₹149, else pays distance fee
-// 6–14 km : non-Plus always pays ₹49                    | Plus free if cart >= ₹399, else pays ₹49
-// Chikasi : non-Plus always pays ₹49                    | Plus free if cart >= ₹399, else pays ₹49
-// >14 km  : not serviceable
-// >5 km after 7:30 PM : delivery closed for rider safety
 // Generalized version — computes delivery info from ANY origin point
-// (grocery store OR a restaurant's own location). Used by getDeliveryInfo()
-// below for grocery, and directly by food checkout for restaurant orders.
+// (grocery store OR a restaurant's own location).
 export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, customerLng, cartTotal = 0, isSnapitPlus = false) => {
   const dist = getDistanceKm(originLat, originLng, customerLat, customerLng)
-  const chikasiDist = getDistanceKm(CHIKASI_LAT, CHIKASI_LNG, customerLat, customerLng)
-  const isChikasi = chikasiDist <= CHIKASI_RADIUS_KM
-  const himalayaDist = getDistanceKm(HIMALAYA_LAT, HIMALAYA_LNG, customerLat, customerLng)
-  const isHimalaya = himalayaDist <= HIMALAYA_RADIUS_KM
-
   const isEvening = isAfterEveningCutoff()
 
-  // After 7:30 PM, deliveries beyond 5km are closed
+  // After 7:30 PM, deliveries beyond 5km are closed for rider night safety
   if (dist > 5 && isEvening) {
     return {
       serviceable: false,
@@ -97,13 +71,12 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
       label: 'Closed (>5km after 7:30 PM)',
       isEveningClosed: true,
       reason: 'EVENING_DISTANCE_LIMIT',
-      isChikasi: false,
-      isHimalaya: false,
+      isLongDistance: false,
       minOrder: 0
     }
   }
 
-  if (!isChikasi && !isHimalaya && dist > 14) {
+  if (dist > 14) {
     return {
       serviceable: false,
       distanceKm: Math.round(dist * 10) / 10,
@@ -111,54 +84,61 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
       eta: null,
       label: 'Outside delivery range',
       isEveningClosed: false,
-      isChikasi: false,
-      isHimalaya: false,
+      isLongDistance: false,
       minOrder: 0
     }
   }
 
-  const charge = isChikasi ? 49 : isHimalaya ? HIMALAYA_FLAT_FEE : getDeliveryCharge(dist)
+  const isLongDistance = dist > 6
+  let charge = 12
+  let longDistanceTier = null // 'PER_KM' | 'FLAT_ABOVE_499'
+  let amountNeededForFlatRate = 0
+  const numCartTotal = Number(cartTotal) || 0
+
+  if (dist <= 3) {
+    charge = 12
+  } else if (dist <= 6) {
+    charge = 29
+  } else {
+    // 6.0 – 14.0 km
+    if (numCartTotal >= 499) {
+      charge = 60
+      longDistanceTier = 'FLAT_ABOVE_499'
+    } else {
+      charge = Math.round(dist * 7)
+      longDistanceTier = 'PER_KM'
+      amountNeededForFlatRate = Math.max(0, 499 - numCartTotal)
+    }
+  }
 
   let finalCharge = charge
   if (isSnapitPlus) {
-    if (isChikasi || isHimalaya || dist > 6) {
-      if (cartTotal >= 399) finalCharge = 0
+    if (dist > 6) {
+      if (numCartTotal >= 399) finalCharge = 0
     } else {
-      if (cartTotal >= 149) finalCharge = 0
+      if (numCartTotal >= 149) finalCharge = 0
     }
   }
 
   const eta = getDeliveryETA(dist)
 
-  // Min order:
-  // - For food/restaurant orders: under 6km has no minimum order (₹0); above 6km requires ₹199 minimum order.
-  // - For grocery orders: 6-14km / Himalaya has ₹499 minimum order.
-  // - Snapit Plus members are exempt (minOrder = 0).
-  const RESTAURANT_MIN_ORDER_ABOVE_6KM = 199
-  const isFoodOrder = (originLat !== STORE_LAT || originLng !== STORE_LNG)
-  let minOrder = 0
-  if (isFoodOrder) {
-    if (dist > 6) minOrder = RESTAURANT_MIN_ORDER_ABOVE_6KM
-    if (isSnapitPlus) minOrder = 0
-  } else {
-    if (isHimalaya) minOrder = HIMALAYA_MIN_ORDER
-    else if (dist > 6) minOrder = MIN_ORDER_ABOVE_6KM
-    if (isSnapitPlus) minOrder = 0
-  }
-
   return {
-    serviceable:    true,
-    distanceKm:     Math.round(dist * 10) / 10,
-    charge:         finalCharge,
+    serviceable: true,
+    distanceKm: Math.round(dist * 10) / 10,
+    charge: finalCharge,
     originalCharge: charge,
     eta,
     label: finalCharge === 0 ? 'FREE' : `₹${finalCharge}`,
-    isChikasi,
-    isHimalaya,
-    minOrder,
+    isLongDistance,
+    longDistanceTier,
+    ratePerKm: 7,
+    flatAbove499Fee: 60,
+    amountNeededForFlatRate,
+    minOrder: 0,
   }
 }
 
 // Grocery entry point — always measures from the fixed Snapit store location.
 export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapitPlus = false) =>
   getDeliveryInfoFromOrigin(STORE_LAT, STORE_LNG, customerLat, customerLng, cartTotal, isSnapitPlus)
+
