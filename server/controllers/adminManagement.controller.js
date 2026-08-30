@@ -177,49 +177,68 @@ export async function unfreezeIPController(request, response) {
 
 export async function listReferralsController(request, response) {
     try {
-        // Referrers: any user who has successfully referred at least one person
-        const referrers = await UserModel.find({ referralCount: { $gt: 0 } })
-            .select('name email mobile referralCode referralCount walletTransactions createdAt')
-            .sort({ referralCount: -1 })
+        // 1. Fetch all users who registered with a referral code
+        const referredUsers = await UserModel.find({
+            referredBy: { $exists: true, $ne: null, $nin: ['', 'null'] }
+        })
+            .select('name email mobile referredBy verify_email referralBonusCredited firstOrderBonusApplied createdAt')
+            .sort({ createdAt: -1 })
+            .lean()
 
-        // For each referrer, find everyone they referred (matched by referralCode)
-        const referrerCodes = referrers.map(r => r.referralCode).filter(Boolean)
-        const referredUsers = await UserModel.find({ referredBy: { $in: referrerCodes } })
-            .select('name email mobile referredBy verify_email referralBonusCredited createdAt')
-
+        // 2. Group referred users by referralCode
         const referredByCode = {}
+        const referredCodes = new Set()
         for (const u of referredUsers) {
-            if (!referredByCode[u.referredBy]) referredByCode[u.referredBy] = []
-            referredByCode[u.referredBy].push({
-                name: u.name,
+            const code = (u.referredBy || '').trim().toUpperCase()
+            if (!code) continue
+            referredCodes.add(code)
+            if (!referredByCode[code]) referredByCode[code] = []
+            referredByCode[code].push({
+                _id: u._id,
+                name: u.name || 'User',
                 email: u.email,
-                mobile: u.mobile,
-                emailVerified: u.verify_email,
-                bonusCredited: u.referralBonusCredited,
+                mobile: u.mobile || 'N/A',
+                emailVerified: Boolean(u.verify_email),
+                bonusCredited: Boolean(u.referralBonusCredited || u.firstOrderBonusApplied),
                 joinedAt: u.createdAt
             })
         }
 
-        const data = referrers.map(r => {
+        // 3. Find all referrer accounts
+        const referrers = await UserModel.find({
+            $or: [
+                { referralCount: { $gt: 0 } },
+                { referralCode: { $in: Array.from(referredCodes) } }
+            ]
+        })
+            .select('name email mobile referralCode referralCount walletTransactions walletBalance createdAt')
+            .sort({ referralCount: -1, createdAt: -1 })
+            .lean()
+
+        // 4. Map referrers data with full details
+        const referrersList = referrers.map(r => {
+            const code = (r.referralCode || '').trim().toUpperCase()
+            const invited = referredByCode[code] || []
             const earned = (r.walletTransactions || [])
-                .filter(t => t.type === 'credit' && t.description?.startsWith('Referral bonus'))
-                .reduce((sum, t) => sum + (t.amount || 0), 0)
+                .filter(t => t.type === 'credit' && (t.description || '').toLowerCase().includes('referral'))
+                .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
             return {
                 referrerId: r._id,
-                name: r.name,
+                name: r.name || 'Anonymous User',
                 email: r.email,
-                mobile: r.mobile,
-                referralCode: r.referralCode,
-                referralCount: r.referralCount,
+                mobile: r.mobile || 'N/A',
+                referralCode: r.referralCode || 'N/A',
+                referralCount: Math.max(Number(r.referralCount) || 0, invited.length),
+                walletBalance: Number(r.walletBalance) || 0,
                 totalEarned: earned,
                 joinedAt: r.createdAt,
-                referredUsers: referredByCode[r.referralCode] || []
+                referredUsers: invited
             }
         })
 
-        const totalReferrals = data.reduce((sum, r) => sum + r.referralCount, 0)
-        const totalPaidOut = data.reduce((sum, r) => sum + r.totalEarned, 0)
+        const totalReferrals = referrersList.reduce((sum, r) => sum + r.referralCount, 0)
+        const totalPaidOut = referrersList.reduce((sum, r) => sum + r.totalEarned, 0)
 
         return response.json({
             message: "Referrals fetched",
@@ -227,16 +246,57 @@ export async function listReferralsController(request, response) {
             success: true,
             data: {
                 summary: {
-                    totalReferrers: data.length,
+                    totalReferrers: referrersList.length,
                     totalReferrals,
-                    totalPaidOut
+                    totalPaidOut,
+                    totalReferredUsers: referredUsers.length
                 },
-                referrers: data
+                referrers: referrersList,
+                allReferredUsers: referredUsers
             }
         })
     } catch (error) {
+        console.error('[listReferralsController] error:', error)
         return response.status(500).json({
             message: error.message || "Failed to fetch referrals",
+            error: true,
+            success: false
+        })
+    }
+}
+
+export async function manualCreditReferralBonusController(request, response) {
+    try {
+        const { userId, amount, reason } = request.body
+        if (!userId) {
+            return response.status(400).json({ message: "User ID is required", error: true, success: false })
+        }
+        const creditAmt = Number(amount) || 5
+        const user = await UserModel.findById(userId)
+        if (!user) {
+            return response.status(404).json({ message: "User not found", error: true, success: false })
+        }
+
+        await UserModel.findByIdAndUpdate(userId, {
+            $inc: { walletBalance: creditAmt, referralCount: 1 },
+            $push: {
+                walletTransactions: {
+                    type: 'credit',
+                    amount: creditAmt,
+                    description: reason || `Manual Referral Bonus by Admin (₹${creditAmt})`,
+                    date: new Date()
+                }
+            }
+        })
+
+        return response.json({
+            message: `Successfully credited ₹${creditAmt} referral bonus to ${user.name}!`,
+            error: false,
+            success: true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "Failed to credit referral bonus",
             error: true,
             success: false
         })

@@ -321,6 +321,10 @@ const SummaryApi = {
         url: '/api/admin-management/referrals',
         method: 'get'
     },
+    creditReferralBonusAdmin: {
+        url: '/api/admin-management/referrals/credit-bonus',
+        method: 'post'
+    },
     listAdmins: {
         url: '/api/admin-management/list',
         method: 'get'

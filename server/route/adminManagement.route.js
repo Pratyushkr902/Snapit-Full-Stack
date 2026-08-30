@@ -8,7 +8,8 @@ import {
     removeAdminController,
     listFrozenIPsController,
     unfreezeIPController,
-    listReferralsController
+    listReferralsController,
+    manualCreditReferralBonusController
 } from '../controllers/adminManagement.controller.js'
 
 const router = express.Router()
@@ -22,5 +23,6 @@ router.get('/frozen-ips', auth, superAdmin, listFrozenIPsController)
 router.delete('/frozen-ips/:ip', auth, superAdmin, unfreezeIPController)
 
 router.get('/referrals', auth, admin, listReferralsController)
+router.post('/referrals/credit-bonus', auth, superAdmin, manualCreditReferralBonusController)
 
 export default router
