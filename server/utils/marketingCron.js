@@ -51,7 +51,8 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
               url: '/'
             }
           })
-          if (res?.success) {
+          const isSuccess = Boolean(res && (res.success === true || typeof res === 'string' || (typeof res === 'object' && res.result)))
+          if (isSuccess) {
             successCount++
           } else if (res?.isUnregistered) {
             deadTokens.push(token)

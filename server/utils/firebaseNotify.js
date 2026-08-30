@@ -10,6 +10,15 @@ const { getMessaging } = require('firebase-admin/messaging')
 
 let messaging = null
 
+function formatPrivateKey(key) {
+    if (!key) return ''
+    let cleaned = key.trim()
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.slice(1, -1)
+    }
+    return cleaned.replace(/\\n/g, '\n').replace(/\r/g, '').trim()
+}
+
 function getMessagingClient() {
     if (messaging) return messaging
     try {
@@ -22,7 +31,7 @@ function getMessagingClient() {
                 credential: admin.cert({
                     projectId: FIREBASE_PROJECT_ID,
                     clientEmail: FIREBASE_CLIENT_EMAIL,
-                    privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                    privateKey: formatPrivateKey(FIREBASE_PRIVATE_KEY),
                 })
             })
             console.log('✅ Firebase Admin initialized')
@@ -39,9 +48,9 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
         const client = getMessagingClient()
         if (!client) {
             console.warn('[Push] Firebase not initialized, skipping notification')
-            return
+            return { success: false, error: 'Firebase not initialized' }
         }
-        if (!token) return
+        if (!token) return { success: false, error: 'Missing token' }
         const dataMap = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
         const message = {
             token,
