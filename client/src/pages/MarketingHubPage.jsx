@@ -9,7 +9,7 @@ const MarketingHubPage = () => {
 
   return (
     <AdminPermision>
-      <div className='min-h-screen bg-slate-50/50 pt-safe pt-12 sm:pt-6 pb-24 px-3 sm:px-6 max-w-5xl mx-auto'>
+      <div className='min-h-screen bg-slate-50/50 pt-safe pt-12 sm:pt-6 pb-28 px-3 sm:px-6 max-w-5xl mx-auto w-full overflow-x-hidden'>
         {/* Mobile-Friendly Top Navigation */}
         <div className='flex items-center gap-3 mb-4'>
           <button

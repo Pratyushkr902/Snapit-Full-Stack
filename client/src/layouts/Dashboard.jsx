@@ -20,6 +20,7 @@ const Dashboard = () => {
     location.pathname.includes('restaurant-admin') ||
     location.pathname.includes('admin-summary')    ||
     location.pathname.includes('super-admin')      ||
+    location.pathname.includes('marketing')        ||
     location.pathname.includes('treasury')
 
   if (isFullScreen) {
