@@ -35,6 +35,7 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
     const BATCH_SIZE = 50
     let successCount = 0
     const deadTokens = []
+    const pushErrors = []
 
     for (let i = 0; i < uniqueTokens.length; i += BATCH_SIZE) {
       const batch = uniqueTokens.slice(i, i + BATCH_SIZE)
@@ -54,11 +55,14 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
           const isSuccess = Boolean(res && (res.success === true || typeof res === 'string' || (typeof res === 'object' && res.result)))
           if (isSuccess) {
             successCount++
-          } else if (res?.isUnregistered) {
-            deadTokens.push(token)
+          } else {
+            if (res?.error) pushErrors.push(res.error)
+            if (res?.isUnregistered) {
+              deadTokens.push(token)
+            }
           }
         } catch (err) {
-          // Never delete on unexpected errors
+          pushErrors.push(err.message)
         }
       })
       await Promise.allSettled(promises)
@@ -92,7 +96,12 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
 
     await Notification.insertMany(inAppDocs, { ordered: false }).catch(() => {})
     console.log(`✅ [Marketing Engine] Broadcast complete: ${successCount} devices received "${title}".`)
-    return { success: true, deliveredCount: successCount, totalDevices: uniqueTokens.length }
+    return { 
+      success: true, 
+      deliveredCount: successCount, 
+      totalDevices: uniqueTokens.length,
+      errors: pushErrors.slice(0, 5)
+    }
   } catch (err) {
     console.error('❌ [Marketing Engine] Broadcast failed:', err.message)
     return { success: false, error: err.message }

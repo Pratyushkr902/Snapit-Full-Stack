@@ -9,6 +9,7 @@ const admin = require('firebase-admin')
 const { getMessaging } = require('firebase-admin/messaging')
 
 let messaging = null
+let initError = null
 
 function formatPrivateKey(key) {
     if (!key) return ''
@@ -23,21 +24,39 @@ function getMessagingClient() {
     if (messaging) return messaging
     try {
         if (admin.getApps().length === 0) {
-            const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env
-            if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
-                throw new Error('Missing FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY in .env')
+            let projectId = process.env.FIREBASE_PROJECT_ID
+            let clientEmail = process.env.FIREBASE_CLIENT_EMAIL
+            let privateKey = process.env.FIREBASE_PRIVATE_KEY
+
+            if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+                try {
+                    const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+                    projectId = parsed.project_id || projectId
+                    clientEmail = parsed.client_email || clientEmail
+                    privateKey = parsed.private_key || privateKey
+                } catch (e) {
+                    console.warn('Could not parse FIREBASE_SERVICE_ACCOUNT JSON:', e.message)
+                }
             }
+
+            if (!projectId || !clientEmail || !privateKey) {
+                initError = `Missing Firebase config. ID: ${Boolean(projectId)}, Email: ${Boolean(clientEmail)}, Key: ${Boolean(privateKey)}`
+                throw new Error(initError)
+            }
+
             admin.initializeApp({
                 credential: admin.cert({
-                    projectId: FIREBASE_PROJECT_ID,
-                    clientEmail: FIREBASE_CLIENT_EMAIL,
-                    privateKey: formatPrivateKey(FIREBASE_PRIVATE_KEY),
+                    projectId: projectId,
+                    clientEmail: clientEmail,
+                    privateKey: formatPrivateKey(privateKey),
                 })
             })
             console.log('✅ Firebase Admin initialized')
         }
         messaging = getMessaging()
+        initError = null
     } catch (error) {
+        initError = error.message
         console.error('❌ Firebase Admin init failed — push notifications disabled:', error.message)
     }
     return messaging
@@ -47,8 +66,8 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
     try {
         const client = getMessagingClient()
         if (!client) {
-            console.warn('[Push] Firebase not initialized, skipping notification')
-            return { success: false, error: 'Firebase not initialized' }
+            console.warn('[Push] Firebase not initialized, skipping notification:', initError)
+            return { success: false, error: initError || 'Firebase not initialized' }
         }
         if (!token) return { success: false, error: 'Missing token' }
         const dataMap = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
