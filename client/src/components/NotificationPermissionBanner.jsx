@@ -16,7 +16,6 @@ const NotificationPermissionBanner = () => {
   useEffect(() => {
     // Only needed on Web / PWA (Capacitor handles native prompt automatically)
     if (Capacitor.isNativePlatform()) return
-    if (!user?._id) return
 
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
     const isStandalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
@@ -33,7 +32,7 @@ const NotificationPermissionBanner = () => {
         }
       }
     }
-  }, [user?._id])
+  }, [])
 
   const handleEnable = async () => {
     try {

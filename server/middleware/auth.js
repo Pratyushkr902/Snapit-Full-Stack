@@ -55,4 +55,26 @@ const auth = async (request, response, next) => {
     }
 }
 
+export const optionalAuth = async (request, response, next) => {
+    try {
+        let token = null
+        const authHeader = request?.headers?.authorization || request?.headers?.Authorization
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1]
+        }
+        if (!token) {
+            token = request.cookies?.accessToken || request.cookies?.accesstoken
+        }
+        if (token) {
+            const secretKey = process.env.SECRET_KEY_ACCESS_TOKEN
+            const decode = jwt.verify(token, secretKey)
+            if (decode?.id) {
+                request.userId = decode.id
+                request.userRole = decode.role
+            }
+        }
+    } catch {}
+    next()
+}
+
 export default auth

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import sendEmail from './sendEmail.js'
 import UserModel from '../models/user.model.js'
+import DeviceTokenModel from '../models/deviceToken.model.js'
 import bcryptjs from 'bcryptjs'
 import verifyEmailTemplate from '../utils/verifyEmailTemplate.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
@@ -715,22 +716,39 @@ export async function getAllRiders(request, response) {
 
 export async function saveFcmTokenController(request, response) {
     try {
-        const userId = request.userId
-        const { fcmToken } = request.body
+        const userId = request.userId || null
+        const { fcmToken, platform, appVersion } = request.body
 
-        if (!fcmToken) {
+        if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim().length < 10) {
             return response.status(400).json({
-                message: "FCM token is required",
+                message: "Valid FCM token is required",
                 error: true,
                 success: false
             })
         }
 
-        // Save active token and add to user's device token pool
-        await UserModel.findByIdAndUpdate(userId, {
-            fcmToken,
-            $addToSet: { fcmTokens: fcmToken }
-        })
+        const cleanToken = fcmToken.trim()
+
+        // 1. Save / Upsert in DeviceToken registry
+        await DeviceTokenModel.findOneAndUpdate(
+            { token: cleanToken },
+            {
+                token: cleanToken,
+                ...(userId ? { userId } : {}),
+                ...(platform ? { platform } : {}),
+                ...(appVersion ? { appVersion } : {}),
+                lastActiveAt: new Date()
+            },
+            { upsert: true, new: true }
+        ).catch(() => {})
+
+        // 2. If logged in, save to User model
+        if (userId) {
+            await UserModel.findByIdAndUpdate(userId, {
+                fcmToken: cleanToken,
+                $addToSet: { fcmTokens: cleanToken }
+            }).catch(() => {})
+        }
 
         return response.json({
             message: "FCM token saved successfully",

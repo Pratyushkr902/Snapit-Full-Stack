@@ -1,5 +1,6 @@
 import cron from 'node-cron'
 import UserModel from '../models/user.model.js'
+import DeviceTokenModel from '../models/deviceToken.model.js'
 import CartProductModel from '../models/cartproduct.model.js'
 import OrderModel from '../models/order.model.js'
 import { Notification } from './notificationService.js'
@@ -8,16 +9,21 @@ import { sendPushNotification } from './firebaseNotify.js'
 // Helper: Broadcast to all active unique devices in batches
 export async function broadcastToAllUsers({ title, shayari, body, type, promoTag = 'DAILY_CRAVING' }) {
   try {
-    const users = await UserModel.find({
-      $or: [
-        { fcmToken: { $exists: true, $ne: null, $ne: '' } },
-        { 'fcmTokens.0': { $exists: true } }
-      ]
-    }).select('_id name fcmToken fcmTokens').lean()
-
-    if (users.length === 0) return { success: true, count: 0 }
+    const [users, deviceDocs] = await Promise.all([
+      UserModel.find({
+        $or: [
+          { fcmToken: { $exists: true, $ne: null, $ne: '' } },
+          { 'fcmTokens.0': { $exists: true } }
+        ]
+      }).select('_id name fcmToken fcmTokens').lean(),
+      DeviceTokenModel.find({
+        token: { $exists: true, $ne: null, $ne: '' }
+      }).select('token userId').lean()
+    ])
 
     const tokenMap = new Map()
+
+    // 1. Add tokens from users
     users.forEach(u => {
       const tokens = [
         ...(u.fcmToken ? [u.fcmToken] : []),
@@ -29,7 +35,18 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
       })
     })
 
+    // 2. Add tokens from standalone device registry (anonymous & app installs)
+    deviceDocs.forEach(d => {
+      if (d.token && typeof d.token === 'string' && d.token.trim().length > 10) {
+        if (!tokenMap.has(d.token.trim())) {
+          tokenMap.set(d.token.trim(), { _id: d.userId || null, name: 'Customer' })
+        }
+      }
+    })
+
     const uniqueTokens = Array.from(tokenMap.keys())
+    if (uniqueTokens.length === 0) return { success: true, deliveredCount: 0, totalDevices: 0 }
+
     console.log(`📢 [Marketing Engine] Broadcasting "${title}" to ${uniqueTokens.length} active device(s)...`)
 
     const BATCH_SIZE = 50
