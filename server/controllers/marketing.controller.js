@@ -61,6 +61,24 @@ export const getCampaignTemplatesController = async (request, response) => {
   try {
     const templates = [
       {
+        category: '🚀 Snapit is Back! (Grand Launch)',
+        title: '🚀 We Are Back! Snapit 10-Min Delivery is LIVE! 🎉',
+        shayari: '"Aapke intezaar ki ghadi hui khatam aaj,\nSnapit laut aaya hai lekar naya andaaz!" ⚡🛍️',
+        body: 'Groceries, fresh milk, dairy, snacks aur resto cravings — ab sab deliver hoga bas 10 minute mein! Tap karke order karo abhi! 🛒✨'
+      },
+      {
+        category: '🎁 Welcome Back (Special Offer)',
+        title: '🎉 Snapit is Back with ₹50 OFF on Your Next Order! 🎁',
+        shayari: '"Purani yaadein aur naya swaad,\nSnapit ke saath manao khushiyon ki raat!" 🍕🍦',
+        body: 'Aapka favourite 10-minute grocery & food delivery partner wapas aa gaya hai. Cart banao aur pao best discounts!'
+      },
+      {
+        category: '⚡ Snapit 2.0 Superfast',
+        title: '⚡ Snapit 2.0 is LIVE: Faster, Smoother & Cheaper! 🚀',
+        shayari: '"Raftaar wahi par andaaz naya,\nSnapit ne 10 min mein order pohchaya!" 🛵💨',
+        body: 'Updated app ke sath groceries, chai-biscuit aur khana bas ek click mein aapke darwaze par!'
+      },
+      {
         category: '🏏 IND vs SL (Day 5)',
         title: '🏏 IND vs SL: Day 5 Match Thrill! 🇮🇳🔥',
         shayari: '"Jeet ka jashn ho ya har over ka thrill,\nSnapit se snacks manga lo, mood ho jayega chill!" 🏏🍿',

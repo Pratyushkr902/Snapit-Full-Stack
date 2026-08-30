@@ -10,17 +10,17 @@ const AdminMarketingHub = () => {
   const [sending, setSending] = useState(false)
   const [lastResult, setLastResult] = useState(null)
 
-  const DEFAULT_MATCH_TEMPLATE = {
-    category: '🏏 IND vs SL (Day 5)',
-    title: '🏏 IND vs SL: Day 5 Match Thrill! 🇮🇳🔥',
-    shayari: '"Jeet ka jashn ho ya har over ka thrill,\nSnapit se snacks manga lo, mood ho jayega chill!" 🏏🍿',
-    body: 'Cold drinks, chips, samosa aur popcorn ready hain! TV ke samne se uthna mat — bas 9 minute mein delivered! 🥤🍕'
+  const DEFAULT_BACK_TEMPLATE = {
+    category: '🚀 Snapit is Back! (Grand Launch)',
+    title: '🚀 We Are Back! Snapit 10-Min Delivery is LIVE! 🎉',
+    shayari: '"Aapke intezaar ki ghadi hui khatam aaj,\nSnapit laut aaya hai lekar naya andaaz!" ⚡🛍️',
+    body: 'Groceries, fresh milk, dairy, snacks aur resto cravings — ab sab deliver hoga bas 10 minute mein! Tap karke order karo abhi! 🛒✨'
   }
 
   const [formData, setFormData] = useState({
-    title: DEFAULT_MATCH_TEMPLATE.title,
-    shayari: DEFAULT_MATCH_TEMPLATE.shayari,
-    body: DEFAULT_MATCH_TEMPLATE.body
+    title: DEFAULT_BACK_TEMPLATE.title,
+    shayari: DEFAULT_BACK_TEMPLATE.shayari,
+    body: DEFAULT_BACK_TEMPLATE.body
   })
 
   useEffect(() => {
@@ -37,10 +37,10 @@ const AdminMarketingHub = () => {
       if (res.data?.success && res.data.data?.length > 0) {
         setTemplates(res.data.data)
       } else {
-        setTemplates([DEFAULT_MATCH_TEMPLATE])
+        setTemplates([DEFAULT_BACK_TEMPLATE])
       }
     } catch (err) {
-      setTemplates([DEFAULT_MATCH_TEMPLATE])
+      setTemplates([DEFAULT_BACK_TEMPLATE])
     } finally {
       setLoadingTemplates(false)
     }
