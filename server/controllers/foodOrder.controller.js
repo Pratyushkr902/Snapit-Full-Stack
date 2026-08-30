@@ -391,6 +391,20 @@ const prepareMultiRestaurantOrder = async (req) => {
 
   const addressDoc = await AddressModel.findById(fields.addressId).lean()
 
+  const HIMALAYA_LAT = 25.2639198
+  const HIMALAYA_LNG = 84.8545598
+  const CHIKASI_LAT = 25.28091606583264
+  const CHIKASI_LNG = 84.87069734970407
+
+  const combined = `${addressDoc?.address_line || ''} ${addressDoc?.city || ''} ${addressDoc?.landmark || ''}`
+  if (/himalaya|hmch|bams|mbbs/i.test(combined)) {
+    fields.deliveryLocation = { lat: HIMALAYA_LAT, lng: HIMALAYA_LNG }
+  } else if (/chiksi|chikasi/i.test(combined)) {
+    fields.deliveryLocation = { lat: CHIKASI_LAT, lng: CHIKASI_LNG }
+  } else if (addressDoc?.lat && addressDoc?.lng) {
+    fields.deliveryLocation = { lat: Number(addressDoc.lat), lng: Number(addressDoc.lng) }
+  }
+
   const groups = await buildGroupsByRestaurant(fields.items)
   if (!groups.length) { const e = new Error('No valid items in order'); e.statusCode = 400; throw e }
 

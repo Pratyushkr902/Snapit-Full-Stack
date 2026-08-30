@@ -362,11 +362,22 @@ export async function CashOnDeliveryOrderController(request, response) {
         const address = await AddressModel.findOne({ _id: addressId, userId })
         if (!address) return response.status(404).json({ message: 'Address not found.', error: true, success: false })
 
-        // Use the address's own saved, geocoded coordinates for delivery fee /
-        // zone / minimum-order logic. Client-sent lat/lng must never drive pricing
-        // (device GPS can be stale, cached, or spoofed).
-        const verifiedLat = address.lat
-        const verifiedLng = address.lng
+        const HIMALAYA_LAT = 25.2639198
+        const HIMALAYA_LNG = 84.8545598
+        const CHIKASI_LAT = 25.28091606583264
+        const CHIKASI_LNG = 84.87069734970407
+
+        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
+        let verifiedLat = address.lat
+        let verifiedLng = address.lng
+        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+            verifiedLat = HIMALAYA_LAT
+            verifiedLng = HIMALAYA_LNG
+        } else if (/chiksi|chikasi/i.test(combinedText)) {
+            verifiedLat = CHIKASI_LAT
+            verifiedLng = CHIKASI_LNG
+        }
+
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
             return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
         }
@@ -511,11 +522,22 @@ export async function WalletPaymentOrderController(request, response) {
         const address = await AddressModel.findOne({ _id: addressId, userId })
         if (!address) return response.status(404).json({ message: 'Address not found.', error: true, success: false })
 
-        // Use the address's own saved, geocoded coordinates for delivery fee /
-        // zone / minimum-order logic. Client-sent lat/lng must never drive pricing
-        // (device GPS can be stale, cached, or spoofed).
-        const verifiedLat = address.lat
-        const verifiedLng = address.lng
+        const HIMALAYA_LAT = 25.2639198
+        const HIMALAYA_LNG = 84.8545598
+        const CHIKASI_LAT = 25.28091606583264
+        const CHIKASI_LNG = 84.87069734970407
+
+        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
+        let verifiedLat = address.lat
+        let verifiedLng = address.lng
+        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+            verifiedLat = HIMALAYA_LAT
+            verifiedLng = HIMALAYA_LNG
+        } else if (/chiksi|chikasi/i.test(combinedText)) {
+            verifiedLat = CHIKASI_LAT
+            verifiedLng = CHIKASI_LNG
+        }
+
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
             return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
         }
@@ -737,11 +759,22 @@ export async function verifyPaymentController(request, response) {
         const address = await AddressModel.findOne({ _id: addressId, userId })
         if (!address) return response.status(404).json({ message: 'Address not found.', error: true, success: false })
 
-        // Use the address's own saved, geocoded coordinates for delivery fee /
-        // zone / minimum-order logic. Client-sent lat/lng must never drive pricing
-        // (device GPS can be stale, cached, or spoofed).
-        const verifiedLat = address.lat
-        const verifiedLng = address.lng
+        const HIMALAYA_LAT = 25.2639198
+        const HIMALAYA_LNG = 84.8545598
+        const CHIKASI_LAT = 25.28091606583264
+        const CHIKASI_LNG = 84.87069734970407
+
+        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
+        let verifiedLat = address.lat
+        let verifiedLng = address.lng
+        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+            verifiedLat = HIMALAYA_LAT
+            verifiedLng = HIMALAYA_LNG
+        } else if (/chiksi|chikasi/i.test(combinedText)) {
+            verifiedLat = CHIKASI_LAT
+            verifiedLng = CHIKASI_LNG
+        }
+
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
             return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
         }

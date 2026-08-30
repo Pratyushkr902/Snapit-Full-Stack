@@ -35,24 +35,37 @@ const CheckoutPage = () => {
 
   const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
 
-  // Read coords directly from selected address — no GPS needed on checkout
+  const HIMALAYA_COORDS = { lat: 25.2639198, lng: 84.8545598 }
+  const CHIKASI_COORDS = { lat: 25.28091606583264, lng: 84.87069734970407 }
+
+  const getEffectiveAddressCoords = (addr) => {
+    if (!addr) return null
+    const combined = `${addr.address_line || ''} ${addr.city || ''} ${addr.landmark || ''}`
+    if (/himalaya|hmch|bams|mbbs/i.test(combined)) return HIMALAYA_COORDS
+    if (/chiksi|chikasi/i.test(combined)) return CHIKASI_COORDS
+    if (addr.lat != null && addr.lng != null && !Number.isNaN(Number(addr.lat)) && !Number.isNaN(Number(addr.lng))) {
+      return { lat: Number(addr.lat), lng: Number(addr.lng) }
+    }
+    return null
+  }
+
+  // Read coords directly from selected address
   const selectedAddress = addressList[selectAddress]
-  const deliveryInfo = (selectedAddress?.lat && selectedAddress?.lng)
-    ? getDeliveryInfo(selectedAddress.lat, selectedAddress.lng, totalPrice, isSnapitPlus)
+  const effectiveCoords = getEffectiveAddressCoords(selectedAddress)
+
+  const deliveryInfo = effectiveCoords
+    ? getDeliveryInfo(effectiveCoords.lat, effectiveCoords.lng, totalPrice, isSnapitPlus)
     : null
 
   const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
-  // Coords for backend — from address or store fallback
-  // NOTE: if address has no lat/lng, this silently falls back to STORE coords,
-  // which makes distance = 0 and charges the lowest slab. This masks bad data
-  // instead of fixing it. We warn the user below so they re-save their address.
+  // Coords for backend — from effective address or store fallback
   const getCoords = () => ({
-    lat: selectedAddress?.lat || STORE_FALLBACK.lat,
-    lng: selectedAddress?.lng || STORE_FALLBACK.lng,
+    lat: effectiveCoords?.lat || selectedAddress?.lat || STORE_FALLBACK.lat,
+    lng: effectiveCoords?.lng || selectedAddress?.lng || STORE_FALLBACK.lng,
   })
-  const addressMissingCoords = !!selectedAddress && (!selectedAddress?.lat || !selectedAddress?.lng)
+  const addressMissingCoords = !!selectedAddress && !effectiveCoords
 
   // ── Coupon ──
   const handleApplyPromoCoupon = async () => {

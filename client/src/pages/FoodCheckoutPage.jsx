@@ -117,7 +117,22 @@ const FoodCheckoutPage = () => {
     user?.snapitPlusExpiresAt &&
     new Date() < new Date(user.snapitPlusExpiresAt)
   )
+  const HIMALAYA_COORDS = { lat: 25.2639198, lng: 84.8545598 }
+  const CHIKASI_COORDS = { lat: 25.28091606583264, lng: 84.87069734970407 }
+
+  const getEffectiveAddressCoords = (addr) => {
+    if (!addr) return null
+    const combined = `${addr.address_line || ''} ${addr.city || ''} ${addr.landmark || ''}`
+    if (/himalaya|hmch|bams|mbbs/i.test(combined)) return HIMALAYA_COORDS
+    if (/chiksi|chikasi/i.test(combined)) return CHIKASI_COORDS
+    if (addr.lat != null && addr.lng != null && !Number.isNaN(Number(addr.lat)) && !Number.isNaN(Number(addr.lng))) {
+      return { lat: Number(addr.lat), lng: Number(addr.lng) }
+    }
+    return null
+  }
+
   const selectedAddr = addressList[selectAddress]
+  const effectiveAddrCoords = getEffectiveAddressCoords(selectedAddr)
 
   // Per-restaurant subtotal (using the editable qty overrides) + per-restaurant
   // delivery fee/min-order, mirroring how the backend prices each group.
@@ -127,8 +142,8 @@ const FoodCheckoutPage = () => {
     }, 0)
 
     const hasLoc = Boolean(r.restaurantLat && r.restaurantLng)
-    const info = (selectedAddr?.lat && selectedAddr?.lng && hasLoc)
-      ? getDeliveryInfoFromOrigin(r.restaurantLat, r.restaurantLng, selectedAddr.lat, selectedAddr.lng, subtotal, isSnapitPlus)
+    const info = (effectiveAddrCoords && hasLoc)
+      ? getDeliveryInfoFromOrigin(r.restaurantLat, r.restaurantLng, effectiveAddrCoords.lat, effectiveAddrCoords.lng, subtotal, isSnapitPlus)
       : null
     const fee = hasLoc
       ? (info?.charge ?? FALLBACK_DELIVERY_FEE)
@@ -245,7 +260,9 @@ const FoodCheckoutPage = () => {
   // own restaurantId (DB-derived, not trusted from client) into one order
   // per restaurant, folding tip/coupon/wallet into the first group. ────────
   const buildPayload = useCallback(async (extra = {}) => {
-    const coords = await getCoordinates()
+    const chosenAddr = addressList[selectAddress]
+    const effectiveCoords = getEffectiveAddressCoords(chosenAddr)
+    const coords = effectiveCoords || (await getCoordinates())
     const fullInstructions = [
       ...activeTags,
       instructions.trim(),

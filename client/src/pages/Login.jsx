@@ -240,9 +240,9 @@ const Login = () => {
                             <button
                                 type="button"
                                 onClick={() => setAuthMode(prev => prev === 'otp' ? 'password' : 'otp')}
-                                className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-lg hover:bg-green-100 transition-colors"
+                                className="text-[11px] font-bold text-green-800 bg-green-50 border border-green-200 px-3 py-1.5 rounded-xl hover:bg-green-100 transition-colors shadow-xs"
                             >
-                                {authMode === 'otp' ? 'Use Password' : 'Use OTP Code'}
+                                {authMode === 'otp' ? 'Sign in with Password' : 'Sign in with OTP'}
                             </button>
                         )}
                     </div>
@@ -383,8 +383,8 @@ const Login = () => {
                     {authMode === 'password' && (
                         <form onSubmit={handlePasswordSubmit} className="space-y-4">
                             <div>
-                                <h2 className="text-lg font-black text-gray-900">Admin / Password Login</h2>
-                                <p className="text-xs text-gray-500 mt-0.5">Sign in with your registered email and password</p>
+                                <h2 className="text-lg font-black text-gray-900">Sign in with Password</h2>
+                                <p className="text-xs text-gray-500 mt-0.5">Sign in with your registered email and password (Staff & Customers)</p>
                             </div>
 
                             {/* Email */}

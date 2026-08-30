@@ -124,7 +124,7 @@ const AdminMarketingHub = () => {
             </span>
           </div>
           <p className='text-xs text-slate-500 mt-1'>
-            Automated Blinkit/Swiggy-style meal cravings + instant 1-click all-user broadcasts
+            Automated scheduled meal engagement schedules & high-priority push broadcast command center
           </p>
         </div>
       </div>

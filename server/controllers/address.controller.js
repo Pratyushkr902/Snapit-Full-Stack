@@ -140,9 +140,25 @@ export const addAddressController = async (request, response) => {
             landmark, floor_door, delivery_instructions
         } = request.body
 
-        // Coords resolution: map pin, GPS, or village geocode
-        let finalLat = lat != null && !Number.isNaN(Number(lat)) ? Number(lat) : null
-        let finalLng = lng != null && !Number.isNaN(Number(lng)) ? Number(lng) : null
+        const HIMALAYA_LAT = 25.2639198
+        const HIMALAYA_LNG = 84.8545598
+        const CHIKASI_LAT = 25.28091606583264
+        const CHIKASI_LNG = 84.87069734970407
+
+        const combinedText = `${address_line || ''} ${city || ''} ${landmark || ''}`
+        let finalLat = null
+        let finalLng = null
+
+        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+            finalLat = HIMALAYA_LAT
+            finalLng = HIMALAYA_LNG
+        } else if (/chiksi|chikasi/i.test(combinedText)) {
+            finalLat = CHIKASI_LAT
+            finalLng = CHIKASI_LNG
+        } else if (lat != null && !Number.isNaN(Number(lat)) && lng != null && !Number.isNaN(Number(lng))) {
+            finalLat = Number(lat)
+            finalLng = Number(lng)
+        }
 
         if (finalLat == null || finalLng == null) {
             const geocoded = await geocodeCityFallback(city || address_line)
@@ -247,9 +263,25 @@ export const updateAddressController = async (request, response) => {
             landmark, floor_door, delivery_instructions
         } = request.body
 
-        // Use GPS coords if provided, otherwise geocode from city name
-        let finalLat = lat != null && !Number.isNaN(Number(lat)) ? Number(lat) : null
-        let finalLng = lng != null && !Number.isNaN(Number(lng)) ? Number(lng) : null
+        const HIMALAYA_LAT = 25.2639198
+        const HIMALAYA_LNG = 84.8545598
+        const CHIKASI_LAT = 25.28091606583264
+        const CHIKASI_LNG = 84.87069734970407
+
+        const combinedText = `${address_line || ''} ${city || ''} ${landmark || ''}`
+        let finalLat = null
+        let finalLng = null
+
+        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+            finalLat = HIMALAYA_LAT
+            finalLng = HIMALAYA_LNG
+        } else if (/chiksi|chikasi/i.test(combinedText)) {
+            finalLat = CHIKASI_LAT
+            finalLng = CHIKASI_LNG
+        } else if (lat != null && !Number.isNaN(Number(lat)) && lng != null && !Number.isNaN(Number(lng))) {
+            finalLat = Number(lat)
+            finalLng = Number(lng)
+        }
 
         if (!finalLat || !finalLng) {
             const geocoded = await geocodeCityFallback(city || address_line)
