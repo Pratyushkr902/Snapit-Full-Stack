@@ -384,7 +384,7 @@ const Login = () => {
                         <form onSubmit={handlePasswordSubmit} className="space-y-4">
                             <div>
                                 <h2 className="text-lg font-black text-gray-900">Sign in with Password</h2>
-                                <p className="text-xs text-gray-500 mt-0.5">Sign in with your registered email and password (Staff & Customers)</p>
+                                <p className="text-xs text-gray-500 mt-0.5">Sign in with your registered email and password</p>
                             </div>
 
                             {/* Email */}
