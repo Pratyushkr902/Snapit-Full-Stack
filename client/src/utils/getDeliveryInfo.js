@@ -22,12 +22,12 @@ export const getDistanceFromStore = (customerLat, customerLng) =>
   getDistanceKm(STORE_LAT, STORE_LNG, customerLat, customerLng)
 
 // 0–3 km   → ₹12   ┐
-// 3–6 km   → ₹19   ┘  0–6km zone
+// 3–6 km   → ₹29   ┘  0–6km zone
 // 6–14 km  → ₹49       flat zone
 // >14 km   → not serviceable
 export const getDeliveryCharge = (distanceKm) => {
   if (distanceKm <= 3)  return 12
-  if (distanceKm <= 6)  return 19
+  if (distanceKm <= 6)  return 29
   if (distanceKm <= 14) return 49
   return null
 }

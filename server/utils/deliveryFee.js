@@ -48,12 +48,12 @@ export const getDistanceFromOrigin = (originLat, originLng, customerLat, custome
   getDistanceKm(originLat, originLng, customerLat, customerLng)
 
 // 0–3 km   → ₹12
-// 3–6 km   → ₹19
+// 3–6 km   → ₹29
 // 6–14 km  → ₹49
 // >14 km   → not serviceable
 const getDeliveryChargeByDistance = (distanceKm) => {
   if (distanceKm <= 3) return 12
-  if (distanceKm <= 6) return 19
+  if (distanceKm <= 6) return 29
   if (distanceKm <= 14) return 49
   return null
 }
