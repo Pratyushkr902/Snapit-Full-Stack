@@ -226,6 +226,8 @@ const RiderDashboard = () => {
 
             // If going ON DUTY, test GPS permissions (only for real RIDER accounts)
             if (target && user?.role === 'RIDER' && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    () => {},
                     (err) => {
                         console.warn('[RiderGPS] Permission prompt warning:', err.message);
                         toast('Please enable GPS Location on your device for accurate tracking', { icon: '📍' });
@@ -300,47 +302,140 @@ const RiderDashboard = () => {
         };
     }, [fetchRiderOrders, playOrderAlertSound]);
 
-    // ─── GPS tracking & Fleet broadcasting (ONLY for real RIDER role, NEVER for Admins) ──
+    // ─── High-Precision GPS Engine for On-Duty Delivery Partners (Manish Kumar) ──
     useEffect(() => {
-        let watchId;
-            watchId = navigator.geolocation.watchPosition((pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                const speed = pos.coords.speed;
+        let isCancelled = false;
+        let webWatchId = null;
+        let capCallbackId = null;
+        let lastHttpSync = 0;
 
-                // 1. Broadcast to Admin Fleet Tracker
-                if (socketRef.current) {
-                    socketRef.current.emit('rider_live_location', {
-                        riderId: user?._id,
-                        riderName: user?.name,
-                        riderMobile: user?.mobile,
-                        latitude: lat,
-                        longitude: lng,
-                        heading,
-                        speed,
-                        isDutyOn: true
-                    });
-                }
+        const processLocation = (lat, lng, heading = null, speed = null, accuracy = null) => {
+            if (isCancelled || !lat || !lng) return;
+            // Filter out coarse cell-tower noise if accuracy is worse than 80m
+            if (accuracy && accuracy > 80) {
+                console.warn('[RiderGPS] Discarding coarse GPS fix (accuracy too low):', accuracy);
+                return;
+            }
 
-                // 2. Broadcast to specific active customer order (if Out for Delivery)
-                const activeOrder = ordersRef.current.find(o => o.delivery_status === "Out for Delivery");
-                if (activeOrder && socketRef.current) {
+            // 1. Broadcast to Admin Fleet Tracker
+            if (socketRef.current) {
+                socketRef.current.emit('rider_live_location', {
+                    riderId:     user?._id,
+                    riderName:   user?.name,
+                    riderMobile: user?.mobile,
+                    latitude:    lat,
+                    longitude:   lng,
+                    heading:     heading || 0,
+                    speed:       speed || 0,
+                    accuracy:    accuracy || null,
+                    isDutyOn:    true
+                });
+            }
+
+            // 2. Broadcast to active customer tracking map for Out for Delivery orders
+            const activeOrders = (ordersRef.current || []).filter(o => o?.delivery_status === "Out for Delivery");
+            activeOrders.forEach(o => {
+                if (socketRef.current && o?.orderId) {
                     socketRef.current.emit('send_location', {
-                        orderId: activeOrder.orderId,
-                        latitude: lat,
-                        longitude: lng
+                        orderId:   o.orderId,
+                        latitude:  lat,
+                        longitude: lng,
+                        heading:   heading || 0,
+                        speed:     speed || 0
                     });
                 }
-            }, (err) => console.warn('[RiderGPS] watch error:', err.message), { enableHighAccuracy: true });
-        }
+            });
+
+            // 3. Throttle HTTP persistence to backend every 8s
+            const nowTime = Date.now();
+            if (activeOrders.length > 0 && nowTime - lastHttpSync > 8000) {
+                lastHttpSync = nowTime;
+                activeOrders.forEach(o => {
+                    if (o?.orderId) {
+                        Axios({
+                            url: `/api/order/rider-location/${o.orderId}`,
+                            method: 'post',
+                            data: { latitude: lat, longitude: lng }
+                        }).catch(() => {});
+                    }
+                });
+            }
+        };
+
+        const startHighAccuracyGPS = async () => {
+            // Strictly guard: ONLY run for active RIDER accounts on duty
+            if (!isDutyOn || user?.role !== 'RIDER') return;
+
+            try {
+                const { Capacitor } = await import('@capacitor/core');
+                if (Capacitor.isNativePlatform()) {
+                    const { Geolocation } = await import('@capacitor/geolocation');
+                    const perm = await Geolocation.checkPermissions();
+                    if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
+                        await Geolocation.requestPermissions();
+                    }
+                    capCallbackId = await Geolocation.watchPosition(
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 },
+                        (pos, err) => {
+                            if (err) {
+                                console.warn('[NativeRiderGPS] Watch error:', err);
+                                return;
+                            }
+                            if (pos?.coords) {
+                                processLocation(
+                                    pos.coords.latitude,
+                                    pos.coords.longitude,
+                                    pos.coords.heading,
+                                    pos.coords.speed,
+                                    pos.coords.accuracy
+                                );
+                            }
+                        }
+                    );
+                    return;
+                }
+            } catch (err) {
+                console.warn('[RiderGPS] Native GPS init fell back to browser:', err?.message);
+            }
+
+            // Web Browser High Accuracy GPS Fallback
+            if (navigator.geolocation) {
+                webWatchId = navigator.geolocation.watchPosition(
+                    (pos) => {
+                        processLocation(
+                            pos.coords.latitude,
+                            pos.coords.longitude,
+                            pos.coords.heading,
+                            pos.coords.speed,
+                            pos.coords.accuracy
+                        );
+                    },
+                    (err) => console.warn('[WebRiderGPS] Watch error:', err?.message),
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 }
+                );
+            }
+        };
+
+        startHighAccuracyGPS();
+
         return () => {
-            if (watchId && navigator.geolocation) {
-                navigator.geolocation.clearWatch(watchId);
+            isCancelled = true;
+            if (webWatchId !== null && navigator.geolocation) {
+                navigator.geolocation.clearWatch(webWatchId);
+            }
+            if (capCallbackId) {
+                import('@capacitor/geolocation').then(({ Geolocation }) => {
+                    Geolocation.clearWatch({ id: capCallbackId }).catch(() => {});
+                }).catch(() => {});
             }
         };
     }, [isDutyOn, user?.role, user?._id, user?.name, user?.mobile]);
+
+    const handlePickup = async (order) => {
+        if (!isDutyOn) {
             toast.error('Please switch ON DUTY before picking up orders!', { icon: '🛑', duration: 4000 });
             return;
+        }
         try {
             const response = await Axios({
                 ...SummaryApi.updateOrderStatus,
