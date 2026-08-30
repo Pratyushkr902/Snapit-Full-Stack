@@ -5,19 +5,19 @@ export const getAppVersionController = async (req, res) => {
       success: true,
       error: false,
       data: {
-        latestVersion: "2.6.34",
-        latestVersionCode: 73,
+        latestVersion: "2.6.36",
+        latestVersionCode: 75,
         minRequiredVersionCode: 73,
         forceUpdate: true,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit.pages.dev/app-release.apk",
         title: "Update Available 🚀",
-        message: "A new version of Snapit (v2.6.34) is ready with faster 10-minute delivery, smart search & new features!",
+        message: "A new version of Snapit (v2.6.36) is ready with faster delivery, 6-14km coverage & high-precision tracking!",
         releaseNotes: [
-          "⚡ Faster 10-Minute Delivery & Order Tracking",
-          "🔍 Blinkit/Zepto-Grade Smart Voice Search & Hindi Filters",
-          "🔔 Multi-Device Live Push Notifications & Alerts",
-          "🍕 Improved Speed, Performance & Stability"
+          "⚡ 6–14 km Tiered Long-Distance Delivery & Upsell Banners",
+          "📍 High-Precision Live Rider GPS Engine",
+          "🔔 Multi-Device Push Notifications & Live Sound Chimes",
+          "🛡️ Android 15 Edge-to-Edge & R8 Performance Optimizations"
         ]
       }
     });

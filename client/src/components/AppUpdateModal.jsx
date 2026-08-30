@@ -39,7 +39,7 @@ const AppUpdateModal = () => {
         console.warn('[AppUpdate] info read fallback:', infoErr?.message)
       }
 
-      const backendUrl = import.meta.env.VITE_API_URL || 'https://snapit-full-stack-production.up.railway.app'
+      const backendUrl = import.meta.env.VITE_API_URL || 'https://snapit-backend-bn8r.onrender.com'
       let data = null
       try {
         const response = await fetch(`${backendUrl}/api/app-version?t=${Date.now()}`, {
