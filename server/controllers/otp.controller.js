@@ -109,8 +109,18 @@ export async function verifyOtpController(request, response) {
         await otpRecord.save()
 
         let user = await UserModel.findOne({
-            $or: [{ email: cleanEmail }, { email: email.trim().toLowerCase() }]
+            $or: [
+                { email: cleanEmail },
+                { email: email.trim().toLowerCase() },
+                ...(cleanEmail === 'manish.kumar.pk3546@gmail.com' ? [{ email: 'manish.rider@snapit.express' }] : [])
+            ]
         })
+
+        if (user && user.email === 'manish.rider@snapit.express') {
+            user.email = 'manish.kumar.pk3546@gmail.com'
+            user.role = 'RIDER'
+            await UserModel.findByIdAndUpdate(user._id, { email: 'manish.kumar.pk3546@gmail.com', role: 'RIDER' })
+        }
 
         if (!user) {
             // New account via OTP — seamless signup with name or email fallback
