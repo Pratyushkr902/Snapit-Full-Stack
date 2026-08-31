@@ -92,9 +92,13 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     defaultSound: true,
                     defaultVibrateTimings: true,
                     tag: data?.type === 'ABANDONED_CART' ? 'cart_nudge' : (data?.type ? `promo_${data.type}` : (data?.orderId ? `order_${data.orderId}` : undefined)),
-                }
+                },
+                collapseKey: data?.orderId ? `order_${data.orderId}` : undefined,
             },
             apns: {
+                headers: {
+                    'apns-collapse-id': data?.orderId ? `order_${data.orderId}` : undefined,
+                },
                 payload: {
                     aps: {
                         alert: { title, body },
@@ -104,12 +108,18 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                 }
             },
             webpush: {
+                headers: {
+                    'Urgency': 'high',
+                    'Topic': data?.orderId ? `order_${data.orderId}`.replace(/[^a-zA-Z0-9-_]/g, '') : undefined,
+                },
                 notification: {
                     title,
                     body,
                     icon: '/snapit-icon-192.png',
                     badge: '/snapit-icon-192.png',
-                    vibrate: [200, 100, 200]
+                    vibrate: [200, 100, 200],
+                    tag: data?.type === 'ABANDONED_CART' ? 'cart_nudge' : (data?.type ? `promo_${data.type}` : (data?.orderId ? `order_${data.orderId}` : undefined)),
+                    renotify: false
                 },
                 data: {
                     title,

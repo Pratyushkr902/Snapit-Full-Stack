@@ -15,9 +15,15 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Background message received:', payload);
-  const title = payload.notification?.title || payload.data?.title || 'Snapit Delivery';
-  const body = payload.notification?.body || payload.data?.body || payload.data?.message || 'Your order status has been updated';
-  const icon = payload.notification?.icon || payload.data?.icon || '/snapit-icon-192.png';
+  // If payload already contains a notification object, the browser automatically displays it.
+  // We only call showNotification for data-only messages to prevent duplicate notifications.
+  if (payload.notification) {
+    return;
+  }
+
+  const title = payload.data?.title || 'Snapit Delivery';
+  const body = payload.data?.body || payload.data?.message || 'Your order status has been updated';
+  const icon = payload.data?.icon || '/snapit-icon-192.png';
   const targetUrl = payload.data?.url || (payload.data?.orderId ? `/#/dashboard/order-tracking/${payload.data.orderId}` : '/');
 
   self.registration.showNotification(title, {
