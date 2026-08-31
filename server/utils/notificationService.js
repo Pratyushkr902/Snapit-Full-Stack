@@ -200,15 +200,18 @@ const saveAndSend = async ({
 }) => {
   let fcmMessageId = null;
 
-  // Auto-resolve FCM tokens from UserModel (multi-device support)
-  let targetTokens = fcmToken ? [fcmToken] : [];
-  if (recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
+  // Auto-resolve single active FCM token from UserModel to prevent duplicate pushes
+  let targetTokens = [];
+  if (fcmToken && typeof fcmToken === 'string' && fcmToken.trim().length > 10) {
+    targetTokens.push(fcmToken.trim());
+  } else if (recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
     try {
       const UserModel = mongoose.models.User || mongoose.model("User");
       const userDoc = await UserModel.findById(recipientId).select("fcmToken fcmTokens").lean();
-      if (userDoc) {
-        if (userDoc.fcmToken) targetTokens.push(userDoc.fcmToken);
-        if (Array.isArray(userDoc.fcmTokens)) targetTokens.push(...userDoc.fcmTokens);
+      if (userDoc?.fcmToken) {
+        targetTokens.push(userDoc.fcmToken);
+      } else if (Array.isArray(userDoc?.fcmTokens) && userDoc.fcmTokens.length > 0) {
+        targetTokens.push(userDoc.fcmTokens[userDoc.fcmTokens.length - 1]);
       }
     } catch (e) {
       console.warn(`[FCM Token Lookup Error] recipientId=${recipientId}:`, e.message);

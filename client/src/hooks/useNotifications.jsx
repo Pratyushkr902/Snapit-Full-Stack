@@ -86,7 +86,16 @@ const useNotifications = () => {
               console.warn('❌ Native FCM Registration error:', error)
             })
 
+            const recentPushes = new Map()
             PushNotifications.addListener('pushNotificationReceived', (notification) => {
+              const notifKey = String(notification.id || notification.data?.orderId || notification.title || notification.body || '').trim()
+              const now = Date.now()
+              if (notifKey && recentPushes.has(notifKey) && (now - recentPushes.get(notifKey) < 4000)) {
+                console.log('🔇 Duplicate push notification suppressed:', notifKey)
+                return
+              }
+              if (notifKey) recentPushes.set(notifKey, now)
+
               console.log('🔔 Push notification received in foreground:', notification)
               const title = notification.title || notification.data?.title || 'Snapit Alert'
               const body = notification.body || notification.data?.body || ''
