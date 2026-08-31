@@ -146,7 +146,7 @@ export async function updateRestaurant(req, res) {
     if (!await assertOwnership(req, res, req.params.id)) return
 
     const updated = await RestaurantModel.findByIdAndUpdate(
-      req.params.id, req.body, { new: true, runValidators: true }
+      req.params.id, req.body, { returnDocument: 'after', new: true, runValidators: true }
     )
     if (!updated) return res.status(404).json({ success: false, message: 'Restaurant not found' })
     cache.del(`restaurant_${req.params.id}`)
@@ -221,7 +221,7 @@ export async function updateMenuItem(req, res) {
     }
 
     const item = await MenuItemModel.findByIdAndUpdate(
-      req.params.itemId, req.body, { new: true, runValidators: true }
+      req.params.itemId, req.body, { returnDocument: 'after', new: true, runValidators: true }
     )
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
     cache.del(`restaurant_${item.restaurantId}`)
