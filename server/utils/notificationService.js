@@ -392,9 +392,13 @@ export const notifySellersOfNewOrder = async (order) => {
 
     console.log(`[notifySellersOfNewOrder] Notifying ${sellers.length} sellers/admins for order ${order.orderId}`);
     const notifiedTokens = new Set();
+    const customerId = String(order?.userId || '');
+
     await Promise.allSettled(
       sellers.map(seller => {
         if (!seller.fcmToken || notifiedTokens.has(seller.fcmToken)) return Promise.resolve();
+        // Prevent sending duplicate seller notification to the customer if the customer is also an admin/seller
+        if (customerId && String(seller._id) === customerId) return Promise.resolve();
         notifiedTokens.add(seller.fcmToken);
         return notifySellerNewOrder(seller._id, order.orderId, order.totalAmt || order.subTotalAmt, seller.fcmToken);
       })

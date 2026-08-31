@@ -46,13 +46,7 @@ export function getStoreStatus() {
  * Named export used by CheckoutPage.jsx, AddToCartButton.jsx, ProductDisplayPage.jsx, etc.
  * Admins, sellers, and riders bypass closing hours.
  */
-export function isStoreOpen(userRole) {
-  if (userRole) {
-    const normalized = String(userRole).replace(/['"]/g, '').trim().toUpperCase();
-    if (ADMIN_LIKE_ROLES.includes(normalized)) {
-      return true;
-    }
-  }
+export function isStoreOpen() {
   return !getStoreStatus().isClosed;
 }
 
