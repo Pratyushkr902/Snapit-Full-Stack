@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
+import banner1 from '../assets/banner1.webp';
 import banner2 from '../assets/banner2.webp';
 import banner3 from '../assets/banner3.webp';
 import exclusiveOffersBanner from '../assets/exclusive_offers_banner.jpg';
@@ -11,6 +13,7 @@ const bannerData = [
   { image: banner1, link: '/search?q=chicken' },
   { image: banner2, link: '/search?q=drink' },
   { image: banner3, link: '/search?q=oats' },
+];
 
 const HomeBanner = () => {
   const navigate = useNavigate();
@@ -24,6 +27,9 @@ const HomeBanner = () => {
         {/* INSTANT PAINT LAYER (LCP) */}
         {!swiperReady && (
           <div className='relative w-full h-full'>
+            <img
+              src={exclusiveOffersBanner}
+              alt='Snapit Up to 60% OFF Exclusive Offers'
               className='absolute inset-0 w-full h-full object-contain object-center'
               fetchPriority='high'
               loading='eager'
@@ -32,6 +38,7 @@ const HomeBanner = () => {
           </div>
         )}
 
+        {/* SWIPER BANNER CAROUSEL */}
         <Swiper
           spaceBetween={0}
           centeredSlides={true}
@@ -47,6 +54,8 @@ const HomeBanner = () => {
               onClick={() => navigate(item.link)}
               className='relative cursor-pointer w-full h-full flex items-center justify-center'
             >
+              <img
+                src={item.image}
                 alt={`Snapit Promo ${index + 1}`}
                 className='w-full h-full object-contain object-center select-none pointer-events-none'
                 loading={index === 0 ? 'eager' : 'lazy'}
@@ -60,4 +69,5 @@ const HomeBanner = () => {
     </div>
   );
 };
+
 export default HomeBanner;
