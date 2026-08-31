@@ -1,10 +1,29 @@
 import cron from 'node-cron'
-import UserModel from '../models/user.model.js'
+import UserModel, { CronLockModel } from '../models/user.model.js'
 import DeviceTokenModel from '../models/deviceToken.model.js'
 import CartProductModel from '../models/cartproduct.model.js'
 import OrderModel from '../models/order.model.js'
 import { Notification } from './notificationService.js'
 import { sendPushNotification } from './firebaseNotify.js'
+
+// Helper: Acquire atomic distributed lock in MongoDB so multiple server instances never run duplicate crons
+export async function acquireCronLock(lockKey) {
+  try {
+    const lock = await CronLockModel.findOneAndUpdate(
+      { key: lockKey },
+      { $setOnInsert: { key: lockKey, executedAt: new Date() } },
+      { upsert: true, new: false }
+    )
+    if (lock) {
+      console.log(`🔒 [Cron Lock] Slot "${lockKey}" was already executed by another instance. Skipping duplicate.`)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.log(`🔒 [Cron Lock] Slot "${lockKey}" locked by another instance. Skipping duplicate.`)
+    return false
+  }
+}
 
 // Helper: Broadcast to all active unique devices in batches
 export async function broadcastToAllUsers({ title, shayari, body, type, promoTag = 'DAILY_CRAVING' }) {
@@ -22,21 +41,23 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
     ])
 
     const tokenMap = new Map()
+    const registeredUserIds = new Set()
 
-    // 1. Add tokens from users
+    // 1. Add tokens from users (strictly 1 active token per registered user)
     users.forEach(u => {
-      const tokens = [
-        ...(u.fcmToken ? [u.fcmToken] : []),
-        ...(Array.isArray(u.fcmTokens) ? u.fcmTokens : [])
-      ].filter(t => typeof t === 'string' && t.trim().length > 10)
+      registeredUserIds.add(String(u._id))
+      const token = (u.fcmToken && typeof u.fcmToken === 'string' && u.fcmToken.trim().length > 10)
+        ? u.fcmToken.trim()
+        : (Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0 ? u.fcmTokens[u.fcmTokens.length - 1] : null)
 
-      tokens.forEach(tok => {
-        if (!tokenMap.has(tok)) tokenMap.set(tok, u)
-      })
+      if (token && !tokenMap.has(token)) {
+        tokenMap.set(token, u)
+      }
     })
 
-    // 2. Add tokens from standalone device registry (anonymous & app installs)
+    // 2. Add tokens from standalone device registry (ONLY for anonymous devices not already tied to UserModel)
     deviceDocs.forEach(d => {
+      if (d.userId && registeredUserIds.has(String(d.userId))) return
       if (d.token && typeof d.token === 'string' && d.token.trim().length > 10) {
         if (!tokenMap.has(d.token.trim())) {
           tokenMap.set(d.token.trim(), { _id: d.userId || null, name: 'Customer' })
@@ -47,7 +68,7 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
     const uniqueTokens = Array.from(tokenMap.keys())
     if (uniqueTokens.length === 0) return { success: true, deliveredCount: 0, totalDevices: 0 }
 
-    console.log(`📢 [Marketing Engine] Broadcasting "${title}" to ${uniqueTokens.length} active device(s)...`)
+    console.log(`📢 [Marketing Engine] Broadcasting "${title}" to ${uniqueTokens.length} active unique device(s)...`)
 
     const BATCH_SIZE = 50
     let successCount = 0
@@ -287,24 +308,44 @@ export const initMarketingCron = () => {
 
   // 1. Morning Breakfast Rush (08:30 AM IST)
   cron.schedule('30 8 * * *', async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+    const lockKey = `CRON_BREAKFAST_${today}`
+    const acquired = await acquireCronLock(lockKey)
+    if (!acquired) return
+
     console.log('⏰ [Cron] Triggering Morning Breakfast Rush Notification...')
     await triggerMarketingSchedule('BREAKFAST')
   }, { timezone: 'Asia/Kolkata' })
 
   // 2. Evening Chai & Snack Time (05:00 PM IST)
   cron.schedule('0 17 * * *', async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+    const lockKey = `CRON_CHAI_TIME_${today}`
+    const acquired = await acquireCronLock(lockKey)
+    if (!acquired) return
+
     console.log('⏰ [Cron] Triggering Evening Chai Time Notification...')
     await triggerMarketingSchedule('CHAI_TIME')
   }, { timezone: 'Asia/Kolkata' })
 
   // 3. Dinner Rush (08:00 PM IST)
   cron.schedule('0 20 * * *', async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+    const lockKey = `CRON_DINNER_${today}`
+    const acquired = await acquireCronLock(lockKey)
+    if (!acquired) return
+
     console.log('⏰ [Cron] Triggering Dinner Rush Notification (08:00 PM)...')
     await triggerMarketingSchedule('DINNER')
   }, { timezone: 'Asia/Kolkata' })
 
   // 4. Abandoned Cart Auto-Nudge (Every 10 mins)
   cron.schedule('*/10 * * * *', async () => {
+    const tenMinSlot = Math.floor(Date.now() / (10 * 60 * 1000))
+    const lockKey = `CRON_CART_NUDGE_${tenMinSlot}`
+    const acquired = await acquireCronLock(lockKey)
+    if (!acquired) return
+
     await checkAbandonedCarts()
   })
 

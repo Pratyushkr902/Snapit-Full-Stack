@@ -1,5 +1,20 @@
 import mongoose from "mongoose";
 
+const cronLockSchema = new mongoose.Schema({
+  key: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  executedAt: {
+    type: Date,
+    default: Date.now,
+    expires: 3600 * 4, // Auto-purges after 4 hours
+  },
+});
+
+export const CronLockModel = mongoose.model('CronLock', cronLockSchema);
+
 const userSchema = new mongoose.Schema({
     name : {
         type : String,
