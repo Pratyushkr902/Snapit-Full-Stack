@@ -32,7 +32,7 @@ const onTokenRefreshed = (newAccessToken) => {
 }
 const addRefreshSubscriber = (cb) => { refreshSubscribers.push(cb) }
 
-// ─── PUBLIC ROUTES (skip auth header) ────────────────────────────────────────
+// ─── PUBLIC ROUTES (skip auth header & refresh redirects) ────────────────────
 const publicRoutes = [
     '/api/category/get',
     '/api/subcategory/get',
@@ -42,22 +42,31 @@ const publicRoutes = [
     '/api/product/get-product-details',
     '/api/product/search-product',
     '/api/user/login',
+    '/api/user/login-with-password',
     '/api/user/register',
+    '/api/user/forgot-password',
+    '/api/user/verify-forgot-password-otp',
+    '/api/user/reset-password',
+    '/api/otp/send',
+    '/api/otp/verify',
     '/api/app-version',
     '/api/public-tracking',
 ]
 
 // ─── REQUEST INTERCEPTOR ─────────────────────────────────────────────────────
-// SECURITY FIX: Use a single canonical token key ('accessToken').
-// Tokens should ideally live in httpOnly cookies (set by the server) so JS
-// cannot read them at all.  Until that migration is done we keep one key name.
 Axios.interceptors.request.use(
     async (config) => {
-        // SECURITY NOTE: Read from one canonical key only.
-        // Migrate to httpOnly cookie auth to eliminate this entirely.
-        const accessToken = await secureStorage.getItem('accessToken')
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`
+        const requestUrl = config?.url
+            ? config.url.replace(API_URL, '').split('?')[0]
+            : ''
+        const isPublic = publicRoutes.some(route => requestUrl.includes(route))
+
+        // Only attach Authorization header if not a public auth/catalog route
+        if (!isPublic) {
+            const accessToken = await secureStorage.getItem('accessToken')
+            if (accessToken) {
+                config.headers.Authorization = `Bearer ${accessToken}`
+            }
         }
 
         // Let the browser set Content-Type with correct boundary for multipart

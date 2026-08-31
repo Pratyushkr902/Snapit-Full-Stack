@@ -113,11 +113,11 @@ const Login = () => {
                 setStep('verify')
                 setCountdown(30)
             } else {
-                toast.error(res.data?.message || 'Failed to send code', { id: 'otp-send' })
+                toast.error(res.data?.message || 'Failed to send code', { id: 'otp-send', duration: 4000 })
             }
         } catch (err) {
-            toast.dismiss('otp-send')
-            AxiosToastError(err)
+            const errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Failed to send code. Please try again.'
+            toast.error(errMsg, { id: 'otp-send', duration: 4000 })
         } finally {
             setLoading(false)
         }
@@ -148,16 +148,16 @@ const Login = () => {
             })
 
             if (res.data?.success) {
-                toast.success('🎉 Login successful!', { id: 'otp-verify' })
+                toast.success('🎉 Login successful!', { id: 'otp-verify', duration: 3000 })
                 const token = res.data.data?.accesstoken || res.data.data?.accessToken
                 const refresh = res.data.data?.refreshToken || res.data.data?.refreshtoken
                 await handleLoginSuccess(token, refresh)
             } else {
-                toast.error(res.data?.message || 'Invalid verification code', { id: 'otp-verify' })
+                toast.error(res.data?.message || 'Invalid verification code', { id: 'otp-verify', duration: 4000 })
             }
         } catch (err) {
-            toast.dismiss('otp-verify')
-            AxiosToastError(err)
+            const errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Verification failed. Please try again.'
+            toast.error(errMsg, { id: 'otp-verify', duration: 4000 })
         } finally {
             setLoading(false)
         }
@@ -221,23 +221,24 @@ const Login = () => {
                 const refresh = res.data?.data?.refreshToken || res.data?.data?.refreshtoken
                 await handleLoginSuccess(token, refresh)
             } else {
-                toast.dismiss('pwd-login')
                 if (res.data?.isOtpAccount || res.data?.requiresOtp || res.data?.message?.includes('OTP')) {
+                    toast.dismiss('pwd-login')
                     toast('This account uses OTP login. Sending code to your email...', { icon: '📨' })
                     setAuthMode('otp')
                     await handleSendOtp()
                 } else {
-                    toast.error(res.data?.message || 'Login failed')
+                    toast.error(res.data?.message || 'Login failed', { id: 'pwd-login', duration: 4000 })
                 }
             }
         } catch (err) {
-            toast.dismiss('pwd-login')
             if (err?.response?.data?.message?.includes('OTP') || err?.response?.data?.isOtpAccount) {
+                toast.dismiss('pwd-login')
                 toast('This account uses OTP login. Sending code to your email...', { icon: '📨' })
                 setAuthMode('otp')
                 await handleSendOtp()
             } else {
-                AxiosToastError(err)
+                const errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Login failed. Please check credentials.'
+                toast.error(errMsg, { id: 'pwd-login', duration: 4000 })
             }
         } finally {
             setLoading(false)
