@@ -126,14 +126,11 @@ const Home = () => {
     <section className='bg-white min-h-screen overflow-x-hidden'>
 
       {/* 1. TOP BANNER CAROUSEL */}
-      <div className='container mx-auto px-0 lg:px-4 mb-2'>
+      <div className='container mx-auto px-0 lg:px-4 mb-3 sm:mb-4'>
         <HomeBanner />
       </div>
 
-      {/* 2. TODAY'S EXCLUSIVE 60% OFF OFFERS (Zomato/Blinkit Style) */}
-      <TodayOffersStrip />
-
-      {/* 3. 4 SUPER-APP CATEGORY CARDS (Below Banners) */}
+      {/* 2. 4 SUPER-APP CATEGORY CARDS (Below Banners) */}
       <div className='container mx-auto px-4 mb-4 lg:mb-6'>
         <div className='grid grid-cols-4 gap-2.5 sm:gap-4'>
           {SUPER_APP_CATEGORIES.map((cat) => (

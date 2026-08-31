@@ -249,6 +249,15 @@ const FoodHomePage = () => {
                 </p>
               )}
 
+              {/* Zomato-Style Promo Offer Badge */}
+              <div className='flex items-center gap-1.5 mb-2'>
+                <span className='inline-flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-2xs'>
+                  <span>🏷️</span>
+                  <span>UP TO 60% OFF</span>
+                  <span className='opacity-80 font-semibold text-[9px]'>| SNAPIT60</span>
+                </span>
+              </div>
+
               <div className='flex items-center gap-3 text-xs text-gray-500 border-t border-gray-100 pt-2'>
                 <span>🕐 {r.deliveryTimeMin}–{r.deliveryTimeMax} min</span>
                 {r.minOrderValue > 0 && <><span>·</span><span>Min ₹{r.minOrderValue}</span></>}

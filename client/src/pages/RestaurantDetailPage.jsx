@@ -547,6 +547,30 @@ export default function RestaurantDetailPage() {
 
             {/* ── Distance + Address bar (Zomato-style) ── */}
             <LocationBar restaurant={restaurant} userLocation={userLocation} />
+
+            {/* ── Zomato-Style Offers & Coupons for this Restaurant ── */}
+            <div className="mx-4 my-2.5 p-3 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 flex items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🏷️</span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-blue-900 uppercase">UP TO 60% OFF</span>
+                    <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">SNAPIT60</span>
+                  </div>
+                  <p className="text-[10px] text-blue-700 font-medium mt-0.5">Surprise discount ₹1–₹10 on orders</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText('SNAPIT60')
+                  toast.success('🎟️ Code "SNAPIT60" copied! Apply at checkout for Up to 60% OFF')
+                }}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black rounded-xl shadow-xs active:scale-95 transition-all flex-shrink-0"
+              >
+                Copy
+              </button>
+            </div>
           </div>
 
           {/* ── Category Tabs ── */}
