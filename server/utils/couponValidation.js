@@ -1,17 +1,17 @@
 // Zomato/Swiggy-style Psychological Coupon Engine:
-// High percentage displayed to customers (30% to 60% OFF), strictly capped at ₹1–₹10 max discount.
+// "Up to 60% OFF" displayed to customers, with a dynamic/random variable ₹1–₹10 surprise discount.
 const COUPON_RULES = {
-  SNAPIT60:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  WELCOME60:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  CAKE50:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  BIRYANIFREE: { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  FEAST40:     { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  SAVE30:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  SNAPIT:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  SNAPIT50:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  FIRSTUSER:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  FIRSTFREE:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  FIRST50:     { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  SNAPIT60:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  WELCOME60:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  CAKE50:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  BIRYANIFREE: { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  FEAST40:     { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  SAVE30:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  SNAPIT:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  SNAPIT50:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  FIRSTUSER:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  FIRSTFREE:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  FIRST50:     { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
 }
 
 export function validateCoupon(couponCode, subTotalAmt) {
@@ -30,10 +30,11 @@ export function validateCoupon(couponCode, subTotalAmt) {
     return { code: null, discount: 0, label: '', minOrder: rule.minOrder }
   }
 
-  // Calculate percentage discount (30% to 60%)
+  // Calculate 60% ceiling
   const calculatedDiscount = Math.max(1, Math.round((subtotal * rule.percent) / 100))
-  // Hard cap at max ₹10 for all users
-  const finalDiscount = Math.min(calculatedDiscount, rule.maxDiscount, 10, subtotal)
+  // Variable random surprise discount between ₹1 and ₹10 (strictly capped at ₹10 max)
+  const randomAmount = Math.floor(Math.random() * 10) + 1
+  const finalDiscount = Math.max(1, Math.min(randomAmount, calculatedDiscount, rule.maxDiscount, 10, subtotal))
 
   return { code, discount: finalDiscount, label: rule.label }
 }
