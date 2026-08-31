@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
+import TodayOffersStrip from '../components/TodayOffersStrip'
 
 // ── Haversine distance (km) ───────────────────────────────────────────────────
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -169,8 +170,11 @@ const FoodHomePage = () => {
         </div>
       )}
 
+      {/* ── Limited Offer Promo Codes Strip ── */}
+      <TodayOffersStrip className='mt-2 mb-1' />
+
       {/* ── Restaurant Cards ── */}
-      <div className='px-4 pt-4'>
+      <div className='px-4 pt-2'>
         {loading ? (
           [1,2,3].map(i => (
             <div key={i} className='bg-white rounded-2xl overflow-hidden shadow-sm animate-pulse mb-4'>
