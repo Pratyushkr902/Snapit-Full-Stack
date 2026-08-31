@@ -96,6 +96,7 @@ import {
   MAX_DELIVERY_RADIUS_KM,
   EXPRESS_DELIVERY_FEE,
 } from '../utils/deliveryFee.js'
+import { validateCoupon } from '../utils/couponValidation.js'
 
 const checkDeliveryServiceability = (lat, lng) => {
   const dist = getDistanceFromStore(lat, lng)
@@ -1636,51 +1637,33 @@ export const applyCouponController = async (request, response) => {
             return response.status(400).json({ message: 'Coupon code and amount required.', error: true, success: false })
         }
 
-        if (Number(totalAmt) < 149) {
-            return response.status(400).json({ message: 'Minimum order ₹149 required.', error: true, success: false })
-        }
-
         const user = await UserModel.findById(userId)
         if (!user) return response.status(404).json({ message: 'User not found.', error: true, success: false })
 
-        const code = couponCode.trim().toUpperCase()
-        const VALID_CODES = ['SNAPIT', 'FIRSTUSER', 'FIRSTFREE', 'FIRST50']
-
-        if (!VALID_CODES.includes(code)) {
-            return response.status(400).json({ message: 'Invalid coupon code.', error: true, success: false })
+        const validation = validateCoupon(couponCode, Number(totalAmt))
+        if (!validation.code || validation.discount <= 0) {
+            if (validation.minOrder) {
+                return response.status(400).json({ message: `Minimum order of ₹${validation.minOrder} required for this coupon.`, error: true, success: false })
+            }
+            return response.status(400).json({ message: 'Invalid or expired coupon code.', error: true, success: false })
         }
 
-        if (code === 'FIRSTUSER' || code === 'FIRSTFREE') {
+        const code = validation.code
+        const discount = validation.discount
+
+        if (code === 'FIRSTUSER' || code === 'FIRSTFREE' || code === 'WELCOME60') {
             const previousOrder = await OrderModel.findOne({ userId })
             if (previousOrder) {
                 return response.status(400).json({ message: 'This code is for first-time customers only.', error: true, success: false })
             }
         }
 
-        // One use per calendar month per code, per user
         const now = new Date()
-        const currentMonth = now.getMonth()
-        const currentYear = now.getFullYear()
-        const alreadyUsedThisMonth = (user.usedPromoCodes || []).some((entry) => {
-            if (!entry || entry.code !== code || !entry.usedAt) return false
-            const usedAt = new Date(entry.usedAt)
-            return usedAt.getMonth() === currentMonth && usedAt.getFullYear() === currentYear
-        })
-        if (alreadyUsedThisMonth) {
-            return response.status(400).json({ message: `You've already used ${code} this month. Try again next month.`, error: true, success: false })
-        }
-
-        const discount = Math.floor(Math.random() * 5) + 1
-
-        await UserModel.findByIdAndUpdate(userId, {
-            $push: { usedPromoCodes: { code, usedAt: now } }
-        })
-
         return response.json({
-            message:  `Lucky coupon! You got ₹${discount} surprise discount.`,
+            message:  `🎉 Coupon Applied! ${validation.label || `You saved ₹${discount}`}`,
             error:    false,
             success:  true,
-            data:     { couponCode: code, discount_label: 'Surprise Discount', discount, newTotal: Number(totalAmt) - discount },
+            data:     { couponCode: code, discount_label: validation.label || 'Promo Discount', discount, newTotal: Math.max(0, Number(totalAmt) - discount) },
         })
     } catch (error) {
         console.error('applyCouponController:', error.message)
