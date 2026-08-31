@@ -108,8 +108,9 @@ const CheckoutPage = () => {
       }
       return false
     }
-    if (deliveryInfo && deliveryInfo.minOrder > 0 && totalPrice < deliveryInfo.minOrder) {
-      toast.error(`Minimum order of ₹${deliveryInfo.minOrder} required for delivery beyond 6km.`, { duration: 5000 })
+    const minGroceryOrder = Math.max(49, deliveryInfo?.minOrder || 49)
+    if (totalPrice < minGroceryOrder) {
+      toast.error(`Minimum order of ₹${minGroceryOrder} required. Add ₹${minGroceryOrder - totalPrice} more to proceed!`, { duration: 5000 })
       return false
     }
     return true

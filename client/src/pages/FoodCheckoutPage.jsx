@@ -148,7 +148,7 @@ const FoodCheckoutPage = () => {
     const fee = hasLoc
       ? (info?.charge ?? FALLBACK_DELIVERY_FEE)
       : (isSnapitPlus ? 0 : FALLBACK_DELIVERY_FEE)
-    const minOrder = info?.minOrder ?? 0
+    const minOrder = Math.max(99, Number(r.minOrderValue || r.minOrder || info?.minOrder || 99))
 
     return { ...r, subtotal, fee, minOrder, info }
   })
@@ -178,8 +178,8 @@ const FoodCheckoutPage = () => {
         }
         return false
       }
-      if (r.minOrder > 0 && r.subtotal < r.minOrder) {
-        toast.error(`Minimum order of ₹${r.minOrder} required for ${r.restaurantName} at this location.`, { duration: 5000 })
+      if (r.subtotal < r.minOrder) {
+        toast.error(`Minimum order of ₹${r.minOrder} required for ${r.restaurantName}. Add ₹${r.minOrder - r.subtotal} more to proceed!`, { duration: 5000 })
         return false
       }
     }

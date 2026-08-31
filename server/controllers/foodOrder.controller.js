@@ -169,9 +169,12 @@ const priceGroup = async (group, deliveryLocation, user) => {
     user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
     new Date() < new Date(user.snapitPlusExpiresAt)
   )
-  const minOrderRequired = getMinOrderAmountFromOrigin(restaurant.location.lat, restaurant.location.lng, lat, lng, isPlusForMinOrder)
-  if (minOrderRequired > 0 && subTotalAmt < minOrderRequired) {
-    const err = new Error(`Minimum order of ₹${minOrderRequired} required at ${restaurant.name} for this location.`)
+  const minOrderRequired = Math.max(
+    Number(restaurant.minOrderValue || restaurant.minOrder || 99),
+    getMinOrderAmountFromOrigin(restaurant.location?.lat, restaurant.location?.lng, lat, lng, isPlusForMinOrder)
+  )
+  if (subTotalAmt < minOrderRequired) {
+    const err = new Error(`Minimum order of ₹${minOrderRequired} required at ${restaurant.name}. Please add items worth ₹${minOrderRequired - subTotalAmt} more.`)
     err.statusCode = 400
     throw err
   }
