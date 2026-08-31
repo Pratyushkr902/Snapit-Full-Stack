@@ -841,7 +841,14 @@ const FoodCheckoutPage = () => {
               {!restaurantPricing[0]?.info?.serviceable
                 ? <span className='text-amber-600 font-bold text-xs'>{'Closed (>5km)'}</span>
                 : deliveryFee === 0
-                ? <><span className='line-through text-gray-300 mr-1'>₹30</span><span className='text-green-600 font-bold'>Free</span></>
+                ? <>
+                    {restaurantPricing[0]?.info?.originalCharge > 0 && (
+                      <span className='line-through text-gray-400 mr-1.5 font-normal'>
+                        ₹{restaurantPricing[0].info.originalCharge}
+                      </span>
+                    )}
+                    <span className='text-green-600 font-bold'>Free</span>
+                  </>
                 : `₹${deliveryFee}`
               }
             </span>

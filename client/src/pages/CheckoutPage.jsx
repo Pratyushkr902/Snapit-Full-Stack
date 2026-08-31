@@ -451,7 +451,19 @@ const CheckoutPage = () => {
                 )}
               </div>
               <p className={deliveryInfo && !deliveryInfo.serviceable ? 'text-amber-600 font-black text-xs' : deliveryFee === 0 ? 'text-green-600 font-black' : 'font-bold text-slate-900'}>
-                {deliveryInfo && !deliveryInfo.serviceable ? 'Closed (>5km)' : deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
+                {deliveryInfo && !deliveryInfo.serviceable
+                  ? 'Closed (>5km)'
+                  : deliveryFee === 0
+                  ? <>
+                      {deliveryInfo?.originalCharge > 0 && (
+                        <span className='line-through text-slate-400 mr-1.5 font-normal'>
+                          ₹{deliveryInfo.originalCharge}
+                        </span>
+                      )}
+                      <span className='text-green-600 font-black'>FREE</span>
+                    </>
+                  : DisplayPriceInRupees(deliveryFee)
+                }
               </p>
             </div>
             {couponApplied && (

@@ -60,17 +60,21 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   const dist = getDistanceKm(originLat, originLng, customerLat, customerLng)
   const isEvening = isAfterEveningCutoff()
 
+  const numCartTotal = Number(cartTotal) || 0
+  const daytimeCharge = dist <= 3 ? 12 : dist <= 6 ? 29 : numCartTotal >= 499 ? 60 : Math.round(dist * 7)
+
   // After 7:30 PM, deliveries beyond 5km are closed for rider night safety
   if (dist > 5 && isEvening) {
     return {
       serviceable: false,
       distanceKm: Math.round(dist * 10) / 10,
-      charge: 0,
+      charge: daytimeCharge,
+      originalCharge: daytimeCharge,
       eta: null,
       label: 'Closed (>5km after 7:30 PM)',
       isEveningClosed: true,
       reason: 'EVENING_DISTANCE_LIMIT',
-      isLongDistance: false,
+      isLongDistance: dist > 6,
       minOrder: 0
     }
   }
@@ -92,7 +96,6 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   let charge = 12
   let longDistanceTier = null // 'PER_KM' | 'FLAT_ABOVE_499'
   let amountNeededForFlatRate = 0
-  const numCartTotal = Number(cartTotal) || 0
 
   if (dist <= 3) {
     charge = 12
