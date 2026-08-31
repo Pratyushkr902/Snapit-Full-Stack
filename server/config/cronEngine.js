@@ -14,6 +14,10 @@ const DEFAULT_STORE = {
 };
 
 export const initSubscriptionCron = () => {
+    if (process.env.RENDER === 'true' || process.env.IS_FALLBACK_SERVER === 'true' || process.env.DISABLE_CRON === 'true') {
+        console.log("🛑 [Subscription Cron] Standby instance detected (Render). Skipping background cron.");
+        return;
+    }
     // ⏰ Wakes up automatically every single day at 04:00 AM IST
     // Cron syntax mapping: (Minute Hour Day-of-Month Month Day-of-Week)
     cron.schedule('0 4 * * *', async () => {

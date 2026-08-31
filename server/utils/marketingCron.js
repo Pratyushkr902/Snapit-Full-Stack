@@ -304,6 +304,12 @@ export async function triggerMarketingSchedule(type) {
 // MASTER INITIALIZER
 // ─────────────────────────────────────────────────────────────────────────────
 export const initMarketingCron = () => {
+  // If running on standby/fallback instance (Render or explicit fallback env), disable crons completely
+  if (process.env.RENDER === 'true' || process.env.IS_FALLBACK_SERVER === 'true' || process.env.DISABLE_CRON === 'true') {
+    console.log('🛑 [Marketing Cron] Standby fallback instance detected (Render). Marketing crons disabled on this instance to guarantee 0 duplicate notifications!')
+    return
+  }
+
   console.log('🚀 [Marketing Cron] Initializing Blinkit/Swiggy-style smart marketing schedules...')
 
   // 1. Morning Breakfast Rush (08:30 AM IST)

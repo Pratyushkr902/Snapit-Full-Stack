@@ -91,7 +91,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     visibility: 'public',
                     defaultSound: true,
                     defaultVibrateTimings: true,
-                    tag: data?.orderId ? `order_${data.orderId}` : undefined,
+                    tag: data?.type === 'ABANDONED_CART' ? 'cart_nudge' : (data?.type ? `promo_${data.type}` : (data?.orderId ? `order_${data.orderId}` : undefined)),
                 }
             },
             apns: {
