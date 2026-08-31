@@ -59,6 +59,19 @@ const Login = () => {
         const userDetails = await fetchUserDetails()
         if (userDetails?.success && userDetails.data) {
             dispatch(setUserDetails(userDetails.data))
+            const role = (userDetails.data.role || '').toUpperCase()
+            if (role === 'RIDER') {
+                navigate('/rider/dashboard', { replace: true })
+                return
+            }
+            if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+                navigate('/dashboard/orders', { replace: true })
+                return
+            }
+            if (role === 'SELLER' || role === 'RESTO_SELLER') {
+                navigate('/dashboard/store-orders', { replace: true })
+                return
+            }
         }
 
         navigate('/', { replace: true })
@@ -70,6 +83,13 @@ const Login = () => {
         const cleanEmail = email.trim().toLowerCase()
         if (!cleanEmail || !cleanEmail.includes('@')) {
             toast.error('Please enter a valid email address.')
+            return
+        }
+
+        // Automatic smart redirect for rider/staff accounts
+        if (cleanEmail.endsWith('@snapit.express') || cleanEmail.includes('.rider@') || cleanEmail.includes('.admin@')) {
+            toast('Rider/Staff account detected. Please sign in with your password.', { icon: '🔑' })
+            setAuthMode('password')
             return
         }
 
