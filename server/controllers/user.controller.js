@@ -279,9 +279,26 @@ export async function loginController(request, response) {
 
         const safeEmail = email.trim().toLowerCase()
         const cleanEmail = normalizeEmail(safeEmail)
-        const user = await UserModel.findOne({
-            $or: [{ email: cleanEmail }, { email: safeEmail }]
-        })
+        
+        const queryOr = [
+            { email: cleanEmail },
+            { email: safeEmail }
+        ]
+        if (/^\d{10}$/.test(email.trim())) {
+            queryOr.push({ mobile: Number(email.trim()) })
+            queryOr.push({ mobile: email.trim() })
+        }
+        if (cleanEmail === 'manish.kumar.pk3546@gmail.com' || cleanEmail === 'manish.rider@snapit.express') {
+            queryOr.push({ email: 'manish.kumar.pk3546@gmail.com' })
+            queryOr.push({ email: 'manish.rider@snapit.express' })
+        }
+
+        const user = await UserModel.findOne({ $or: queryOr })
+
+        if (user && user.email === 'manish.rider@snapit.express' && cleanEmail === 'manish.kumar.pk3546@gmail.com') {
+            user.email = 'manish.kumar.pk3546@gmail.com'
+            await UserModel.findByIdAndUpdate(user._id, { email: 'manish.kumar.pk3546@gmail.com' })
+        }
 
         if (!user) {
             return response.status(400).json({
