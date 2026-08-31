@@ -1,11 +1,11 @@
 import jwt from 'jsonwebtoken'
 
-// ✅ FIXED: accepts role param and includes it in JWT payload
+// Mobile-first session: Access token valid for 30 days
 const generatedAccessToken = async(userId, role)=>{
     const token = await jwt.sign(
         { id: userId, role: role },
         process.env.SECRET_KEY_ACCESS_TOKEN,
-        { expiresIn : '1h'}
+        { expiresIn : '30d'}
     )
 
     return token

@@ -81,29 +81,24 @@ function App() {
   }, [])
 
   const fetchUser = useCallback(async () => {
-    const token = await secureStorage.getItem(ACCESS_TOKEN_KEY);
+    let token = await secureStorage.getItem(ACCESS_TOKEN_KEY);
+    if (!token) {
+      token = await secureStorage.getItem('refreshToken');
+    }
     if (!token) {
       setIsAuthResolving(false)
-      dispatch(logout())
       if (Capacitor.isNativePlatform()) {
         SplashScreen.hide({ fadeOutDuration: 300 }).catch(() => {})
       }
       return
     }
     try {
-      const userData = await Promise.race([
-        fetchUserDetails(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Session check timed out')), 8000))
-      ])
+      const userData = await fetchUserDetails()
       if (userData?.success && userData?.data?._id) {
         dispatch(setUserDetails(userData.data))
-      } else if (!userData || !userData.success) {
-        // Token expired or invalid — clear state cleanly
-        dispatch(logout())
       }
     } catch (error) {
-      console.log("Session Check: No active user found or timed out.", error?.message)
-      dispatch(logout())
+      console.log("Session Check: Network or temporary error:", error?.message)
     } finally {
       setIsAuthResolving(false)
       if (Capacitor.isNativePlatform()) {
