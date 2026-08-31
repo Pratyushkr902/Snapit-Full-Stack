@@ -1,5 +1,8 @@
 import ProductModel from "../models/product.model.js";
 import mongoose from "mongoose";
+import NodeCache from "node-cache";
+
+const productCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
 
 // Fields returned in list queries (not full details)
 const LIST_FIELDS = 'name image imageThumbnail category subCategory unit stock price sellerPrice snapitMargin sellingPrice discount publish flashSale store_inventory';
@@ -77,6 +80,7 @@ export const createProductController = async (request, response) => {
         });
 
         const saveProduct = await product.save();
+        productCache.flushAll();
         return response.json({
             message: "Product Created Successfully",
             data: saveProduct,
@@ -93,18 +97,26 @@ export const getProductController = async (request, response) => {
         let { page, limit, search } = request.body;
         if (!page)  page  = 1;
         if (!limit) limit = 100;
+
+        const cacheKey = `prod_${page}_${limit}_${search || 'all'}`;
+        const cached = productCache.get(cacheKey);
+        if (cached) return response.json(cached);
+
         const query = search ? { $text: { $search: search } } : {};
         const skip  = (page - 1) * limit;
         const [data, totalCount] = await Promise.all([
             ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
             ProductModel.countDocuments(query)
         ]);
-        return response.json({
+
+        const result = {
             message: "Product data", error: false, success: true,
             totalCount,
             totalNoPage: Math.ceil(totalCount / limit),
             data: data.map(prod => ({ ...prod, image: secureImages(prod.image) }))
-        });
+        };
+        productCache.set(cacheKey, result);
+        return response.json(result);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
     }
@@ -253,11 +265,12 @@ export const updateProductDetails = async (request, response) => {
             updateFields.price        = sellerPrice + snapitMargin;
         }
 
-        const updateProduct = await ProductModel.findOneAndUpdate(
-            { _id },
+        const updateProduct = await ProductModel.findByIdAndUpdate(
+            _id,
             { $set: updateFields },
             { new: true, runValidators: true }
         ).populate('category subCategory');
+        productCache.flushAll();
 
         return response.json({ message: "updated successfully", data: updateProduct, error: false, success: true });
     } catch (error) {
@@ -289,6 +302,7 @@ export const deleteProductDetails = async (request, response) => {
         }
 
         const deleteProduct = await ProductModel.deleteOne({ _id });
+        productCache.flushAll();
         return response.json({ message: "Delete successfully", error: false, success: true, data: deleteProduct });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
