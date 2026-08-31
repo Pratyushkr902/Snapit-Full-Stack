@@ -21,9 +21,9 @@ const HomeBanner = () => {
   const [swiperReady, setSwiperReady] = useState(false);
 
   return (
-    <div className='container mx-auto px-4 mt-2 lg:mt-3'>
-      {/* 16:9 RESPONSIVE BANNER CONTAINER (Never crops text or images) */}
-      <div className='relative w-full aspect-[16/9] max-h-[380px] rounded-2xl overflow-hidden shadow-sm group bg-slate-900'>
+    <div className='container mx-auto px-3 sm:px-4 mt-1.5 sm:mt-3'>
+      {/* PERFECTLY FIT RESPONSIVE BANNER CONTAINER (Zero cropping) */}
+      <div className='relative w-full aspect-[1000/665] max-h-[420px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm group bg-gradient-to-b from-amber-50/80 to-orange-50/50 border border-amber-100/80'>
 
         {/* INSTANT PAINT LAYER (LCP) */}
         {!swiperReady && (
@@ -31,7 +31,7 @@ const HomeBanner = () => {
             <img
               src={exclusiveOffersBanner}
               alt='Snapit Up to 60% OFF Exclusive Offers'
-              className='absolute inset-0 w-full h-full object-cover object-center'
+              className='absolute inset-0 w-full h-full object-contain sm:object-cover object-center'
               fetchPriority='high'
               loading='eager'
               decoding='async'
@@ -44,7 +44,7 @@ const HomeBanner = () => {
           spaceBetween={0}
           centeredSlides={true}
           loop={true}
-          autoplay={{ delay: 4000, disableOnInteraction: false }}
+          autoplay={{ delay: 4500, disableOnInteraction: false }}
           pagination={{ clickable: true, dynamicBullets: true }}
           modules={[Autoplay, Pagination]}
           className='mySwiper h-full w-full'
@@ -54,12 +54,12 @@ const HomeBanner = () => {
             <SwiperSlide
               key={index}
               onClick={() => navigate(item.link)}
-              className='relative cursor-pointer w-full h-full'
+              className='relative cursor-pointer w-full h-full flex items-center justify-center'
             >
               <img
                 src={item.image}
                 alt={`Snapit Promo ${index + 1}`}
-                className='w-full h-full object-cover object-center select-none pointer-events-none'
+                className='w-full h-full object-contain sm:object-cover object-center select-none pointer-events-none'
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding='async'
