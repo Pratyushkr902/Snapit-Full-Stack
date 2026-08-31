@@ -17,7 +17,7 @@ function getISTHour() {
 
 function isWithinGlobalHours() {
   const h = getISTHour()
-  return h >= 8 && h < 21
+  return h >= 6 && h < 21
 }
 
 const parseBaseId = (rawId) => {
