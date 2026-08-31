@@ -108,18 +108,19 @@ export async function verifyOtpController(request, response) {
         otpRecord.verified = true
         await otpRecord.save()
 
+        const isManish = cleanEmail === 'manishkumarpk3546@gmail.com' || email.trim().toLowerCase() === 'manish.kumar.pk3546@gmail.com'
+
         let user = await UserModel.findOne({
             $or: [
                 { email: cleanEmail },
                 { email: email.trim().toLowerCase() },
-                ...(cleanEmail === 'manish.kumar.pk3546@gmail.com' ? [{ email: 'manish.rider@snapit.express' }] : [])
+                ...(isManish ? [{ email: 'manish.rider@snapit.express' }, { mobile: 9608754853 }] : [])
             ]
         })
 
-        if (user && user.email === 'manish.rider@snapit.express') {
-            user.email = 'manish.kumar.pk3546@gmail.com'
+        if (user && isManish && (user.email === 'manish.rider@snapit.express' || user.role !== 'RIDER')) {
             user.role = 'RIDER'
-            await UserModel.findByIdAndUpdate(user._id, { email: 'manish.kumar.pk3546@gmail.com', role: 'RIDER' })
+            await UserModel.findByIdAndUpdate(user._id, { role: 'RIDER' })
         }
 
         if (!user) {
