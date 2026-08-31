@@ -9,7 +9,7 @@ import logo from "../assets/snapit.png";
  */
 
 export const CLOSE_HOUR = 21; // 9:00 PM IST (21:00)
-export const OPEN_HOUR = 6;   // 6:00 AM IST (06:00)
+export const OPEN_HOUR = 9;   // 9:00 AM IST (09:00)
 
 export const ADMIN_LIKE_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER'];
 
@@ -285,7 +285,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             lineHeight: 1.5,
             padding: "0 8px"
           }}>
-            Operating hours are <strong>6:00 AM – 9:00 PM IST</strong>. We are resting and packing fresh stock for tomorrow!
+            Operating hours are <strong>9:00 AM – 9:00 PM IST</strong>. We are resting and packing fresh stock for tomorrow!
           </p>
 
           {/* Real-time Live Countdown Pill */}
@@ -320,7 +320,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             gap: 4
           }}>
             <span>⚡</span>
-            <span>10-Minute Deliveries Start at 6:00 AM Tomorrow</span>
+            <span>10-Minute Deliveries Start at 9:00 AM Tomorrow</span>
           </div>
 
           {/* Actions: Browse Catalog Anyway */}
@@ -404,7 +404,7 @@ function ClosedBanner({ status, onReopenShutter }) {
             overflow: "hidden",
             textOverflow: "ellipsis"
           }}>
-            Store Closed · Opens at 6:00 AM
+            Store Closed · Opens at 9:00 AM
           </p>
           <p style={{ fontSize: 11, fontWeight: 700, color: "#F5A623", margin: "2px 0 0" }}>
             Deliveries resume in {formatCountdown(status.msUntilOpen)}

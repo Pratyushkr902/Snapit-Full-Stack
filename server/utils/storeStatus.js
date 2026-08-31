@@ -17,7 +17,7 @@ function getISTHour() {
 
 function isWithinGlobalHours() {
   const h = getISTHour()
-  return h >= 6 && h < 21
+  return h >= 9 && h < 21
 }
 
 const parseBaseId = (rawId) => {
@@ -102,7 +102,7 @@ export async function assertStoreOpenForOrder({ list_items = [], userRole, order
   // Food/restaurant orders are controlled per-restaurant via the isOpen
   // toggle in Restaurant Admin, checked below in assertRestaurantItemsAvailable.
   if (orderType === 'grocery' && !roleBypassesHours && !isWithinGlobalHours()) {
-    const err = new Error('Store is closed. We open at 8 AM!')
+    const err = new Error('Store is closed. We open at 9 AM!')
     err.statusCode = 400
     throw err
   }
