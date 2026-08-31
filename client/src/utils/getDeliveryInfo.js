@@ -54,7 +54,6 @@ export const isAfterEveningCutoff = () => {
   const minutes = istDate.getUTCMinutes()
   return hours > 20 || (hours === 20 && minutes >= 30)
 }
-
 // Generalized version — computes delivery info from ANY origin point
 // (grocery store OR a restaurant's own location).
 export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, customerLng, cartTotal = 0, isSnapitPlus = false) => {
