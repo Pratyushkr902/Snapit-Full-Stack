@@ -5,7 +5,7 @@ import CommonSummaryApi from "../common/SummaryApi"
 // ─── SECURITY FIX: No hardcoded fallback URL ────────────────────────────────
 // The backend URL must always come from the environment.
 // A missing env var in production will now throw immediately (fail-loud),
-const API_URL = import.meta.env.VITE_API_URL || "https://snapit-backend-bn8r.onrender.com"
+const API_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
 export const baseURL = API_URL
 export const SummaryApi = CommonSummaryApi
