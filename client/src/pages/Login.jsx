@@ -91,6 +91,7 @@ const Login = () => {
                 toast.error(res.data?.message || 'Failed to send code', { id: 'otp-send' })
             }
         } catch (err) {
+            toast.dismiss('otp-send')
             AxiosToastError(err)
         } finally {
             setLoading(false)
@@ -130,6 +131,7 @@ const Login = () => {
                 toast.error(res.data?.message || 'Invalid verification code', { id: 'otp-verify' })
             }
         } catch (err) {
+            toast.dismiss('otp-verify')
             AxiosToastError(err)
         } finally {
             setLoading(false)
