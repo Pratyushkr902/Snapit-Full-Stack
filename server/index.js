@@ -130,10 +130,6 @@ app.use(cors({
     methods:        ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept", "Origin"],
 }))
-app.options('*', cors({
-    origin: (origin, callback) => callback(null, origin || true),
-    credentials: true,
-}))
 // ─── ABUSE / ANOMALY DETECTION ────────────────────────────────────────────────
 // Runs after CORS so blocked/frozen responses still carry proper CORS headers
 // and show up in the browser as real 429s instead of fake "CORS error"s.
