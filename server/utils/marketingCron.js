@@ -191,6 +191,11 @@ export const DINNER_TEMPLATES = [
     title: '🔥 Garma-Garam Dinner Treat — 20 Min Delivery!',
     shayari: '"Raat ka waqt suhana hai, kuch lazeez khana hai,\nSnapit se order karo, khushiyan ghar laana hai!" 🍕🍔',
     body: 'Order your favorite dinner tonight from Paliganj’s best restaurants on Snapit Food!'
+  },
+  {
+    title: '🎂 Gaon Tak Fresh Cake & Alka ki Biryani!',
+    shayari: '"Gaon mein ho ya shahar ke paar,\nSnapit layega garam Biryani aur Cake aapke dwar!" 🎂🍗🛵',
+    body: 'Alka Restro ki Biryani aur Fresh Cake ab 6-14km gaon tak direct bike delivery! Use code: GAON50'
   }
 ]
 
