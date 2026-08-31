@@ -130,74 +130,27 @@ app.use(cors({
     methods:        ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept", "Origin"],
 }))
-// ─── ABUSE / ANOMALY DETECTION ────────────────────────────────────────────────
-// Runs after CORS so blocked/frozen responses still carry proper CORS headers
-// and show up in the browser as real 429s instead of fake "CORS error"s.
-// app.use(abuseGuard()) — REMOVED: duplicate global mount was double-counting every hit (see line ~239)
 
-// ─── HELMET / CSP ─────────────────────────────────────────────────────────────
+// Universal 200 OK preflight interceptor to guarantee zero CORS failures
+app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        const origin = req.headers.origin
+        if (origin) {
+            res.header('Access-Control-Allow-Origin', origin)
+            res.header('Access-Control-Allow-Credentials', 'true')
+            res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH')
+            res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,Cookie,X-Requested-With,Accept,Origin')
+        }
+        return res.status(200).end()
+    }
+    next()
+})
+
+// ─── HELMET ──────────────────────────────────────────────────────────────────
 app.use(helmet({
     crossOriginResourcePolicy:  false,
     crossOriginEmbedderPolicy:  false,
-    contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: [
-                "'self'",
-                "https://checkout.razorpay.com",
-                "https://*.razorpay.com",
-                "https://cdn.razorpay.com",
-                "https://*.googleapis.com",
-                "https://unpkg.com",
-                "https://*.gstatic.com",
-                "https://www.gstatic.com",
-                "https://*.firebaseapp.com",
-            ],
-            workerSrc: ["'self'", "blob:", "https://*.gstatic.com", "https://www.gstatic.com", "https://www.gstatic.com/firebasejs/*"],
-            imgSrc: [
-                "'self'", "data:", "blob:",
-                "https://*.openstreetmap.org",
-                "https://res.cloudinary.com",
-                "https://*.cloudinary.com",
-                "https://*.r2.dev",
-                "https://pub-af292132196c4b93bf56272675b82149.r2.dev",
-                "https://*.googleapis.com",
-                "https://*.gstatic.com",
-                "https://api.qrserver.com",
-                "https://cdn-icons-png.flaticon.com",
-                "https://images.unsplash.com",
-            ],
-            frameSrc: [
-                "'self'",
-                "https://api.razorpay.com",
-                "https://*.razorpay.com",
-                "https://checkout.razorpay.com",
-            ],
-            connectSrc: [
-                "'self'",
-                "https://api.razorpay.com", "https://*.razorpay.com",
-                "https://cdn.razorpay.com", "https://lumberjack.razorpay.com",
-                "https://lumberjack-dx.razorpay.com",
-                "https://firebaseremoteconfig.googleapis.com",
-                "https://firebaseinstallations.googleapis.com",
-                "https://*.firebaseio.com", "https://*.googleapis.com",
-                "https://snapit-full-stack-production.up.railway.app",
-                "wss://snapit-full-stack-production.up.railway.app",
-                "https://snapit-client.vercel.app",
-                "https://snapit-ashy.vercel.app",
-                "https://snapit-full-stack.vercel.app",
-                "https://snapit-backend-production.up.railway.app",
-                "https://snapit-api-production.up.railway.app",
-                "wss://snapit-api-production.up.railway.app",
-                "http://localhost:5173", "https://localhost:5173",
-                "ws://localhost:5173",   "wss://localhost:5173",
-                "http://localhost:8080", "ws://localhost:8080",
-                "capacitor://localhost", "android://localhost",
-                "https://snapit.grocery", "wss://snapit.grocery",
-            ],
-        },
-    },
+    contentSecurityPolicy:      false,
 }))
 
 // ─── RATE LIMITING ────────────────────────────────────────────────────────────

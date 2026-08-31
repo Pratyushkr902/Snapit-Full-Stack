@@ -1,10 +1,10 @@
 import FrozenIpModel from '../models/frozenIp.model.js'
 
 const WINDOW_MS = 60 * 1000
-const AUTH_LIMIT = 15      // login/otp hits per minute per IP
-const GENERAL_LIMIT = 120      // general WRITE hits per minute per IP (raised — shared/CGNAT IPs)
-const GENERAL_READ_LIMIT = 300 // general READ (GET) hits per minute per IP (raised — shared/CGNAT IPs)
-const FREEZE_MINUTES = 30
+const AUTH_LIMIT = 100         // login/otp hits per minute per IP (safe for shared office/home Wi-Fi)
+const GENERAL_LIMIT = 600      // general WRITE hits per minute per IP
+const GENERAL_READ_LIMIT = 1200 // general READ (GET) hits per minute per IP
+const FREEZE_MINUTES = 5
 
 const hitLog = new Map()
 const frozenCache = new Map()
