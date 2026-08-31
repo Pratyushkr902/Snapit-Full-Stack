@@ -27,3 +27,9 @@
 -dontwarn org.apache.cordova.**
 -dontwarn com.getcapacitor.**
 
+# ── R8 Performance & Memory Optimization ──────────────────────────────────────
+-optimizationpasses 5
+-allowaccessmodification
+-repackageclasses ''
+-overloadaggressively
+

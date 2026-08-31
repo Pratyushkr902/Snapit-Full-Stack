@@ -75,11 +75,11 @@ const Login = () => {
             dispatch(setUserDetails(userDetails.data))
             const role = (userDetails.data.role || '').toUpperCase()
             if (role === 'RIDER') {
-                navigate('/rider/dashboard', { replace: true })
+                navigate('/dashboard/rider-panel', { replace: true })
                 return
             }
             if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
-                navigate('/dashboard/orders', { replace: true })
+                navigate('/dashboard/admin-summary', { replace: true })
                 return
             }
             if (role === 'SELLER' || role === 'RESTO_SELLER') {
