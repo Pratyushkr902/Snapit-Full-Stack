@@ -71,6 +71,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
         }
         if (!token) return { success: false, error: 'Missing token' }
         const dataMap = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
+        const androidTag = data?.type === 'ABANDONED_CART' ? 'cart_nudge' : (data?.type ? `promo_${data.type}` : (data?.orderId ? `order_${data.orderId}` : 'general_alert'))
         const message = {
             token,
             notification: { title, body },
@@ -91,14 +92,12 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     visibility: 'public',
                     defaultSound: true,
                     defaultVibrateTimings: true,
-                    tag: data?.type === 'ABANDONED_CART' ? 'cart_nudge' : (data?.type ? `promo_${data.type}` : (data?.orderId ? `order_${data.orderId}` : undefined)),
+                    tag: androidTag,
                 },
-                collapseKey: data?.orderId ? `order_${data.orderId}` : undefined,
+                ...(data?.orderId ? { collapseKey: `order_${data.orderId}` } : {})
             },
             apns: {
-                headers: {
-                    'apns-collapse-id': data?.orderId ? `order_${data.orderId}` : undefined,
-                },
+                ...(data?.orderId ? { headers: { 'apns-collapse-id': `order_${data.orderId}` } } : {}),
                 payload: {
                     aps: {
                         alert: { title, body },
@@ -109,8 +108,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
             },
             webpush: {
                 headers: {
-                    'Urgency': 'high',
-                    'Topic': data?.orderId ? `order_${data.orderId}`.replace(/[^a-zA-Z0-9-_]/g, '') : undefined,
+                    'Urgency': 'high'
                 },
                 notification: {
                     title,
@@ -118,7 +116,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     icon: '/snapit-icon-192.png',
                     badge: '/snapit-icon-192.png',
                     vibrate: [200, 100, 200],
-                    tag: data?.type === 'ABANDONED_CART' ? 'cart_nudge' : (data?.type ? `promo_${data.type}` : (data?.orderId ? `order_${data.orderId}` : undefined)),
+                    tag: androidTag,
                     renotify: false
                 },
                 data: {
