@@ -25,7 +25,7 @@ const QUICK_TAGS = [
   { icon: '🪜', label: 'Climb stairs' },
 ]
 
-const VALID_COUPONS = ['SNAPIT', 'FIRSTUSER', 'FIRSTFREE', 'FIRST50']
+const VALID_COUPONS = ['SNAPIT60', 'WELCOME60', 'CAKE50', 'BIRYANIFREE', 'FEAST40', 'SAVE30', 'SNAPIT', 'SNAPIT50', 'FIRSTUSER', 'FIRSTFREE', 'FIRST50']
 
 // Fallback ₹30 flat fee only for restaurants missing location data —
 // remove once every restaurant has lat/lng set in the DB.
@@ -714,7 +714,7 @@ const FoodCheckoutPage = () => {
                 <input
                   value={couponCode}
                   onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
-                 placeholder='Try SNAPIT, FIRSTUSER, FIRSTFREE, FIRST50'
+                  placeholder='Try SNAPIT60, WELCOME60, CAKE50, BIRYANIFREE, SNAPIT'
                   className='flex-1 min-w-0 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
                   disabled={couponLoading}
                 />
@@ -838,7 +838,9 @@ const FoodCheckoutPage = () => {
               )}
             </div>
             <span className='font-semibold'>
-              {deliveryFee === 0
+              {!restaurantPricing[0]?.info?.serviceable
+                ? <span className='text-amber-600 font-bold text-xs'>{'Closed (>5km)'}</span>
+                : deliveryFee === 0
                 ? <><span className='line-through text-gray-300 mr-1'>₹30</span><span className='text-green-600 font-bold'>Free</span></>
                 : `₹${deliveryFee}`
               }

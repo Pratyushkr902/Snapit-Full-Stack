@@ -371,12 +371,12 @@ const CheckoutPage = () => {
           <div className='mx-4 mt-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
             <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-1'>Promo Code</p>
             <p className='text-[10px] text-slate-400 mb-2'>
-              First-time customer? Use <span className='font-black text-slate-600'>FIRSTUSER</span> on orders ₹149+
+              Special Offer? Use <span className='font-black text-slate-600'>SNAPIT60</span>, <span className='font-black text-slate-600'>WELCOME60</span>, or <span className='font-black text-slate-600'>CAKE50</span>
             </p>
             <div className='flex flex-col sm:flex-row gap-2'>
               <input type='text' value={couponCode} onChange={e => setCouponCode(e.target.value)}
                 disabled={couponApplied}
-                placeholder={couponApplied ? 'Code applied! 🎉' : 'Enter FIRSTUSER'}
+                placeholder={couponApplied ? 'Code applied! 🎉' : 'Try SNAPIT60, WELCOME60, CAKE50'}
                 className='w-full px-3 py-2.5 border border-slate-200 rounded-xl uppercase text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-400 disabled:bg-green-50 disabled:border-green-200' />
               {couponApplied ? (
                 <button onClick={() => { setCouponApplied(false); setDiscountAmount(0); setDiscountLabel(''); setCouponCode('') }}
@@ -450,13 +450,13 @@ const CheckoutPage = () => {
                   </p>
                 )}
               </div>
-              <p className={deliveryFee === 0 ? 'text-green-600 font-black' : 'font-bold text-slate-900'}>
-                {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
+              <p className={deliveryInfo && !deliveryInfo.serviceable ? 'text-amber-600 font-black text-xs' : deliveryFee === 0 ? 'text-green-600 font-black' : 'font-bold text-slate-900'}>
+                {deliveryInfo && !deliveryInfo.serviceable ? 'Closed (>5km)' : deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
               </p>
             </div>
             {couponApplied && (
               <div className='flex justify-between text-green-600 font-bold bg-green-50 p-2 rounded-lg border border-green-200 border-dashed'>
-                <p>🎟️ {discountLabel || 'Surprise Discount'} (FIRSTUSER)</p>
+                <p>🎟️ {discountLabel || 'Promo Discount'} ({couponCode.trim().toUpperCase()})</p>
                 <p>- {DisplayPriceInRupees(discountAmount)}</p>
               </div>
             )}

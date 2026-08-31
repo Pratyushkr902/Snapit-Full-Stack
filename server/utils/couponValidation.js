@@ -1,15 +1,17 @@
 // Zomato/Swiggy-style Psychological Coupon Engine:
-// High percentage displayed to customers with safe, high-conversion caps.
+// High percentage displayed to customers (30% to 60% OFF), strictly capped at ₹1–₹10 max discount.
 const COUPON_RULES = {
-  SNAPIT60:    { percent: 60, maxDiscount: 15, minOrder: 149, label: '60% OFF up to ₹15' },
-  WELCOME60:   { percent: 60, maxDiscount: 15, minOrder: 99,  label: '60% OFF up to ₹15' },
-  CAKE50:      { percent: 50, maxDiscount: 20, minOrder: 249, label: '50% OFF up to ₹20' },
-  BIRYANIFREE: { percent: 40, maxDiscount: 15, minOrder: 129, label: '40% OFF up to ₹15' },
+  SNAPIT60:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  WELCOME60:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  CAKE50:      { percent: 50, maxDiscount: 10, minOrder: 199, label: '50% OFF up to ₹10' },
+  BIRYANIFREE: { percent: 40, maxDiscount: 10, minOrder: 99,  label: '40% OFF up to ₹10' },
+  FEAST40:     { percent: 40, maxDiscount: 10, minOrder: 99,  label: '40% OFF up to ₹10' },
+  SAVE30:      { percent: 30, maxDiscount: 10, minOrder: 99,  label: '30% OFF up to ₹10' },
   SNAPIT:      { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
   SNAPIT50:    { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
-  FIRSTUSER:   { percent: 60, maxDiscount: 15, minOrder: 99,  label: '60% OFF up to ₹15' },
-  FIRSTFREE:   { percent: 50, maxDiscount: 12, minOrder: 99,  label: '50% OFF up to ₹12' },
-  FIRST50:     { percent: 50, maxDiscount: 15, minOrder: 99,  label: '50% OFF up to ₹15' },
+  FIRSTUSER:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  FIRSTFREE:   { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
+  FIRST50:     { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
 }
 
 export function validateCoupon(couponCode, subTotalAmt) {
@@ -28,10 +30,10 @@ export function validateCoupon(couponCode, subTotalAmt) {
     return { code: null, discount: 0, label: '', minOrder: rule.minOrder }
   }
 
-  // Calculate percentage discount (e.g. 60% of subtotal)
-  const calculatedDiscount = Math.round((subtotal * rule.percent) / 100)
-  // Hard cap at maxDiscount (e.g. max ₹10 to ₹15)
-  const finalDiscount = Math.min(calculatedDiscount, rule.maxDiscount, subtotal)
+  // Calculate percentage discount (30% to 60%)
+  const calculatedDiscount = Math.max(1, Math.round((subtotal * rule.percent) / 100))
+  // Hard cap at max ₹10 for all users
+  const finalDiscount = Math.min(calculatedDiscount, rule.maxDiscount, 10, subtotal)
 
   return { code, discount: finalDiscount, label: rule.label }
 }
