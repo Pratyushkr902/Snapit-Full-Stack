@@ -158,12 +158,13 @@ export async function notifyAllRiders({ title, body, data = {} }) {
             console.log('No riders with FCM tokens found')
             return
         }
-        const tokens = riders.flatMap(r => [
-            ...(r.fcmToken ? [r.fcmToken] : []),
-            ...(Array.isArray(r.fcmTokens) ? r.fcmTokens : [])
-        ]).filter(Boolean)
+        const tokens = riders.map(r => {
+            if (r.fcmToken && typeof r.fcmToken === 'string' && r.fcmToken.trim().length > 10) return r.fcmToken.trim();
+            if (Array.isArray(r.fcmTokens) && r.fcmTokens.length > 0) return r.fcmTokens[r.fcmTokens.length - 1];
+            return null;
+        }).filter(Boolean)
         const uniqueTokens = [...new Set(tokens)]
-        console.log(`📢 Notifying ${uniqueTokens.length} active rider tokens`)
+        console.log(`📢 Notifying ${uniqueTokens.length} active unique rider devices`)
         return await sendPushToMultiple({ tokens: uniqueTokens, title, body, data })
     } catch (error) {
         console.error('❌ notifyAllRiders failed:', error.message)

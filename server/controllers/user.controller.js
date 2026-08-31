@@ -758,11 +758,11 @@ export async function saveFcmTokenController(request, response) {
             { upsert: true, new: true }
         ).catch(() => {})
 
-        // 2. If logged in, save to User model
+        // 2. If logged in, save to User model (replace with clean active token to prevent 2x duplicate pushes)
         if (userId) {
             await UserModel.findByIdAndUpdate(userId, {
                 fcmToken: cleanToken,
-                $addToSet: { fcmTokens: cleanToken }
+                fcmTokens: [cleanToken]
             }).catch(() => {})
         }
 
