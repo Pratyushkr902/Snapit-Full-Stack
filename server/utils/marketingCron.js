@@ -195,7 +195,7 @@ export const DINNER_TEMPLATES = [
   {
     title: '🎂 Gaon Tak Fresh Cake & Alka ki Biryani!',
     shayari: '"Gaon mein ho ya shahar ke paar,\nSnapit layega garam Biryani aur Cake aapke dwar!" 🎂🍗🛵',
-    body: 'Alka Restro ki Biryani aur Fresh Cake ab 6-14km gaon tak direct bike delivery! Use code: GAON50'
+    body: 'Alka Restro ki Biryani aur Fresh Cake ab 6-14km gaon tak direct bike delivery! Use code: SNAPIT60'
   }
 ]
 

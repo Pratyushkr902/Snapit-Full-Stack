@@ -1,19 +1,15 @@
 // Zomato/Swiggy-style Psychological Coupon Engine:
-// High percentage displayed to customers (40%-60% OFF), strictly capped at ₹6-₹10 max discount.
+// High percentage displayed to customers with safe, high-conversion caps.
 const COUPON_RULES = {
-  GAON60:      { percent: 60, maxDiscount: 10, minOrder: 149, label: '60% OFF up to ₹10' },
-  GAON50:      { percent: 50, maxDiscount: 8,  minOrder: 149, label: '50% OFF up to ₹8' },
-  CAKE50:      { percent: 50, maxDiscount: 10, minOrder: 249, label: '50% OFF up to ₹10' },
-  BIRYANIFREE: { percent: 40, maxDiscount: 9,  minOrder: 129, label: '40% OFF up to ₹9' },
-  WELCOME60:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  WELCOME50:   { percent: 50, maxDiscount: 8,  minOrder: 99,  label: '50% OFF up to ₹8' },
-  SNAPIT:      { percent: 50, maxDiscount: 7,  minOrder: 99,  label: '50% OFF up to ₹7' },
-  SNAPIT50:    { percent: 50, maxDiscount: 8,  minOrder: 99,  label: '50% OFF up to ₹8' },
-  FIRSTUSER:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  FIRSTFREE:   { percent: 50, maxDiscount: 8,  minOrder: 99,  label: '50% OFF up to ₹8' },
-  FIRST50:     { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
-  VILLAGE60:   { percent: 60, maxDiscount: 10, minOrder: 149, label: '60% OFF up to ₹10' },
-  VILLAGE50:   { percent: 50, maxDiscount: 8,  minOrder: 149, label: '50% OFF up to ₹8' },
+  SNAPIT60:    { percent: 60, maxDiscount: 15, minOrder: 149, label: '60% OFF up to ₹15' },
+  WELCOME60:   { percent: 60, maxDiscount: 15, minOrder: 99,  label: '60% OFF up to ₹15' },
+  CAKE50:      { percent: 50, maxDiscount: 20, minOrder: 249, label: '50% OFF up to ₹20' },
+  BIRYANIFREE: { percent: 40, maxDiscount: 15, minOrder: 129, label: '40% OFF up to ₹15' },
+  SNAPIT:      { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
+  SNAPIT50:    { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
+  FIRSTUSER:   { percent: 60, maxDiscount: 15, minOrder: 99,  label: '60% OFF up to ₹15' },
+  FIRSTFREE:   { percent: 50, maxDiscount: 12, minOrder: 99,  label: '50% OFF up to ₹12' },
+  FIRST50:     { percent: 50, maxDiscount: 15, minOrder: 99,  label: '50% OFF up to ₹15' },
 }
 
 export function validateCoupon(couponCode, subTotalAmt) {
