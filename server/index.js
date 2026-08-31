@@ -123,27 +123,16 @@ const allowedOrigins = [
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true)
-        const lowerOrigin = origin.toLowerCase().trim()
-        if (
-            allowedOrigins.includes(lowerOrigin) ||
-            /\.vercel\.app$/.test(lowerOrigin) ||
-            lowerOrigin.startsWith('http://localhost') ||
-            lowerOrigin.startsWith('https://localhost') ||
-            lowerOrigin.startsWith('capacitor://') ||
-            lowerOrigin.startsWith('ionic://') ||
-            lowerOrigin.startsWith('android://') ||
-            lowerOrigin === 'null' ||
-            lowerOrigin.startsWith('file://')
-        ) {
-            callback(null, true)
-        } else {
-            // Allow all mobile and web traffic cleanly
-            callback(null, true)
-        }
+        // Reflect origin for full credential support across all domains & webviews
+        callback(null, origin)
     },
     credentials: true,
     methods:        ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept", "Origin"],
+}))
+app.options('*', cors({
+    origin: (origin, callback) => callback(null, origin || true),
+    credentials: true,
 }))
 // ─── ABUSE / ANOMALY DETECTION ────────────────────────────────────────────────
 // Runs after CORS so blocked/frozen responses still carry proper CORS headers
