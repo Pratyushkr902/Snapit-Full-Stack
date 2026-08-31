@@ -35,7 +35,16 @@ const Login = () => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
 
-    // Auto-dismiss any lingering toasts when switching mode or step
+    // Auto-clear stale tokens and dismiss lingering toasts on mount to ensure clean slate
+    useEffect(() => {
+        secureStorage.removeItem('accessToken')
+        secureStorage.removeItem('refreshToken')
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        toast.dismiss()
+    }, [])
+
+    // Auto-dismiss toasts when switching mode or step
     useEffect(() => {
         toast.dismiss()
     }, [authMode, step])

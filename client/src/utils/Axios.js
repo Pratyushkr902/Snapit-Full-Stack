@@ -15,7 +15,7 @@ export const SummaryApi = CommonSummaryApi
 const Axios = axios.create({
     baseURL:         API_URL,
     withCredentials: true,
-    timeout:         15000, // 15 seconds — fail loud rather than hang forever
+    timeout:         25000, // 25 seconds — resilient on mobile cellular networks
     headers: {
         'Content-Type': 'application/json',
         'Accept':        'application/json',

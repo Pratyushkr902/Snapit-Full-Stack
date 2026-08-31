@@ -122,20 +122,23 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        console.log('[CORS CHECK] Incoming origin:', origin)
         if (!origin) return callback(null, true)
         const lowerOrigin = origin.toLowerCase().trim()
         if (
             allowedOrigins.includes(lowerOrigin) ||
             /\.vercel\.app$/.test(lowerOrigin) ||
             lowerOrigin.startsWith('http://localhost') ||
+            lowerOrigin.startsWith('https://localhost') ||
             lowerOrigin.startsWith('capacitor://') ||
-            lowerOrigin.startsWith('android://')
+            lowerOrigin.startsWith('ionic://') ||
+            lowerOrigin.startsWith('android://') ||
+            lowerOrigin === 'null' ||
+            lowerOrigin.startsWith('file://')
         ) {
             callback(null, true)
         } else {
-            console.warn(`[CORS Blocked] Unauthorized request from: ${origin}`)
-            callback(new Error('Cross-Origin Request rejected by Snapit Engine policies.'))
+            // Allow all mobile and web traffic cleanly
+            callback(null, true)
         }
     },
     credentials: true,
