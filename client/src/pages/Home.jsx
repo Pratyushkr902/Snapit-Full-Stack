@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect } from 'react'
 import HomeBanner from '../components/HomeBanner'
+import TodayOffersStrip from '../components/TodayOffersStrip'
 import { useDispatch, useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'
@@ -124,12 +125,15 @@ const Home = () => {
   return (
     <section className='bg-white min-h-screen overflow-x-hidden'>
 
-      {/* 1. TOP BANNER CAROUSEL (With Rakhi Countdown on festive slide) */}
-      <div className='container mx-auto px-0 lg:px-4 mb-3 lg:mb-4'>
+      {/* 1. TOP BANNER CAROUSEL */}
+      <div className='container mx-auto px-0 lg:px-4 mb-2'>
         <HomeBanner />
       </div>
 
-      {/* 2. 4 SUPER-APP CATEGORY CARDS (Below Banners) */}
+      {/* 2. TODAY'S EXCLUSIVE 60% OFF OFFERS (Zomato/Blinkit Style) */}
+      <TodayOffersStrip />
+
+      {/* 3. 4 SUPER-APP CATEGORY CARDS (Below Banners) */}
       <div className='container mx-auto px-4 mb-4 lg:mb-6'>
         <div className='grid grid-cols-4 gap-2.5 sm:gap-4'>
           {SUPER_APP_CATEGORIES.map((cat) => (

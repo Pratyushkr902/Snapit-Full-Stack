@@ -7,8 +7,10 @@ import 'swiper/css/pagination';
 import banner1 from '../assets/banner1.webp';
 import banner2 from '../assets/banner2.webp';
 import banner3 from '../assets/banner3.webp';
+import exclusiveOffersBanner from '../assets/exclusive_offers_banner.jpg';
 
 const bannerData = [
+  { image: exclusiveOffersBanner, link: '/category/all-deals' },
   { image: banner1, link: '/search?q=chicken' },
   { image: banner2, link: '/search?q=drink' },
   { image: banner3, link: '/search?q=oats' },
@@ -27,8 +29,8 @@ const HomeBanner = () => {
         {!swiperReady && (
           <div className='relative w-full h-full'>
             <img
-              src={banner1}
-              alt='Snapit Delivery'
+              src={exclusiveOffersBanner}
+              alt='Snapit Up to 60% OFF Exclusive Offers'
               className='absolute inset-0 w-full h-full object-cover object-center'
               fetchPriority='high'
               loading='eager'
