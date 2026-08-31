@@ -3,15 +3,15 @@
 const COUPON_RULES = {
   SNAPIT60:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
   WELCOME60:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  CAKE50:      { percent: 50, maxDiscount: 10, minOrder: 199, label: '50% OFF up to ₹10' },
-  BIRYANIFREE: { percent: 40, maxDiscount: 10, minOrder: 99,  label: '40% OFF up to ₹10' },
-  FEAST40:     { percent: 40, maxDiscount: 10, minOrder: 99,  label: '40% OFF up to ₹10' },
-  SAVE30:      { percent: 30, maxDiscount: 10, minOrder: 99,  label: '30% OFF up to ₹10' },
-  SNAPIT:      { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
-  SNAPIT50:    { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
+  CAKE50:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  BIRYANIFREE: { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  FEAST40:     { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  SAVE30:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  SNAPIT:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  SNAPIT50:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
   FIRSTUSER:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
-  FIRSTFREE:   { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
-  FIRST50:     { percent: 50, maxDiscount: 10, minOrder: 99,  label: '50% OFF up to ₹10' },
+  FIRSTFREE:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
+  FIRST50:     { percent: 60, maxDiscount: 10, minOrder: 99,  label: '60% OFF up to ₹10' },
 }
 
 export function validateCoupon(couponCode, subTotalAmt) {
