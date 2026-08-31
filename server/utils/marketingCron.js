@@ -222,35 +222,31 @@ export async function checkAbandonedCarts() {
       const user = await UserModel.findById(uId).select('name fcmToken fcmTokens').lean()
       if (!user) continue
 
-      const tokens = [
-        ...(user.fcmToken ? [user.fcmToken] : []),
-        ...(Array.isArray(user.fcmTokens) ? user.fcmTokens : [])
-      ].filter(t => typeof t === 'string' && t.trim().length > 10)
+      const targetToken = (user.fcmToken && typeof user.fcmToken === 'string' && user.fcmToken.trim().length > 10)
+        ? user.fcmToken.trim()
+        : (Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0 ? user.fcmTokens[user.fcmTokens.length - 1] : null)
 
-      if (tokens.length === 0) continue
+      if (!targetToken) continue
 
       const firstItemName = items[0]?.productId?.name || 'Aapke favorite items'
       const moreCount = items.length > 1 ? ` (+${items.length - 1} aur items)` : ''
       const cartTitle = '🛒 Aapka cart intezaar kar raha hai!'
       const cartBody = `"${firstItemName}${moreCount}" cart mein hain. 10 min express delivery on Snapit! ⚡`
 
-      let userReceived = false
-      for (const token of tokens) {
-        try {
-          const res = await sendPushNotification({
-            token,
-            title: cartTitle,
-            body: cartBody,
-            data: { type: 'ABANDONED_CART', url: '/cart' }
-          })
-          if (res) userReceived = true
-        } catch {}
-      }
-
-      if (userReceived) {
-        userLastNudgeMap.set(uId, now)
-        nudgedCount++
-        console.log(`🛒 [Cart Nudge] Sent reminder to user: ${user.name || uId} (${firstItemName})`)
+      try {
+        const res = await sendPushNotification({
+          token: targetToken,
+          title: cartTitle,
+          body: cartBody,
+          data: { type: 'ABANDONED_CART', url: '/cart' }
+        })
+        if (res) {
+          userLastNudgeMap.set(uId, now)
+          nudgedCount++
+          console.log(`🛒 [Cart Nudge] Sent reminder to user: ${user.name || uId} (${firstItemName})`)
+        }
+      } catch (err) {
+        console.warn(`[Cart Nudge] Push error for ${uId}:`, err.message)
       }
     }
 
