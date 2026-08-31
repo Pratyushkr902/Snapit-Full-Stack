@@ -73,21 +73,9 @@ const Login = () => {
         const userDetails = await fetchUserDetails()
         if (userDetails?.success && userDetails.data) {
             dispatch(setUserDetails(userDetails.data))
-            const role = (userDetails.data.role || '').toUpperCase()
-            if (role === 'RIDER') {
-                navigate('/dashboard/rider-panel', { replace: true })
-                return
-            }
-            if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
-                navigate('/dashboard/admin-summary', { replace: true })
-                return
-            }
-            if (role === 'SELLER' || role === 'RESTO_SELLER') {
-                navigate('/dashboard/store-orders', { replace: true })
-                return
-            }
         }
 
+        // ✅ All users (Ravi, Manish, Admins, Riders, and Customers) enter straight to the Home Page
         navigate('/', { replace: true })
     }
 
