@@ -35,6 +35,11 @@ const Login = () => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
 
+    // Auto-dismiss any lingering toasts when switching mode or step
+    useEffect(() => {
+        toast.dismiss()
+    }, [authMode, step])
+
     // Countdown timer for Resend OTP
     useEffect(() => {
         let timer
@@ -195,22 +200,28 @@ const Login = () => {
     // ── 3. PASSWORD LOGIN (Optional / Fallback) ──
     const handlePasswordSubmit = async (e) => {
         e.preventDefault()
-        if (!email.trim() || !password.trim()) return
+        toast.dismiss()
+        const cleanEmail = email.trim().toLowerCase()
+        if (!cleanEmail || !password.trim()) {
+            toast.error('Please enter email and password')
+            return
+        }
 
         try {
             setLoading(true)
+            toast.loading('Signing in...', { id: 'pwd-login' })
             const res = await Axios({
                 ...SummaryApi.login,
-                data: { email: email.trim().toLowerCase(), password }
+                data: { email: cleanEmail, password }
             })
 
             if (res.data?.success) {
-                toast.success(res.data.message || 'Login successful')
+                toast.success(res.data.message || 'Login successful', { id: 'pwd-login' })
                 const token = res.data?.data?.accessToken || res.data?.data?.accesstoken
                 const refresh = res.data?.data?.refreshToken || res.data?.data?.refreshtoken
                 await handleLoginSuccess(token, refresh)
             } else {
-                // If account has no password / is OTP account -> seamless auto-transition
+                toast.dismiss('pwd-login')
                 if (res.data?.isOtpAccount || res.data?.requiresOtp || res.data?.message?.includes('OTP')) {
                     toast('This account uses OTP login. Sending code to your email...', { icon: '📨' })
                     setAuthMode('otp')
@@ -220,6 +231,7 @@ const Login = () => {
                 }
             }
         } catch (err) {
+            toast.dismiss('pwd-login')
             if (err?.response?.data?.message?.includes('OTP') || err?.response?.data?.isOtpAccount) {
                 toast('This account uses OTP login. Sending code to your email...', { icon: '📨' })
                 setAuthMode('otp')
