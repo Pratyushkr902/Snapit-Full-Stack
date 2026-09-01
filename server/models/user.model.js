@@ -178,6 +178,14 @@ const userSchema = new mongoose.Schema({
     usedPromoCodes: {
         type: [mongoose.Schema.Types.Mixed],
         default: []
+    },
+    isCodBlocked: {
+        type: Boolean,
+        default: false
+    },
+    codBlockedReason: {
+        type: String,
+        default: ""
     }
 },{
     timestamps : true

@@ -393,6 +393,14 @@ export async function CashOnDeliveryOrderController(request, response) {
 
         const currentUser = await UserModel.findById(userId)
 
+        if (currentUser?.isCodBlocked) {
+            return response.status(403).json({
+                message: "Cash on Delivery is unavailable for your account due to past unreachable delivery attempts. Please pay online via UPI/Card to place orders.",
+                error: true,
+                success: false
+            })
+        }
+
         try {
             await assertStoreOpenForOrder({ list_items, userRole: currentUser?.role })
         } catch (guardErr) {

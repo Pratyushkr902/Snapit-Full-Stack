@@ -437,6 +437,15 @@ export async function foodOrderCOD(req, res) {
     // walletAmountUsed before pricing so it can't fake a discount here.
     req.body.walletAmountUsed = 0
     const { fields, user, addressDoc, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
+
+    if (user?.isCodBlocked) {
+      return res.status(403).json({
+        message: "Cash on Delivery is unavailable for your account due to past unreachable delivery attempts. Please pay online via UPI/Card to place orders.",
+        error: true,
+        success: false
+      })
+    }
+
     const assignedRider = await assignAvailableRider()
 
     const orders = []
