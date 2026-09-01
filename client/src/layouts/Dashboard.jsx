@@ -7,8 +7,8 @@ const Dashboard = () => {
   const user = useSelector(state => state.user)
   const location = useLocation()
 
-  const token = localStorage.getItem('accessToken')
-  if (!token) {
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken')
+  if (!token && !user?._id) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

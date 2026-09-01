@@ -83,8 +83,8 @@ const RiderDashboard = () => {
 
     // ── Auth Guard for Rider Panel ──
     useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken');
+        if (!token && !user?._id) {
             toast.error('Please login with your Rider account to access the panel', { icon: '🔐' });
             navigate('/login');
             return;
