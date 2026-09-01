@@ -328,6 +328,8 @@ async function sendFoodOrderInvoiceEmail(order, user) {
       <tfoot>
         ${order.discount_amount > 0 ? `<tr><td colspan="3" style="padding:10px 16px;text-align:right;color:#64748b;">Discount</td><td style="padding:10px 16px;text-align:right;color:#ea580c;">-₹${order.discount_amount}</td></tr>` : ''}
         <tr><td colspan="3" style="padding:10px 16px;text-align:right;color:#64748b;">Delivery Fee</td><td style="padding:10px 16px;text-align:right;">₹${order.delivery_fee || 0}</td></tr>
+        ${order.tip > 0 ? `<tr><td colspan="3" style="padding:10px 16px;text-align:right;color:#64748b;">Rider Tip ❤️</td><td style="padding:10px 16px;text-align:right;color:#16a34a;">+₹${order.tip}</td></tr>` : ''}
+        ${order.walletAmountUsed > 0 ? `<tr><td colspan="3" style="padding:10px 16px;text-align:right;color:#64748b;">Wallet Paid</td><td style="padding:10px 16px;text-align:right;color:#ea580c;">-₹${order.walletAmountUsed}</td></tr>` : ''}
         <tr style="background:#fff7ed;"><td colspan="3" style="padding:12px 16px;text-align:right;font-weight:800;font-size:15px;color:#ea580c;">Grand Total</td><td style="padding:12px 16px;text-align:right;font-weight:800;font-size:15px;color:#ea580c;">₹${order.totalAmt}</td></tr>
       </tfoot>
     </table>
