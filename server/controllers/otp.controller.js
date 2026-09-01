@@ -146,6 +146,7 @@ export async function verifyOtpController(request, response) {
                 referralCode: newReferralCode,
                 referredBy: referredByCode,
                 status: 'Active',
+                verify_email: true,
             })
         }
 
@@ -160,6 +161,7 @@ export async function verifyOtpController(request, response) {
         await UserModel.findByIdAndUpdate(user._id, {
             refresh_token: refreshToken,
             last_login_date: new Date(),
+            verify_email: true,
         })
 
         response.cookie('accessToken', accesstoken, cookiesOption)
