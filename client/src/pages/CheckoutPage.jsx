@@ -136,7 +136,13 @@ const CheckoutPage = () => {
   const handleWalletPayment = async () => {
     try {
       if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
-      if (!selectedAddress) return toast.error('Please select a delivery address')
+      if (!selectedAddress) return toast.error('Please select an address first')
+      const contactPhone = (selectedAddress?.mobile || selectedAddress?.recipient_mobile || user?.mobile || '').toString().trim()
+      if (!contactPhone || !/^[6-9]\d{9}$/.test(contactPhone.replace(/\D/g, ''))) {
+        toast.error('Please enter a valid 10-digit mobile number on your delivery address so our delivery rider can contact you.', { duration: 5000 })
+        setOpenAddress(true)
+        return
+      }
       if (addressMissingCoords) return toast.error('This address has no location pin. Please delete and re-add it so delivery charge is calculated correctly.', { duration: 5000 })
       if (!checkServiceArea()) return
       const currentBalance = Number(user?.walletBalance || 0)
@@ -174,6 +180,12 @@ const CheckoutPage = () => {
     try {
       if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select an address first')
+      const contactPhone = (selectedAddress?.mobile || selectedAddress?.recipient_mobile || user?.mobile || '').toString().trim()
+      if (!contactPhone || !/^[6-9]\d{9}$/.test(contactPhone.replace(/\D/g, ''))) {
+        toast.error('Please enter a valid 10-digit mobile number on your delivery address so our delivery rider can contact you.', { duration: 5000 })
+        setOpenAddress(true)
+        return
+      }
       if (!checkServiceArea()) return
       const loadingToast = toast.loading('Placing order...')
       const c = getCoords()
@@ -208,6 +220,12 @@ const CheckoutPage = () => {
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!selectedAddress) return toast.error('Please select a delivery address')
+      const contactPhone = (selectedAddress?.mobile || selectedAddress?.recipient_mobile || user?.mobile || '').toString().trim()
+      if (!contactPhone || !/^[6-9]\d{9}$/.test(contactPhone.replace(/\D/g, ''))) {
+        toast.error('Please enter a valid 10-digit mobile number on your delivery address so our delivery rider can contact you.', { duration: 5000 })
+        setOpenAddress(true)
+        return
+      }
       if (addressMissingCoords) return toast.error('This address has no location pin. Please delete and re-add it so delivery charge is calculated correctly.', { duration: 5000 })
       if (!checkServiceArea()) return
       const gatewayToast = toast.loading('Loading payment gateway...')

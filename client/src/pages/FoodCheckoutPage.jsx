@@ -301,6 +301,13 @@ const FoodCheckoutPage = () => {
   const handleCOD = async () => {
     if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
+    const chosenAddr = addressList[selectAddress]
+    const contactPhone = (chosenAddr?.mobile || chosenAddr?.recipient_mobile || user?.mobile || '').toString().trim()
+    if (!contactPhone || !/^[6-9]\d{9}$/.test(contactPhone.replace(/\D/g, ''))) {
+      toast.error('Please enter a valid 10-digit mobile number on your delivery address so our delivery rider can contact you.', { duration: 5000 })
+      setOpenAddress(true)
+      return
+    }
     if (!checkServiceArea()) return
     setPlacing(true)
     const t = toast.loading('Placing order...')
@@ -311,7 +318,6 @@ const FoodCheckoutPage = () => {
       if (res.data?.success) {
         toast.success('Order placed!')
         clearAll()
-        const chosenAddr = addressList[selectAddress]
         const orderData = chosenAddr?.recipient_name ? {
           recipient_name: chosenAddr.recipient_name,
           recipient_mobile: chosenAddr.recipient_mobile,
@@ -327,6 +333,13 @@ const FoodCheckoutPage = () => {
   const handleWalletPay = async () => {
     if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
+    const chosenAddr = addressList[selectAddress]
+    const contactPhone = (chosenAddr?.mobile || chosenAddr?.recipient_mobile || user?.mobile || '').toString().trim()
+    if (!contactPhone || !/^[6-9]\d{9}$/.test(contactPhone.replace(/\D/g, ''))) {
+      toast.error('Please enter a valid 10-digit mobile number on your delivery address so our delivery rider can contact you.', { duration: 5000 })
+      setOpenAddress(true)
+      return
+    }
     if (!checkServiceArea()) return
     if (walletBal < grandTotal) return toast.error(`Insufficient wallet balance. Need ₹${grandTotal}, have ₹${walletBal.toFixed(0)}`)
     setPlacing(true)
