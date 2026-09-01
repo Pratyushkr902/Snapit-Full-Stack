@@ -14,8 +14,21 @@ const DEFAULT_STORE = {
 };
 
 export const initSubscriptionCron = () => {
-    if (process.env.RENDER === 'true' || process.env.IS_FALLBACK_SERVER === 'true' || process.env.DISABLE_CRON === 'true') {
-        console.log("🛑 [Subscription Cron] Standby instance detected (Render). Skipping background cron.");
+    const isRailway = Boolean(
+        process.env.RAILWAY_ENVIRONMENT ||
+        process.env.RAILWAY_PROJECT_ID ||
+        process.env.RAILWAY_SERVICE_ID ||
+        process.env.RAILWAY_STATIC_URL ||
+        process.env.ENABLE_CRON === 'true'
+    )
+    const isBlocked = process.env.RENDER === 'true' || 
+                      process.env.IS_FALLBACK_SERVER === 'true' || 
+                      process.env.DISABLE_CRON === 'true' ||
+                      process.env.RENDER_SERVICE_ID ||
+                      process.env.RENDER_EXTERNAL_URL
+
+    if (!isRailway || isBlocked) {
+        console.log("🛑 [Subscription Cron] Non-Railway/Standby instance detected. Skipping background cron.");
         return;
     }
     // ⏰ Wakes up automatically every single day at 04:00 AM IST

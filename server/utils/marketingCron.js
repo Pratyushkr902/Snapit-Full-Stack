@@ -304,13 +304,24 @@ export async function triggerMarketingSchedule(type) {
   throw new Error(`Unknown schedule type: ${type}`)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MASTER INITIALIZER
-// ─────────────────────────────────────────────────────────────────────────────
 export const initMarketingCron = () => {
-  // If running on standby/fallback instance (Render or explicit fallback env), disable crons completely
-  if (process.env.RENDER === 'true' || process.env.IS_FALLBACK_SERVER === 'true' || process.env.DISABLE_CRON === 'true') {
-    console.log('🛑 [Marketing Cron] Standby fallback instance detected (Render). Marketing crons disabled on this instance to guarantee 0 duplicate notifications!')
+  // Guarantee crons run EXCLUSIVELY on Railway Production
+  const isRailway = Boolean(
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RAILWAY_PROJECT_ID ||
+    process.env.RAILWAY_SERVICE_ID ||
+    process.env.RAILWAY_STATIC_URL ||
+    process.env.ENABLE_CRON === 'true'
+  )
+
+  const isBlocked = process.env.RENDER === 'true' || 
+                    process.env.IS_FALLBACK_SERVER === 'true' || 
+                    process.env.DISABLE_CRON === 'true' ||
+                    process.env.RENDER_SERVICE_ID ||
+                    process.env.RENDER_EXTERNAL_URL
+
+  if (!isRailway || isBlocked) {
+    console.log('🛑 [Marketing Cron] Non-Railway/Standby server detected. Marketing crons disabled. ONLY Railway Production can send notifications.')
     return
   }
 
