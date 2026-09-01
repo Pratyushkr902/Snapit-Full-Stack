@@ -94,10 +94,12 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     defaultVibrateTimings: true,
                     tag: androidTag,
                 },
-                ...(data?.orderId ? { collapseKey: `order_${data.orderId}` } : {})
+                collapseKey: androidTag,
             },
             apns: {
-                ...(data?.orderId ? { headers: { 'apns-collapse-id': `order_${data.orderId}` } } : {}),
+                headers: {
+                    'apns-collapse-id': androidTag,
+                },
                 payload: {
                     aps: {
                         alert: { title, body },
