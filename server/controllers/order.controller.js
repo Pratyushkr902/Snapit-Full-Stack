@@ -444,8 +444,8 @@ export async function CashOnDeliveryOrderController(request, response) {
    }
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
-        const recipientName = isGift ? address.recipient_name : ''
-        const recipientMobile = isGift ? (address.recipient_mobile || '') : ''
+        const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
+        const recipientMobile = String((isGift ? address.recipient_mobile : null) || address?.mobile || address?.recipient_mobile || currentUser?.mobile || '').trim()
         const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
@@ -643,8 +643,8 @@ export async function WalletPaymentOrderController(request, response) {
         })
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
-        const recipientName = isGift ? address.recipient_name : ''
-        const recipientMobile = isGift ? (address.recipient_mobile || '') : ''
+        const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
+        const recipientMobile = String((isGift ? address.recipient_mobile : null) || address?.mobile || address?.recipient_mobile || currentUser?.mobile || '').trim()
         const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
@@ -847,8 +847,8 @@ export async function verifyPaymentController(request, response) {
        })
    }
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
-        const recipientName = isGift ? address.recipient_name : ''
-        const recipientMobile = isGift ? (address.recipient_mobile || '') : ''
+        const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
+        const recipientMobile = String((isGift ? address.recipient_mobile : null) || address?.mobile || address?.recipient_mobile || currentUser?.mobile || '').trim()
         const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')

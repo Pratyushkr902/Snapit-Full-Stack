@@ -207,6 +207,7 @@ export const addAddressController = async (request, response) => {
 
         await UserModel.findByIdAndUpdate(userId, {
             $push: { address_details: saveAddress._id },
+            ...(mobile ? { mobile: Number(mobile) } : {})
         })
 
         return response.json({
@@ -312,6 +313,10 @@ export const updateAddressController = async (request, response) => {
                 lng: finalLng,
             }
         )
+
+        if (mobile && !Number.isNaN(Number(mobile))) {
+            await UserModel.findByIdAndUpdate(userId, { mobile: Number(mobile) }).catch(() => {})
+        }
 
         if (updateAddress.matchedCount === 0) {
             return response.status(404).json({

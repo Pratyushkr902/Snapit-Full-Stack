@@ -235,8 +235,8 @@ const priceAllGroups = async (groups, fields, user) => {
 // ── Build one order document's fields for a single restaurant group ─────────
 const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user = {}, addressDoc = null) => {
   const isGift = Boolean(addressDoc?.recipient_name || (addressDoc?.address_type === 'FRIENDS_FAMILY' && addressDoc?.recipient_name))
-  const recipientName = isGift ? addressDoc.recipient_name : ''
-  const recipientMobile = isGift ? (addressDoc.recipient_mobile || '') : ''
+  const recipientName = String((isGift ? addressDoc.recipient_name : null) || addressDoc?.recipient_name || user?.name || 'Customer').trim()
+  const recipientMobile = String((isGift ? addressDoc.recipient_mobile : null) || addressDoc?.mobile || addressDoc?.recipient_mobile || user?.mobile || '').trim()
   const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
   const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
 
