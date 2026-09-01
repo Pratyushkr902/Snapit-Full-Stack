@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
-import { logout } from '../store/userSlice'
+import { logout, setUserDetails } from '../store/userSlice'
+import fetchUserDetails from '../utils/fetchUserDetails'
 import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import Divider from '../components/Divider'
@@ -14,6 +15,14 @@ const UserMenuMobile = () => {
   const role = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
   const dispatch = useDispatch()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    fetchUserDetails().then((userData) => {
+      if (userData?.success && userData?.data) {
+        dispatch(setUserDetails(userData.data))
+      }
+    }).catch(() => {})
+  }, [dispatch])
 
   const handleLogout = async () => {
     try {
