@@ -184,6 +184,11 @@ export const EVENING_TEMPLATES = [
 // ─────────────────────────────────────────────────────────────────────────────
 export const DINNER_TEMPLATES = [
   {
+    title: '🍛 Garam Dinner Doorstep Pe! (RJ Garden, Alka & MGD Pizza)',
+    shayari: 'Fresh Paneer Handi, Biryani, Crispy Pizza & Chowmein ready in 15 mins! 🛵💨',
+    body: 'Tired after a long day? Get piping-hot dinner delivered from Paliganj’s best restaurants in minutes!\n\nUse Code: SNAPIT60 for instant discount. Order now!'
+  },
+  {
     title: '🍕 Aaj kitchen se chhutti lo boss!',
     shayari: '"Kyun banana roz khana, jab Snapit hai sath,\nPaliganj ke top khane se sajao apni thali aaj raat!" 🍛✨',
     body: 'Pizza, Biryani, Paneer Butter Masala ya Chowmein? Aaj ka dinner Snapit ke naam!'
@@ -340,14 +345,14 @@ export const initMarketingCron = () => {
     await triggerMarketingSchedule('CHAI_TIME')
   }, { timezone: 'Asia/Kolkata' })
 
-  // 3. Dinner Rush (08:00 PM IST)
-  cron.schedule('0 20 * * *', async () => {
+  // 3. Dinner Rush (07:00 PM IST)
+  cron.schedule('0 19 * * *', async () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
     const lockKey = `CRON_DINNER_${today}`
     const acquired = await acquireCronLock(lockKey)
     if (!acquired) return
 
-    console.log('⏰ [Cron] Triggering Dinner Rush Notification (08:00 PM)...')
+    console.log('⏰ [Cron] Triggering Dinner Rush Notification (07:00 PM)...')
     await triggerMarketingSchedule('DINNER')
   }, { timezone: 'Asia/Kolkata' })
 
@@ -361,5 +366,5 @@ export const initMarketingCron = () => {
     await checkAbandonedCarts()
   })
 
-  console.log('✅ [Marketing Cron] Morning (8:30 AM), Chai Time (5:00 PM), Dinner (8:00 PM), and Cart Recovery (every 10m) active!')
+  console.log('✅ [Marketing Cron] Morning (8:30 AM), Chai Time (5:00 PM), Dinner (7:00 PM), and Cart Recovery (every 10m) active!')
 }
