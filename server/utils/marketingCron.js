@@ -10,18 +10,11 @@ import { sendPushNotification } from './firebaseNotify.js'
 // Helper: Acquire atomic distributed lock in MongoDB so multiple server instances never run duplicate crons
 export async function acquireCronLock(lockKey) {
   try {
-    const lock = await CronLockModel.findOneAndUpdate(
-      { key: lockKey },
-      { $setOnInsert: { key: lockKey, executedAt: new Date() } },
-      { upsert: true, new: false }
-    )
-    if (lock) {
-      console.log(`🔒 [Cron Lock] Slot "${lockKey}" was already executed by another instance. Skipping duplicate.`)
-      return false
-    }
+    await CronLockModel.create({ key: lockKey, executedAt: new Date() })
+    console.log(`🔑 [Cron Lock] Successfully acquired exclusive lock for slot: "${lockKey}"`)
     return true
   } catch (err) {
-    console.log(`🔒 [Cron Lock] Slot "${lockKey}" locked by another instance. Skipping duplicate.`)
+    console.log(`🔒 [Cron Lock] Slot "${lockKey}" already executed by another instance. Skipping duplicate.`)
     return false
   }
 }
