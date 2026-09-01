@@ -8,6 +8,7 @@ import { logout } from '../store/userSlice'
 import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import { HiOutlineExternalLink } from "react-icons/hi";
+import secureStorage from '../utils/secureStorage'
 
 const UserMenu = ({close}) => {
    const user = useSelector((state) => state.user)
@@ -17,16 +18,23 @@ const UserMenu = ({close}) => {
 
    const handleLogout = async () => {
         try {
-          const response = await Axios({ ...SummaryApi.logout })
-          if (response.data.success) {
-            if (close) close()
-            dispatch(logout())
-            localStorage.clear()
-            toast.success(response.data.message)
-            navigate("/")
-          }
+          if (close) close()
+          dispatch(logout())
+          await secureStorage.removeItem('accessToken').catch(() => {})
+          await secureStorage.removeItem('refreshToken').catch(() => {})
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
+          localStorage.removeItem('user')
+          sessionStorage.clear()
+          Axios({ ...SummaryApi.logout }).catch(() => {})
+          toast.success("Logged out successfully")
+          navigate("/login", { replace: true })
         } catch (error) {
-          AxiosToastError(error)
+          if (close) close()
+          dispatch(logout())
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
+          navigate("/login", { replace: true })
         }
    }
 

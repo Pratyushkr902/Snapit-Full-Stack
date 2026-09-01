@@ -10,6 +10,8 @@ import AxiosToastError from '../utils/AxiosToastError'
 import Divider from '../components/Divider'
 import { ACCESS_TOKEN_KEY } from '../constants/storageKeys'
 
+import secureStorage from '../utils/secureStorage'
+
 const UserMenuMobile = () => {
   const user = useSelector((state) => state.user)
   const role = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
@@ -26,17 +28,25 @@ const UserMenuMobile = () => {
 
   const handleLogout = async () => {
     try {
-      const response = await Axios({ ...SummaryApi.logout })
-      if (response.data.success) {
-        dispatch(logout())
-        // FIX: only clear auth tokens, not all localStorage (cart, prefs, FCM token etc.)
-        localStorage.removeItem(ACCESS_TOKEN_KEY)
-        localStorage.removeItem('refreshToken')
-        toast.success(response.data.message)
-        navigate("/")
-      }
+      // 1. Immediately reset Redux state and all local/secure storage
+      dispatch(logout())
+      await secureStorage.removeItem('accessToken').catch(() => {})
+      await secureStorage.removeItem('refreshToken').catch(() => {})
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('user')
+      sessionStorage.clear()
+
+      // 2. Fire backend logout in background
+      Axios({ ...SummaryApi.logout }).catch(() => {})
+
+      toast.success("Logged out successfully")
+      navigate("/login", { replace: true })
     } catch (error) {
-      AxiosToastError(error)
+      dispatch(logout())
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      navigate("/login", { replace: true })
     }
   }
 
