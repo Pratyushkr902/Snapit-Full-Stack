@@ -1,4 +1,4 @@
-import { createHashRouter, useRouteError, useNavigate } from "react-router-dom";
+import { createHashRouter, useRouteError, useNavigate, Navigate } from "react-router-dom";
 import { lazy, Suspense, useEffect, useState } from "react";
 import App from "../App";
 
@@ -198,6 +198,30 @@ const ErrorPage = () => {
   )
 }
 
+import { useSelector } from "react-redux";
+
+const DashboardIndex = () => {
+  const user = useSelector(state => state.user)
+  const role = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
+
+  if (role === 'SUPER_ADMIN') {
+    return <Navigate to="/dashboard/super-admin" replace />
+  }
+  if (role === 'ADMIN') {
+    return <Navigate to="/dashboard/admin-summary" replace />
+  }
+  if (role === 'SELLER') {
+    return <Navigate to="/dashboard/seller-dashboard" replace />
+  }
+  if (role === 'RESTO_SELLER') {
+    return <Navigate to="/dashboard/resto-dashboard" replace />
+  }
+  if (role === 'RIDER') {
+    return <Navigate to="/rider-panel" replace />
+  }
+  return <Navigate to="/dashboard/myorders" replace />
+}
+
 const router = createHashRouter([
   {
     path: "/",
@@ -225,6 +249,7 @@ const router = createHashRouter([
         path: "dashboard",
         element: <S><Dashboard /></S>,
         children: [
+          { index: true, element: <DashboardIndex /> },
           { path: "profile", element: <S><Profile /></S> },
           {
             path: "admin-summary",
