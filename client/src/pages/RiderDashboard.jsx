@@ -117,7 +117,10 @@ const RiderDashboard = () => {
             }
         } catch (err) {
             console.warn('[RiderOrders] fetch error:', err?.message);
-            if (!silent) toast.error("Failed to sync with server");
+            // Only alert if fatal 401 session expiry, otherwise retry silently in background
+            if (err?.response?.status === 401) {
+                toast.error('Session expired. Please login again.', { id: 'rider-session-expired' });
+            }
         } finally {
             setLoading(false);
         }
