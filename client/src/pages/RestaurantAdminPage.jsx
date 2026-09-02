@@ -290,6 +290,22 @@ export default function RestaurantAdminPage() {
     setTab('addItem')
   }
 
+  const handleToggleItemAvailability = async (item) => {
+    const newStatus = item.isAvailable === false ? true : false
+    setMenuItems(prev => prev.map(i => i._id === item._id ? { ...i, isAvailable: newStatus } : i))
+    try {
+      await Axios({
+        method: 'PUT',
+        url: `/api/restaurant/menu/${item._id}`,
+        data: { isAvailable: newStatus }
+      })
+      toast.success(`${item.name} is now ${newStatus ? 'In Stock (Available)' : 'Out of Stock (Sold Out)'}`)
+    } catch {
+      setMenuItems(prev => prev.map(i => i._id === item._id ? { ...i, isAvailable: !newStatus } : i))
+      toast.error('Failed to update availability')
+    }
+  }
+
   const handleEditResto = (r) => {
     setEditingResto(r)
     setRestoForm({
@@ -619,9 +635,20 @@ export default function RestaurantAdminPage() {
                             </div>
                           </div>
                         </div>
-                        <div className='flex gap-2 mt-2'>
+                        <div className='flex gap-2 mt-2 items-center'>
+                          <button
+                            type='button'
+                            onClick={() => handleToggleItemAvailability(item)}
+                            className={`flex-1 text-[11px] font-black py-2 px-3 rounded-lg border flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+                              item.isAvailable !== false
+                                ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40 hover:bg-emerald-900/60'
+                                : 'bg-rose-950/60 text-rose-400 border-rose-500/40 hover:bg-rose-900/60'
+                            }`}
+                          >
+                            {item.isAvailable !== false ? '🟢 In Stock' : '🔴 Out of Stock (Sold Out)'}
+                          </button>
                           <button onClick={() => handleEditItem(item)}
-                            className='flex-1 text-[10px] font-black py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700'>
+                            className='text-[11px] font-black py-2 px-3 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 active:scale-95'>
                             ✏️ Edit
                           </button>
                         </div>

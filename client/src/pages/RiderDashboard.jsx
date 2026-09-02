@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
-import { FaMapMarkedAlt, FaCheckCircle, FaShoppingBasket, FaPhone, FaMotorcycle, FaStore, FaClock, FaPowerOff, FaMoneyBillWave } from "react-icons/fa";
+import { FaMapMarkedAlt, FaCheckCircle, FaShoppingBasket, FaPhone, FaMotorcycle, FaStore, FaClock, FaPowerOff, FaMoneyBillWave, FaWhatsapp, FaVolumeMute, FaVolumeUp } from "react-icons/fa";
 import { MdPayment } from "react-icons/md";
 import { IoArrowBack } from "react-icons/io5";
 import { io } from 'socket.io-client';
@@ -77,6 +77,11 @@ const RiderDashboard = () => {
     const [showRemittanceModal, setShowRemittanceModal] = useState(false);
     const [unremittedCash, setUnremittedCash] = useState(0);
 
+    // ── Loud Order Siren State ──
+    const [isAlarmActive, setIsAlarmActive] = useState(false);
+    const alarmIntervalRef = useRef(null);
+    const silencedOrdersRef = useRef(new Set());
+
     const socketRef = useRef(null);
     const ordersRef = useRef(orders);
     useEffect(() => { ordersRef.current = orders; }, [orders]);
@@ -114,6 +119,21 @@ const RiderDashboard = () => {
 
                 setOrders(visibleOrders);
                 setLastSynced(new Date());
+
+                // Check for new incoming orders requiring attention (placed within last 20 mins)
+                const hasNewIncoming = visibleOrders.some(o =>
+                    ['Confirmed', 'Pending'].includes(o.delivery_status) &&
+                    !silencedOrdersRef.current.has(o._id) &&
+                    ((Date.now() - new Date(o.createdAt)) / 60000) <= 20
+                );
+                if (hasNewIncoming) {
+                    triggerLoudOrderSiren();
+                } else {
+                    const anyActive = visibleOrders.some(o => ['Confirmed', 'Pending'].includes(o.delivery_status));
+                    if (!anyActive) {
+                        stopOrderSiren();
+                    }
+                }
             }
         } catch (err) {
             console.warn('[RiderOrders] fetch error:', err?.message);
@@ -157,35 +177,100 @@ const RiderDashboard = () => {
         }
     }, []);
 
-    // ── 4. Audio Alert Sound Callback ──
-    const playOrderAlertSound = useCallback(() => {
-        try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
+    // ── 4. Loud Order Siren & Audio Alert Engine ──
+    const triggerLoudOrderSiren = useCallback(() => {
+        setIsAlarmActive(true);
+        const playSirenPulse = () => {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
 
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
-            osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.24); // D6
+                // High-intensity repeating chime (Zomato/Swiggy order alert tone)
+                const playBeep = (freq, startTime, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, startTime);
+                    gain.gain.setValueAtTime(0.85, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(startTime);
+                    osc.stop(startTime + duration);
+                };
 
-            gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                const now = ctx.currentTime;
+                playBeep(850, now, 0.25);
+                playBeep(1150, now + 0.28, 0.28);
+                playBeep(850, now + 0.58, 0.25);
+                playBeep(1150, now + 0.86, 0.45);
 
-            osc.start();
-            osc.stop(ctx.currentTime + 0.5);
-
-            if (navigator.vibrate) {
-                navigator.vibrate([200, 100, 200, 100, 300]);
+                if (navigator.vibrate) {
+                    navigator.vibrate([400, 200, 400, 200, 800]);
+                }
+            } catch (e) {
+                console.warn('[RiderSiren] Sound playback error:', e);
             }
-        } catch (e) {
-            console.warn('[RiderSound] Alert sound error:', e);
-        }
+        };
+
+        playSirenPulse();
+        if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+        alarmIntervalRef.current = setInterval(playSirenPulse, 2600);
     }, []);
+
+    const stopOrderSiren = useCallback(() => {
+        setIsAlarmActive(false);
+        if (alarmIntervalRef.current) {
+            clearInterval(alarmIntervalRef.current);
+            alarmIntervalRef.current = null;
+        }
+        // Mark currently visible pending/confirmed orders as acknowledged
+        (ordersRef.current || []).forEach(o => {
+            if (o?._id) silencedOrdersRef.current.add(o._id);
+        });
+    }, []);
+
+    const playOrderAlertSound = useCallback(() => {
+        triggerLoudOrderSiren();
+    }, [triggerLoudOrderSiren]);
+
+    // Clean up siren on unmount
+    useEffect(() => {
+        return () => {
+            if (alarmIntervalRef.current) {
+                clearInterval(alarmIntervalRef.current);
+            }
+        };
+    }, []);
+
+    // ── 4b. 1-Tap WhatsApp Forward Handlers ──
+    const handleWhatsAppStore = (order) => {
+        const store = order.store_details || order.store || {};
+        const storeName = store.name || order.restaurantName || 'Restaurant';
+        const itemsList = order.cartItems?.map((item, idx) => `• ${item.quantity}x ${item.productId?.name || item.name}`).join('\n') || 'Order items';
+        const rawStorePhone = String(store.phone || store.contactNumber || store.mobile || '');
+        const cleanStorePhone = rawStorePhone.replace(/\D/g, '');
+
+        const message = `*Snapit Order #${order.orderId?.slice(-8) || order.orderId}* ⚡\n\n*Store:* ${storeName}\n*Customer:* ${order.delivery_address?.recipient_name || order.userId?.name || 'Customer'}\n\n*Items to Prepare:*\n${itemsList}\n\n*Total Amount:* ₹${order.totalAmt || 0}\n*Payment Mode:* ${order.payment_status || 'CASH ON DELIVERY'}\n\n*Rider:* Manish Kumar (Snapit)\nPlease start preparing and keep packed. Rider reaching in 5-10 minutes! 🛵💨`;
+
+        const waUrl = cleanStorePhone.length >= 10
+            ? `https://api.whatsapp.com/send?phone=91${cleanStorePhone.slice(-10)}&text=${encodeURIComponent(message)}`
+            : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+
+        window.open(waUrl, '_blank');
+    };
+
+    const handleWhatsAppCustomer = (order) => {
+        const rawPhone = String(order.recipient_mobile || order.delivery_address?.recipient_mobile || order.delivery_address?.mobile || order.userId?.mobile || '');
+        const cleanPhone = rawPhone.replace(/\D/g, '');
+        if (!cleanPhone) {
+            toast.error('Customer phone number not available');
+            return;
+        }
+        const message = `Hello! Snapit delivery partner Manish yahan se. Aapka order #${order.orderId?.slice(-6) || ''} leke main nikal raha hoon. Doorstep pe 10-15 min mein pahunch raha hoon! 🛵`;
+        window.open(`https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(message)}`, '_blank');
+    };
 
     // ── 5. Online / Offline Connectivity Tracker ──
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -712,6 +797,26 @@ const RiderDashboard = () => {
                     </button>
                 </div>
 
+                {/* 🚨 Loud Order Siren Flashing Alert Banner */}
+                {isAlarmActive && (
+                    <div className='mb-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white flex items-center justify-between gap-3 shadow-xl border-2 border-white/40 animate-pulse'>
+                        <div className='flex items-center gap-3 min-w-0'>
+                            <span className='text-2xl sm:text-3xl animate-bounce'>🚨</span>
+                            <div className='min-w-0'>
+                                <p className='font-black text-sm text-white uppercase tracking-wider'>NEW ORDER INCOMING!</p>
+                                <p className='text-xs text-white/90 truncate'>Siren ringing loud. Check order details below.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={stopOrderSiren}
+                            className='px-3.5 py-2 bg-white text-red-700 hover:bg-slate-100 font-black text-xs rounded-xl shadow-lg active:scale-95 transition flex items-center gap-1.5 flex-shrink-0'
+                        >
+                            <FaVolumeMute size={14}/>
+                            <span>Stop Siren</span>
+                        </button>
+                    </div>
+                )}
+
                 {/* Offline Warning Bar */}
                 {!isOnline && (
                     <div className='mb-4 p-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-between gap-2 text-xs font-bold'>
@@ -893,6 +998,14 @@ const RiderDashboard = () => {
                                                 </div>
 
                                                 <div className='flex gap-1.5 flex-shrink-0'>
+                                                    <button
+                                                        type='button'
+                                                        onClick={() => handleWhatsAppCustomer(order)}
+                                                        className='w-9 h-9 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
+                                                        title='WhatsApp Customer'
+                                                    >
+                                                        <FaWhatsapp size={15}/>
+                                                    </button>
                                                     <a href={`tel:${order.recipient_mobile || order.delivery_address?.recipient_mobile || order.delivery_address?.mobile || order.userId?.mobile}`}
                                                         className='w-9 h-9 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
                                                         title='Call Recipient'
@@ -928,13 +1041,24 @@ const RiderDashboard = () => {
                                                             {store?.address && <p className='text-[10px] text-slate-400 truncate'>{store.address}</p>}
                                                         </div>
                                                     </div>
-                                                    {mapLink && (
-                                                        <a href={mapLink} target="_blank" rel="noreferrer"
-                                                            className='flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1.5 rounded-xl text-[10px] font-black transition-all active:scale-90 flex-shrink-0'>
-                                                            <FaMapMarkedAlt size={11}/>
-                                                            <span>Map</span>
-                                                        </a>
-                                                    )}
+                                                    <div className='flex items-center gap-1.5 flex-shrink-0'>
+                                                        <button
+                                                            type='button'
+                                                            onClick={() => handleWhatsAppStore(order)}
+                                                            className='flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-xl text-[10px] font-black transition-all active:scale-90 shadow-sm'
+                                                            title='Forward order breakdown to restaurant kitchen'
+                                                        >
+                                                            <FaWhatsapp size={12}/>
+                                                            <span>WhatsApp</span>
+                                                        </button>
+                                                        {mapLink && (
+                                                            <a href={mapLink} target="_blank" rel="noreferrer"
+                                                                className='flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1.5 rounded-xl text-[10px] font-black transition-all active:scale-90 flex-shrink-0'>
+                                                                <FaMapMarkedAlt size={11}/>
+                                                                <span>Map</span>
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 

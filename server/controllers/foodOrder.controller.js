@@ -142,6 +142,25 @@ const priceGroup = async (group, deliveryLocation, user) => {
     throw err
   }
 
+  // ── Verify item availability (prevent out-of-stock orders) ───────────
+  const itemIds = group.cartItems
+    .map(it => it.productId || it._id)
+    .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+
+  if (itemIds.length > 0) {
+    const unavailable = await MenuItemModel.find({
+      _id: { $in: itemIds },
+      isAvailable: false
+    }).select('name').lean()
+
+    if (unavailable.length > 0) {
+      const names = unavailable.map(u => u.name).join(', ')
+      const err = new Error(`Sorry, "${names}" is currently out of stock at ${restaurant.name}. Please remove or replace it.`)
+      err.statusCode = 400
+      throw err
+    }
+  }
+
   const { lat, lng } = deliveryLocation || {}
   const subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 

@@ -51,7 +51,7 @@ export async function getRestaurantById(req, res) {
     if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' })
 
     const items = await MenuItemModel
-      .find({ restaurantId: req.params.id, isAvailable: true })
+      .find({ restaurantId: req.params.id })
       .sort({ category: 1, sortOrder: 1, isBestseller: -1 })
       .lean()
 

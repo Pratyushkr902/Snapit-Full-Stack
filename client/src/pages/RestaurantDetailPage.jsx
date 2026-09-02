@@ -165,10 +165,16 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
         {item.calories > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{item.calories} kcal</p>}
       </div>
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
-        <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
+        <div className={`w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100 ${item.isAvailable === false ? 'opacity-60 grayscale' : ''}`}>
           <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMAGE)} className="w-full h-full object-cover" loading="lazy" decoding="async" />
         </div>
-        <QtyControl qty={qty} onAdd={onAdd} onIncrease={onIncrease} onDecrease={onDecrease} />
+        {item.isAvailable === false ? (
+          <span className="text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg whitespace-nowrap">
+            Sold Out
+          </span>
+        ) : (
+          <QtyControl qty={qty} onAdd={onAdd} onIncrease={onIncrease} onDecrease={onDecrease} />
+        )}
       </div>
     </div>
   )
@@ -231,16 +237,22 @@ function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
         {item.calories > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{item.calories} kcal</p>}
       </div>
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
-        <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
-          <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMG)}
+        <div className={`w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100 ${item.isAvailable === false ? 'opacity-60 grayscale' : ''}`}>
+          <img src={imgSrc} alt={item.name} onError={() => setImgSrc(FALLBACK_IMAGE)}
             className="w-full h-full object-cover" loading="lazy" decoding="async" />
         </div>
-        <QtyControl
-          qty={qty}
-          onAdd={() => onAdd(cartItem)}
-          onIncrease={() => onIncrease(cartItem)}
-          onDecrease={() => onDecrease(cartItem)}
-        />
+        {item.isAvailable === false ? (
+          <span className="text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg whitespace-nowrap">
+            Sold Out
+          </span>
+        ) : (
+          <QtyControl
+            qty={qty}
+            onAdd={() => onAdd(cartItem)}
+            onIncrease={() => onIncrease(cartItem)}
+            onDecrease={() => onDecrease(cartItem)}
+          />
+        )}
       </div>
     </div>
   )
@@ -257,6 +269,8 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
   const selectedItem = selectedVariant.item
   const effectivePrice = selectedItem.discountedPrice > 0 ? selectedItem.discountedPrice : selectedItem.price
   const qty = foodCart[selectedItem._id]?.qty || 0
+  const isItemSoldOut = selectedItem.isAvailable === false || group.isAvailable === false
+
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
       <div className="flex-1 min-w-0">
@@ -299,15 +313,21 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
         {group.calories > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{group.calories} kcal</p>}
       </div>
       <div className="flex flex-col items-center gap-2 flex-shrink-0">
-        <div className="w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100">
+        <div className={`w-24 h-20 sm:w-28 sm:h-24 rounded-xl overflow-hidden bg-gray-100 ${isItemSoldOut ? 'opacity-60 grayscale' : ''}`}>
           <img src={imgSrc} alt={group.baseName} onError={() => setImgSrc(FALLBACK_IMG)} className="w-full h-full object-cover" loading="lazy" decoding="async" />
         </div>
-        <QtyControl
-          qty={qty}
-          onAdd={() => onAdd(selectedItem)}
-          onIncrease={() => onIncrease(selectedItem)}
-          onDecrease={() => onDecrease(selectedItem)}
-        />
+        {isItemSoldOut ? (
+          <span className="text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg whitespace-nowrap">
+            Sold Out
+          </span>
+        ) : (
+          <QtyControl
+            qty={qty}
+            onAdd={() => onAdd(selectedItem)}
+            onIncrease={() => onIncrease(selectedItem)}
+            onDecrease={() => onDecrease(selectedItem)}
+          />
+        )}
       </div>
     </div>
   )
