@@ -1,4 +1,5 @@
 import sendEmail from '../controllers/sendEmail.js'
+import sendEmailResend from '../controllers/sendEmailResend.js'
 import UserModel from '../models/user.model.js'
 
 export async function sendOrderDeliveredEmail(order, userObj = null) {
@@ -97,11 +98,19 @@ export async function sendOrderDeliveredEmail(order, userObj = null) {
 </body>
 </html>`
 
-    const res = await sendEmail({
+    const subject = `🎉 Order Delivered Successfully! #${orderId} - Snapit`
+    let res = await sendEmailResend({
       sendTo: user.email,
-      subject: `🎉 Order Delivered Successfully! #${orderId} - Snapit`,
+      subject,
       html
     })
+    if (!res) {
+      res = await sendEmail({
+        sendTo: user.email,
+        subject,
+        html
+      })
+    }
     return res
   } catch (err) {
     console.error('[sendOrderDeliveredEmail error]', err.message)
