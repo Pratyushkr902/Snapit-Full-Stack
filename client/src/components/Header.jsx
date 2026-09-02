@@ -31,12 +31,10 @@ const Header = ({ openCart }) => {
     // restaurant page.
     const { grandCount: foodGrandCount, grandTotal: foodGrandTotal } = useFullCart()
 
-    // Routes that have their own dedicated search bars or full-page flows
-    const hideMobileSearchRoutes = [
+    // Routes that have their own dedicated search bars or full-page flows (search page must show search bar)
         '/food', '/grocery', '/pharmacy', '/checkout', '/food-checkout',
-        '/search', '/wallet', '/cart', '/success', '/cancel', '/dashboard',
+        '/wallet', '/cart', '/success', '/cancel', '/dashboard',
         '/public-tracking', '/track-order', '/restaurant'
-    ]
     const shouldHideMobileSearch = hideMobileSearchRoutes.some(path =>
         location.pathname === path || location.pathname.startsWith(path + '/')
     )
