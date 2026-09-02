@@ -288,24 +288,8 @@ export async function loginController(request, response) {
             queryOr.push({ mobile: Number(email.trim()) })
             queryOr.push({ mobile: email.trim() })
         }
-        const isManish = safeEmail === 'manish.kumar.pk3546@gmail.com' || 
-                         cleanEmail === 'manishkumarpk3546@gmail.com' || 
-                         safeEmail === 'manish.rider@snapit.express' || 
-                         email.trim() === '9608754853'
-
-        if (isManish) {
-            queryOr.push({ email: 'manish.kumar.pk3546@gmail.com' })
-            queryOr.push({ email: 'manishkumarpk3546@gmail.com' })
-            queryOr.push({ email: 'manish.rider@snapit.express' })
-            queryOr.push({ mobile: 9608754853 })
-        }
 
         const user = await UserModel.findOne({ $or: queryOr })
-
-        if (user && isManish && user.role !== 'RIDER') {
-            user.role = 'RIDER'
-            await UserModel.findByIdAndUpdate(user._id, { role: 'RIDER' })
-        }
 
         if (!user) {
             return response.status(400).json({
