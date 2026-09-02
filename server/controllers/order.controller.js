@@ -1436,20 +1436,18 @@ export async function getOrderItems(request, response) {
         response.set('Pragma', 'no-cache')
 
         const userId   = request.userId
-        const userRole = request.userRole
+        let userRole = request.userRole
+
+        // Always verify live role from DB if token role is missing or outdated
+        if (!userRole || userRole === 'USER') {
+            const u = await UserModel.findById(userId).select('role').lean()
+            if (u?.role) userRole = u.role
+        }
 
         let filter = {}
-        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'RIDER') {
+            // Admins and Delivery Fleet see all active and completed town orders
             filter = {}
-        } else if (userRole === 'RIDER') {
-            // Show assigned orders + unassigned orders ready for pickup
-            filter = {
-                $or: [
-                    { riderId: userId },
-                    { riderId: null, delivery_status: { $in: ['Confirmed', 'Pending'] } }
-                ],
-                delivery_status: { $nin: ['Cancelled'] }
-            }
         } else {
             filter = { userId }
         }
