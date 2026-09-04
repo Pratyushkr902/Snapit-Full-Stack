@@ -26,7 +26,11 @@ const RiderDashboard = () => {
                 setOrders(Array.isArray(response.data.data) ? response.data.data : []);
             }
         } catch (error) {
-            toast.error("Failed to sync with server");
+            if (error?.response?.status === 401) {
+                toast.error("Session expired. Please login again.");
+            } else {
+                console.warn("[RiderSimulator] sync error:", error?.message);
+            }
         } finally {
             setLoading(false);
         }
