@@ -878,18 +878,21 @@ const RiderDashboard = () => {
                         {/* Filter Chips */}
                         <div className='flex gap-1.5 sm:gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide w-full'>
                             {[
-                                { key: 'Confirmed', label: '📦 Ready for Pickup' },
-                                { key: 'Out for Delivery', label: '🛵 Out for Delivery' },
-                                { key: 'Delivered', label: '✅ Delivered' },
-                                { key: 'All', label: '📋 All Orders' },
+                                { key: 'Confirmed', label: '📦 Ready for Pickup', count: safeOrders.filter(o => o.delivery_status === 'Confirmed' || o.delivery_status === 'Pending').length },
+                                { key: 'Out for Delivery', label: '🛵 Out for Delivery', count: safeOrders.filter(o => o.delivery_status === 'Out for Delivery').length },
+                                { key: 'Delivered', label: '✅ Delivered', count: safeOrders.filter(o => o.delivery_status === 'Delivered').length },
+                                { key: 'All', label: '📋 All Orders', count: safeOrders.length },
                             ].map(t => (
                                 <button key={t.key} onClick={() => setFilter(t.key)}
-                                    className={`px-3.5 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all border ${
+                                    className={`px-3.5 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all border flex items-center gap-1.5 ${
                                         filter === t.key
                                             ? 'bg-white text-slate-900 border-white shadow-md'
                                             : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
                                     }`}>
-                                    {t.label}
+                                    <span>{t.label}</span>
+                                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${filter === t.key ? 'bg-slate-900 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                                        {t.count}
+                                    </span>
                                 </button>
                             ))}
                         </div>
@@ -897,11 +900,26 @@ const RiderDashboard = () => {
                         {/* Order Cards Grid */}
                         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full max-w-full'>
                             {filteredOrders.length === 0 ? (
-                                <div className='col-span-full py-16 text-center bg-slate-900/80 rounded-3xl border-2 border-dashed border-slate-800 p-6'>
+                                <div className='col-span-full py-14 text-center bg-slate-900/80 rounded-3xl border-2 border-dashed border-slate-800 p-6'>
                                     <p className='text-4xl mb-2'>🛵</p>
-                                    <p className='text-slate-300 font-black text-sm'>No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders</p>
-                                    <p className='text-slate-500 text-xs mt-1'>Auto-refreshes every 20 seconds</p>
-                                    <button onClick={() => fetchRiderOrders(true)} className='mt-3 text-xs text-blue-400 font-black underline'>Refresh Now</button>
+                                    <p className='text-slate-300 font-black text-sm'>
+                                        No {filter === 'Confirmed' ? 'Ready for Pickup' : filter} orders
+                                    </p>
+                                    <p className='text-slate-500 text-xs mt-1 max-w-sm mx-auto'>
+                                        {filter === 'Confirmed'
+                                            ? 'All town orders have been delivered! When a customer places a new order, it will alert and appear here instantly.'
+                                            : 'Auto-refreshes every 20 seconds.'}
+                                    </p>
+                                    <div className='flex items-center justify-center gap-2.5 mt-4 flex-wrap'>
+                                        <button onClick={() => fetchRiderOrders(true)} className='px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black active:scale-95 shadow-md'>
+                                            🔄 Refresh Now
+                                        </button>
+                                        {filter !== 'Delivered' && (
+                                            <button onClick={() => setFilter('Delivered')} className='px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-black border border-slate-700 active:scale-95'>
+                                                ✅ View Delivered ({safeOrders.filter(o => o.delivery_status === 'Delivered').length})
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ) : (
                                 filteredOrders.map((order) => {
