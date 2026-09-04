@@ -29,10 +29,10 @@ export const getDistanceFromStore = (customerLat, customerLng) =>
 //   - ₹499 & above → Flat ₹60
 // >14 km   → not serviceable
 export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
+  if (Number(cartTotal) >= 499) return 0
   if (distanceKm <= 3) return 12
   if (distanceKm <= 6) return 29
   if (distanceKm <= 14) {
-    if (Number(cartTotal) >= 499) return 60
     return Math.round(distanceKm * 7)
   }
   return null
@@ -61,7 +61,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   const isEvening = isAfterEveningCutoff()
 
   const numCartTotal = Number(cartTotal) || 0
-  const daytimeCharge = dist <= 3 ? 12 : dist <= 6 ? 29 : numCartTotal >= 499 ? 60 : Math.round(dist * 7)
+  const daytimeCharge = numCartTotal >= 499 ? 0 : dist <= 3 ? 12 : dist <= 6 ? 29 : Math.round(dist * 7)
 
   // After 7:30 PM, deliveries beyond 5km are closed for rider night safety
   if (dist > 5 && isEvening) {
