@@ -304,7 +304,7 @@ const saveAndSend = async ({
       shayari:      payload.shayari,
       body:         payload.body,
       data:         metadata,
-      fcmToken:     targetFcmToken || null,
+      fcmToken:     uniqueTokens[0] || fcmToken || null,
       fcmMessageId: fcmMessageId || null,
     });
 
