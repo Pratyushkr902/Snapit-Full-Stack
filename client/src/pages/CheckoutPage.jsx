@@ -134,14 +134,18 @@ const CheckoutPage = () => {
   }
 
   const handleWalletPayment = async () => {
+    let loadingToast = null
     try {
       if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select a delivery address')
       if (addressMissingCoords) return toast.error('This address has no location pin. Please delete and re-add it so delivery charge is calculated correctly.', { duration: 5000 })
       if (!checkServiceArea()) return
+      if (totalPrice < 49) {
+        return toast.error(`Minimum order of ₹49 required. Please add items worth ₹${49 - totalPrice} more!`, { duration: 5000 })
+      }
       const currentBalance = Number(user?.walletBalance || 0)
       if (currentBalance < grandTotal) return toast.error('Insufficient Balance!')
-      const loadingToast = toast.loading('Processing Wallet Payment...')
+      loadingToast = toast.loading('Processing Wallet Payment...')
       const c = getCoords()
       const response = await Axios({
         ...SummaryApi.payWithWallet,
@@ -160,22 +164,29 @@ const CheckoutPage = () => {
           discountAmt:      discountAmount
         }
       })
-      toast.dismiss(loadingToast)
       if (response.data.success) {
         toast.success('Paid successfully using Snapit Wallet! 💸')
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
         navigateToSuccess(response.data.scratch_cards)
       }
-    } catch (error) { AxiosToastError(error) }
+    } catch (error) {
+      AxiosToastError(error)
+    } finally {
+      if (loadingToast) toast.dismiss(loadingToast)
+    }
   }
 
   const handleCashOnDelivery = async () => {
+    let loadingToast = null
     try {
       if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select an address first')
       if (!checkServiceArea()) return
-      const loadingToast = toast.loading('Placing order...')
+      if (totalPrice < 49) {
+        return toast.error(`Minimum order of ₹49 required. Please add items worth ₹${49 - totalPrice} more!`, { duration: 5000 })
+      }
+      loadingToast = toast.loading('Placing order...')
       const c = getCoords()
       const response = await Axios({
         ...SummaryApi.CashOnDeliveryOrder,
@@ -192,14 +203,17 @@ const CheckoutPage = () => {
           discountAmt:      discountAmount
         }
       })
-      toast.dismiss(loadingToast)
       if (response.data.success) {
         toast.success(response.data.message)
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
         navigateToSuccess(response.data.scratch_cards)
       }
-    } catch (error) { AxiosToastError(error) }
+    } catch (error) {
+      AxiosToastError(error)
+    } finally {
+      if (loadingToast) toast.dismiss(loadingToast)
+    }
   }
 
   const handleOnlinePayment = async () => {
