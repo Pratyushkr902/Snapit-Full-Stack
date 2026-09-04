@@ -450,6 +450,8 @@ export async function CashOnDeliveryOrderController(request, response) {
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
 
+        const assignedRider = await assignAvailableRider()
+
         const payload = {
             userId,
             orderId:          `ORD-${new mongoose.Types.ObjectId()}`,
@@ -852,6 +854,8 @@ export async function verifyPaymentController(request, response) {
         const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
+
+        const assignedRider = await assignAvailableRider()
 
         const payload = {
             userId,

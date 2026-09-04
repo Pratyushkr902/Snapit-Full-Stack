@@ -113,7 +113,6 @@ export function shouldQueueOrder(userId) {
         return false
     }
 }
-
 export const listFrozenIps = () => FrozenIpModel.find().sort({ frozenAt: -1 })
 
 export const unfreezeIpByAddress = async (ip) => {
