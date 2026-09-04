@@ -2,6 +2,7 @@ import RestaurantModel from '../models/restaurant.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import FestiveOfferModel from '../models/festiveOffer.model.js'
 import NodeCache from 'node-cache'
+import mongoose from 'mongoose'
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 120 })
 
@@ -43,6 +44,10 @@ export async function getAllRestaurants(req, res) {
 // ── GET /api/restaurant/:id ────────────────────────────────────────────────────
 export async function getRestaurantById(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid restaurant ID' })
+    }
+
     const cacheKey = `restaurant_${req.params.id}`
     const cached = cache.get(cacheKey)
     if (cached) return res.json(cached)
@@ -159,6 +164,11 @@ export async function updateRestaurant(req, res) {
 
 // ── Helper: verify RESTO_SELLER owns this restaurant ─────────────────────────
 async function assertOwnership(req, res, restaurantId) {
+  if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
+    res.status(400).json({ success: false, message: 'Invalid restaurant ID' })
+    return false
+  }
+
   if (req.userRole === 'ADMIN') return true
 
   if (req.userRole === 'RESTO_SELLER') {
@@ -179,6 +189,9 @@ async function assertOwnership(req, res, restaurantId) {
 // ── GET /api/restaurant/:id/menu ──────────────────────────────────────────────
 export async function getMenuItems(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid restaurant ID' })
+    }
     if (!await assertOwnership(req, res, req.params.id)) return
 
     const items = await MenuItemModel

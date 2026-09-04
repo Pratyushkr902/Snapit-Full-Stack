@@ -420,28 +420,52 @@ export async function CashOnDeliveryOrderController(request, response) {
             })
         }
 
-        const isPlusForMinOrder = Boolean(currentUser?.isSnapitPlusMember && currentUser?.snapitPlusExpiresAt && new Date() < new Date(currentUser.snapitPlusExpiresAt))
-        const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
-        if (Number(subTotalAmt) < minOrderRequired) {
+        const assignedStore  = await resolveStore(verifiedLat, verifiedLng)
+        const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
+        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
+        const invalidItems = taggedCartItems.filter(i => i._invalid)
+        if (invalidItems.length > 0) {
             return response.status(400).json({
-                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - Number(subTotalAmt)} more to checkout.`,
+                message: invalidItems.map(i => i._reason).join(' '),
                 error: true,
                 success: false
             })
         }
 
-    const delivery_fee   = calcDeliveryFee(subTotalAmt, verifiedLat, verifiedLng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
-        const assignedStore  = await resolveStore(verifiedLat, verifiedLng)
-        const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
-        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
-        const invalidItems = taggedCartItems.filter(i => i._invalid)
-   if (invalidItems.length > 0) {
-       return response.status(400).json({
-           message: invalidItems.map(i => i._reason).join(' '),
-           error: true,
-           success: false
-       })
-   }
+        // ── SERVER-SIDE PRICE & DELIVERY FEE CALCULATION (TAMPER-PROOF) ───────────
+        const actualSubTotal = taggedCartItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
+
+        const isPlusForMinOrder = Boolean(currentUser?.isSnapitPlusMember && currentUser?.snapitPlusExpiresAt && new Date() < new Date(currentUser.snapitPlusExpiresAt))
+        const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
+        if (actualSubTotal < minOrderRequired) {
+            return response.status(400).json({
+                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
+                error: true,
+                success: false
+            })
+        }
+
+        const delivery_fee = calcDeliveryFee(actualSubTotal, verifiedLat, verifiedLng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+
+        let validCouponCode = null
+        let validDiscountAmt = 0
+        if (couponCode) {
+            const couponVal = validateCoupon(couponCode, actualSubTotal)
+            if (couponVal?.code && couponVal?.discount > 0) {
+                if (couponVal.code === 'FIRSTUSER' || couponVal.code === 'FIRSTFREE' || couponVal.code === 'WELCOME60') {
+                    const previousOrder = await OrderModel.findOne({ userId })
+                    if (!previousOrder) {
+                        validCouponCode = couponVal.code
+                        validDiscountAmt = couponVal.discount
+                    }
+                } else {
+                    validCouponCode = couponVal.code
+                    validDiscountAmt = couponVal.discount
+                }
+            }
+        }
+
+        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
@@ -464,15 +488,15 @@ export async function CashOnDeliveryOrderController(request, response) {
             payment_status:   'CASH ON DELIVERY',
             delivery_address: addressId,
             delivery_distance_km: Math.round(getDistanceFromStore(verifiedLat, verifiedLng) * 10) / 10,
-            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : (verifiedLat || null),
-            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : (verifiedLng || null),
+            delivery_lat: verifiedLat,
+            delivery_lng: verifiedLng,
             recipient_name:           recipientName,
             recipient_mobile:         recipientMobile,
             order_for:                orderFor,
             delivery_instructions:    deliveryInstructions,
             shareable_tracking_token: shareableToken,
-            subTotalAmt:      Number(subTotalAmt),
-            totalAmt:         Number(totalAmt),
+            subTotalAmt:      actualSubTotal,
+            totalAmt:         finalTotalAmt,
             delivery_fee,
             is_express:       !!isExpress,
             delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
@@ -487,8 +511,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             rider_name:       assignedRider?.name   || 'Unassigned',
             rider_contact:    assignedRider?.mobile || '',
             payment_collected: false,
-            coupon_used:      couponCode || null,
-            discount_amount:  Number(discountAmt) || 0,
+            coupon_used:      validCouponCode,
+            discount_amount:  validDiscountAmt,
         }
 
         const generatedOrder = new OrderModel(payload)
@@ -582,17 +606,52 @@ export async function WalletPaymentOrderController(request, response) {
             })
         }
 
-        const isPlusForMinOrder = Boolean(user?.isSnapitPlusMember && user?.snapitPlusExpiresAt && new Date() < new Date(user.snapitPlusExpiresAt))
-        const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
-        if (Number(subTotalAmt) < minOrderRequired) {
+        const assignedStore   = await resolveStore(verifiedLat, verifiedLng)
+        const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
+        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
+        const invalidItems = taggedCartItems.filter(i => i._invalid)
+        if (invalidItems.length > 0) {
             return response.status(400).json({
-                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - Number(subTotalAmt)} more to checkout.`,
+                message: invalidItems.map(i => i._reason).join(' '),
                 error: true,
                 success: false
             })
         }
 
-        const exactRequiredTotal = Number(totalAmt)
+        // ── SERVER-SIDE PRICE & DELIVERY FEE CALCULATION (TAMPER-PROOF) ───────────
+        const actualSubTotal = taggedCartItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
+
+        const isPlusForMinOrder = Boolean(user?.isSnapitPlusMember && user?.snapitPlusExpiresAt && new Date() < new Date(user.snapitPlusExpiresAt))
+        const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
+        if (actualSubTotal < minOrderRequired) {
+            return response.status(400).json({
+                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
+                error: true,
+                success: false
+            })
+        }
+
+        const delivery_fee = calcDeliveryFee(actualSubTotal, verifiedLat, verifiedLng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+
+        let validCouponCode = null
+        let validDiscountAmt = 0
+        if (couponCode) {
+            const couponVal = validateCoupon(couponCode, actualSubTotal)
+            if (couponVal?.code && couponVal?.discount > 0) {
+                if (couponVal.code === 'FIRSTUSER' || couponVal.code === 'FIRSTFREE' || couponVal.code === 'WELCOME60') {
+                    const previousOrder = await OrderModel.findOne({ userId })
+                    if (!previousOrder) {
+                        validCouponCode = couponVal.code
+                        validDiscountAmt = couponVal.discount
+                    }
+                } else {
+                    validCouponCode = couponVal.code
+                    validDiscountAmt = couponVal.discount
+                }
+            }
+        }
+
+        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt)
         if ((user.walletBalance || 0) < exactRequiredTotal) {
             return response.status(400).json({
                 message: `Insufficient wallet balance. Need ₹${(exactRequiredTotal - (user.walletBalance || 0)).toFixed(2)} more.`,
@@ -615,18 +674,6 @@ export async function WalletPaymentOrderController(request, response) {
             await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } })
         }
 
-      const delivery_fee    = calcDeliveryFee(subTotalAmt, verifiedLat, verifiedLng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
-        const assignedStore   = await resolveStore(verifiedLat, verifiedLng)
-        const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
-        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
-        const invalidItems = taggedCartItems.filter(i => i._invalid)
-   if (invalidItems.length > 0) {
-       return response.status(400).json({
-           message: invalidItems.map(i => i._reason).join(' '),
-           error: true,
-           success: false
-       })
-   }
         const transactionId   = `WAL-ORD-${new mongoose.Types.ObjectId()}`
 
         const assignedRider = await assignAvailableRider()
@@ -645,8 +692,8 @@ export async function WalletPaymentOrderController(request, response) {
         })
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
-        const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
-        const recipientMobile = String((isGift ? address.recipient_mobile : null) || address?.mobile || address?.recipient_mobile || currentUser?.mobile || '').trim()
+        const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
+        const recipientMobile = String((isGift ? address.recipient_mobile : null) || address?.mobile || address?.recipient_mobile || user?.mobile || '').trim()
         const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
@@ -663,14 +710,14 @@ export async function WalletPaymentOrderController(request, response) {
             payment_status:   'PAID',
             delivery_address: addressId,
             delivery_distance_km: Math.round(getDistanceFromStore(verifiedLat, verifiedLng) * 10) / 10,
-            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : (verifiedLat || null),
-            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : (verifiedLng || null),
+            delivery_lat: verifiedLat,
+            delivery_lng: verifiedLng,
             recipient_name:           recipientName,
             recipient_mobile:         recipientMobile,
             order_for:                orderFor,
             delivery_instructions:    deliveryInstructions,
             shareable_tracking_token: shareableToken,
-            subTotalAmt:      Number(subTotalAmt),
+            subTotalAmt:      actualSubTotal,
             totalAmt:         exactRequiredTotal,
             delivery_fee,
             is_express:       !!isExpress,
@@ -686,8 +733,8 @@ export async function WalletPaymentOrderController(request, response) {
             rider_name:       assignedRider?.name   || 'Unassigned',
             rider_contact:    assignedRider?.mobile || '',
             payment_collected: true,
-            coupon_used:      couponCode || null,
-            discount_amount:  Number(discountAmt) || 0,
+            coupon_used:      validCouponCode,
+            discount_amount:  validDiscountAmt,
         }
 
         const newOrder = new OrderModel(payload)
@@ -723,16 +770,57 @@ export async function WalletPaymentOrderController(request, response) {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function paymentController(request, response) {
     try {
-        const { totalAmt, addressId } = request.body
+        const { totalAmt, addressId, list_items, couponCode, isExpress } = request.body
         const userId = request.userId
 
-        if (!totalAmt || Number(totalAmt) <= 0) {
-            return response.status(400).json({ message: 'Invalid amount.', error: true, success: false })
-        }
+        let payableAmount = Number(totalAmt)
 
-        if (addressId) {
+        if (addressId && Array.isArray(list_items) && list_items.length > 0) {
             const address = await AddressModel.findOne({ _id: addressId, userId })
             if (!address) return response.status(404).json({ message: 'Address not found.', error: true, success: false })
+
+            let verifiedLat = address.lat
+            let verifiedLng = address.lng
+            const HIMALAYA_LAT = 25.2639198
+            const HIMALAYA_LNG = 84.8545598
+            const CHIKASI_LAT = 25.28091606583264
+            const CHIKASI_LNG = 84.87069734970407
+            const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
+            if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+                verifiedLat = HIMALAYA_LAT
+                verifiedLng = HIMALAYA_LNG
+            } else if (/chiksi|chikasi/i.test(combinedText)) {
+                verifiedLat = CHIKASI_LAT
+                verifiedLng = CHIKASI_LNG
+            }
+
+            const currentUser = await UserModel.findById(userId)
+            const assignedStore = await resolveStore(verifiedLat, verifiedLng)
+            const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
+            const actualSubTotal = taggedCartItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
+            const delivery_fee = calcDeliveryFee(actualSubTotal, verifiedLat, verifiedLng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+
+            let validDiscountAmt = 0
+            if (couponCode) {
+                const couponVal = validateCoupon(couponCode, actualSubTotal)
+                if (couponVal?.code && couponVal?.discount > 0) {
+                    if (couponVal.code === 'FIRSTUSER' || couponVal.code === 'FIRSTFREE' || couponVal.code === 'WELCOME60') {
+                        const previousOrder = await OrderModel.findOne({ userId })
+                        if (!previousOrder) validDiscountAmt = couponVal.discount
+                    } else {
+                        validDiscountAmt = couponVal.discount
+                    }
+                }
+            }
+
+            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt)
+            if (calculatedTotal > 0) {
+                payableAmount = calculatedTotal
+            }
+        }
+
+        if (!payableAmount || Number(payableAmount) <= 0) {
+            return response.status(400).json({ message: 'Invalid amount.', error: true, success: false })
         }
 
         const razorpay = new Razorpay({
@@ -741,7 +829,7 @@ export async function paymentController(request, response) {
         })
 
         const order = await razorpay.orders.create({
-            amount:   Math.round(Number(totalAmt) * 100),
+            amount:   Math.round(Number(payableAmount) * 100),
             currency: 'INR',
             receipt:  `rcpt_${new mongoose.Types.ObjectId()}`,
             notes:    { userId: request.userId, addressId },
@@ -819,38 +907,56 @@ export async function verifyPaymentController(request, response) {
             })
         }
 
-        const isPlusForMinOrder = Boolean(user?.isSnapitPlusMember && user?.snapitPlusExpiresAt && new Date() < new Date(user.snapitPlusExpiresAt))
-        const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
-        if (Number(subTotalAmt) < minOrderRequired) {
+        const assignedStore   = await resolveStore(verifiedLat, verifiedLng)
+        const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
+        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
+        const invalidItems = taggedCartItems.filter(i => i._invalid)
+        if (invalidItems.length > 0) {
             return response.status(400).json({
-                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - Number(subTotalAmt)} more to checkout.`,
+                message: invalidItems.map(i => i._reason).join(' '),
                 error: true,
                 success: false
             })
         }
 
-         const delivery_fee = calcDeliveryFee(subTotalAmt, verifiedLat, verifiedLng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+        // ── SERVER-SIDE PRICE & DELIVERY FEE CALCULATION (TAMPER-PROOF) ───────────
+        const actualSubTotal = taggedCartItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
 
-        const serverTotal = Number(subTotalAmt) + delivery_fee - (Number(discountAmt) || 0)
-        if (Math.abs(Number(totalAmt) - serverTotal) > 1) {
-            console.warn(`PRICE_TAMPER | user=${userId} | clientTotal=${totalAmt} | serverTotal=${serverTotal}`)
-            return response.status(422).json({ message: 'Order total mismatch. Please try again.', error: true, success: false })
+        const isPlusForMinOrder = Boolean(user?.isSnapitPlusMember && user?.snapitPlusExpiresAt && new Date() < new Date(user.snapitPlusExpiresAt))
+        const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
+        if (actualSubTotal < minOrderRequired) {
+            return response.status(400).json({
+                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
+                error: true,
+                success: false
+            })
         }
 
-        const assignedStore   = await resolveStore(verifiedLat, verifiedLng)
-        const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
-        const involvedStores = [...new Set(taggedCartItems.map(i => i.seller_store_name).filter(Boolean))]
-        const invalidItems = taggedCartItems.filter(i => i._invalid)
-   if (invalidItems.length > 0) {
-       return response.status(400).json({
-           message: invalidItems.map(i => i._reason).join(' '),
-           error: true,
-           success: false
-       })
-   }
+        const delivery_fee = calcDeliveryFee(actualSubTotal, verifiedLat, verifiedLng, user) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
+
+        let validCouponCode = null
+        let validDiscountAmt = 0
+        if (couponCode) {
+            const couponVal = validateCoupon(couponCode, actualSubTotal)
+            if (couponVal?.code && couponVal?.discount > 0) {
+                if (couponVal.code === 'FIRSTUSER' || couponVal.code === 'FIRSTFREE' || couponVal.code === 'WELCOME60') {
+                    const previousOrder = await OrderModel.findOne({ userId })
+                    if (!previousOrder) {
+                        validCouponCode = couponVal.code
+                        validDiscountAmt = couponVal.discount
+                    }
+                } else {
+                    validCouponCode = couponVal.code
+                    validDiscountAmt = couponVal.discount
+                }
+            }
+        }
+
+        const serverTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt)
+
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
-        const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
-        const recipientMobile = String((isGift ? address.recipient_mobile : null) || address?.mobile || address?.recipient_mobile || currentUser?.mobile || '').trim()
+        const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
+        const recipientMobile = String((isGift ? address.recipient_mobile : null) || address?.mobile || address?.recipient_mobile || user?.mobile || '').trim()
         const orderFor = isGift ? 'SOMEONE_ELSE' : 'SELF'
         const deliveryInstructions = address?.delivery_instructions || ''
         const shareableToken = 'trk_' + crypto.randomBytes(12).toString('hex')
@@ -869,15 +975,15 @@ export async function verifyPaymentController(request, response) {
             payment_status:   'PAID',
             delivery_address: addressId,
             delivery_distance_km: Math.round(getDistanceFromStore(verifiedLat, verifiedLng) * 10) / 10,
-            delivery_lat: (lat !== undefined && lat !== null) ? Number(lat) : (verifiedLat || null),
-            delivery_lng: (lng !== undefined && lng !== null) ? Number(lng) : (verifiedLng || null),
+            delivery_lat: verifiedLat,
+            delivery_lng: verifiedLng,
             recipient_name:           recipientName,
             recipient_mobile:         recipientMobile,
             order_for:                orderFor,
             delivery_instructions:    deliveryInstructions,
             shareable_tracking_token: shareableToken,
-            subTotalAmt:      Number(subTotalAmt),
-            totalAmt:         Number(totalAmt),
+            subTotalAmt:      actualSubTotal,
+            totalAmt:         serverTotal,
             delivery_fee,
             is_express:       !!isExpress,
             delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
@@ -892,8 +998,8 @@ export async function verifyPaymentController(request, response) {
             rider_name:       assignedRider?.name   || 'Unassigned',
             rider_contact:    assignedRider?.mobile || '',
             payment_collected: true,
-            coupon_used:      couponCode || null,
-            discount_amount:  Number(discountAmt) || 0,
+            coupon_used:      validCouponCode,
+            discount_amount:  validDiscountAmt,
         }
 
         const newOrder = new OrderModel(payload)
