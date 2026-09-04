@@ -71,7 +71,11 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
         }
         if (!token) return { success: false, error: 'Missing token' }
         const dataMap = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
-        const androidTag = data?.type === 'ABANDONED_CART' ? 'cart_nudge' : (data?.type ? `promo_${data.type}` : (data?.orderId ? `order_${data.orderId}` : 'general_alert'))
+        const androidTag = data?.type === 'ABANDONED_CART'
+            ? 'cart_nudge'
+            : (String(data?.type || '').includes('PROMO') || data?.type === 'TEA_SNACK')
+                ? 'daily_promo'
+                : (data?.orderId ? `order_${data.orderId}` : 'general_alert')
         const message = {
             token,
             notification: { title, body },

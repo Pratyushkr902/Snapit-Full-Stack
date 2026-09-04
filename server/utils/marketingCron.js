@@ -30,32 +30,34 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
         ]
       }).select('_id name fcmToken fcmTokens').lean(),
       DeviceTokenModel.find({
-        token: { $exists: true, $ne: null, $ne: '' }
-      }).select('token userId').lean()
+        token: { $exists: true, $ne: null, $ne: '' },
+        userId: null, // Strictly only anonymous devices
+        lastActiveAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Active in last 7 days
+      }).select('token').lean()
     ])
 
     const tokenMap = new Map()
-    const registeredUserIds = new Set()
 
-    // 1. Add tokens from users (strictly 1 active token per registered user)
+    // 1. Add strictly 1 canonical active token per registered user
     users.forEach(u => {
-      registeredUserIds.add(String(u._id))
-      const token = (u.fcmToken && typeof u.fcmToken === 'string' && u.fcmToken.trim().length > 10)
-        ? u.fcmToken.trim()
-        : (Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0 ? u.fcmTokens[u.fcmTokens.length - 1] : null)
+      let bestToken = null
+      if (u.fcmToken && typeof u.fcmToken === 'string' && u.fcmToken.trim().length > 10) {
+        bestToken = u.fcmToken.trim()
+      } else if (Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0) {
+        const valid = u.fcmTokens.filter(t => typeof t === 'string' && t.trim().length > 10)
+        if (valid.length > 0) bestToken = valid[valid.length - 1].trim()
+      }
 
-      if (token && !tokenMap.has(token)) {
-        tokenMap.set(token, u)
+      if (bestToken && !tokenMap.has(bestToken)) {
+        tokenMap.set(bestToken, u)
       }
     })
 
-    // 2. Add tokens from standalone device registry (ONLY for anonymous devices not already tied to UserModel)
+    // 2. Add truly unique anonymous devices (avoiding duplicates)
     deviceDocs.forEach(d => {
-      if (d.userId && registeredUserIds.has(String(d.userId))) return
-      if (d.token && typeof d.token === 'string' && d.token.trim().length > 10) {
-        if (!tokenMap.has(d.token.trim())) {
-          tokenMap.set(d.token.trim(), { _id: d.userId || null, name: 'Customer' })
-        }
+      const cleanToken = d.token?.trim()
+      if (cleanToken && cleanToken.length > 10 && !tokenMap.has(cleanToken)) {
+        tokenMap.set(cleanToken, { name: 'Customer' })
       }
     })
 
