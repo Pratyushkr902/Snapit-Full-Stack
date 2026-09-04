@@ -79,6 +79,7 @@ import { getTodayDateIST } from './controllers/riderDuty.controller.js'
 
 import adminManagementRouter from './route/adminManagement.route.js'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -440,10 +441,17 @@ app.get("/debug-brevo-test", async (req, res) => {
 })
 
 // ─── SERVE FRONTEND ───────────────────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, '../client/dist')))
-app.get('/{*splat}', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'))
-})
+const clientDist = path.join(__dirname, '../client/dist')
+if (fs.existsSync(path.join(clientDist, 'index.html'))) {
+    app.use(express.static(clientDist))
+    app.get('/{*splat}', (req, res) => {
+        res.sendFile(path.join(clientDist, 'index.html'))
+    })
+} else {
+    app.get('/', (req, res) => {
+        res.status(200).json({ status: 'ok', message: 'Snapit API Server is running' })
+    })
+}
 
 // ─── KEEP-ALIVE ───────────────────────────────────────────────────────────────
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL
