@@ -99,13 +99,15 @@ export async function sendOrderDeliveredEmail(order, userObj = null) {
 </html>`
 
     const subject = `🎉 Order Delivered Successfully! #${orderId} - Snapit`
-    let res = await sendEmailResend({
+    // Send delivered order emails directly from Brevo (snapitxpress@gmail.com)
+    let res = await sendEmail({
       sendTo: user.email,
       subject,
       html
     })
     if (!res) {
-      res = await sendEmail({
+      // Fallback to Resend if Brevo fails
+      res = await sendEmailResend({
         sendTo: user.email,
         subject,
         html
