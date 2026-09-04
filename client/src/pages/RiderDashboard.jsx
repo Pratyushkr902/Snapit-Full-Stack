@@ -111,9 +111,7 @@ const RiderDashboard = () => {
 
                 const visibleOrders = allOrders.filter(o => {
                     if (!o) return false;
-                    if (['Confirmed', 'Out for Delivery', 'Delivered'].includes(o.delivery_status)) return true;
-                    const ageMinutes = (Date.now() - new Date(o.createdAt)) / 60000;
-                    if (o.delivery_status === 'Pending' && ageMinutes >= 3) return true;
+                    if (['Confirmed', 'Out for Delivery', 'Delivered', 'Pending'].includes(o.delivery_status)) return true;
                     return false;
                 });
 
@@ -644,6 +642,7 @@ const RiderDashboard = () => {
         if (filter === 'Delivered') return o.delivery_status === 'Delivered';
         if (o.delivery_status === 'Delivered' || o.delivery_status === 'Cancelled') return false;
         if (filter === 'All') return true;
+        if (filter === 'Confirmed') return o.delivery_status === 'Confirmed' || o.delivery_status === 'Pending';
         return o.delivery_status === filter;
     });
 
@@ -952,11 +951,11 @@ const RiderDashboard = () => {
 
                                                 <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider flex-shrink-0 ${
                                                     order.delivery_status === 'Confirmed'        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                                    order.delivery_status === 'Pending'          ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 animate-pulse' :
                                                     order.delivery_status === 'Out for Delivery' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse'  :
-                                                    isSellerDelayed                              ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
                                                     'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                                                 }`}>
-                                                    {isSellerDelayed ? '⏳ Awaiting Seller' : order.delivery_status === 'Confirmed' ? 'Ready for Pickup' : order.delivery_status}
+                                                    {order.delivery_status === 'Pending' ? '⏳ Packing at Store' : order.delivery_status === 'Confirmed' ? 'Ready for Pickup' : order.delivery_status}
                                                 </span>
                                             </div>
 
@@ -1105,10 +1104,10 @@ const RiderDashboard = () => {
                                                     <FaCheckCircle/> {isUnassigned ? '⚡ CLAIM & PICKUP' : `PICKUP FROM ${store?.name?.toUpperCase() || 'STORE'}`}
                                                 </button>
                                             )}
-                                            {isSellerDelayed && (
+                                            {(order.delivery_status === 'Pending') && (
                                                 <button onClick={() => handlePickup(order)}
-                                                    className='w-full py-3.5 rounded-2xl font-black text-xs sm:text-sm text-white bg-orange-500 hover:bg-orange-400 shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
-                                                    <FaCheckCircle/> PICKUP ANYWAY (Seller Delayed)
+                                                    className='w-full py-3.5 rounded-2xl font-black text-xs sm:text-sm text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 shadow-lg shadow-amber-400/20 transition-all flex items-center justify-center gap-2 active:scale-95'>
+                                                    <FaCheckCircle/> ⚡ CLAIM &amp; PICKUP
                                                 </button>
                                             )}
                                             {canCancel && (

@@ -1056,7 +1056,13 @@ export const updateSellerOrderStatusController = async (request, response) => {
         const order = await OrderModel.findOne({ orderId })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
-        if (request.userRole !== 'ADMIN' && request.userRole !== 'SUPER_ADMIN') {
+        let userRole = request.userRole
+        if (!userRole || userRole === 'USER') {
+            const u = await UserModel.findById(userId).select('role').lean()
+            if (u?.role) userRole = u.role
+        }
+
+        if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
             const sellerUser = await UserModel.findById(userId).select('store_name').lean()
             if (!sellerUser?.store_name || !order.involved_stores?.includes(sellerUser.store_name)) {
                 console.warn(`SELLER_IDOR | user=${userId} | orderId=${orderId} | ip=${request.ip}`)
@@ -1583,7 +1589,12 @@ export async function getSellerOrdersController(request, response) {
         response.set('Expires', '0')
 
         const userId   = request.userId
-        const userRole = request.userRole
+        let userRole = request.userRole
+
+        if (!userRole || userRole === 'USER') {
+            const u = await UserModel.findById(userId).select('role').lean()
+            if (u?.role) userRole = u.role
+        }
 
         let filter = {}
         if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {

@@ -18,23 +18,18 @@ const fmtINR = (n) =>
     `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const StoreOrders = () => {
-    const [orders, setOrders]     = useState([]);
-    const [loading, setLoading]   = useState(false);
-    const [updating, setUpdating] = useState({});
-    const navigate                = useNavigate();
+    const [allOrders, setAllOrders] = useState([]);
+    const [tabFilter, setTabFilter] = useState('to_pack');
+    const [loading, setLoading]     = useState(false);
+    const [updating, setUpdating]   = useState({});
+    const navigate                  = useNavigate();
 
     const fetchOrdersToPack = async () => {
         try {
-            if (orders.length === 0) setLoading(true);
+            if (allOrders.length === 0) setLoading(true);
             const response = await Axios({ ...SummaryApi.getSellerOrders });
             if (response.data.success) {
-                const filtered = response.data.data.filter(o =>
-                    o.seller_status !== 'Ready for Pickup' &&
-                    o.delivery_status !== 'Out for Delivery' &&
-                    o.delivery_status !== 'Delivered' &&
-                    o.delivery_status !== 'Cancelled'
-                );
-                setOrders(filtered);
+                setAllOrders(Array.isArray(response.data.data) ? response.data.data : []);
             }
         } catch (error) {
             console.error("Fetch error", error);
@@ -72,11 +67,29 @@ const StoreOrders = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const toPackOrders = allOrders.filter(o =>
+        o.seller_status !== 'Ready for Pickup' &&
+        o.delivery_status !== 'Out for Delivery' &&
+        o.delivery_status !== 'Delivered' &&
+        o.delivery_status !== 'Cancelled'
+    );
+    const readyOrders = allOrders.filter(o =>
+        o.seller_status === 'Ready for Pickup' &&
+        o.delivery_status !== 'Delivered' &&
+        o.delivery_status !== 'Cancelled'
+    );
+
+    const orders = tabFilter === 'to_pack'
+        ? toPackOrders
+        : tabFilter === 'ready'
+            ? readyOrders
+            : allOrders;
+
     if (loading) return <Loading />;
 
-    const totalEarningInQueue = orders.reduce((a, o) => a + getSellerEarning(o), 0);
-    const packingCount        = orders.filter(o => o.seller_status === 'Packing').length;
-    const pendingCount        = orders.filter(o => o.seller_status !== 'Packing').length;
+    const totalEarningInQueue = toPackOrders.reduce((a, o) => a + getSellerEarning(o), 0);
+    const packingCount        = toPackOrders.filter(o => o.seller_status === 'Packing').length;
+    const pendingCount        = toPackOrders.filter(o => o.seller_status !== 'Packing').length;
 
     return (
         <div className='min-h-screen bg-orange-50'>
@@ -119,6 +132,39 @@ const StoreOrders = () => {
             </div>
 
             <div className='max-w-4xl mx-auto p-4 lg:p-6'>
+                {/* Segmented Filter Tabs */}
+                <div className='flex gap-2 mb-4 overflow-x-auto pb-1'>
+                    <button
+                        onClick={() => setTabFilter('to_pack')}
+                        className={`px-4 py-2 rounded-2xl text-xs font-black transition-all ${
+                            tabFilter === 'to_pack'
+                                ? 'bg-orange-500 text-white shadow-md'
+                                : 'bg-white text-slate-600 border border-orange-200 hover:bg-orange-50'
+                        }`}
+                    >
+                        ⏳ To Pack ({toPackOrders.length})
+                    </button>
+                    <button
+                        onClick={() => setTabFilter('ready')}
+                        className={`px-4 py-2 rounded-2xl text-xs font-black transition-all ${
+                            tabFilter === 'ready'
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'bg-white text-slate-600 border border-orange-200 hover:bg-blue-50'
+                        }`}
+                    >
+                        📦 Ready for Pickup ({readyOrders.length})
+                    </button>
+                    <button
+                        onClick={() => setTabFilter('all')}
+                        className={`px-4 py-2 rounded-2xl text-xs font-black transition-all ${
+                            tabFilter === 'all'
+                                ? 'bg-slate-800 text-white shadow-md'
+                                : 'bg-white text-slate-600 border border-orange-200 hover:bg-slate-100'
+                        }`}
+                    >
+                        📋 All Orders ({allOrders.length})
+                    </button>
+                </div>
                 {orders.length > 0 && (
                     <div className='mb-4 bg-white rounded-2xl px-4 py-3 border border-orange-100 shadow-sm flex items-center justify-between'>
                         <div className='flex items-center gap-2'>

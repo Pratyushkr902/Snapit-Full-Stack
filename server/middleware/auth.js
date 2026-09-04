@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import UserModel from '../models/user.model.js'
 
 const auth = async (request, response, next) => {
     try {
@@ -34,6 +35,18 @@ const auth = async (request, response, next) => {
 
         request.userId = decode.id
         request.userRole = decode.role
+
+        // Fast DB fallback to ensure promoted roles (ADMIN, RIDER, SUPER_ADMIN) take effect immediately
+        if (!request.userRole || request.userRole === 'USER') {
+            try {
+                const liveUser = await UserModel.findById(decode.id).select('role').lean()
+                if (liveUser?.role) {
+                    request.userRole = liveUser.role
+                }
+            } catch (err) {
+                // non-fatal fallback to token role
+            }
+        }
 
         if (!request.userId) {
             return response.status(401).json({
