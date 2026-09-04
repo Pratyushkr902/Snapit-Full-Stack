@@ -236,7 +236,15 @@ const priceAllGroups = async (groups, fields, user) => {
   for (const g of groups) priced.push(await priceGroup(g, fields.deliveryLocation, user))
 
   const totalSubTotal = priced.reduce((s, g) => s + g.subTotalAmt, 0)
-  const { code: validCouponCode, discount: couponDiscount } = validateCoupon(fields.couponCode, totalSubTotal, user._id)
+  let { code: validCouponCode, discount: couponDiscount } = validateCoupon(fields.couponCode, totalSubTotal)
+
+  if (validCouponCode && ['FIRSTUSER', 'FIRSTFREE', 'WELCOME60', 'FIRST50'].includes(validCouponCode)) {
+    const previousOrder = await OrderModel.findOne({ userId: user._id })
+    if (previousOrder) {
+      validCouponCode = null
+      couponDiscount = 0
+    }
+  }
 
   priced.forEach((g, idx) => {
     g.tip              = idx === 0 ? fields.tip : 0
