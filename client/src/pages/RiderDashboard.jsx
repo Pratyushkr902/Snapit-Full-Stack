@@ -29,8 +29,26 @@ const storeMapLink = (store) => {
 };
 
 const getDeliveryFee = (o) => {
-    const fee = o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge ?? o.riderFee ?? o.rider_fee ?? 0;
-    return isNaN(Number(fee)) ? 0 : Number(fee);
+    const directRiderFee = o.rider_fee ?? o.riderFee;
+    if (directRiderFee != null && !isNaN(Number(directRiderFee)) && Number(directRiderFee) > 0) {
+        return Number(directRiderFee);
+    }
+    const fee = o.delivery_fee ?? o.deliveryFee ?? o.delivery_charge;
+    if (fee != null && !isNaN(Number(fee)) && Number(fee) > 0) {
+        return Number(fee);
+    }
+    // Fallback: When delivery_fee was 0 for customer (e.g. Free Delivery above ₹499 or Snapit Plus),
+    // rider must always receive their earned distance payout!
+    const dist = Number(o.delivery_distance_km || 0);
+    if (dist > 0) {
+        if (dist <= 3) return 12;
+        if (dist <= 6) return 29;
+        return Math.round(dist * 7);
+    }
+    const addr = `${o.delivery_address?.address_line || ''} ${o.delivery_address?.city || ''}`;
+    if (/himalaya|hmch|bams|mbbs/i.test(addr)) return 49;
+    if (/chiksi|chikasi/i.test(addr)) return 49;
+    return 15; // Minimum guaranteed drop fee
 };
 
 const fmt = (n) => Number(n).toFixed(2);

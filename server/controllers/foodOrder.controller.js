@@ -224,7 +224,11 @@ const priceGroup = async (group, deliveryLocation, user) => {
     }
   }
 
-  return { ...group, restaurantName: restaurant.name, subTotalAmt, deliveryFee, distanceKm }
+  const riderFee = deliveryFee > 0
+    ? deliveryFee
+    : (distanceKm <= 3 ? 12 : (distanceKm <= 6 ? 29 : (Math.round(distanceKm * 7) || 29)))
+
+  return { ...group, restaurantName: restaurant.name, subTotalAmt, deliveryFee, riderFee, distanceKm }
 }
 
 // ── Price every restaurant group, then fold tip/coupon/wallet into the FIRST
@@ -283,6 +287,7 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
     shareable_tracking_token: shareableToken,
     subTotalAmt:      group.subTotalAmt,
     delivery_fee:     group.deliveryFee,
+    rider_fee:        group.riderFee || 29,
     totalAmt:         group.totalAmt,
     tip:              group.tip,
     offerKey:         group.offerKey,
