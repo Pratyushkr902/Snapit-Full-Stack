@@ -169,6 +169,21 @@ export const updateRiderLocationController = async (req, res) => {
       { upsert: true, new: true }
     );
 
+    // Broadcast live location to Admin Fleet OpenStreetMap
+    const io = req.app?.get('io');
+    if (io) {
+      io.to('admin_live_fleet').emit('rider_fleet_updated', {
+        riderId,
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        heading: heading !== undefined ? Number(heading) : null,
+        speed: speed !== undefined ? Number(speed) : null,
+        battery: battery !== undefined ? Number(battery) : null,
+        isDutyOn: true,
+        timestamp: Date.now()
+      });
+    }
+
     return res.status(200).json({ success: true, message: 'Location updated' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -191,6 +206,27 @@ export const getAdminLiveRidersController = async (req, res) => {
     dutyRecords.forEach(d => {
       dutyMap.set(String(d.riderId), d);
     });
+
+    // 2b. Fallback: For riders whose today duty doc has no coordinates yet, check their most recent recorded location
+    const ridersMissingGps = riders.filter(r => {
+      const d = dutyMap.get(String(r._id));
+      return !(d?.lastLocation?.latitude && d?.lastLocation?.longitude);
+    });
+
+    const fallbackLocMap = new Map();
+    if (ridersMissingGps.length > 0) {
+      const pastDutiesWithGps = await RiderDutyModel.find({
+        riderId: { $in: ridersMissingGps.map(r => r._id) },
+        'lastLocation.latitude': { $ne: null }
+      }).sort({ updatedAt: -1, date: -1 }).lean();
+
+      pastDutiesWithGps.forEach(pd => {
+        const rKey = String(pd.riderId);
+        if (!fallbackLocMap.has(rKey) && pd.lastLocation?.latitude) {
+          fallbackLocMap.set(rKey, pd.lastLocation);
+        }
+      });
+    }
 
     // 3. Fetch active orders ("Out for Delivery" or "Confirmed") assigned to riders
     const activeOrders = await OrderModel.find({
@@ -243,6 +279,10 @@ export const getAdminLiveRidersController = async (req, res) => {
       const totalRemitted = remittedByRider.get(rId) || 0;
       const cashInHand = Math.max(0, totalCod - totalRemitted);
 
+      const resolvedLoc = (duty?.lastLocation?.latitude && duty?.lastLocation?.longitude)
+        ? duty.lastLocation
+        : (fallbackLocMap.get(rId) || null);
+
       return {
         riderId: rider._id,
         name: rider.name || 'Snapit Rider',
@@ -254,7 +294,7 @@ export const getAdminLiveRidersController = async (req, res) => {
         dutyStartedAt: duty?.currentShiftStart || null,
         todayDutyMinutes: effectiveMinutes,
         shiftsCount: duty?.shifts?.length || 0,
-        lastLocation: duty?.lastLocation || null,
+        lastLocation: resolvedLoc,
         activeOrder: activeOrderMap.get(rId) || null,
         cashInHand
       };

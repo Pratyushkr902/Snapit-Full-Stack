@@ -104,6 +104,45 @@ const RiderDashboard = () => {
     const ordersRef = useRef(orders);
     useEffect(() => { ordersRef.current = orders; }, [orders]);
 
+    // ── Live GPS Tracking State & Ref ──
+    const [gpsState, setGpsState] = useState({
+        active: false,
+        lat: null,
+        lng: null,
+        accuracy: null,
+        lastPing: null,
+        error: null
+    });
+    const processLocationRef = useRef(null);
+
+    const handleRequestGps = () => {
+        if (!navigator.geolocation) {
+            toast.error('Geolocation is not supported by your browser', { icon: '📍' });
+            return;
+        }
+        toast('Requesting device GPS location…', { icon: '📍' });
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                toast.success('🟢 GPS Connected! Location streaming live.', { duration: 4000 });
+                if (pos?.coords && processLocationRef.current) {
+                    processLocationRef.current(
+                        pos.coords.latitude,
+                        pos.coords.longitude,
+                        pos.coords.heading,
+                        pos.coords.speed,
+                        pos.coords.accuracy
+                    );
+                }
+            },
+            (err) => {
+                console.warn('[RiderGPS] Manual GPS request note:', err?.message);
+                toast.error('Please enable Location in your device settings/browser permissions.', { duration: 5000 });
+                setGpsState(prev => ({ ...prev, active: false, error: err?.message || 'Location unavailable' }));
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
+        );
+    };
+
     // ── Auth Guard for Rider Panel ──
     useEffect(() => {
         const token = localStorage.getItem('accessToken') || localStorage.getItem('accesstoken');
@@ -429,17 +468,27 @@ const RiderDashboard = () => {
         let isCancelled = false;
         let webWatchId = null;
         let capCallbackId = null;
+        let keepAliveInterval = null;
         let lastHttpSync = 0;
 
         const processLocation = (lat, lng, heading = null, speed = null, accuracy = null) => {
             if (isCancelled || !lat || !lng) return;
-            // Filter out coarse cell-tower noise if accuracy is worse than 80m
-            if (accuracy && accuracy > 80) {
+            // Only discard completely invalid/absurd fixes (> 3000m)
+            if (accuracy && accuracy > 3000) {
                 console.warn('[RiderGPS] Discarding coarse GPS fix (accuracy too low):', accuracy);
                 return;
             }
 
-            // 1. Broadcast to Admin Fleet Tracker
+            setGpsState({
+                active: true,
+                lat: Number(lat),
+                lng: Number(lng),
+                accuracy: Math.round(accuracy || 0),
+                lastPing: new Date(),
+                error: null
+            });
+
+            // 1. Broadcast to Admin Fleet Tracker via WebSockets
             if (socketRef.current) {
                 socketRef.current.emit('rider_live_location', {
                     riderId:     user?._id,
@@ -468,25 +517,40 @@ const RiderDashboard = () => {
                 }
             });
 
-            // 3. Throttle HTTP persistence to backend every 8s
+            // 3. HTTP persistence to backend every 12s for Rider Duty Fleet & Order tracking
             const nowTime = Date.now();
-            if (activeOrders.length > 0 && nowTime - lastHttpSync > 8000) {
+            if (nowTime - lastHttpSync > 12000 || lastHttpSync === 0) {
                 lastHttpSync = nowTime;
-                activeOrders.forEach(o => {
-                    if (o?.orderId) {
-                        Axios({
-                            url: `/api/order/rider-location/${o.orderId}`,
-                            method: 'post',
-                            data: { latitude: lat, longitude: lng }
-                        }).catch(() => {});
+                Axios({
+                    ...SummaryApi.updateRiderLocation,
+                    data: {
+                        latitude: lat,
+                        longitude: lng,
+                        heading: heading || 0,
+                        speed: speed || 0,
+                        battery: null
                     }
-                });
+                }).catch(err => console.warn('[RiderDuty] HTTP location sync note:', err?.message));
+
+                if (activeOrders.length > 0) {
+                    activeOrders.forEach(o => {
+                        if (o?.orderId) {
+                            Axios({
+                                url: `/api/order/rider-location/${o.orderId}`,
+                                method: 'post',
+                                data: { latitude: lat, longitude: lng }
+                            }).catch(() => {});
+                        }
+                    });
+                }
             }
         };
 
+        processLocationRef.current = processLocation;
+
         const startHighAccuracyGPS = async () => {
-            // Strictly guard: ONLY run for active RIDER accounts on duty
-            if (!isDutyOn || user?.role !== 'RIDER') return;
+            // Strictly guard: ONLY run when ON DUTY
+            if (!isDutyOn) return;
 
             try {
                 const { Capacitor } = await import('@capacitor/core');
@@ -496,8 +560,18 @@ const RiderDashboard = () => {
                     if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
                         await Geolocation.requestPermissions();
                     }
+                    const currentPos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+                    if (currentPos?.coords) {
+                        processLocation(
+                            currentPos.coords.latitude,
+                            currentPos.coords.longitude,
+                            currentPos.coords.heading,
+                            currentPos.coords.speed,
+                            currentPos.coords.accuracy
+                        );
+                    }
                     capCallbackId = await Geolocation.watchPosition(
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 },
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
                         (pos, err) => {
                             if (err) {
                                 console.warn('[NativeRiderGPS] Watch error:', err);
@@ -520,28 +594,92 @@ const RiderDashboard = () => {
                 console.warn('[RiderGPS] Native GPS init fell back to browser:', err?.message);
             }
 
-            // Web Browser High Accuracy GPS Fallback
+            // Web Browser GPS
             if (navigator.geolocation) {
-                webWatchId = navigator.geolocation.watchPosition(
+                // Immediate initial fix
+                navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        processLocation(
-                            pos.coords.latitude,
-                            pos.coords.longitude,
-                            pos.coords.heading,
-                            pos.coords.speed,
-                            pos.coords.accuracy
+                        if (pos?.coords) {
+                            processLocation(
+                                pos.coords.latitude,
+                                pos.coords.longitude,
+                                pos.coords.heading,
+                                pos.coords.speed,
+                                pos.coords.accuracy
+                            );
+                        }
+                    },
+                    (err) => {
+                        console.warn('[WebRiderGPS] Initial high-accuracy timeout, falling back:', err?.message);
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                                if (pos?.coords) {
+                                    processLocation(
+                                        pos.coords.latitude,
+                                        pos.coords.longitude,
+                                        pos.coords.heading,
+                                        pos.coords.speed,
+                                        pos.coords.accuracy
+                                    );
+                                }
+                            },
+                            (err2) => {
+                                console.warn('[WebRiderGPS] Fallback failed:', err2?.message);
+                                setGpsState(prev => ({ ...prev, active: false, error: err2?.message }));
+                            },
+                            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
                         );
                     },
-                    (err) => console.warn('[WebRiderGPS] Watch error:', err?.message),
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 }
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
+                );
+
+                // Continuous Watch
+                webWatchId = navigator.geolocation.watchPosition(
+                    (pos) => {
+                        if (pos?.coords) {
+                            processLocation(
+                                pos.coords.latitude,
+                                pos.coords.longitude,
+                                pos.coords.heading,
+                                pos.coords.speed,
+                                pos.coords.accuracy
+                            );
+                        }
+                    },
+                    (err) => {
+                        console.warn('[WebRiderGPS] Watch warning:', err?.message);
+                    },
+                    { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
                 );
             }
         };
 
         startHighAccuracyGPS();
 
+        // Background / Periodic Poller while on duty (every 25s)
+        keepAliveInterval = setInterval(() => {
+            if (!isCancelled && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        if (pos?.coords) {
+                            processLocation(
+                                pos.coords.latitude,
+                                pos.coords.longitude,
+                                pos.coords.heading,
+                                pos.coords.speed,
+                                pos.coords.accuracy
+                            );
+                        }
+                    },
+                    () => {},
+                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
+                );
+            }
+        }, 25000);
+
         return () => {
             isCancelled = true;
+            if (keepAliveInterval) clearInterval(keepAliveInterval);
             if (webWatchId !== null && navigator.geolocation) {
                 navigator.geolocation.clearWatch(webWatchId);
             }
@@ -727,6 +865,42 @@ const RiderDashboard = () => {
                             </button>
                         </div>
                     </div>
+
+                    {/* Live GPS Status Bar */}
+                    {isDutyOn && (
+                        <div className={`mt-2 p-2.5 rounded-2xl border flex items-center justify-between gap-2 transition-all ${
+                            gpsState.active
+                                ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
+                                : 'bg-amber-950/40 border-amber-500/30 text-amber-300'
+                        }`}>
+                            <div className='flex items-center gap-2 min-w-0'>
+                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                    gpsState.active ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400 animate-ping'
+                                }`}></span>
+                                <div className='min-w-0'>
+                                    <p className='text-xs font-black truncate'>
+                                        {gpsState.active ? '🟢 LIVE GPS STREAMING' : '📍 GPS ACQUIRING / PERMISSION NEEDED'}
+                                    </p>
+                                    <p className='text-[10px] text-slate-400 truncate font-mono'>
+                                        {gpsState.active
+                                            ? `Lat: ${gpsState.lat?.toFixed(5)}, Lng: ${gpsState.lng?.toFixed(5)} ${gpsState.accuracy ? `(±${gpsState.accuracy}m)` : ''}`
+                                            : (gpsState.error || 'Tap button to grant location permission & broadcast to Admin')}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleRequestGps}
+                                className={`px-2.5 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider flex-shrink-0 flex items-center gap-1 transition active:scale-95 shadow ${
+                                    gpsState.active
+                                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                                }`}
+                            >
+                                <span>{gpsState.active ? '🔄 Re-Ping' : '📍 Allow GPS'}</span>
+                            </button>
+                        </div>
+                    )}
 
                     {/* Secondary Row: Quick Stats HUD */}
                     <div className='grid grid-cols-2 sm:grid-cols-3 gap-2 pt-0.5 w-full'>
