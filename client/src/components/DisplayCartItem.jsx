@@ -61,14 +61,19 @@ const DisplayCartItem = ({close}) => {
     }
 
     return (
-        <section className='bg-black/60 backdrop-blur-xs fixed inset-0 z-50 flex justify-end transition-opacity' onClick={close}>
+        <section 
+            className='bg-black/60 backdrop-blur-xs fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end transition-opacity' 
+            onClick={close}
+        >
             <div
-                className='bg-white dark:bg-slate-950 w-full max-w-md h-[100dvh] max-h-[100dvh] ml-auto flex flex-col shadow-2xl overflow-hidden'
+                className='bg-white dark:bg-slate-950 w-full max-w-md max-h-[88dvh] sm:max-h-[100dvh] sm:h-[100dvh] rounded-t-[28px] sm:rounded-none ml-auto flex flex-col shadow-2xl overflow-hidden transition-all'
                 onClick={e => e.stopPropagation()}
             >
+                {/* Mobile Pull Handle (Zepto/Blinkit/Zomato style) */}
+                <div className='w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 sm:hidden flex-shrink-0'></div>
                 
-                {/* Drawer Top Header — with notch & safe-area inset protection */}
-                <div className='flex items-center px-4 pb-3.5 pt-[max(env(safe-area-inset-top,0px),24px)] border-b border-slate-100 dark:border-slate-800 gap-3 justify-between bg-white dark:bg-slate-900 flex-shrink-0 shadow-xs'>
+                {/* Drawer Top Header */}
+                <div className='flex items-center px-4 pb-3.5 pt-2 sm:pt-4 border-b border-slate-100 dark:border-slate-800 gap-3 justify-between bg-white dark:bg-slate-900 flex-shrink-0 shadow-xs'>
                     <div className='flex items-center gap-2.5'>
                         <h2 className='font-black text-lg text-slate-800 dark:text-white tracking-tight'>My Cart</h2>
                         <span className='bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs px-2.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800/40'>
