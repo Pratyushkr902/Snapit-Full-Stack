@@ -4,11 +4,7 @@ export const THEME_STORAGE_KEY = 'snapit_theme'
 export const getStoredTheme = () => {
   if (typeof window === 'undefined') return 'light'
   const saved = localStorage.getItem(THEME_STORAGE_KEY)
-  if (saved === 'dark' || saved === 'light') return saved
-  // Fallback to system preference if no user preference is set
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    return 'dark'
-  }
+  if (saved === 'dark') return 'dark'
   return 'light'
 }
 
