@@ -283,11 +283,19 @@ const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
     `border ${hasError ? 'border-red-400 bg-red-50 dark:bg-red-950/30' : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900'} p-3 rounded-2xl text-xs sm:text-sm outline-none focus:border-green-500 focus:bg-white dark:focus:bg-slate-950 text-slate-800 dark:text-slate-100 transition-all w-full shadow-xs`
 
   return (
-    <section className='bg-black/75 backdrop-blur-md fixed inset-0 z-50 overflow-y-auto flex items-start justify-center p-2 sm:p-4'>
-      <div className='bg-white dark:bg-slate-950 w-full max-w-xl my-3 sm:my-6 rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 flex flex-col max-h-[94vh] transition-colors'>
+    <section 
+      className='bg-black/75 backdrop-blur-md fixed inset-0 z-50 overflow-y-auto flex items-end sm:items-center justify-center p-0 sm:p-4'
+      onClick={close}
+    >
+      <div 
+        className='bg-white dark:bg-slate-950 w-full max-w-xl rounded-t-[28px] sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 flex flex-col max-h-[90dvh] sm:max-h-[88vh] transition-all'
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Mobile Pull Handle (Zepto/Blinkit/Zomato style) */}
+        <div className='w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 sm:hidden flex-shrink-0'></div>
 
         {/* ── HEADER ── */}
-        <div className='flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80'>
+        <div className='flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex-shrink-0'>
           <div>
             <h2 className='font-black text-slate-900 dark:text-white text-base sm:text-lg'>
               Select Delivery Location

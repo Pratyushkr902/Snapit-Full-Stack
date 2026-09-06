@@ -67,16 +67,20 @@ const DisplayCartItem = ({close}) => {
                 onClick={e => e.stopPropagation()}
             >
                 
-                {/* Drawer Top Header */}
-                <div className='flex items-center px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 gap-3 justify-between bg-white dark:bg-slate-900 flex-shrink-0'>
-                    <div className='flex items-center gap-2'>
-                        <h2 className='font-black text-lg text-slate-800 dark:text-white'>My Cart</h2>
-                        <span className='bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs px-2 py-0.5 rounded-full'>
+                {/* Drawer Top Header — with notch & safe-area inset protection */}
+                <div className='flex items-center px-4 pb-3.5 pt-[max(env(safe-area-inset-top,0px),24px)] border-b border-slate-100 dark:border-slate-800 gap-3 justify-between bg-white dark:bg-slate-900 flex-shrink-0 shadow-xs'>
+                    <div className='flex items-center gap-2.5'>
+                        <h2 className='font-black text-lg text-slate-800 dark:text-white tracking-tight'>My Cart</h2>
+                        <span className='bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs px-2.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800/40'>
                             {totalQty} {totalQty > 1 ? 'items' : 'item'}
                         </span>
                     </div>
-                    <button onClick={close} className='p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-all'>
-                        <IoClose size={22}/>
+                    <button 
+                        onClick={close} 
+                        className='p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-full text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 transition-all'
+                        aria-label='Close Cart'
+                    >
+                        <IoClose size={20}/>
                     </button>
                 </div>
 
@@ -165,15 +169,26 @@ const DisplayCartItem = ({close}) => {
                                 </div>
                             </>
                         ) : (
-                            <div className='bg-white dark:bg-slate-900 flex flex-col justify-center items-center py-12 rounded-2xl border border-slate-100 dark:border-slate-800 transition-colors'>
-                                <img
-                                    src={imageEmpty}
-                                    className='w-44 h-44 object-contain opacity-80'
-                                    alt='Empty Cart'
-                                />
-                                <p className='font-bold text-slate-400 dark:text-slate-500 mt-3 text-base'>Your cart is empty</p>
-                                <button onClick={close} className='bg-emerald-600 hover:bg-emerald-700 px-8 py-2.5 text-white font-bold rounded-xl mt-4 active:scale-95 transition-all shadow-md text-sm'>
-                                    Shop Now
+                            <div className='flex-1 flex flex-col justify-center items-center py-12 px-4 text-center my-auto'>
+                                <div className='w-44 h-44 bg-white dark:bg-slate-900 rounded-3xl flex items-center justify-center p-4 border border-slate-100 dark:border-slate-800 shadow-sm'>
+                                    <img
+                                        src={imageEmpty}
+                                        className='w-36 h-36 object-contain'
+                                        alt='Empty Cart'
+                                    />
+                                </div>
+                                <h3 className='font-black text-slate-800 dark:text-white text-lg mt-4'>Your cart is empty</h3>
+                                <p className='text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs'>
+                                    Add items to your cart and enjoy superfast 9-minute doorstep delivery!
+                                </p>
+                                <button 
+                                    onClick={() => {
+                                        if (close) close();
+                                        navigate('/');
+                                    }} 
+                                    className='bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm px-8 py-3 rounded-2xl mt-5 active:scale-95 shadow-md shadow-emerald-600/30 transition-all'
+                                >
+                                    Start Shopping
                                 </button>
                             </div>
                         )

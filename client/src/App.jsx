@@ -298,7 +298,7 @@ function App() {
           )}
 
           {/* {!isDashboard && <WhatsAppButton />} */}
-          {!isDashboard && !isSelectLocation && !isCartPage && <ChatBox />}
+          {!isDashboard && !isSelectLocation && !isCartPage && !showCart && <ChatBox />}
         </div>
       </GlobalProvider>
     </RemoteConfigProvider>

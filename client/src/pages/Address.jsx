@@ -222,8 +222,8 @@ const Address = () => {
 
   return (
     <div className='min-h-screen bg-[#F4F5F7] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-24'>
-      {/* Top Header */}
-      <div className='sticky top-0 z-30 bg-[#F4F5F7]/90 dark:bg-slate-950/90 backdrop-blur-md px-4 pt-4 pb-2'>
+      {/* Top Header — protected from device status bar / notch */}
+      <div className='sticky top-0 z-30 bg-[#F4F5F7]/95 dark:bg-slate-950/95 backdrop-blur-md px-4 pt-[max(env(safe-area-inset-top,0px),48px)] pb-3 shadow-xs transition-colors'>
         <div className='max-w-xl mx-auto flex items-center gap-3.5'>
           <button
             onClick={() => navigate(-1)}

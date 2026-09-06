@@ -65,7 +65,7 @@ const Header = ({ openCart }) => {
     }
 
     return (
-        <header className='sticky top-0 z-40 bg-white dark:bg-slate-950 border-b border-transparent dark:border-slate-800/80 shadow-sm pt-[env(safe-area-inset-top,0px)] transition-colors'>
+        <header className='sticky top-0 z-40 bg-white dark:bg-slate-950 border-b border-transparent dark:border-slate-800/80 shadow-sm pt-[max(env(safe-area-inset-top,0px),8px)] transition-colors'>
 
             {/* ════════════════════════════════
                 DESKTOP HEADER  (lg and above)
@@ -196,7 +196,17 @@ const Header = ({ openCart }) => {
                             </Link>
                         )}
 
-                        <button onClick={openCart} className='relative text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'>
+                        <button 
+                            onClick={() => {
+                                if (isMobile) {
+                                    navigate('/cart');
+                                } else {
+                                    openCart();
+                                }
+                            }} 
+                            className='relative text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'
+                            aria-label='Shopping Cart'
+                        >
                             <BsCart4 size={22} />
                             {totalQty > 0 && (
                                 <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white dark:ring-slate-950'>

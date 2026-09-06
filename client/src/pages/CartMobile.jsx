@@ -53,7 +53,7 @@ const CartMobilePage = () => {
     }
 
     return (
-        <section className='bg-slate-50 dark:bg-slate-950 min-h-[100dvh] w-full flex flex-col p-3 gap-3 pb-36 pt-[env(safe-area-inset-top,0px)] max-w-lg mx-auto transition-colors'>
+        <section className='bg-slate-50 dark:bg-slate-950 min-h-[100dvh] w-full flex flex-col p-3 gap-3 pb-36 pt-[max(env(safe-area-inset-top,0px),16px)] max-w-lg mx-auto transition-colors'>
             {/* Header */}
             <div className='sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3.5 shadow-sm rounded-2xl flex items-center justify-between border border-slate-100 dark:border-slate-800 transition-colors'>
                 <div className='flex items-center gap-3'>
@@ -160,15 +160,23 @@ const CartMobilePage = () => {
                             </div>
                         </>
                     ) : (
-                        <div className='bg-white dark:bg-slate-900 flex flex-col justify-center items-center py-16 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors'>
-                            <img
-                                src={imageEmpty}
-                                className='w-48 h-48 object-contain opacity-80'
-                                alt='Empty Cart'
-                            />
-                            <p className='font-bold text-slate-400 dark:text-slate-500 mt-4 text-base'>Your cart is empty</p>
-                            <button onClick={() => navigate('/')} className='bg-emerald-600 hover:bg-emerald-700 px-8 py-2.5 text-white font-bold rounded-xl mt-4 active:scale-95 transition-all shadow-md text-sm'>
-                                Shop Now
+                        <div className='flex-1 flex flex-col justify-center items-center py-16 px-4 text-center my-auto'>
+                            <div className='w-48 h-48 bg-white dark:bg-slate-900 rounded-3xl flex items-center justify-center p-4 border border-slate-100 dark:border-slate-800 shadow-sm'>
+                                <img
+                                    src={imageEmpty}
+                                    className='w-36 h-36 object-contain'
+                                    alt='Empty Cart'
+                                />
+                            </div>
+                            <h3 className='font-black text-slate-800 dark:text-white text-lg mt-4'>Your cart is empty</h3>
+                            <p className='text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs'>
+                                Add items to your cart and enjoy superfast 9-minute doorstep delivery!
+                            </p>
+                            <button 
+                                onClick={() => navigate('/')} 
+                                className='bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm px-8 py-3 rounded-2xl mt-5 active:scale-95 shadow-md shadow-emerald-600/30 transition-all'
+                            >
+                                Start Shopping
                             </button>
                         </div>
                     )
