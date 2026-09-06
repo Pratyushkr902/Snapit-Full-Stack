@@ -8,7 +8,6 @@ import { BsCart4 } from "react-icons/bs";
 import { useSelector } from 'react-redux';
 import { GoTriangleDown, GoTriangleUp } from "react-icons/go";
 import UserMenu from './UserMenu';
-import ThemeToggle from './ThemeToggle';
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { useFullCart } from '../utils/foodCartStore';
@@ -97,7 +96,6 @@ const Header = ({ openCart }) => {
 
                 {/* Right actions */}
                 <div className='flex items-center gap-3 flex-shrink-0'>
-                    <ThemeToggle variant="icon" />
                     {user?._id && (
                         <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-all group shadow-sm">
                             <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
@@ -181,7 +179,6 @@ const Header = ({ openCart }) => {
 
                     {/* Right: user + cart icons */}
                     <div className='flex items-center gap-3 flex-shrink-0 ml-2'>
-                        <ThemeToggle variant="icon" className="w-8 h-8" />
                         <Link to='/wallet' className='flex flex-col items-center text-green-700 active:scale-90 transition-transform'><span className='text-lg'>💰</span><span className='text-[9px] font-bold'>Wallet</span></Link>
                         <button className='text-neutral-600 active:scale-90 transition-transform' onClick={handleMobileUser}>
                             <FaRegCircleUser size={22} />
