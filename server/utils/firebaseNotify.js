@@ -96,9 +96,8 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     visibility: 'public',
                     defaultSound: true,
                     defaultVibrateTimings: true,
-                    tag: androidTag,
+                    tag: `${androidTag}_${Date.now()}`,
                 },
-                collapseKey: androidTag,
             },
             apns: {
                 headers: {
