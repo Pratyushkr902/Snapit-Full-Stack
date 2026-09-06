@@ -173,7 +173,8 @@ const priceGroup = async (group, deliveryLocation, user) => {
       err.statusCode = 400
       throw err
     }
-    if (dist > 5 && isAfterEveningCutoff()) {
+    const isAdminLike = user?.role && ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER'].includes(user?.role)
+    if (dist > 5 && isAfterEveningCutoff() && !isAdminLike) {
       const err = new Error(`Deliveries to locations beyond 5 km are closed after 7:30 PM for rider safety (${dist.toFixed(1)} km from ${restaurant.name}). Please select an address within 5 km or order tomorrow morning!`)
       err.statusCode = 400
       throw err

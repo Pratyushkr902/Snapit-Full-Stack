@@ -9,7 +9,6 @@ import { loadRazorpay } from '../utils/loadRazorpay'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
 import { useFullCart, foodCartStore } from '../utils/foodCartStore'
-import { isStoreOpen } from '../components/StoreClosedOverlay'
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -166,7 +165,8 @@ const FoodCheckoutPage = () => {
   const grandTotal  = Math.max(0, preWallet - walletDeduct)
   const totalSaved  = 48 + couponDiscount + walletDeduct
 
-  const unserviceableResto = restaurantPricing.find(r => r.info && !r.info.serviceable)
+  const isAdminLike = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER'].includes(user?.role)
+  const unserviceableResto = restaurantPricing.find(r => r.info && !r.info.serviceable && !(r.info.isEveningClosed && isAdminLike))
 
   const checkServiceArea = () => {
     if (restaurants.length > 1) {
@@ -176,11 +176,14 @@ const FoodCheckoutPage = () => {
     for (const r of restaurantPricing) {
       if (r.info && !r.info.serviceable) {
         if (r.info.isEveningClosed) {
-          toast.error(`🌙 Delivery beyond 5 km is closed after 7:30 PM (${r.info.distanceKm} km from ${r.restaurantName}).`, { duration: 6000 })
+          if (!isAdminLike) {
+            toast.error(`🌙 Delivery beyond 5 km is closed after 7:30 PM (${r.info.distanceKm} km from ${r.restaurantName}).`, { duration: 6000 })
+            return false
+          }
         } else {
           toast.error(`Your address is ${r.info.distanceKm} km away and outside the 14 km delivery range for ${r.restaurantName}.`, { duration: 5000 })
+          return false
         }
-        return false
       }
       if (r.subtotal < r.minOrder) {
         toast.error(`Minimum order of ₹${r.minOrder} required for ${r.restaurantName}. Add ₹${r.minOrder - r.subtotal} more to proceed!`, { duration: 5000 })
@@ -303,7 +306,6 @@ const FoodCheckoutPage = () => {
 
   // ── Payment handlers ─────────────────────────────────────────────────────────
   const handleCOD = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
     if (!checkServiceArea()) return
     setPlacing(true)
@@ -329,7 +331,6 @@ const FoodCheckoutPage = () => {
   }
 
   const handleWalletPay = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
     if (!checkServiceArea()) return
     if (walletBal < grandTotal) return toast.error(`Insufficient wallet balance. Need ₹${grandTotal}, have ₹${walletBal.toFixed(0)}`)
@@ -356,7 +357,6 @@ const FoodCheckoutPage = () => {
   }
 
   const handleOnlinePayment = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
     const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
     if (!RAZORPAY_KEY) return toast.error('Razorpay key missing')
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
