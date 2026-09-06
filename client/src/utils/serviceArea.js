@@ -91,12 +91,10 @@ export function isInDeliveryZone(lat, lng) {
   }
 }
 
-// Get user's current location
-// Uses the Capacitor Geolocation plugin on native (Android/iOS) so the OS
-// permission dialog actually fires — raw navigator.geolocation inside a
-// Capacitor WebView often fails silently without it, which is why location
-// detection was unreliable specifically in the APK (worked fine on web).
-// Falls back to navigator.geolocation when running in a plain browser tab.
+// Get user's current location with maximum precision
+// Uses Capacitor Geolocation on native (Android/iOS) with fine GPS permissions,
+// maximumAge: 0 (prevent stale cached coords), and high accuracy.
+// Falls back to navigator.geolocation with same high precision settings.
 export async function getUserLocation() {
   try {
     const { Capacitor } = await import('@capacitor/core')
@@ -109,12 +107,21 @@ export async function getUserLocation() {
           throw new Error('Location permission denied')
         }
       }
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 })
-      return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? null }
+
+      // Request fresh GPS position with maximum precision
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      })
+
+      return {
+        lat: Number(pos.coords.latitude.toFixed(6)),
+        lng: Number(pos.coords.longitude.toFixed(6)),
+        accuracy: pos.coords.accuracy ?? null,
+      }
     }
   } catch (nativeErr) {
-    // Native path failed (plugin missing, permission denied, etc) — fall
-    // through to the browser API below rather than failing outright.
     console.log('Native geolocation failed, falling back to browser API:', nativeErr?.message)
   }
 
@@ -123,10 +130,62 @@ export async function getUserLocation() {
       reject(new Error('Geolocation not supported'))
       return
     }
+
+    let bestPos = null
+    let watchId = null
+    let resolved = false
+
+    const cleanup = () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId)
+        watchId = null
+      }
+    }
+
+    const finish = (pos) => {
+      if (resolved) return
+      resolved = true
+      cleanup()
+      resolve({
+        lat: Number(pos.coords.latitude.toFixed(6)),
+        lng: Number(pos.coords.longitude.toFixed(6)),
+        accuracy: pos.coords.accuracy ?? null,
+      })
+    }
+
+    // Try getCurrentPosition first
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? null }),
-      err => reject(err),
-      { enableHighAccuracy: true, timeout: 8000 }
+      (pos) => {
+        bestPos = pos
+        // If accuracy is already very tight (<= 25m), resolve immediately
+        if (pos.coords.accuracy && pos.coords.accuracy <= 25) {
+          finish(pos)
+        } else {
+          // Otherwise give GPS up to 3 seconds to refine accuracy via watchPosition
+          watchId = navigator.geolocation.watchPosition(
+            (wPos) => {
+              if (!bestPos || (wPos.coords.accuracy && wPos.coords.accuracy < bestPos.coords.accuracy)) {
+                bestPos = wPos
+              }
+              if (wPos.coords.accuracy && wPos.coords.accuracy <= 20) {
+                finish(wPos)
+              }
+            },
+            () => {},
+            { enableHighAccuracy: true, maximumAge: 0 }
+          )
+
+          setTimeout(() => {
+            if (!resolved && bestPos) finish(bestPos)
+          }, 3000)
+        }
+      },
+      (err) => {
+        cleanup()
+        reject(err)
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     )
   })
 }
+

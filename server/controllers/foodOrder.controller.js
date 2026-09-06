@@ -437,12 +437,12 @@ const prepareMultiRestaurantOrder = async (req) => {
   const CHIKASI_LNG = 84.87069734970407
 
   const combined = `${addressDoc?.address_line || ''} ${addressDoc?.city || ''} ${addressDoc?.landmark || ''}`
-  if (/himalaya|hmch|bams|mbbs/i.test(combined)) {
+  if (addressDoc?.lat && addressDoc?.lng && !isNaN(Number(addressDoc.lat)) && !isNaN(Number(addressDoc.lng)) && Number(addressDoc.lat) !== 0) {
+    fields.deliveryLocation = { lat: Number(addressDoc.lat), lng: Number(addressDoc.lng) }
+  } else if (/himalaya|hmch|bams|mbbs/i.test(combined)) {
     fields.deliveryLocation = { lat: HIMALAYA_LAT, lng: HIMALAYA_LNG }
   } else if (/chiksi|chikasi/i.test(combined)) {
     fields.deliveryLocation = { lat: CHIKASI_LAT, lng: CHIKASI_LNG }
-  } else if (addressDoc?.lat && addressDoc?.lng) {
-    fields.deliveryLocation = { lat: Number(addressDoc.lat), lng: Number(addressDoc.lng) }
   }
 
   const groups = await buildGroupsByRestaurant(fields.items)

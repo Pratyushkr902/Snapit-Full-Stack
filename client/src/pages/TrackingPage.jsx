@@ -34,6 +34,13 @@ const storeIcon = new L.DivIcon({
   iconAnchor: [16, 16],
 })
 
+const customerIcon = new L.DivIcon({
+  html: `<div style="background:#dc2626;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);font-size:16px;">🏠</div>`,
+  className: '',
+  iconSize: [34, 34],
+  iconAnchor: [17, 17],
+})
+
 const STATUS_STEPS = [
   { key: 'Pending',          label: 'Order Placed', icon: '📋' },
   { key: 'Confirmed',        label: 'Confirmed',    icon: '✅' },
@@ -307,41 +314,75 @@ const TrackingPage = () => {
       )}
 
       {/* Map */}
-      <div className='h-64 lg:h-96 w-full z-0'>
-        <MapContainer
-          center={mapCenter}
-          zoom={14}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-        >
-          <TileLayer
-            attribution='&copy; OpenStreetMap'
-            url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-          />
-          <Marker position={storeLocation} icon={storeIcon}>
-            <Popup>🏪 {order.store_details?.name || 'Snapit Store'}</Popup>
-          </Marker>
-          {riderPos && (
-            <>
-              <Marker position={riderPos} icon={riderIcon}>
-                <Popup>🏍️ {order.rider_name || 'Your Rider'} — On the way!</Popup>
-              </Marker>
-              <Polyline
-                positions={[storeLocation, riderPos]}
-                color='#16a34a'
-                weight={3}
-                dashArray='8 6'
+      {(() => {
+        const customerLocation =
+          order.delivery_lat && order.delivery_lng
+            ? [Number(order.delivery_lat), Number(order.delivery_lng)]
+            : order.deliveryLocation?.lat && order.deliveryLocation?.lng
+            ? [Number(order.deliveryLocation.lat), Number(order.deliveryLocation.lng)]
+            : order.delivery_address?.lat && order.delivery_address?.lng
+            ? [Number(order.delivery_address.lat), Number(order.delivery_address.lng)]
+            : null
+
+        return (
+          <div className='h-64 lg:h-96 w-full z-0'>
+            <MapContainer
+              center={mapCenter}
+              zoom={14}
+              style={{ height: '100%', width: '100%' }}
+              zoomControl={false}
+            >
+              <TileLayer
+                attribution='&copy; OpenStreetMap'
+                url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
               />
-            </>
-          )}
-          {!riderPos && order.delivery_status === 'Out for Delivery' && (
-            <Marker position={storeLocation} icon={riderIcon}>
-              <Popup>🏍️ Rider is on the way</Popup>
-            </Marker>
-          )}
-          <ChangeMapCenter center={mapCenter} />
-        </MapContainer>
-      </div>
+              <Marker position={storeLocation} icon={storeIcon}>
+                <Popup>🏪 {order.store_details?.name || 'Snapit Store'}</Popup>
+              </Marker>
+              {riderPos && (
+                <>
+                  <Marker position={riderPos} icon={riderIcon}>
+                    <Popup>🏍️ {order.rider_name || 'Your Rider'} — On the way!</Popup>
+                  </Marker>
+                  <Polyline
+                    positions={[storeLocation, riderPos]}
+                    color='#16a34a'
+                    weight={3}
+                    dashArray='8 6'
+                  />
+                </>
+              )}
+              {!riderPos && order.delivery_status === 'Out for Delivery' && (
+                <Marker position={storeLocation} icon={riderIcon}>
+                  <Popup>🏍️ Rider is on the way</Popup>
+                </Marker>
+              )}
+              {customerLocation && (
+                <>
+                  <Marker position={customerLocation} icon={customerIcon}>
+                    <Popup>
+                      <div className='text-xs'>
+                        <p className='font-black text-slate-800'>🎯 Your Exact Delivery Pin</p>
+                        <p className='text-slate-600 mt-0.5'>{order.delivery_address?.address_line || ''}</p>
+                        {(order.delivery_address?.floor_door || order.delivery_address?.landmark) && (
+                          <p className='text-slate-500'>{[order.delivery_address?.floor_door, order.delivery_address?.landmark].filter(Boolean).join(' • ')}</p>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                  <Polyline
+                    positions={riderPos ? [riderPos, customerLocation] : [storeLocation, customerLocation]}
+                    color='#2563eb'
+                    weight={3}
+                    dashArray='6 6'
+                  />
+                </>
+              )}
+              <ChangeMapCenter center={mapCenter} />
+            </MapContainer>
+          </div>
+        )
+      })()}
 
       {/* Status Steps */}
       <div className='bg-white mx-4 mt-4 rounded-2xl p-4 shadow-sm border border-slate-100'>

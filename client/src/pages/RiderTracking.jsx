@@ -66,7 +66,8 @@ const getETA = (distKm) => {
 // ─── Main component ───────────────────────────────────────────────────────────
 const RiderTracking = () => {
     const { id: orderId } = useParams();
-    const destination = [25.2921, 84.817];
+    const [destination, setDestination] = useState([25.2921, 84.817]);
+    const [customerInfo, setCustomerInfo] = useState(null);
 
     // ⚠️ FIX: pull the logged-in user's id from wherever your app stores auth state.
     // This is the value the backend checks against order.userId / order.riderId
@@ -93,11 +94,38 @@ const RiderTracking = () => {
             });
 
             if (response.data.success) {
-                const { rider_name, rider_contact, riderLocation } = response.data.data;
+                const {
+                    rider_name,
+                    rider_contact,
+                    riderLocation,
+                    delivery_lat,
+                    delivery_lng,
+                    delivery_address,
+                    delivery_instructions,
+                    recipient_name,
+                    recipient_mobile,
+                } = response.data.data;
 
                 setRiderData({
                     name:    rider_name    || 'Pratyush Kumar',
                     contact: rider_contact || '9472026580',
+                });
+
+                let custDest = destination;
+                if (delivery_lat && delivery_lng) {
+                    custDest = [Number(delivery_lat), Number(delivery_lng)];
+                    setDestination(custDest);
+                } else if (delivery_address?.lat && delivery_address?.lng) {
+                    custDest = [Number(delivery_address.lat), Number(delivery_address.lng)];
+                    setDestination(custDest);
+                }
+
+                setCustomerInfo({
+                    name: recipient_name || delivery_address?.recipient_name || 'Customer',
+                    mobile: recipient_mobile || delivery_address?.recipient_mobile || delivery_address?.mobile || '',
+                    address: delivery_address?.address_line || '',
+                    landmark: [delivery_address?.floor_door, delivery_address?.landmark].filter(Boolean).join(' • '),
+                    instructions: delivery_instructions,
                 });
 
                 if (riderLocation?.latitude && riderLocation?.longitude) {
@@ -105,7 +133,7 @@ const RiderTracking = () => {
                     setRiderPos(lastPos);
                     const d = calculateDistance(
                         riderLocation.latitude, riderLocation.longitude,
-                        destination[0], destination[1]
+                        custDest[0], custDest[1]
                     );
                     setDistance(d);
                     setCurrentStatus(`Last seen — ${d} km away`);
@@ -269,7 +297,17 @@ const RiderTracking = () => {
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
                         <Marker position={destination} icon={houseIcon}>
-                            <Popup>Your delivery address</Popup>
+                            <Popup>
+                                <div className="text-xs p-1">
+                                    <p className="font-black text-slate-900">🎯 Customer Exact Location</p>
+                                    {customerInfo?.name && <p className="font-bold text-slate-800">{customerInfo.name}</p>}
+                                    {customerInfo?.address && <p className="text-slate-600 mt-0.5">{customerInfo.address}</p>}
+                                    {customerInfo?.landmark && <p className="text-slate-500">{customerInfo.landmark}</p>}
+                                    {customerInfo?.instructions && (
+                                        <p className="text-amber-600 font-semibold italic mt-0.5">Note: {customerInfo.instructions}</p>
+                                    )}
+                                </div>
+                            </Popup>
                         </Marker>
                         <Marker position={riderPos} icon={riderIcon}>
                             <Popup>{riderData.name}</Popup>

@@ -1199,10 +1199,33 @@ const RiderDashboard = () => {
                                                         </p>
                                                     )}
 
+                                                    {/* Precise Customer GPS Pin Badge */}
+                                                    {(order.delivery_lat || order.delivery_address?.lat) && (order.delivery_lng || order.delivery_address?.lng) && (
+                                                        <div className='inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-black text-emerald-400'>
+                                                            <span className='w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse'></span>
+                                                            <span>🎯 Precise GPS Pin: {Number(order.delivery_lat || order.delivery_address?.lat).toFixed(5)}, {Number(order.delivery_lng || order.delivery_address?.lng).toFixed(5)}</span>
+                                                        </div>
+                                                    )}
+
                                                     {order.delivery_instructions && (
                                                         <p className='text-[11px] text-amber-400/90 italic mt-1 font-semibold'>
                                                             📝 Note: {order.delivery_instructions}
                                                         </p>
+                                                    )}
+
+                                                    {/* 1-Tap Google Maps Turn-by-Turn Driving Navigation for Rider */}
+                                                    {(order.delivery_lat || order.delivery_address?.lat) && (order.delivery_lng || order.delivery_address?.lng) && (
+                                                        <div className='mt-2'>
+                                                            <a
+                                                                href={`https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat || order.delivery_address?.lat},${order.delivery_lng || order.delivery_address?.lng}&travelmode=driving`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className='flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-1.5 px-3 rounded-xl shadow-md active:scale-95 transition-all'
+                                                            >
+                                                                <FaMapMarkedAlt size={12}/>
+                                                                <span>🧭 Navigate to Customer Door (GPS)</span>
+                                                            </a>
+                                                        </div>
                                                     )}
                                                 </div>
 

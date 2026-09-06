@@ -149,15 +149,16 @@ export const addAddressController = async (request, response) => {
         let finalLat = null
         let finalLng = null
 
-        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+        // 1. If user provided valid GPS coordinates, ALWAYS preserve exact precision pin!
+        if (lat != null && !Number.isNaN(Number(lat)) && lng != null && !Number.isNaN(Number(lng)) && Number(lat) !== 0) {
+            finalLat = Number(lat)
+            finalLng = Number(lng)
+        } else if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
             finalLat = HIMALAYA_LAT
             finalLng = HIMALAYA_LNG
         } else if (/chiksi|chikasi/i.test(combinedText)) {
             finalLat = CHIKASI_LAT
             finalLng = CHIKASI_LNG
-        } else if (lat != null && !Number.isNaN(Number(lat)) && lng != null && !Number.isNaN(Number(lng))) {
-            finalLat = Number(lat)
-            finalLng = Number(lng)
         }
 
         if (finalLat == null || finalLng == null) {
@@ -273,15 +274,16 @@ export const updateAddressController = async (request, response) => {
         let finalLat = null
         let finalLng = null
 
-        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+        // 1. If user provided valid GPS coordinates, ALWAYS preserve exact precision pin!
+        if (lat != null && !Number.isNaN(Number(lat)) && lng != null && !Number.isNaN(Number(lng)) && Number(lat) !== 0) {
+            finalLat = Number(lat)
+            finalLng = Number(lng)
+        } else if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
             finalLat = HIMALAYA_LAT
             finalLng = HIMALAYA_LNG
         } else if (/chiksi|chikasi/i.test(combinedText)) {
             finalLat = CHIKASI_LAT
             finalLng = CHIKASI_LNG
-        } else if (lat != null && !Number.isNaN(Number(lat)) && lng != null && !Number.isNaN(Number(lng))) {
-            finalLat = Number(lat)
-            finalLng = Number(lng)
         }
 
         if (!finalLat || !finalLng) {

@@ -10,6 +10,7 @@ import AxiosToastError from '../utils/AxiosToastError'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import { Geolocation } from '@capacitor/geolocation'
 import { reverseGeocode } from '../utils/reverseGeocode'
+import { getUserLocation } from '../utils/serviceArea'
 
 // Icons matching Zepto/Blinkit design
 import { IoChevronBack, IoSearchOutline, IoHomeOutline, IoLocationOutline, IoShareOutline } from 'react-icons/io5'
@@ -54,6 +55,8 @@ const Address = () => {
   const [activeMenuId, setActiveMenuId] = useState(null)
   const [locating, setLocating] = useState(false)
   const [userLocation, setUserLocation] = useState(null)
+  const [gpsAccuracy, setGpsAccuracy] = useState(null)
+  const [initialAddCoords, setInitialAddCoords] = useState(null)
   const [selectedId, setSelectedId] = useState(() => {
     return typeof window !== 'undefined' ? localStorage.getItem('selected_address_id') : null
   })
@@ -126,41 +129,40 @@ const Address = () => {
   // Handle "Use my Current Location"
   const handleUseCurrentLocation = async () => {
     setLocating(true)
-    const t = toast.loading('Detecting your GPS location...')
+    const t = toast.loading('Acquiring high-accuracy GPS satellite fix...', { id: 'live-gps-scan' })
     try {
-      let coords = userLocation
-      if (!coords) {
-        const pos = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000,
-        })
-        coords = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        setUserLocation(coords)
-      }
+      // Always get fresh, non-cached high-precision GPS coordinates
+      const loc = await getUserLocation()
+      const coords = { lat: loc.lat, lng: loc.lng }
+      setUserLocation(coords)
+      setGpsAccuracy(loc.accuracy)
+      setInitialAddCoords(coords)
 
       const geo = await reverseGeocode(coords.lat, coords.lng)
-      toast.dismiss(t)
+      toast.dismiss('live-gps-scan')
 
-      // Check if user already has a saved address within 150m of current location
+      // Check if user already has a saved address within 100m of current location
       const nearby = addressList.find((addr) => {
         if (!addr.lat || !addr.lng) return false
         const d = getDistanceMeters(coords.lat, coords.lng, Number(addr.lat), Number(addr.lng))
-        return d !== null && d < 150
+        return d !== null && d < 100
       })
 
       if (nearby) {
         localStorage.setItem('selected_address_id', nearby._id)
         setSelectedId(nearby._id)
-        toast.success(`📍 Set delivery location to: ${nearby.address_line}`)
+        const accInfo = loc.accuracy ? ` (±${Math.round(loc.accuracy)}m)` : ''
+        toast.success(`🎯 High-precision GPS locked${accInfo}! Set location to: ${nearby.address_line}`)
         setTimeout(() => navigate(-1), 400)
       } else {
-        // Open Add Address modal pre-centered at current location
-        toast.success(`📍 Located near ${geo.locality || geo.city || geo.zone || 'Paliganj'}`)
+        // Open Add Address modal pre-centered at the exact GPS coordinate
+        const accText = loc.accuracy ? ` (±${Math.round(loc.accuracy)}m precision)` : ''
+        toast.success(`🎯 Live GPS pinned${accText}! Confirm your exact door/house.`)
         setOpenAddress(true)
       }
     } catch (err) {
-      toast.dismiss(t)
-      toast.error('Could not access current location. Please grant location permission.')
+      toast.dismiss('live-gps-scan')
+      toast.error('Could not get precise GPS. Please check location permissions in phone settings.')
     } finally {
       setLocating(false)
     }
@@ -271,10 +273,16 @@ const Address = () => {
               <BiCurrentLocation className='text-[#E11D48] text-2xl flex-shrink-0' />
               <div>
                 <span className='font-bold text-sm sm:text-base text-[#E11D48]'>
-                  {locating ? 'Detecting Location...' : 'Use my Current Location'}
+                  {locating ? 'Acquiring Satellite GPS...' : 'Use my Current Location'}
                 </span>
-                {userLocation && (
+                {gpsAccuracy ? (
+                  <p className='text-[11px] text-emerald-600 dark:text-emerald-400 font-bold'>
+                    🎯 High-Accuracy GPS active (±{Math.round(gpsAccuracy)}m)
+                  </p>
+                ) : userLocation ? (
                   <p className='text-[11px] text-slate-400 font-medium'>GPS High-Accuracy active</p>
+                ) : (
+                  <p className='text-[11px] text-slate-400 font-medium'>Tap to detect exact house/building pin</p>
                 )}
               </div>
             </div>
@@ -469,8 +477,11 @@ const Address = () => {
       {/* Add Address Modal (Zepto-style Map Pin) */}
       {openAddress && (
         <AddAddress
+          initialCoords={initialAddCoords}
+          initialAccuracy={gpsAccuracy}
           close={() => {
             setOpenAddress(false)
+            setInitialAddCoords(null)
             if (fetchAddress) fetchAddress()
           }}
         />

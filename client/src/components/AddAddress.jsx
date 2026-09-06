@@ -125,14 +125,15 @@ function ZeptoInteractiveMarker({ position, onPositionChange }) {
   ) : null
 }
 
-const AddAddress = ({ close }) => {
+const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
   const user = useSelector(s => s.user)
   const { fetchAddress } = useGlobalContext() || {}
 
   const [orderFor, setOrderFor] = useState('SELF')
   const [addressType, setAddressType] = useState('HOME')
-  const [coords, setCoords] = useState({ lat: 25.2921, lng: 84.8170 })
-  const [zoneStatus, setZoneStatus] = useState(() => isInDeliveryZone(25.2921, 84.8170))
+  const [coords, setCoords] = useState(() => initialCoords || { lat: 25.2921, lng: 84.8170 })
+  const [zoneStatus, setZoneStatus] = useState(() => isInDeliveryZone((initialCoords || { lat: 25.2921, lng: 84.8170 }).lat, (initialCoords || { lat: 25.2921, lng: 84.8170 }).lng))
+  const [gpsAccuracy, setGpsAccuracy] = useState(() => initialAccuracy || null)
   const [locationChecking, setLocationChecking] = useState(false)
   const [isGeocoding, setIsGeocoding] = useState(false)
   const [resolvedAddressSummary, setResolvedAddressSummary] = useState('Paliganj, Bihar')
@@ -183,18 +184,26 @@ const AddAddress = ({ close }) => {
     }
   }, [setValue])
 
+  // Sync with initialCoords if passed from "Use my Current Location"
+  useEffect(() => {
+    if (initialCoords?.lat && initialCoords?.lng) {
+      handleLocationUpdate(initialCoords)
+    }
+  }, [initialCoords, handleLocationUpdate])
+
   // Detect Live GPS Location (Zepto 1-tap style)
   const handleDetectLocation = async () => {
     setLocationChecking(true)
     try {
-      toast.loading('Detecting exact GPS coordinates...', { id: 'gps-fetch' })
+      toast.loading('Acquiring high-accuracy GPS fix...', { id: 'gps-fetch' })
       const { lat, lng, accuracy } = await getUserLocation()
       toast.dismiss('gps-fetch')
+      setGpsAccuracy(accuracy)
 
-      if (accuracy != null && accuracy > 150) {
-        toast('📍 GPS accuracy is ±' + Math.round(accuracy) + 'm. Drag pin to your exact building.', { icon: 'ℹ️' })
+      if (accuracy != null && accuracy > 50) {
+        toast('📍 GPS accuracy is ±' + Math.round(accuracy) + 'm. Drag pin to your exact building/gate.', { icon: 'ℹ️' })
       } else {
-        toast.success('🎯 Precise location detected!')
+        toast.success(`🎯 High-precision GPS pinned (±${Math.round(accuracy || 5)}m)!`)
       }
 
       await handleLocationUpdate({ lat, lng })
@@ -254,6 +263,9 @@ const AddAddress = ({ close }) => {
       })
 
       if (response.data?.success) {
+        if (response.data?.data?._id) {
+          localStorage.setItem('selected_address_id', response.data.data._id)
+        }
         toast.success(orderFor === 'SOMEONE_ELSE' ? '🎁 Recipient address saved!' : '✅ Address saved with live GPS pin!')
         if (close) { close(); reset(); fetchAddress?.() }
       }
@@ -326,8 +338,13 @@ const AddAddress = ({ close }) => {
               </button>
 
               {/* Floating Helper Pill */}
-              <div className='absolute top-3 left-3 z-[1000] bg-slate-900/85 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-[10px] font-bold shadow-md pointer-events-none flex items-center gap-1'>
-                <span>👆 Tap or drag pin to exact gate</span>
+              <div className='absolute top-3 left-3 z-[1000] bg-slate-900/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-md pointer-events-none flex items-center gap-1.5'>
+                <span>📍 {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+                {gpsAccuracy && (
+                  <span className='bg-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded text-[9px] font-black'>
+                    ±{Math.round(gpsAccuracy)}m
+                  </span>
+                )}
               </div>
             </div>
 

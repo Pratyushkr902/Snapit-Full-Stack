@@ -373,12 +373,16 @@ export async function CashOnDeliveryOrderController(request, response) {
         const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
         let verifiedLat = address.lat
         let verifiedLng = address.lng
-        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
-            verifiedLat = HIMALAYA_LAT
-            verifiedLng = HIMALAYA_LNG
-        } else if (/chiksi|chikasi/i.test(combinedText)) {
-            verifiedLat = CHIKASI_LAT
-            verifiedLng = CHIKASI_LNG
+
+        // Only fallback to text regex if saved address doesn't have valid coordinates
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
+            if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+                verifiedLat = HIMALAYA_LAT
+                verifiedLng = HIMALAYA_LNG
+            } else if (/chiksi|chikasi/i.test(combinedText)) {
+                verifiedLat = CHIKASI_LAT
+                verifiedLng = CHIKASI_LNG
+            }
         }
 
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
@@ -567,12 +571,16 @@ export async function WalletPaymentOrderController(request, response) {
         const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
         let verifiedLat = address.lat
         let verifiedLng = address.lng
-        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
-            verifiedLat = HIMALAYA_LAT
-            verifiedLng = HIMALAYA_LNG
-        } else if (/chiksi|chikasi/i.test(combinedText)) {
-            verifiedLat = CHIKASI_LAT
-            verifiedLng = CHIKASI_LNG
+
+        // Only fallback to text regex if saved address doesn't have valid coordinates
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
+            if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+                verifiedLat = HIMALAYA_LAT
+                verifiedLng = HIMALAYA_LNG
+            } else if (/chiksi|chikasi/i.test(combinedText)) {
+                verifiedLat = CHIKASI_LAT
+                verifiedLng = CHIKASI_LNG
+            }
         }
 
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
@@ -788,12 +796,16 @@ export async function paymentController(request, response) {
             const CHIKASI_LAT = 25.28091606583264
             const CHIKASI_LNG = 84.87069734970407
             const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
-            if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
-                verifiedLat = HIMALAYA_LAT
-                verifiedLng = HIMALAYA_LNG
-            } else if (/chiksi|chikasi/i.test(combinedText)) {
-                verifiedLat = CHIKASI_LAT
-                verifiedLng = CHIKASI_LNG
+
+            // Only fallback to text regex if saved address doesn't have valid coordinates
+            if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
+                if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+                    verifiedLat = HIMALAYA_LAT
+                    verifiedLng = HIMALAYA_LNG
+                } else if (/chiksi|chikasi/i.test(combinedText)) {
+                    verifiedLat = CHIKASI_LAT
+                    verifiedLng = CHIKASI_LNG
+                }
             }
 
             const currentUser = await UserModel.findById(userId)
@@ -870,12 +882,16 @@ export async function verifyPaymentController(request, response) {
         const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
         let verifiedLat = address.lat
         let verifiedLng = address.lng
-        if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
-            verifiedLat = HIMALAYA_LAT
-            verifiedLng = HIMALAYA_LNG
-        } else if (/chiksi|chikasi/i.test(combinedText)) {
-            verifiedLat = CHIKASI_LAT
-            verifiedLng = CHIKASI_LNG
+
+        // Only fallback to text regex if saved address doesn't have valid coordinates
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
+            if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+                verifiedLat = HIMALAYA_LAT
+                verifiedLng = HIMALAYA_LNG
+            } else if (/chiksi|chikasi/i.test(combinedText)) {
+                verifiedLat = CHIKASI_LAT
+                verifiedLng = CHIKASI_LNG
+            }
         }
 
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
@@ -1471,7 +1487,8 @@ export const getRiderLocationController = async (request, response) => {
 
         const order = await OrderModel
             .findOne({ orderId })
-            .select('orderId userId riderId rider_name rider_contact riderLocation delivery_status')
+            .select('orderId userId riderId rider_name rider_contact riderLocation delivery_status delivery_lat delivery_lng delivery_address delivery_instructions recipient_name recipient_mobile')
+            .populate('delivery_address')
 
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
@@ -1494,6 +1511,12 @@ export const getRiderLocationController = async (request, response) => {
                 rider_contact:   order.rider_contact,
                 delivery_status: order.delivery_status,
                 riderLocation:   order.riderLocation,
+                delivery_lat:    order.delivery_lat || order.delivery_address?.lat || null,
+                delivery_lng:    order.delivery_lng || order.delivery_address?.lng || null,
+                delivery_address: order.delivery_address,
+                delivery_instructions: order.delivery_instructions || '',
+                recipient_name:  order.recipient_name || '',
+                recipient_mobile: order.recipient_mobile || '',
             },
         })
     } catch (error) {
