@@ -22,8 +22,8 @@ const useNotifications = () => {
         ...SummaryApi.saveFcmToken,
         data: {
           fcmToken: token.trim(),
-          platform: Capacitor.isNativePlatform() ? 'android' : 'web',
-          appVersion: CURRENT_APP_VERSION || '2.6.33'
+          platform: Capacitor.getPlatform() || (Capacitor.isNativePlatform() ? 'android' : 'web'),
+          appVersion: CURRENT_APP_VERSION || '2.6.44'
         }
       })
       console.log('✅ FCM Token synced with server')
@@ -158,11 +158,23 @@ const useNotifications = () => {
             syncTokenToBackend(cachedWebToken)
           }
 
-          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            const token = await requestNotificationPermission()
-            if (token) {
-              localStorage.setItem('snapit_web_fcm_token', token)
-              syncTokenToBackend(token)
+          if (typeof window !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'granted') {
+              const token = await requestNotificationPermission()
+              if (token) {
+                localStorage.setItem('snapit_web_fcm_token', token)
+                syncTokenToBackend(token)
+              }
+            } else if (Notification.permission === 'default' && user?._id) {
+              try {
+                const token = await requestNotificationPermission()
+                if (token) {
+                  localStorage.setItem('snapit_web_fcm_token', token)
+                  syncTokenToBackend(token)
+                }
+              } catch (e) {
+                console.warn('Web notification request note:', e?.message)
+              }
             }
           }
 
