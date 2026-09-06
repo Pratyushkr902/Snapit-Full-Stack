@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import { setUserDetails } from '../store/userSlice';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import CampusAmbassadorCard from '../components/CampusAmbassadorCard';
+import ThemeToggle from '../components/ThemeToggle';
 
 const Profile = () => {
     const user     = useSelector(state => state.user)
@@ -110,6 +111,14 @@ const Profile = () => {
                     {loading ? "Loading..." : "Submit"}
                 </button>
             </form>
+
+            {/* Appearance / Dark Mode */}
+            <div className='my-6 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-neutral-200 dark:border-slate-800 shadow-sm'>
+                <h4 className='font-bold text-sm text-neutral-800 dark:text-neutral-100 mb-2'>
+                    Appearance
+                </h4>
+                <ThemeToggle variant="row" />
+            </div>
 
             {/* Notification Test Utility */}
             <div className='my-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 shadow-sm'>

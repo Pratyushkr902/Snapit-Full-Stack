@@ -101,3 +101,104 @@ body {
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe  { padding-top:    env(safe-area-inset-top);    }
 
+/* ══════════════════════════════════════════════════════════
+   🌙 ZOMATO-STYLE DARK THEME PALETTE & SURFACE STYLING
+   ══════════════════════════════════════════════════════════ */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0b0f19;
+  color: #f1f5f9;
+}
+
+/* Header & navigation in dark mode */
+html.dark header {
+  background-color: #0f172a !important;
+  border-bottom-color: #1e293b !important;
+}
+
+html.dark header .bg-white {
+  background-color: #0f172a !important;
+}
+
+html.dark header .border-slate-100 {
+  border-color: #1e293b !important;
+}
+
+/* Cards & primary white surfaces */
+html.dark .bg-white {
+  background-color: #111827;
+  color: #f1f5f9;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-neutral-50,
+html.dark .bg-gray-50 {
+  background-color: #0d1320;
+}
+
+html.dark .bg-slate-100,
+html.dark .bg-neutral-100,
+html.dark .bg-gray-100 {
+  background-color: #1e293b;
+}
+
+/* Subtle borders */
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-neutral-100,
+html.dark .border-neutral-200,
+html.dark .border-orange-100 {
+  border-color: #1e293b;
+}
+
+/* Typography high contrast */
+html.dark .text-slate-900,
+html.dark .text-gray-900,
+html.dark .text-neutral-900,
+html.dark .text-slate-800,
+html.dark .text-gray-800,
+html.dark .text-neutral-800 {
+  color: #f8fafc;
+}
+
+html.dark .text-slate-700,
+html.dark .text-gray-700,
+html.dark .text-neutral-700 {
+  color: #e2e8f0;
+}
+
+html.dark .text-slate-600,
+html.dark .text-gray-600,
+html.dark .text-neutral-600 {
+  color: #cbd5e1;
+}
+
+html.dark .text-slate-500,
+html.dark .text-gray-500 {
+  color: #94a3b8;
+}
+
+/* Dark mode inputs & search */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark textarea,
+html.dark select {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b;
+}
+
+/* Smooth transition for theme switching */
+body, header, nav, div, card {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+

@@ -18,6 +18,20 @@
     <meta name="theme-color" content="#F0D296" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('snapit_theme');
+          if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- Preconnect to Backend API & Image CDNs for Blinkit/Zomato-speed Image Loading -->
     <link rel="preconnect" href="https://snapit-full-stack-production.up.railway.app" crossorigin>

@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import AxiosToastError from '../utils/AxiosToastError'
 import { HiOutlineExternalLink } from "react-icons/hi";
 import secureStorage from '../utils/secureStorage'
+import ThemeToggle from './ThemeToggle'
 
 const UserMenu = ({close}) => {
    const user = useSelector((state) => state.user)
@@ -59,6 +60,12 @@ const UserMenu = ({close}) => {
           <Link onClick={handleClose} to={"/dashboard/profile"} className='hover:text-primary-200'>
             <HiOutlineExternalLink size={15}/>
           </Link>
+        </div>
+
+        <Divider/>
+
+        <div className='my-1'>
+          <ThemeToggle variant="row" />
         </div>
 
         <Divider/>

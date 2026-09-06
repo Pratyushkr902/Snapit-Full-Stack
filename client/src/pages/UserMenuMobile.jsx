@@ -11,6 +11,7 @@ import Divider from '../components/Divider'
 import { ACCESS_TOKEN_KEY } from '../constants/storageKeys'
 
 import secureStorage from '../utils/secureStorage'
+import ThemeToggle from '../components/ThemeToggle'
 
 const UserMenuMobile = () => {
   const user = useSelector((state) => state.user)
@@ -66,6 +67,13 @@ const UserMenuMobile = () => {
              role === "RESTO_SELLER" ? "(Resto Seller)" : ""}
           </span>
         )}
+      </div>
+
+      <Divider/>
+
+      {/* Dark Mode Toggle (Zomato-style row) */}
+      <div className='my-1 px-1'>
+        <ThemeToggle variant="row" />
       </div>
 
       <Divider/>
