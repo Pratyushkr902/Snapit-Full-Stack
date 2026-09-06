@@ -20,7 +20,9 @@ public class MainActivity extends BridgeActivity {
         View rootView = findViewById(android.R.id.content);
         if (rootView != null) {
             ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, windowInsets) -> {
-                Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                Insets insets = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
+                );
                 v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
                 return WindowInsetsCompat.CONSUMED;
             });

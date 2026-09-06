@@ -1,21 +1,24 @@
 # Add project specific ProGuard / R8 rules here.
 
-# Preserve Capacitor core, bridge and plugins
--keep public class com.getcapacitor.** { *; }
+# Preserve Capacitor bridge entry points and plugins
 -keep public class * extends com.getcapacitor.Plugin { *; }
--keep public class * extends com.getcapacitor.BridgeActivity { *; }
+-keep public class * extends com.getcapacitor.BridgeActivity
 -keepclassmembers class * extends com.getcapacitor.Plugin {
     @com.getcapacitor.PluginMethod public *;
 }
+-keep class com.getcapacitor.Bridge { public *; }
+-keep class com.getcapacitor.PluginHandle { public *; }
+-keep class com.getcapacitor.Plugin { public *; }
+-keep class com.getcapacitor.JSObject { *; }
+-keep class com.getcapacitor.JSArray { *; }
+-keep class com.getcapacitor.PluginResult { *; }
 
 # Keep WebView JavaScript interfaces
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
 
-# Firebase & Google Play Services
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
+# Firebase & Google Play Services (AAR consumer rules handle model keeps)
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 
