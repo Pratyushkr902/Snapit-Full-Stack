@@ -180,7 +180,7 @@ export const DINNER_TEMPLATES = [
   {
     title: '🍛 Garam Dinner Doorstep Pe! (RJ Garden, Alka & MGD Pizza)',
     shayari: 'Fresh Paneer Handi, Biryani, Crispy Pizza & Chowmein ready in 15 mins! 🛵💨',
-    body: 'Tired after a long day? Get piping-hot dinner delivered from Paliganj’s best restaurants in minutes!\n\nUse Code: SNAPIT60 for instant discount. Order now!'
+    body: 'Tired after a long day? Get piping-hot dinner delivered from Paliganj’s best restaurants in minutes!\n\nUse Code: SNAPIT for instant discount. Order now!'
   },
   {
     title: '🍕 Aaj kitchen se chhutti lo boss!',
@@ -195,7 +195,7 @@ export const DINNER_TEMPLATES = [
   {
     title: '🎂 Gaon Tak Fresh Cake & Alka ki Biryani!',
     shayari: '"Gaon mein ho ya shahar ke paar,\nSnapit layega garam Biryani aur Cake aapke dwar!" 🎂🍗🛵',
-    body: 'Alka Restro ki Biryani aur Fresh Cake ab 6-14km gaon tak direct bike delivery! Use code: SNAPIT60'
+    body: 'Alka Restro ki Biryani aur Fresh Cake ab 6-14km gaon tak direct bike delivery! Use code: SNAPIT'
   }
 ]
 

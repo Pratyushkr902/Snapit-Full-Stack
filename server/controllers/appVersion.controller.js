@@ -15,7 +15,7 @@ export const getAppVersionController = async (req, res) => {
         message: "A new version of Snapit (v2.6.43) is ready with enhanced order tracking and delivery optimizations!",
         releaseNotes: [
           "🔐 365-Day Persistent Session (No more logout on app updates)",
-          "🎟️ Up to 60% OFF Promotional Coupon Engine",
+          "🎟️ Promotional Coupon & Deals Engine",
           "⚡ Instant OTP login with zero network latency",
           "🖼️ Optimized crisp responsive hero banner"
         ]

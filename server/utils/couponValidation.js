@@ -1,17 +1,18 @@
 // Zomato/Swiggy-style Psychological Coupon Engine:
-// "Up to 60% OFF" displayed to customers, with a dynamic/random variable ₹1–₹10 surprise discount.
+// Dynamic/random variable ₹1–₹10 surprise discount.
 const COUPON_RULES = {
-  SNAPIT60:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  WELCOME60:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  CAKE50:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  BIRYANIFREE: { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  FEAST40:     { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  SAVE30:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  SNAPIT:      { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  SNAPIT50:    { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  FIRSTUSER:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  FIRSTFREE:   { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
-  FIRST50:     { percent: 60, maxDiscount: 10, minOrder: 99,  label: 'Up to 60% OFF' },
+  SNAPIT:      { percent: 30, maxDiscount: 10, minOrder: 99,  label: 'Special Discount' },
+  SNAPIT50:    { percent: 50, maxDiscount: 10, minOrder: 99,  label: 'Up to 50% OFF' },
+  WELCOME:     { percent: 50, maxDiscount: 10, minOrder: 99,  label: 'Welcome Offer' },
+  WELCOME60:   { percent: 50, maxDiscount: 10, minOrder: 99,  label: 'Welcome Offer' },
+  SNAPIT60:    { percent: 50, maxDiscount: 10, minOrder: 99,  label: 'Special Offer' },
+  CAKE50:      { percent: 50, maxDiscount: 10, minOrder: 99,  label: 'Cake Special' },
+  BIRYANIFREE: { percent: 30, maxDiscount: 10, minOrder: 99,  label: 'Biryani Special' },
+  FEAST40:     { percent: 40, maxDiscount: 10, minOrder: 99,  label: 'Feast Offer' },
+  SAVE30:      { percent: 30, maxDiscount: 10, minOrder: 99,  label: 'Save More' },
+  FIRSTUSER:   { percent: 50, maxDiscount: 10, minOrder: 99,  label: 'First Order Offer' },
+  FIRSTFREE:   { percent: 50, maxDiscount: 10, minOrder: 99,  label: 'Free Delivery' },
+  FIRST50:     { percent: 50, maxDiscount: 10, minOrder: 99,  label: 'First 50' },
 }
 
 export function validateCoupon(couponCode, subTotalAmt) {
@@ -30,7 +31,7 @@ export function validateCoupon(couponCode, subTotalAmt) {
     return { code: null, discount: 0, label: '', minOrder: rule.minOrder }
   }
 
-  // Calculate 60% ceiling
+  // Calculate percent discount
   const calculatedDiscount = Math.max(1, Math.round((subtotal * rule.percent) / 100))
   // Variable random surprise discount between ₹1 and ₹10 (strictly capped at ₹10 max)
   const randomAmount = Math.floor(Math.random() * 10) + 1
