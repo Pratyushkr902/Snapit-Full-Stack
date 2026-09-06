@@ -211,7 +211,14 @@ const StoreOrders = () => {
                                             <span className='text-[10px] font-black bg-orange-100 text-orange-600 px-3 py-1 rounded-full uppercase w-fit'>
                                                 {order.orderId}
                                             </span>
-                                            <p className='text-[10px] text-slate-400 font-bold'>👤 {order.userId?.name || "Customer"}</p>
+                                            <p className='text-[10px] text-slate-400 font-bold'>
+                                                👤 {order.recipient_name || order.delivery_address?.recipient_name || order.userId?.name || order.delivery_address?.name || "Customer"}
+                                                {(order.recipient_mobile || order.delivery_address?.recipient_mobile || order.userId?.mobile || order.delivery_address?.mobile) && (
+                                                    <span className='ml-1 text-slate-500'>
+                                                        • 📞 {order.recipient_mobile || order.delivery_address?.recipient_mobile || order.userId?.mobile || order.delivery_address?.mobile}
+                                                    </span>
+                                                )}
+                                            </p>
                                             <p className='text-[10px] text-slate-400 font-bold'>
                                                 🕐 {new Date(order.createdAt).toLocaleString('en-IN', {
                                                     day: 'numeric', month: 'short',
@@ -226,12 +233,12 @@ const StoreOrders = () => {
                                         </span>
                                     </div>
 
-                                    {order.store_details?.name && (
+                                    {(order.store_details?.name || order.store_name || (Array.isArray(order.involved_stores) && order.involved_stores[0])) && (
                                         <div className='flex items-center gap-2 mb-3 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2'>
                                             <span>🏪</span>
                                             <div>
-                                                <p className='text-[9px] font-black text-indigo-400 uppercase'>Store</p>
-                                                <p className='text-sm font-black text-indigo-700'>{order.store_details.name}</p>
+                                                <p className='text-[9px] font-black text-indigo-400 uppercase'>Store / Kitchen</p>
+                                                <p className='text-sm font-black text-indigo-700'>{order.store_details?.name || order.store_name || order.involved_stores[0]}</p>
                                             </div>
                                         </div>
                                     )}

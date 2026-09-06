@@ -361,7 +361,12 @@ export default function RestaurantAdminPage() {
     </div>
   )
 
-  const restoOrders = orders.filter(o => o.store_details?.name === selectedResto?.name)
+  const restoOrders = orders.filter(o => {
+    if (!selectedResto) return true
+    const orderStore = (o.store_details?.name || o.store_name || (Array.isArray(o.involved_stores) ? o.involved_stores[0] : '') || '').trim().toLowerCase()
+    const targetStore = (selectedResto?.name || '').trim().toLowerCase()
+    return orderStore === targetStore
+  })
   const deliveredOrders = restoOrders.filter(o => o.delivery_status === 'Delivered')
   const cancelledCount = restoOrders.filter(o => o.delivery_status === 'Cancelled').length
   const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.totalAmt || 0), 0)

@@ -1,9 +1,46 @@
 import { useNavigate } from 'react-router-dom'
 import SuperAdminPermision from '../layouts/SuperAdminPermision'
 import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
+import AdminLiveOrdersWidget from '../components/AdminLiveOrdersWidget'
 import AdminMarketingHub from '../components/AdminMarketingHub'
 
 const CARDS = [
+  {
+    key: 'live-orders',
+    title: '⚡ Live Town Orders & Dispatch',
+    desc: 'Real-time customer orders stream across Paliganj, order details & live tracking',
+    icon: '⚡',
+    path: '/dashboard/admin-summary',
+    color: '#0284c7',
+    bg: '#f0f9ff',
+  },
+  {
+    key: 'store-orders',
+    title: '📦 Store Packing Screen',
+    desc: 'All store item packing queues, merchant order status & pickup alerts',
+    icon: '📦',
+    path: '/dashboard/store-orders',
+    color: '#ea580c',
+    bg: '#fff7ed',
+  },
+  {
+    key: 'rider-panel',
+    title: '🛵 Rider Panel',
+    desc: 'View live deliveries, rider locations, and dispatch activity',
+    icon: '🛵',
+    path: '/rider-panel',
+    color: '#2563eb',
+    bg: '#eff6ff',
+  },
+  {
+    key: 'resto-admin',
+    title: '🍔 Restaurant Admin & Kitchens',
+    desc: 'Manage restaurant partners, menus, item availability, and food orders',
+    icon: '🍔',
+    path: '/dashboard/restaurant-admin',
+    color: '#9333ea',
+    bg: '#faf5ff',
+  },
   {
     key: 'treasury',
     title: '💰 COD Cash Treasury & Partner Split',
@@ -52,7 +89,7 @@ const CARDS = [
   {
     key: 'banner-offers',
     title: 'Festive Banners & Offers',
-    desc: 'Manage Raksha Bandhan timer, 10% pizza discount & freebie perks',
+    desc: 'Manage festive banners, food discounts & promotional perks',
     icon: '🍕',
     path: '/dashboard/super-admin/banner-offers',
     color: '#d97706',
@@ -64,15 +101,6 @@ const CARDS = [
     desc: 'Automated daily cravings, smart cart recovery & instant all-user broadcasts',
     icon: '📢',
     path: '/dashboard/marketing',
-    color: '#ea580c',
-    bg: '#fff7ed',
-  },
-  {
-    key: 'rider-panel',
-    title: 'Rider Panel',
-    desc: 'View live deliveries, rider locations, and dispatch activity',
-    icon: '🛵',
-    path: '/rider-panel',
     color: '#ea580c',
     bg: '#fff7ed',
   },
@@ -102,6 +130,9 @@ const SuperAdminDashboard = () => {
             </p>
           </div>
         </div>
+
+        {/* ⚡ LIVE TOWN ORDERS & DISPATCH STREAM */}
+        <AdminLiveOrdersWidget />
 
         {/* 🛵 LIVE RIDER FLEET OVERVIEW */}
         <AdminLiveFleetWidget />

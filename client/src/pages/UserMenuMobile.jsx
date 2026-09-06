@@ -73,6 +73,9 @@ const UserMenuMobile = () => {
       {/* ADMIN & SUPER ADMIN ONLY */}
       {(role === "ADMIN" || role === "SUPER_ADMIN") && (
         <>
+          <Link to={"/dashboard/store-orders"} className='px-3 py-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 font-bold text-emerald-800 border-l-4 border-emerald-500'>
+            📦 Store Packing &amp; Live Orders
+          </Link>
           <Link to={"/dashboard/rider-fleet"} className='px-3 py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600'>
             🛵 Live Rider Fleet Tracker
           </Link>
@@ -109,7 +112,7 @@ const UserMenuMobile = () => {
       )}
 
       {/* SELLER ACCESS */}
-      {(role === "SELLER" || role === "ADMIN" || role === "SUPER_ADMIN") && (
+      {role === "SELLER" && (
         <Link to={"/dashboard/seller-dashboard"} className='px-3 py-2.5 rounded-lg bg-orange-50 hover:bg-orange-100 font-bold text-orange-700 border-l-4 border-orange-600'>
           📦 Store Orders (Pack Items)
         </Link>

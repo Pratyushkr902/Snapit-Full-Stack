@@ -1563,8 +1563,10 @@ export async function getOrderItems(request, response) {
             if (u?.role) userRole = u.role
         }
 
+        const cleanRole = String(userRole || '').trim().toUpperCase()
+
         let filter = {}
-        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'RIDER') {
+        if (cleanRole === 'ADMIN' || cleanRole === 'SUPER_ADMIN' || cleanRole === 'RIDER') {
             // Admins and Delivery Fleet see all active and completed town orders
             filter = {}
         } else {
@@ -1599,8 +1601,10 @@ export async function getSellerOrdersController(request, response) {
             if (u?.role) userRole = u.role
         }
 
+        const cleanRole = String(userRole || '').trim().toUpperCase()
+
         let filter = {}
-        if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+        if (cleanRole !== 'ADMIN' && cleanRole !== 'SUPER_ADMIN') {
             const sellerUser = await UserModel.findById(userId).select('store_name').lean()
             if (!sellerUser?.store_name) {
                 return response.status(403).json({ message: 'No store associated with your account.', error: true, success: false })
