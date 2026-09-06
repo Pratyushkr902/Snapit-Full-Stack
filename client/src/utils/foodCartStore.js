@@ -186,6 +186,29 @@ function decreaseQty(restaurantId, item) {
   })
 }
 
+function removeItem(restaurantId, itemId) {
+  setState((prev) => {
+    const restaurant = prev.restaurants[restaurantId]
+    if (!restaurant) return prev
+    const nextItems = { ...restaurant.items }
+    delete nextItems[itemId]
+
+    if (Object.keys(nextItems).length === 0) {
+      const nextRestaurants = { ...prev.restaurants }
+      delete nextRestaurants[restaurantId]
+      return { ...prev, restaurants: nextRestaurants }
+    }
+
+    return {
+      ...prev,
+      restaurants: {
+        ...prev.restaurants,
+        [restaurantId]: { ...restaurant, items: nextItems },
+      },
+    }
+  })
+}
+
 function clearRestaurant(restaurantId) {
   setState((prev) => {
     if (!prev.restaurants[restaurantId]) return prev
@@ -298,4 +321,4 @@ export function useFullCart() {
 }
 
 // Non-hook accessors, for use outside React (e.g. logging, debugging)
-export const foodCartStore = { getSnapshot, subscribe, addItem, increaseQty, decreaseQty, clearRestaurant, clearAll }
+export const foodCartStore = { getSnapshot, subscribe, addItem, increaseQty, decreaseQty, removeItem, clearRestaurant, clearAll }

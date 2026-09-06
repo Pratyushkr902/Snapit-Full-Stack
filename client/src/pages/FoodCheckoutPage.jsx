@@ -64,27 +64,31 @@ const FoodCheckoutPage = () => {
   // ── Cross-restaurant cart ────────────────────────────────────────────────
   const { restaurants, isEmpty, clearAll } = useFullCart()
 
-  // ── Per-item quantity overrides (lets the customer tweak qty right here,
-  // same UX as before, but now indexed by restaurantId + itemId) ───────────
-  const [qtyOverrides, setQtyOverrides] = useState({})
-  const qtyKey = (restaurantId, itemId) => `${restaurantId}__${itemId}`
-  const getQty = (restaurantId, item) =>
-    qtyOverrides[qtyKey(restaurantId, item._id)] ?? item.__baseQty
-  const changeQty = (restaurantId, item, delta) => {
-    const key = qtyKey(restaurantId, item._id)
-    setQtyOverrides(prev => ({
-      ...prev,
-      [key]: Math.max(1, (prev[key] ?? item.__baseQty) + delta),
-    }))
+  // ── Cart mutations (persisted directly to cross-restaurant store) ─────────
+  const handleIncreaseQty = (restaurantId, item) => {
+    foodCartStore.increaseQty(restaurantId, item)
+  }
+
+  const handleDecreaseQty = (restaurantId, item, currentQty) => {
+    if (currentQty <= 1) {
+      foodCartStore.decreaseQty(restaurantId, item)
+      toast.success(`Removed ${item.name} from cart`)
+    } else {
+      foodCartStore.decreaseQty(restaurantId, item)
+    }
+  }
+
+  const handleRemoveItem = (restaurantId, item) => {
+    foodCartStore.removeItem(restaurantId, item._id)
+    toast.success(`Removed ${item.name} from cart`)
   }
 
   // Flatten restaurants -> per-restaurant item lists carrying resolved price
-  // and an editable qty, without mutating the store.
   const restaurantItemLists = restaurants.map(r => ({
     ...r,
     resolvedItems: r.items.map(({ item, qty }) => {
       const price = item.discountedPrice > 0 ? item.discountedPrice : item.price
-      return { item: { ...item, __baseQty: qty }, price }
+      return { item, price, qty }
     }),
   }))
 
@@ -137,8 +141,8 @@ const FoodCheckoutPage = () => {
   // Per-restaurant subtotal (using the editable qty overrides) + per-restaurant
   // delivery fee/min-order, mirroring how the backend prices each group.
   const restaurantPricing = restaurantItemLists.map(r => {
-    const subtotal = r.resolvedItems.reduce((s, { item, price }) => {
-      return s + price * getQty(r.restaurantId, item)
+    const subtotal = r.resolvedItems.reduce((s, { price, qty }) => {
+      return s + price * qty
     }, 0)
 
     const hasLoc = Boolean(r.restaurantLat && r.restaurantLng)
@@ -269,13 +273,13 @@ const FoodCheckoutPage = () => {
     ].filter(Boolean).join('. ')
 
     const items = restaurantItemLists.flatMap(r =>
-      r.resolvedItems.map(({ item, price }) => ({
+      r.resolvedItems.map(({ item, price, qty }) => ({
         menuItemId: item._id,
         restaurantId: r.restaurantId, // fallback hint only; backend re-derives from DB
         name: item.name,
         image: item.image || '',
         price,
-        quantity: getQty(r.restaurantId, item),
+        quantity: qty,
       }))
     )
 
@@ -294,7 +298,7 @@ const FoodCheckoutPage = () => {
   }, [
     activeTags, instructions, addressList, selectAddress, scheduleNow, scheduleSlot,
     tipAmt, appliedCouponCode, couponDiscount, walletDeduct,
-    restaurantItemLists, qtyOverrides,
+    restaurantItemLists,
   ])
 
   // ── Payment handlers ─────────────────────────────────────────────────────────
@@ -498,8 +502,7 @@ const FoodCheckoutPage = () => {
             {r.restaurantName || 'Restaurant'}
           </p>
           <div className='divide-y divide-gray-50'>
-            {r.resolvedItems.map(({ item, price }) => {
-              const qty = getQty(r.restaurantId, item)
+            {r.resolvedItems.map(({ item, price, qty }) => {
               return (
                 <div key={item._id} className='flex items-center gap-3 py-3'>
                   <VegDot isVeg={item.isVeg !== false} />
@@ -515,16 +518,27 @@ const FoodCheckoutPage = () => {
                   </div>
                   <div className='flex flex-col items-end gap-1.5'>
                     <p className='font-bold text-gray-900 text-sm'>₹{price * qty}</p>
-                    <div className='flex items-center border-2 border-red-500 rounded-lg overflow-hidden'>
+                    <div className='flex items-center gap-1.5'>
+                      <div className='flex items-center border-2 border-red-500 rounded-lg overflow-hidden shadow-xs'>
+                        <button
+                          onClick={() => handleDecreaseQty(r.restaurantId, item, qty)}
+                          className='w-7 h-6 bg-white hover:bg-red-50 text-red-600 font-bold text-base flex items-center justify-center transition-colors active:scale-90'
+                          title={qty === 1 ? 'Remove item' : 'Decrease quantity'}
+                        >−</button>
+                        <div className='w-7 h-6 bg-red-50 text-red-600 font-bold text-xs flex items-center justify-center'>{qty}</div>
+                        <button
+                          onClick={() => handleIncreaseQty(r.restaurantId, item)}
+                          className='w-7 h-6 bg-white hover:bg-red-50 text-red-600 font-bold text-base flex items-center justify-center transition-colors active:scale-90'
+                          title='Increase quantity'
+                        >+</button>
+                      </div>
                       <button
-                        onClick={() => changeQty(r.restaurantId, item, -1)}
-                        className='w-7 h-6 bg-white text-red-500 font-bold text-base flex items-center justify-center'
-                      >−</button>
-                      <div className='w-7 h-6 bg-red-50 text-red-500 font-semibold text-xs flex items-center justify-center'>{qty}</div>
-                      <button
-                        onClick={() => changeQty(r.restaurantId, item, 1)}
-                        className='w-7 h-6 bg-white text-red-500 font-bold text-base flex items-center justify-center'
-                      >+</button>
+                        onClick={() => handleRemoveItem(r.restaurantId, item)}
+                        className='text-gray-400 hover:text-red-500 p-1 text-sm active:scale-90 transition-transform'
+                        title='Remove from cart'
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
                 </div>
