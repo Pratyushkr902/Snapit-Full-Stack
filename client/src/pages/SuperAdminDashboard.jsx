@@ -1,19 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import SuperAdminPermision from '../layouts/SuperAdminPermision'
 import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
-import AdminLiveOrdersWidget from '../components/AdminLiveOrdersWidget'
 import AdminMarketingHub from '../components/AdminMarketingHub'
 
 const CARDS = [
-  {
-    key: 'live-orders',
-    title: '⚡ Live Town Orders & Dispatch',
-    desc: 'Real-time customer orders stream across Paliganj, order details & live tracking',
-    icon: '⚡',
-    path: '/dashboard/admin-summary',
-    color: '#0284c7',
-    bg: '#f0f9ff',
-  },
   {
     key: 'store-orders',
     title: '📦 Store Packing & Live Orders',
@@ -130,9 +120,6 @@ const SuperAdminDashboard = () => {
             </p>
           </div>
         </div>
-
-        {/* ⚡ LIVE TOWN ORDERS & DISPATCH STREAM */}
-        <AdminLiveOrdersWidget />
 
         {/* 🛵 LIVE RIDER FLEET OVERVIEW */}
         <AdminLiveFleetWidget />

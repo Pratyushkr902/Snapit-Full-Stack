@@ -59,6 +59,7 @@ const AdminBannerOffers      = lazyRetry(() => import('../pages/AdminBannerOffer
 const SuperAdminDashboard    = lazyRetry(() => import('../pages/SuperAdminDashboard'))
 const StoreOrders            = lazyRetry(() => import('../pages/StoreOrders'))
 const Wallet                 = lazyRetry(() => import('../pages/Wallet'))
+const PrivacyPolicy          = lazyRetry(() => import('../pages/PrivacyPolicy'))
 const AdminSummary           = lazyRetry(() => import('../components/AdminSummary'))
 const AdminTreasury          = lazyRetry(() => import('../pages/AdminTreasury'))
 const ReferAndEarn           = lazyRetry(() => import('../pages/ReferAndEarn'))
@@ -244,6 +245,8 @@ const router = createHashRouter([
       { path: "snapit-plus", element: <S><SnapitPlus /></S> },
       { path: "streak", element: <S><StreakTracker /></S> },
       { path: "subscriptions", element: <S><MySubscriptions /></S> },
+      { path: "privacy-policy", element: <S><PrivacyPolicy /></S> },
+      { path: "select-location", element: <S><Address /></S> },
       { path: "rider-panel", element: <S><RiderDashboard /></S> },
       {
         path: "dashboard",

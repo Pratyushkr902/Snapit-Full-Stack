@@ -23,7 +23,9 @@ const Header = ({ openCart }) => {
 
     const { totalPrice = 0, totalQty = 0, fetchAddress } = useGlobalContext() || {}
     const addressList = useSelector(state => state.addresses.addressList)
-    const primaryAddress = addressList?.[0]?.address_line || "Select Address"
+    const selectedId = typeof window !== 'undefined' ? localStorage.getItem('selected_address_id') : null
+    const activeAddress = addressList?.find(a => a._id === selectedId) || addressList?.[0]
+    const primaryAddress = activeAddress?.address_line || "Select Address"
 
     // Persistent, cross-restaurant food cart — separate from the grocery
     // cart above (useGlobalContext). Lives in localStorage via foodCartStore
@@ -82,7 +84,7 @@ const Header = ({ openCart }) => {
                             </h2>
                             <span className='text-lg'>⚡</span>
                         </div>
-                        <Link to='/dashboard/address' className='flex items-center gap-0.5 text-xs text-slate-500 font-semibold cursor-pointer active:opacity-60'>
+                        <Link to='/select-location' className='flex items-center gap-0.5 text-xs text-slate-500 font-semibold cursor-pointer active:opacity-60'>
                             <span className='truncate max-w-[150px]'>📍 {primaryAddress}</span>
                             <GoTriangleDown size={12} />
                         </Link>
@@ -170,7 +172,7 @@ const Header = ({ openCart }) => {
                                     in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
                                 </span>
                             </div>
-                            <Link to='/dashboard/address' className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0 active:opacity-60'>
+                            <Link to='/select-location' className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0 active:opacity-60'>
                                 <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
                                 <GoTriangleDown size={10} className='flex-shrink-0' />
                             </Link>

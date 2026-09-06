@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { FaRegUserCircle } from "react-icons/fa";
 import { IoArrowBack } from "react-icons/io5";
 import UserProfileAvatarEdit from '../components/UserProfileAvatarEdit';
@@ -150,6 +150,26 @@ const Profile = () => {
                     >
                         Test Push 📲
                     </button>
+                </div>
+            </div>
+
+            {/* Legal & Privacy Policy */}
+            <div className='my-6 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-neutral-200 dark:border-slate-800 shadow-sm'>
+                <div className='flex items-center justify-between gap-3'>
+                    <div>
+                        <h4 className='font-bold text-sm text-neutral-800 dark:text-neutral-100 flex items-center gap-1.5'>
+                            <span>🔒</span> Privacy Policy
+                        </h4>
+                        <p className='text-xs text-neutral-500 dark:text-neutral-400 mt-0.5'>
+                            Review data collection, location permissions & user safety policies.
+                        </p>
+                    </div>
+                    <Link
+                        to='/privacy-policy'
+                        className='px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-100 font-bold text-xs rounded-xl transition-all flex-shrink-0'
+                    >
+                        View Policy →
+                    </Link>
                 </div>
             </div>
         </div>

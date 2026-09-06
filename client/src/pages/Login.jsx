@@ -483,7 +483,7 @@ const Login = () => {
                         <p className="text-xs text-gray-500">
                             By continuing, you agree to Snapit's{' '}
                             <span className="text-green-700 font-semibold">Terms of Service</span> &{' '}
-                            <span className="text-green-700 font-semibold">Privacy Policy</span>.
+                            <Link to="/privacy-policy" className="text-green-700 font-semibold underline underline-offset-2">Privacy Policy</Link>.
                         </p>
                     </div>
 

@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { FaFacebook, FaInstagram, FaLinkedin } from "react-icons/fa";
 
 const Footer = () => {
@@ -7,6 +8,8 @@ const Footer = () => {
         <div className='container mx-auto px-4 py-5 text-center flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs sm:text-sm text-slate-500'>
             <div className='flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2'>
                 <p>© {new Date().getFullYear()} Snapit. All Rights Reserved.</p>
+                <span className='hidden sm:inline text-slate-300'>•</span>
+                <Link to="/privacy-policy" className='hover:text-amber-600 transition-colors'>Privacy Policy</Link>
                 <span className='hidden sm:inline text-slate-300'>•</span>
                 <p className='font-medium text-slate-600 flex items-center gap-1'>
                     Co-powered by <span className='font-bold text-slate-800 tracking-wide'>PiyaZo</span>

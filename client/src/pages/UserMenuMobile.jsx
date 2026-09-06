@@ -158,6 +158,9 @@ const UserMenuMobile = () => {
         <span>📦</span> My Subscriptions
       </Link>
       <Link to={"/dashboard/address"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100'>Save Address</Link>
+      <Link to={"/privacy-policy"} className='px-3 py-2.5 rounded-lg hover:bg-orange-100 flex items-center gap-1.5 text-slate-700 dark:text-slate-200'>
+        <span>🔒</span> Privacy Policy
+      </Link>
 
       <button onClick={handleLogout} className='text-left px-3 py-2.5 rounded-lg text-red-600 font-semibold hover:bg-red-50'>
         Log Out

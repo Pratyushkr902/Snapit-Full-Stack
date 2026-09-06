@@ -13,6 +13,8 @@ const Dashboard = () => {
   }
 
   const isFullScreen =
+    location.pathname.includes('address')          ||
+    location.pathname.includes('select-location')  ||
     location.pathname.includes('seller-dashboard') ||
     location.pathname.includes('rider-panel')      ||
     location.pathname.includes('rider-fleet')      ||
