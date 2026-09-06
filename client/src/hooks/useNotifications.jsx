@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { PushNotifications } from '@capacitor/push-notifications'
-import { requestNotificationPermission } from '../utils/firebase'
+import { requestNotificationPermission, onForegroundMessage } from '../utils/firebase'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
@@ -164,6 +164,67 @@ const useNotifications = () => {
               localStorage.setItem('snapit_web_fcm_token', token)
               syncTokenToBackend(token)
             }
+          }
+
+          // Listen to foreground pushes on Web
+          if (!registeredRef.current) {
+            registeredRef.current = true
+            onForegroundMessage((payload) => {
+              console.log('🔔 Web push notification received in foreground:', payload)
+              const title = payload.notification?.title || payload.data?.title || 'Snapit Alert'
+              const body = payload.notification?.body || payload.data?.body || payload.data?.message || ''
+
+              const isOrderAlert = title.toLowerCase().includes('order') ||
+                                   title.toLowerCase().includes('delivery') ||
+                                   ['SELLER', 'RESTO_SELLER', 'RIDER', 'ADMIN', 'SUPER_ADMIN'].includes(user?.role)
+
+              if (isOrderAlert) {
+                playOrderAlertChime()
+              } else {
+                playNotificationDing()
+              }
+
+              toast(
+                (t) => (
+                  <div
+                    onClick={() => {
+                      toast.dismiss(t.id)
+                      const url = payload.data?.url || (payload.data?.orderId ? `/#/dashboard/order-tracking/${payload.data.orderId}` : '/food')
+                      if (typeof window !== 'undefined') window.location.href = url
+                    }}
+                    className='flex flex-col gap-0.5 cursor-pointer'
+                  >
+                    <p className='font-black text-xs text-slate-900 flex items-center gap-1.5'>
+                      <span>🔔</span> {title}
+                    </p>
+                    {body && <p className='text-xs text-slate-600 font-medium'>{body}</p>}
+                  </div>
+                ),
+                {
+                  duration: 8000,
+                  style: {
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '16px',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                    padding: '12px 16px',
+                  },
+                }
+              )
+
+              if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                try {
+                  new Notification(title, {
+                    body,
+                    icon: '/snapit-icon-192.png',
+                    badge: '/snapit-icon-192.png'
+                  })
+                } catch (e) {
+                  // Fallback to in-app toast
+                }
+              }
+            })
           }
         }
       } catch (error) {
