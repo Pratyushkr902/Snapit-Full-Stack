@@ -53,7 +53,7 @@ const CartMobilePage = () => {
     }
 
     return (
-        <section className='bg-slate-50 dark:bg-slate-950 min-h-[100dvh] w-full flex flex-col p-3 gap-3 pb-36 pt-[max(env(safe-area-inset-top,0px),16px)] max-w-lg mx-auto transition-colors'>
+        <section className='bg-slate-50 dark:bg-slate-950 min-h-[100dvh] w-full flex flex-col p-3 gap-3 pb-36 pt-safe-header max-w-lg mx-auto transition-colors'>
             {/* Header */}
             <div className='sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3.5 shadow-sm rounded-2xl flex items-center justify-between border border-slate-100 dark:border-slate-800 transition-colors'>
                 <div className='flex items-center gap-3'>

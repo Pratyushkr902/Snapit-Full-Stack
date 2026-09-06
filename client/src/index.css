@@ -126,9 +126,33 @@ html.dark .App {
   transition: all 0.5s linear !important;
 }
 
-/* iOS safe area padding — use pb-safe on bottom bars and overlays */
-.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-.pt-safe  { padding-top:    env(safe-area-inset-top);    }
+/* ══════════════════════════════════════════════════════════
+   📱 MOBILE NOTCH & SAFE-AREA INSET UTILITIES (Zepto/Blinkit)
+   ══════════════════════════════════════════════════════════ */
+.pt-safe {
+  padding-top: 44px;
+  padding-top: max(env(safe-area-inset-top, 0px), 44px);
+}
+
+.pt-safe-top {
+  padding-top: 36px;
+  padding-top: max(env(safe-area-inset-top, 0px), 36px);
+}
+
+.pt-safe-header {
+  padding-top: 50px;
+  padding-top: max(env(safe-area-inset-top, 0px), 50px);
+}
+
+.pb-safe {
+  padding-bottom: 16px;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+.pb-safe-nav {
+  padding-bottom: 28px;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 28px);
+}
 
 /* ══════════════════════════════════════════════════════════
    🌙 ZOMATO-STYLE DARK THEME PALETTE & SURFACE STYLING
