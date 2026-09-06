@@ -15,6 +15,7 @@
 // ============================================================
 import mongoose from "mongoose";
 import { createRequire } from "module";
+import { sendPushNotification } from "./firebaseNotify.js";
 const require = createRequire(import.meta.url);
 const admin = require("firebase-admin");
 const { getMessaging } = require("firebase-admin/messaging");
@@ -200,18 +201,35 @@ const saveAndSend = async ({
 }) => {
   let fcmMessageId = null;
 
-  // Auto-resolve single active FCM token from UserModel to prevent duplicate pushes
+  // Auto-resolve all active FCM tokens from DeviceTokenModel AND UserModel
   let targetTokens = [];
   if (fcmToken && typeof fcmToken === 'string' && fcmToken.trim().length > 10) {
     targetTokens.push(fcmToken.trim());
-  } else if (recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
+  }
+  
+  if (recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
     try {
+      const DeviceTokenModel = (await import("../models/deviceToken.model.js")).default;
+      const deviceDocs = await DeviceTokenModel.find({
+        userId: recipientId,
+        lastActiveAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+      }).select("token").lean();
+      
+      deviceDocs.forEach(d => {
+        if (d.token && typeof d.token === 'string' && d.token.trim().length > 10) {
+          targetTokens.push(d.token.trim());
+        }
+      });
+
       const UserModel = mongoose.models.User || mongoose.model("User");
       const userDoc = await UserModel.findById(recipientId).select("fcmToken fcmTokens").lean();
-      if (userDoc?.fcmToken) {
-        targetTokens.push(userDoc.fcmToken);
-      } else if (Array.isArray(userDoc?.fcmTokens) && userDoc.fcmTokens.length > 0) {
-        targetTokens.push(userDoc.fcmTokens[userDoc.fcmTokens.length - 1]);
+      if (userDoc?.fcmToken && typeof userDoc.fcmToken === 'string' && userDoc.fcmToken.trim().length > 10) {
+        targetTokens.push(userDoc.fcmToken.trim());
+      }
+      if (Array.isArray(userDoc?.fcmTokens)) {
+        userDoc.fcmTokens.forEach(t => {
+          if (t && typeof t === 'string' && t.trim().length > 10) targetTokens.push(t.trim());
+        });
       }
     } catch (e) {
       console.warn(`[FCM Token Lookup Error] recipientId=${recipientId}:`, e.message);
@@ -220,74 +238,30 @@ const saveAndSend = async ({
 
   const uniqueTokens = [...new Set(targetTokens.filter(t => typeof t === 'string' && t.trim().length > 10))];
 
-  // ── 1. Firebase FCM push to all user devices ───
+  // ── 1. Push to all user devices via sendPushNotification ───
   if (uniqueTokens.length > 0) {
     await Promise.allSettled(
       uniqueTokens.map(async (token) => {
         try {
-          const message = {
+          const res = await sendPushNotification({
             token,
-            notification: {
-              title: payload.title,
-              body:  payload.shayari || payload.body || payload.title,
-            },
-            android: {
-              priority: "high",
-              notification: {
-                title:                 payload.title,
-                body:                  payload.shayari || payload.body,
-                sound:                 "default",
-                channelId:             "snapit_orders",
-                clickAction:           "OPEN_NOTIFICATION_SCREEN",
-                priority:              "max",
-                visibility:            "public",
-                defaultSound:          true,
-                defaultVibrateTimings: true,
-                tag:                   metadata?.orderId ? `order_${metadata.orderId}` : undefined,
-              },
-            },
-            apns: {
-              payload: {
-                aps: {
-                  alert: { title: payload.title, body: payload.shayari || payload.body },
-                  sound: "default",
-                  badge: 1,
-                },
-              },
-            },
-            webpush: {
-              notification: {
-                title: payload.title,
-                body:  payload.shayari || payload.body,
-                icon:  "/snapit-icon-192.png",
-                badge: "/snapit-icon-192.png",
-              },
-              data: {
-                title: payload.title,
-                body: payload.body || payload.shayari,
-                url: metadata?.orderId ? `/#/dashboard/order-tracking/${metadata.orderId}` : '/'
-              },
-              fcmOptions: {
-                link: metadata?.orderId ? `/#/dashboard/order-tracking/${metadata.orderId}` : '/'
-              }
-            },
+            title: payload.title,
+            body: payload.shayari || payload.body || payload.title,
             data: {
               type,
               recipientId: String(recipientId),
-              title:       payload.title,
-              body:        payload.body || payload.shayari || payload.title,
-              message:     payload.body || payload.shayari || payload.title,
-              ...Object.fromEntries(
-                Object.entries(metadata).map(([k, v]) => [k, String(v)])
-              ),
-            },
-          };
-
-          const response = await getFcm().send(message);
-          fcmMessageId = response;
-          console.log(`[FCM ✅] ${recipientType.toUpperCase()} | ${type} | messageId: ${response}`);
+              title: payload.title,
+              body: payload.body || payload.shayari || payload.title,
+              url: metadata?.orderId ? `/#/dashboard/order-tracking/${metadata.orderId}` : '/',
+              ...metadata
+            }
+          });
+          if (res?.success && (res.result || typeof res === 'string')) {
+            fcmMessageId = res.result || res;
+            console.log(`[Push ✅] ${recipientType.toUpperCase()} | ${type} | token: ${token.slice(0, 15)}...`);
+          }
         } catch (fcmErr) {
-          console.warn(`[FCM ⚠️] Push failed for token: ${fcmErr.message}`);
+          console.warn(`[Push ⚠️] Push failed for token: ${fcmErr.message}`);
         }
       })
     );
@@ -382,24 +356,26 @@ export const notifySellersOfNewOrder = async (order) => {
 
     const sellers = await UserModel.find({
       $or: queryFilters,
-      fcmToken: { $exists: true, $ne: null, $ne: "" },
     }).select("fcmToken store_name name role").lean();
 
     if (sellers.length === 0) {
-      console.log(`[notifySellersOfNewOrder] No sellers/admins with fcmToken for stores: ${storeNames.join(", ")}`);
+      console.log(`[notifySellersOfNewOrder] No sellers/admins found for stores: ${storeNames.join(", ")}`);
       return;
     }
 
     console.log(`[notifySellersOfNewOrder] Notifying ${sellers.length} sellers/admins for order ${order.orderId}`);
-    const notifiedTokens = new Set();
+    const notifiedUserIds = new Set();
     const customerId = String(order?.userId || '');
 
     await Promise.allSettled(
       sellers.map(seller => {
-        if (!seller.fcmToken || notifiedTokens.has(seller.fcmToken)) return Promise.resolve();
-        // Prevent sending duplicate seller notification to the customer if the customer is also an admin/seller
-        if (customerId && String(seller._id) === customerId) return Promise.resolve();
-        notifiedTokens.add(seller.fcmToken);
+        const sid = String(seller._id);
+        if (notifiedUserIds.has(sid)) return Promise.resolve();
+        // Prevent sending duplicate seller notification to the customer unless customer is an admin/super_admin
+        if (customerId && sid === customerId && !['SUPER_ADMIN', 'ADMIN'].includes(seller.role)) {
+          return Promise.resolve();
+        }
+        notifiedUserIds.add(sid);
         return notifySellerNewOrder(seller._id, order.orderId, order.totalAmt || order.subTotalAmt, seller.fcmToken);
       })
     );
@@ -448,14 +424,14 @@ export const notifySellersOfOrderCancelled = async (order) => {
 
     const sellers = await UserModel.find({
       $or: queryFilters,
-      fcmToken: { $exists: true, $ne: null, $ne: "" },
     }).select("fcmToken store_name name role").lean();
 
-    const notifiedTokens = new Set();
+    const notifiedUserIds = new Set();
     await Promise.allSettled(
       sellers.map(seller => {
-        if (!seller.fcmToken || notifiedTokens.has(seller.fcmToken)) return Promise.resolve();
-        notifiedTokens.add(seller.fcmToken);
+        const sid = String(seller._id);
+        if (notifiedUserIds.has(sid)) return Promise.resolve();
+        notifiedUserIds.add(sid);
         return notifySellerOrderCancelled(seller._id, order.orderId, seller.fcmToken);
       })
     );

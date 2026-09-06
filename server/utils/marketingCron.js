@@ -31,14 +31,13 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
       }).select('_id name fcmToken fcmTokens').lean(),
       DeviceTokenModel.find({
         token: { $exists: true, $ne: null, $ne: '' },
-        userId: null, // Strictly only anonymous devices
-        lastActiveAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Active in last 7 days
-      }).select('token').lean()
+        lastActiveAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Active in last 30 days
+      }).select('token userId').lean()
     ])
 
     const tokenMap = new Map()
 
-    // 1. Add strictly 1 canonical active token per registered user
+    // 1. Add canonical active token per registered user
     users.forEach(u => {
       let bestToken = null
       if (u.fcmToken && typeof u.fcmToken === 'string' && u.fcmToken.trim().length > 10) {
@@ -53,7 +52,7 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
       }
     })
 
-    // 2. Add truly unique anonymous devices (avoiding duplicates)
+    // 2. Add all unique registered and guest devices from DeviceToken registry
     deviceDocs.forEach(d => {
       const cleanToken = d.token?.trim()
       if (cleanToken && cleanToken.length > 10 && !tokenMap.has(cleanToken)) {

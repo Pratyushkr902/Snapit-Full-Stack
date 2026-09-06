@@ -39,19 +39,25 @@ self.addEventListener('push', (event) => {
     'Your order status has been updated';
 
   const origin = self.location.origin || 'https://snapit.pages.dev';
-  const icon = payload.notification?.icon || payload.data?.icon || `${origin}/snapit-icon-192.png`;
+  let icon = payload.notification?.icon || payload.data?.icon || `${origin}/snapit-icon-192.png`;
+  if (typeof icon === 'string' && !icon.startsWith('http://') && !icon.startsWith('https://')) {
+    icon = `${origin}${icon.startsWith('/') ? '' : '/'}${icon}`;
+  }
   const badge = `${origin}/snapit-icon-192.png`;
   const targetUrl = payload.data?.url || (payload.data?.orderId ? `/#/dashboard/order-tracking/${payload.data.orderId}` : '/');
 
+  const options = {
+    body,
+    icon,
+    badge,
+    data: { url: targetUrl },
+    tag: payload.data?.orderId ? `snapit_order_${payload.data.orderId}` : `snapit_${Date.now()}`,
+    renotify: true
+  };
+
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon,
-      badge,
-      data: { url: targetUrl },
-      vibrate: [200, 100, 200],
-      tag: payload.data?.orderId ? `snapit_order_${payload.data.orderId}` : `snapit_${Date.now()}`,
-      renotify: true
+    self.registration.showNotification(title, options).catch((err) => {
+      console.warn('[firebase-messaging-sw.js] showNotification note:', err?.message);
     })
   );
 });
