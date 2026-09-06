@@ -74,19 +74,19 @@ const CategoryPage = () => {
   }
 
   return (
-    <section className='min-h-screen bg-slate-50'>
-      <div className='bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10'>
+    <section className='min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors'>
+      <div className='bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-10'>
         <div className='flex items-center gap-2'>
-          <h2 className='font-semibold text-slate-800'>Categories</h2>
+          <h2 className='font-bold text-slate-800 dark:text-white'>Categories</h2>
           {!loading && categoryData.length > 0 && (
-            <span className='bg-slate-100 text-slate-500 text-xs font-semibold px-2 py-0.5 rounded-full'>
+            <span className='bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 text-xs font-semibold px-2 py-0.5 rounded-full'>
               {categoryData.length}
             </span>
           )}
         </div>
         <button
           onClick={() => setOpenUploadCategory(true)}
-          className='text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-medium transition-colors'
+          className='text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-semibold transition-colors'
         >
           + Add Category
         </button>
@@ -96,11 +96,11 @@ const CategoryPage = () => {
       {loading && (
         <div className='p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3'>
           {new Array(12).fill(null).map((_, i) => (
-            <div key={i} className='bg-white rounded-xl shadow-sm overflow-hidden'>
-              <div className='bg-slate-100 w-full aspect-square animate-pulse' />
+            <div key={i} className='bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden border border-slate-100 dark:border-slate-800'>
+              <div className='bg-slate-100 dark:bg-slate-800 w-full aspect-square animate-pulse' />
               <div className='p-2 flex gap-2'>
-                <div className='bg-slate-100 h-7 flex-1 rounded animate-pulse' />
-                <div className='bg-slate-100 h-7 flex-1 rounded animate-pulse' />
+                <div className='bg-slate-100 dark:bg-slate-800 h-7 flex-1 rounded animate-pulse' />
+                <div className='bg-slate-100 dark:bg-slate-800 h-7 flex-1 rounded animate-pulse' />
               </div>
             </div>
           ))}
@@ -115,9 +115,9 @@ const CategoryPage = () => {
           {categoryData.map((category) => (
             <div
               key={category._id}
-              className='bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 hover:shadow-md transition-shadow'
+              className='bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden border border-slate-100 dark:border-slate-800 hover:shadow-md transition-shadow'
             >
-              <div className='w-full aspect-square bg-slate-50 flex items-center justify-center p-3'>
+              <div className='w-full aspect-square bg-slate-50 dark:bg-slate-800/60 flex items-center justify-center p-3'>
                 <img
                   alt={category.name}
                   src={resolveImage(category.image, category.imageThumbnail)}
@@ -130,17 +130,17 @@ const CategoryPage = () => {
                 />
               </div>
               <div className='px-2 py-1.5'>
-                <p className='text-xs font-semibold text-slate-700 line-clamp-1 mb-2'>{category.name}</p>
+                <p className='text-xs font-bold text-slate-700 dark:text-slate-100 line-clamp-1 mb-2'>{category.name}</p>
                 <div className='flex gap-1.5'>
                   <button
                     onClick={() => { setOpenEdit(true); setEditData(category) }}
-                    className='flex-1 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-semibold py-1.5 rounded-lg transition-colors'
+                    className='flex-1 bg-green-50 dark:bg-emerald-950/40 hover:bg-green-100 dark:hover:bg-emerald-900/60 text-green-700 dark:text-emerald-300 text-xs font-semibold py-1.5 rounded-lg transition-colors'
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => { setOpenConfirmBoxDelete(true); setDeleteCategory(category) }}
-                    className='flex-1 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-1.5 rounded-lg transition-colors'
+                    className='flex-1 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-300 text-xs font-semibold py-1.5 rounded-lg transition-colors'
                   >
                     Delete
                   </button>

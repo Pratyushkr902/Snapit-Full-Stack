@@ -90,7 +90,7 @@ const SubCategoryPage = () => {
               // ✅ FIXED: guard against category being undefined/null
               Array.isArray(row.original.category)
                 ? row.original.category.map((c) => (
-                  <p key={c._id + "table"} className='shadow-md px-1 inline-block bg-white text-xs'>
+                  <p key={c._id + "table"} className='shadow-sm px-2 py-0.5 inline-block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-xs rounded-md text-slate-700 dark:text-slate-200 font-medium'>
                     {c.name}
                   </p>
                 ))
@@ -107,15 +107,15 @@ const SubCategoryPage = () => {
           <div className='flex items-center justify-center gap-3'>
             <button
               onClick={() => { setOpenEdit(true); setEditData(row.original) }}
-              className='p-2 bg-green-100 rounded-full hover:text-green-600 transition-colors'
+              className='p-2 bg-green-100 dark:bg-emerald-950/60 rounded-full text-green-700 dark:text-emerald-400 hover:bg-green-200 dark:hover:bg-emerald-900 transition-colors'
             >
-              <HiPencil size={20} />
+              <HiPencil size={18} />
             </button>
             <button
               onClick={() => { setOpenDeleteConfirmBox(true); setDeleteSubCategory(row.original) }}
-              className='p-2 bg-red-100 rounded-full text-red-500 hover:text-red-600 transition-colors'
+              className='p-2 bg-red-100 dark:bg-red-950/60 rounded-full text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900 transition-colors'
             >
-              <MdDelete size={20} />
+              <MdDelete size={18} />
             </button>
           </div>
         )
@@ -142,18 +142,18 @@ const SubCategoryPage = () => {
   }
 
   return (
-    <section className=''>
-      <div className='p-2 bg-white shadow-md flex items-center justify-between'>
-        <h2 className='font-semibold'>Sub Category</h2>
+    <section className='min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors'>
+      <div className='p-3 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between'>
+        <h2 className='font-bold text-slate-800 dark:text-white'>Sub Category</h2>
         <button
           onClick={() => setOpenAddSubCategory(true)}
-          className='text-sm border border-primary-200 hover:bg-primary-200 px-3 py-1 rounded transition-colors'
+          className='text-sm bg-green-600 hover:bg-green-700 text-white px-3.5 py-1.5 rounded-lg font-semibold transition-colors'
         >
           Add Sub Category
         </button>
       </div>
 
-      <div className='overflow-auto w-full max-w-[95vw]'>
+      <div className='overflow-auto w-full max-w-[95vw] p-2'>
         <DisplayTable data={data} column={column} />
       </div>
 

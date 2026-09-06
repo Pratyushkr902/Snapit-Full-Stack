@@ -29,7 +29,7 @@ const FoodCategoryCard = ({ category }) => {
         </span>
       )}
       <span className="text-2xl mb-1">{category.emoji}</span>
-      <span className="text-[11px] font-semibold text-gray-700 text-center leading-tight">
+      <span className={`text-[11px] font-bold text-center leading-tight ${category.text || 'text-gray-800 dark:text-slate-100'}`}>
         {category.label}
       </span>
     </button>

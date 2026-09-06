@@ -17,14 +17,26 @@ html {
   text-size-adjust: 100%;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   font-family: "Poppins", sans-serif;
   font-weight: 400;
   font-style: normal;
-  @apply bg-white text-neutral-700;
+  @apply bg-white text-neutral-800;
   overflow-x: clip;
   width: 100%;
   min-height: 100vh;
+}
+
+html.dark body {
+  @apply bg-[#0b1329] text-slate-100;
+}
+
+html.dark .App {
+  @apply bg-[#0b1329] text-slate-100;
 }
 
 #root {

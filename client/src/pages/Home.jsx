@@ -15,38 +15,42 @@ import { FALLBACK_IMAGE, optimizeImageUrl } from '../utils/optimizeImageUrl'
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
-// Super-app category definitions
+// Super-app category definitions with premium dark mode palette
 const SUPER_APP_CATEGORIES = [
   {
     id: 'grocery',
     label: 'Grocery',
     emoji: '🛒',
-    bg: 'bg-green-50',
-    border: 'border-green-200',
+    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+    border: 'border-emerald-200 dark:border-emerald-700/60',
+    text: 'text-emerald-900 dark:text-emerald-300',
     path: '/grocery',
   },
   {
     id: 'food',
     label: 'Food',
     emoji: '🍔',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
+    bg: 'bg-amber-50 dark:bg-amber-950/40',
+    border: 'border-amber-200 dark:border-amber-700/60',
+    text: 'text-amber-900 dark:text-amber-300',
     path: '/food',
   },
   {
     id: 'pharmacy',
     label: 'Pharmacy',
     emoji: '💊',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
+    bg: 'bg-cyan-50 dark:bg-cyan-950/40',
+    border: 'border-cyan-200 dark:border-cyan-700/60',
+    text: 'text-cyan-900 dark:text-cyan-300',
     path: '/pharmacy',
   },
   {
     id: 'electronics',
     label: 'Electronics',
     emoji: '📱',
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
+    bg: 'bg-purple-50 dark:bg-purple-950/40',
+    border: 'border-purple-200 dark:border-purple-700/60',
+    text: 'text-purple-900 dark:text-purple-300',
     path: '/electronics',
     comingSoon: true,
   },
@@ -123,7 +127,7 @@ const Home = () => {
   }
 
   return (
-    <section className='bg-white min-h-screen overflow-x-hidden'>
+    <section className='bg-white dark:bg-[#0b1329] min-h-screen overflow-x-hidden transition-colors'>
 
       {/* 1. TOP BANNER CAROUSEL */}
       <div className='container mx-auto px-0 lg:px-4 mb-3 sm:mb-4'>
@@ -141,15 +145,15 @@ const Home = () => {
 
       {/* 3. GROCERY CATEGORY GRID */}
       <div className='container mx-auto px-4 mt-1 mb-6'>
-        <p className='text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3'>
+        <p className='text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3'>
           Shop by Category
         </p>
         <div className='grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-2 lg:gap-4'>
           {loadingCategory || filteredCategories.length === 0
             ? new Array(12).fill(null).map((_, i) => (
                 <div key={i + "load"} className='flex flex-col items-center gap-2'>
-                  <div className='bg-slate-100 w-full aspect-square rounded-xl animate-pulse' />
-                  <div className='bg-slate-100 h-2.5 w-3/4 rounded animate-pulse' />
+                  <div className='bg-slate-100 dark:bg-slate-900 w-full aspect-square rounded-xl animate-pulse' />
+                  <div className='bg-slate-100 dark:bg-slate-900 h-2.5 w-3/4 rounded animate-pulse' />
                 </div>
               ))
             : filteredCategories.map((cat, catIndex) => {
@@ -190,7 +194,7 @@ const Home = () => {
                     className='group cursor-pointer flex flex-col items-center gap-1.5'
                     onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
                   >
-                    <div className='bg-white border border-slate-100 rounded-xl p-2 w-full aspect-square flex items-center justify-center transition-all duration-200 active:scale-90 group-hover:border-green-200 group-hover:bg-green-50'>
+                    <div className='bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-2 w-full aspect-square flex items-center justify-center transition-all duration-200 active:scale-90 group-hover:border-green-200 dark:group-hover:border-emerald-600 shadow-xs'>
                       <img
                         src={optimizedCategorySrc}
                         alt={cat?.name || "Category"}
@@ -204,7 +208,7 @@ const Home = () => {
                         }}
                       />
                     </div>
-                    <p className='text-center text-[10px] lg:text-xs font-medium text-slate-600 line-clamp-1 w-full'>
+                    <p className='text-center text-[10.5px] lg:text-xs font-bold text-slate-700 dark:text-slate-100 line-clamp-1 w-full tracking-tight'>
                       {cat?.name || ""}
                     </p>
                   </div>

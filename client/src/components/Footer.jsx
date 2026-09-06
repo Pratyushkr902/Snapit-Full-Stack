@@ -4,15 +4,15 @@ import { FaFacebook, FaInstagram, FaLinkedin } from "react-icons/fa";
 
 const Footer = () => {
   return (
-    <footer className='border-t border-slate-100 bg-white'>
-        <div className='container mx-auto px-4 py-5 text-center flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs sm:text-sm text-slate-500'>
+    <footer className='border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 transition-colors'>
+        <div className='container mx-auto px-4 py-5 text-center flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400'>
             <div className='flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2'>
                 <p>© {new Date().getFullYear()} Snapit. All Rights Reserved.</p>
-                <span className='hidden sm:inline text-slate-300'>•</span>
-                <Link to="/privacy-policy" className='hover:text-amber-600 transition-colors'>Privacy Policy</Link>
-                <span className='hidden sm:inline text-slate-300'>•</span>
-                <p className='font-medium text-slate-600 flex items-center gap-1'>
-                    Co-powered by <span className='font-bold text-slate-800 tracking-wide'>PiyaZo</span>
+                <span className='hidden sm:inline text-slate-300 dark:text-slate-700'>•</span>
+                <Link to="/privacy-policy" className='hover:text-amber-600 dark:hover:text-amber-400 transition-colors'>Privacy Policy</Link>
+                <span className='hidden sm:inline text-slate-300 dark:text-slate-700'>•</span>
+                <p className='font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1'>
+                    Co-powered by <span className='font-bold text-slate-800 dark:text-white tracking-wide'>PiyaZo</span>
                 </p>
             </div>
             <div className='flex items-center gap-4 justify-center text-xl text-slate-400'>

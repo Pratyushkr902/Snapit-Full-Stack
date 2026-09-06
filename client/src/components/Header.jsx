@@ -65,7 +65,7 @@ const Header = ({ openCart }) => {
     }
 
     return (
-        <header className='sticky top-0 z-40 bg-white shadow-sm pt-[env(safe-area-inset-top,0px)]'>
+        <header className='sticky top-0 z-40 bg-white dark:bg-slate-950 border-b border-transparent dark:border-slate-800/80 shadow-sm pt-[env(safe-area-inset-top,0px)] transition-colors'>
 
             {/* ════════════════════════════════
                 DESKTOP HEADER  (lg and above)
@@ -77,14 +77,14 @@ const Header = ({ openCart }) => {
                     <Link to="/">
                         <img src={logo} alt='logo' className='w-36 h-auto object-contain drop-shadow-sm hover:scale-105 transition-transform' />
                     </Link>
-                    <div className='flex flex-col justify-center border-l-2 pl-3 border-slate-100 h-10'>
+                    <div className='flex flex-col justify-center border-l-2 pl-3 border-slate-100 dark:border-slate-800 h-10'>
                         <div className='flex items-center gap-1'>
-                            <h2 className='font-black text-slate-900 text-[15px] uppercase tracking-tighter'>
+                            <h2 className='font-black text-slate-900 dark:text-white text-[15px] uppercase tracking-tighter'>
                                 Delivery in <span className='text-yellow-500 animate-pulse'>10 MINS</span>
                             </h2>
                             <span className='text-lg'>⚡</span>
                         </div>
-                        <Link to='/select-location' className='flex items-center gap-0.5 text-xs text-slate-500 font-semibold cursor-pointer active:opacity-60'>
+                        <Link to='/select-location' className='flex items-center gap-0.5 text-xs text-slate-500 dark:text-slate-400 font-semibold cursor-pointer active:opacity-60'>
                             <span className='truncate max-w-[150px]'>📍 {primaryAddress}</span>
                             <GoTriangleDown size={12} />
                         </Link>
@@ -99,11 +99,11 @@ const Header = ({ openCart }) => {
                 {/* Right actions */}
                 <div className='flex items-center gap-3 flex-shrink-0'>
                     {user?._id && (
-                        <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-all group shadow-sm">
+                        <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 transition-all group shadow-sm">
                             <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
                             <div className='flex flex-col'>
-                                <span className='font-black text-slate-700 text-[10px] uppercase leading-none'>Balance</span>
-                                <span className='font-bold text-green-700 text-sm'>{DisplayPriceInRupees(user?.walletBalance || 0)}</span>
+                                <span className='font-black text-slate-700 dark:text-slate-300 text-[10px] uppercase leading-none'>Balance</span>
+                                <span className='font-bold text-green-700 dark:text-emerald-400 text-sm'>{DisplayPriceInRupees(user?.walletBalance || 0)}</span>
                             </div>
                         </Link>
                     )}
@@ -111,19 +111,19 @@ const Header = ({ openCart }) => {
                     {user?._id ? (
                         <div className='relative' ref={menuRef}>
                             <div onClick={() => setOpenUserMenu(p => !p)} className='flex select-none items-center gap-1 cursor-pointer group'>
-                                <p className='font-bold text-slate-700 group-hover:text-green-700 transition-colors'>Account</p>
-                                {openUserMenu ? <GoTriangleUp size={22} /> : <GoTriangleDown size={22} />}
+                                <p className='font-bold text-slate-700 dark:text-slate-200 group-hover:text-green-700 dark:group-hover:text-emerald-400 transition-colors'>Account</p>
+                                {openUserMenu ? <GoTriangleUp size={22} className='text-slate-700 dark:text-slate-200' /> : <GoTriangleDown size={22} className='text-slate-700 dark:text-slate-200' />}
                             </div>
                             {openUserMenu && (
                                 <div className='absolute right-0 top-10 z-50'>
-                                    <div className='bg-white rounded-xl p-4 min-w-52 shadow-2xl border border-slate-100'>
+                                    <div className='bg-white dark:bg-slate-900 rounded-xl p-4 min-w-52 shadow-2xl border border-slate-100 dark:border-slate-800'>
                                         <UserMenu close={() => setOpenUserMenu(false)} />
                                     </div>
                                 </div>
                             )}
                         </div>
                     ) : (
-                        <button onClick={() => navigate('/login')} className='text-lg px-2 font-bold text-slate-700 hover:text-green-700 transition-colors'>Login</button>
+                        <button onClick={() => navigate('/login')} className='text-lg px-2 font-bold text-slate-700 dark:text-slate-200 hover:text-green-700 dark:hover:text-emerald-400 transition-colors'>Login</button>
                     )}
 
                     {/* Food cart — separate persistent cross-restaurant cart */}
@@ -166,13 +166,13 @@ const Header = ({ openCart }) => {
                         <Link to="/" className='flex-shrink-0'>
                             <img src={logo} alt='logo' className='w-20 h-auto object-contain' />
                         </Link>
-                        <div className='flex flex-col justify-center border-l-2 pl-2 border-slate-100 min-w-0'>
+                        <div className='flex flex-col justify-center border-l-2 pl-2 border-slate-100 dark:border-slate-800 min-w-0'>
                             <div className='flex items-center gap-0.5'>
-                                <span className='font-black text-slate-900 text-[11px] uppercase tracking-tighter whitespace-nowrap'>
+                                <span className='font-black text-slate-900 dark:text-white text-[11px] uppercase tracking-tighter whitespace-nowrap'>
                                     in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
                                 </span>
                             </div>
-                            <Link to='/select-location' className='flex items-center gap-0.5 text-[10px] text-slate-500 font-semibold min-w-0 active:opacity-60'>
+                            <Link to='/select-location' className='flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-semibold min-w-0 active:opacity-60'>
                                 <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
                                 <GoTriangleDown size={10} className='flex-shrink-0' />
                             </Link>
@@ -181,8 +181,8 @@ const Header = ({ openCart }) => {
 
                     {/* Right: user + cart icons */}
                     <div className='flex items-center gap-3 flex-shrink-0 ml-2'>
-                        <Link to='/wallet' className='flex flex-col items-center text-green-700 active:scale-90 transition-transform'><span className='text-lg'>💰</span><span className='text-[9px] font-bold'>Wallet</span></Link>
-                        <button className='text-neutral-600 active:scale-90 transition-transform' onClick={handleMobileUser}>
+                        <Link to='/wallet' className='flex flex-col items-center text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'><span className='text-lg'>💰</span><span className='text-[9px] font-bold'>Wallet</span></Link>
+                        <button className='text-neutral-600 dark:text-slate-300 active:scale-90 transition-transform' onClick={handleMobileUser}>
                             <FaRegCircleUser size={22} />
                         </button>
 
@@ -190,16 +190,16 @@ const Header = ({ openCart }) => {
                         {foodGrandCount > 0 && (
                             <Link to='/food-checkout' className='relative text-orange-500 active:scale-90 transition-transform'>
                                 <span className='text-xl leading-none'>🍔</span>
-                                <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white'>
+                                <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white dark:ring-slate-950'>
                                     {foodGrandCount}
                                 </span>
                             </Link>
                         )}
 
-                        <button onClick={openCart} className='relative text-green-700 active:scale-90 transition-transform'>
+                        <button onClick={openCart} className='relative text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'>
                             <BsCart4 size={22} />
                             {totalQty > 0 && (
-                                <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white'>
+                                <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white dark:ring-slate-950'>
                                     {totalQty}
                                 </span>
                             )}

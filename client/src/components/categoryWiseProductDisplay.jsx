@@ -116,10 +116,10 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     return (
         <div className='my-4 lg:my-8' ref={sectionRef}>
             <div className='container mx-auto px-4 flex items-center justify-between gap-4 mb-3'>
-                <h3 className='font-black text-lg md:text-xl text-slate-800'>{name}</h3>
+                <h3 className='font-black text-lg md:text-xl text-slate-800 dark:text-white'>{name}</h3>
                 <Link
                     to={redirectURL}
-                    className='text-green-600 font-bold hover:text-green-700 bg-green-50 hover:bg-green-100 px-4 py-1.5 rounded-full text-sm transition-all'
+                    className='text-green-600 dark:text-emerald-400 font-bold hover:text-green-700 dark:hover:text-emerald-300 bg-green-50 dark:bg-emerald-950/40 hover:bg-green-100 dark:hover:bg-emerald-900/60 border border-transparent dark:border-emerald-800/40 px-4 py-1.5 rounded-full text-sm transition-all'
                 >
                     See All →
                 </Link>
@@ -165,17 +165,17 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     })}
 
                     {!loading && visible && data.length === 0 && (
-                        <div className='w-full py-8 text-center text-slate-400 text-sm font-medium'>
+                        <div className='w-full py-8 text-center text-slate-400 dark:text-slate-500 text-sm font-medium'>
                             No products available
                         </div>
                     )}
                 </div>
 
                 <div className='w-full left-0 right-0 container mx-auto px-2 absolute hidden lg:flex justify-between pointer-events-none'>
-                    <button onClick={handleScrollLeft} className='pointer-events-auto z-10 bg-white shadow-xl text-slate-700 p-3 rounded-full'>
+                    <button onClick={handleScrollLeft} className='pointer-events-auto z-10 bg-white dark:bg-slate-800 shadow-xl text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 p-3 rounded-full hover:scale-105 active:scale-95 transition-all'>
                         <FaAngleLeft size={16} />
                     </button>
-                    <button onClick={handleScrollRight} className='pointer-events-auto z-10 bg-white shadow-xl text-slate-700 p-3 rounded-full'>
+                    <button onClick={handleScrollRight} className='pointer-events-auto z-10 bg-white dark:bg-slate-800 shadow-xl text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 p-3 rounded-full hover:scale-105 active:scale-95 transition-all'>
                         <FaAngleRight size={16} />
                     </button>
                 </div>

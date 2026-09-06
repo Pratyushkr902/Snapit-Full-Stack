@@ -29,12 +29,12 @@ const getSellingPrice = (product) =>
 
 function SkeletonCard() {
   return (
-    <div className="flex-shrink-0 w-36 rounded-xl border border-slate-100 overflow-hidden animate-pulse">
-      <div className="w-full h-28 bg-slate-200" />
+    <div className="flex-shrink-0 w-36 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden animate-pulse">
+      <div className="w-full h-28 bg-slate-200 dark:bg-slate-800" />
       <div className="p-2 space-y-2">
-        <div className="h-3 bg-slate-200 rounded w-4/5" />
-        <div className="h-3 bg-slate-200 rounded w-3/5" />
-        <div className="h-7 bg-slate-200 rounded w-full mt-2" />
+        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-4/5" />
+        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-3/5" />
+        <div className="h-7 bg-slate-200 dark:bg-slate-800 rounded w-full mt-2" />
       </div>
     </div>
   )
@@ -47,10 +47,10 @@ function DealCard({ product, isComboCard }) {
 
   return (
     <div
-      className="flex-shrink-0 w-36 bg-white rounded-xl border border-slate-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow relative"
+      className="flex-shrink-0 w-36 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden cursor-pointer hover:shadow-md transition-shadow relative"
       onClick={() => navigate(`/product/${product._id}`)}
     >
-      <div className="w-full h-28 bg-slate-100 flex items-center justify-center p-2">
+      <div className="w-full h-28 bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center p-2">
         <img
           src={product.imageThumbnail?.[0] || product.image?.[0]}
           alt={product.name}
@@ -74,7 +74,7 @@ function DealCard({ product, isComboCard }) {
       )}
 
       {product.stock > 0 && product.stock <= 10 && (
-        <div className="absolute top-[88px] left-0 right-0 bg-red-50 text-red-600 text-[9px] font-bold text-center py-0.5 tracking-wide">
+        <div className="absolute top-[88px] left-0 right-0 bg-red-50 dark:bg-red-950/70 text-red-600 dark:text-red-400 text-[9px] font-bold text-center py-0.5 tracking-wide">
           ONLY {product.stock} LEFT
         </div>
       )}
@@ -86,14 +86,14 @@ function DealCard({ product, isComboCard }) {
         )}
       </div>
 
-      <p className="text-xs font-semibold text-slate-800 line-clamp-2 px-2 pt-1 leading-tight">{product.name}</p>
-      <p className="text-[10px] text-slate-400 px-2 pb-1">{product.unit}</p>
+      <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 px-2 pt-1 leading-tight">{product.name}</p>
+      <p className="text-[10px] text-slate-400 dark:text-slate-400 px-2 pb-1">{product.unit}</p>
 
       <div className="flex items-center justify-between px-2 pb-2 gap-1" onClick={e => e.stopPropagation()}>
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-slate-800">₹{sellingPrice}</span>
+          <span className="text-sm font-bold text-slate-800 dark:text-white">₹{sellingPrice}</span>
           {discount > 0 && (
-            <span className="text-[10px] text-slate-400 line-through">₹{product.price}</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 line-through">₹{product.price}</span>
           )}
         </div>
         <div className="w-16">
@@ -174,10 +174,10 @@ export default function TodayDeals() {
 
   return (
     <div className="container mx-auto px-4 my-4">
-      <div className="bg-green-50 border border-green-100 rounded-2xl py-4 overflow-hidden">
+      <div className="bg-green-50 dark:bg-slate-900/90 border border-green-100 dark:border-slate-800 rounded-2xl py-4 overflow-hidden shadow-sm transition-colors">
 
         <div className="flex items-center justify-between px-4 mb-3">
-          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Today's Deals </h2>
+          <h2 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Today's Deals </h2>
           <button
             onClick={() => navigate("/deals")}
             className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-full px-4 py-1.5 transition-colors"
@@ -192,8 +192,8 @@ export default function TodayDeals() {
         {(loading || comboProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
-              <span className="text-sm font-bold text-slate-700">Combo Offers</span>
-              <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-100 rounded px-2 py-0.5">SAVE MORE</span>
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Combo Offers</span>
+              <span className="text-[10px] font-bold text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 border border-purple-100 dark:border-purple-800/60 rounded px-2 py-0.5">SAVE MORE</span>
             </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
               {loading
@@ -205,15 +205,15 @@ export default function TodayDeals() {
         )}
 
         {(comboProducts.length > 0 || loading) && (bogoProducts.length > 0 || loading) && (
-          <div className="mx-4 my-4 border-t border-green-100" />
+          <div className="mx-4 my-4 border-t border-green-100 dark:border-slate-800" />
         )}
 
         {/* Buy 1 Get 1 Free */}
         {(loading || bogoProducts.length > 0) && (
           <>
             <div className="flex items-center gap-2 px-4 mb-2">
-              <span className="text-sm font-bold text-slate-700">Buy 1 Get 1 Free</span>
-              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5">FREE ITEM</span>
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Buy 1 Get 1 Free</span>
+              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-100 dark:border-blue-800/60 rounded px-2 py-0.5">FREE ITEM</span>
             </div>
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
               {loading

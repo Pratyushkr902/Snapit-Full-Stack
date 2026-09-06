@@ -44,12 +44,12 @@ const UserMenu = ({close}) => {
    }
 
   return (
-    <div>
-        <div className='font-semibold'>My Account</div>
-        <div className='text-sm flex items-center gap-2'>
-          <span className='max-w-52 text-ellipsis line-clamp-1'>
+    <div className='text-slate-800 dark:text-slate-100'>
+        <div className='font-bold text-slate-900 dark:text-white'>My Account</div>
+        <div className='text-sm flex items-center gap-2 mt-0.5'>
+          <span className='max-w-52 text-ellipsis line-clamp-1 text-slate-700 dark:text-slate-200'>
             {user?.name || user?.mobile}
-            <span className='ml-1 font-medium text-red-600'>
+            <span className='ml-1 font-bold text-red-600 dark:text-red-400'>
               {role === "ADMIN"        ? "(Admin)"      :
                role === "SUPER_ADMIN"  ? "(Super Admin)":
                role === "RIDER"        ? "(Rider)"      :
@@ -57,7 +57,7 @@ const UserMenu = ({close}) => {
                role === "RESTO_SELLER" ? "(Restaurant)" : ""}
             </span>
           </span>
-          <Link onClick={handleClose} to={"/dashboard/profile"} className='hover:text-primary-200'>
+          <Link onClick={handleClose} to={"/dashboard/profile"} className='hover:text-primary-200 text-slate-500 dark:text-slate-400'>
             <HiOutlineExternalLink size={15}/>
           </Link>
         </div>
@@ -76,48 +76,48 @@ const UserMenu = ({close}) => {
             {(role === "ADMIN" || role === "SUPER_ADMIN") && (
               <>
                 <Link onClick={handleClose} to={"/dashboard/store-orders"}
-                  className='px-2 bg-emerald-50 hover:bg-emerald-100 py-1 font-bold text-emerald-800 border-l-4 border-emerald-500'>
+                  className='px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-bold text-emerald-800 dark:text-emerald-300 border-l-4 border-emerald-500 transition-colors'>
                   📦 Store Packing &amp; Live Orders
                 </Link>
                 <Link onClick={handleClose} to={"/dashboard/rider-fleet"}
-                  className='px-2 bg-blue-50 hover:bg-blue-100 py-1 font-bold text-blue-700 border-l-4 border-blue-500'>
+                  className='px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 font-bold text-blue-700 dark:text-blue-300 border-l-4 border-blue-500 transition-colors'>
                   🛵 Live Rider Fleet Tracker
                 </Link>
                 <Link onClick={handleClose} to={"/dashboard/marketing"}
-                  className='px-2 bg-amber-50 hover:bg-amber-100 py-1 font-bold text-amber-800 border-l-4 border-amber-500'>
+                  className='px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 font-bold text-amber-800 dark:text-amber-300 border-l-4 border-amber-500 transition-colors'>
                   📢 Marketing & Notification Hub
                 </Link>
                 <Link onClick={handleClose} to={"/dashboard/treasury"}
-                  className='px-2 bg-emerald-50 hover:bg-emerald-100 py-1 font-bold text-emerald-700 border-l-4 border-emerald-500'>
+                  className='px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-bold text-emerald-700 dark:text-emerald-300 border-l-4 border-emerald-500 transition-colors'>
                   💰 COD Treasury & Partner Split
                 </Link>
-                <Link onClick={handleClose} to={"/dashboard/admin-summary"} className='px-2 hover:bg-orange-200 py-1 font-bold text-secondary-100'>Admin Dashboard</Link>
-                <Link onClick={handleClose} to={"/dashboard/category"} className='px-2 hover:bg-orange-200 py-1'>Category</Link>
-                <Link onClick={handleClose} to={"/dashboard/subcategory"} className='px-2 hover:bg-orange-200 py-1'>Sub Category</Link>
-                <Link onClick={handleClose} to={"/dashboard/upload-product"} className='px-2 hover:bg-orange-200 py-1'>Upload Product</Link>
-                <Link onClick={handleClose} to={"/dashboard/refunds"} className='px-2 hover:bg-orange-200 py-1'>Refunds</Link>
+                <Link onClick={handleClose} to={"/dashboard/admin-summary"} className='px-2.5 py-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-slate-800 font-bold text-secondary-100 dark:text-amber-400 transition-colors'>Admin Dashboard</Link>
+                <Link onClick={handleClose} to={"/dashboard/category"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Category</Link>
+                <Link onClick={handleClose} to={"/dashboard/subcategory"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Sub Category</Link>
+                <Link onClick={handleClose} to={"/dashboard/upload-product"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Upload Product</Link>
+                <Link onClick={handleClose} to={"/dashboard/refunds"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Refunds</Link>
                 {role === "SUPER_ADMIN" && (
                   <Link onClick={handleClose} to={"/dashboard/super-admin"}
-                    className='px-2 bg-purple-50 hover:bg-purple-100 py-1 font-bold text-purple-700 border-l-4 border-purple-500'>
+                    className='px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 font-bold text-purple-700 dark:text-purple-300 border-l-4 border-purple-500 transition-colors'>
                     👑 Super Admin Panel
                   </Link>
                 )}
-                <Link onClick={handleClose} to={"/dashboard/product"} className='px-2 hover:bg-orange-200 py-1'>Product</Link>
+                <Link onClick={handleClose} to={"/dashboard/product"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Product</Link>
                 {/* Admin can also manage restaurants */}
                 <Link onClick={handleClose} to={"/dashboard/restaurant-admin"}
-                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  className='px-2.5 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-900/50 py-1 font-bold text-orange-700 dark:text-orange-300 border-l-4 border-orange-500 transition-colors'>
                   🍔 Restaurant Admin
                 </Link>
                 <Link onClick={handleClose} to={"/dashboard/store-sellers"}
-                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  className='px-2.5 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-900/50 py-1 font-bold text-orange-700 dark:text-orange-300 border-l-4 border-orange-500 transition-colors'>
                   🏪 Store Panel
                 </Link>
                 <Link onClick={handleClose} to={"/dashboard/campus-ambassadors"}
-                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  className='px-2.5 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-900/50 py-1 font-bold text-orange-700 dark:text-orange-300 border-l-4 border-orange-500 transition-colors'>
                   🎓 Campus Ambassadors
                 </Link>
                 <Link onClick={handleClose} to={"/dashboard/store-earnings"}
-                  className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-500'>
+                  className='px-2.5 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-900/50 py-1 font-bold text-orange-700 dark:text-orange-300 border-l-4 border-orange-500 transition-colors'>
                   💰 Store Earnings
                 </Link>
               </>
@@ -126,18 +126,15 @@ const UserMenu = ({close}) => {
             {/* RIDER ACCESS */}
             {(role === "RIDER" || role === "ADMIN" || role === "SUPER_ADMIN") && (
               <Link onClick={handleClose} to={"/rider-panel"}
-                className='px-2 bg-blue-50 hover:bg-blue-100 py-1 font-bold text-blue-700 border-l-4 border-blue-600 mb-1'>
-                Rider Panel
+                className='px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 font-bold text-blue-700 dark:text-blue-300 border-l-4 border-blue-600 mb-1 transition-colors'>
+                🛵 Rider Panel
               </Link>
             )}
 
-            {/* SELLER ACCESS — ADMIN uses the dedicated per-store panel above instead,
-                since the seller dashboard's own-store filter is bypassed for ADMIN
-                (see getSellerOrdersController), which used to dump every store's
-                orders/products into one mixed view for admin accounts. */}
+            {/* SELLER ACCESS */}
             {role === "SELLER" && (
               <Link onClick={handleClose} to={"/dashboard/seller-dashboard"}
-                className='px-2 bg-orange-50 hover:bg-orange-100 py-1 font-bold text-orange-700 border-l-4 border-orange-600 mb-1'>
+                className='px-2.5 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-900/50 font-bold text-orange-700 dark:text-orange-300 border-l-4 border-orange-600 mb-1 transition-colors'>
                 🏪 Store Panel
               </Link>
             )}
@@ -145,54 +142,54 @@ const UserMenu = ({close}) => {
             {/* RESTO SELLER ACCESS */}
             {role === "RESTO_SELLER" && (
               <Link onClick={handleClose} to={"/dashboard/resto-dashboard"}
-                className='px-2 bg-red-50 hover:bg-red-100 py-1 font-bold text-red-700 border-l-4 border-red-500 mb-1'>
+                className='px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 font-bold text-red-700 dark:text-red-300 border-l-4 border-red-500 mb-1 transition-colors'>
                 🍽️ My Restaurant
               </Link>
             )}
 
             {/* COMMON LINKS */}
-            <Link onClick={handleClose} to={"/dashboard/myorders"} className='px-2 hover:bg-orange-200 py-1'>My Orders</Link>
-            <Link onClick={handleClose} to={"/refer"} className='px-2 hover:bg-orange-200 py-1 flex items-center gap-1.5'>
+            <Link onClick={handleClose} to={"/dashboard/myorders"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>My Orders</Link>
+            <Link onClick={handleClose} to={"/refer"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors flex items-center gap-1.5'>
               <span>🎁</span> Refer &amp; Earn
             </Link>
-            <Link onClick={handleClose} to={"/wishlist"} className='px-2 hover:bg-red-50 py-1 flex items-center gap-1.5'>
+            <Link onClick={handleClose} to={"/wishlist"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors flex items-center gap-1.5'>
               <span>❤️</span> My Wishlist
             </Link>
-            <Link onClick={handleClose} to={"/dashboard/address"} className='px-2 hover:bg-orange-200 py-1'>Save Address</Link>
+            <Link onClick={handleClose} to={"/dashboard/address"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Save Address</Link>
 
             <Divider/>
 
-            <Link onClick={handleClose} to={"/snapit-plus"} className='px-2 hover:bg-green-50 py-1 flex items-center gap-2 font-semibold text-green-800'>
+            <Link onClick={handleClose} to={"/snapit-plus"} className='px-2.5 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-slate-800 flex items-center gap-2 font-semibold text-emerald-800 dark:text-emerald-300 transition-colors'>
               <span>⭐</span>
               <div>
                 <p className='leading-none'>Snapit Plus</p>
-                <p className='text-[10px] text-gray-400 font-normal'>Membership & benefits</p>
+                <p className='text-[10px] text-slate-400 dark:text-slate-400 font-normal mt-0.5'>Membership & benefits</p>
               </div>
             </Link>
-            <Link onClick={handleClose} to={"/streak"} className='px-2 hover:bg-orange-50 py-1 flex items-center gap-2 font-semibold text-orange-700'>
+            <Link onClick={handleClose} to={"/streak"} className='px-2.5 py-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-slate-800 flex items-center gap-2 font-semibold text-orange-700 dark:text-orange-400 transition-colors'>
               <span>🔥</span>
               <div>
                 <p className='leading-none'>Daily Streak</p>
-                <p className='text-[10px] text-gray-400 font-normal'>Order daily, earn rewards</p>
+                <p className='text-[10px] text-slate-400 dark:text-slate-400 font-normal mt-0.5'>Order daily, earn rewards</p>
               </div>
             </Link>
-            <Link onClick={handleClose} to={"/subscriptions"} className='px-2 hover:bg-blue-50 py-1 flex items-center gap-2 font-semibold text-blue-700'>
+            <Link onClick={handleClose} to={"/subscriptions"} className='px-2.5 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-2 font-semibold text-blue-700 dark:text-blue-400 transition-colors'>
               <span>📦</span>
               <div>
                 <p className='leading-none'>My Subscriptions</p>
-                <p className='text-[10px] text-gray-400 font-normal'>Manage recurring orders</p>
+                <p className='text-[10px] text-slate-400 dark:text-slate-400 font-normal mt-0.5'>Manage recurring orders</p>
               </div>
             </Link>
 
             <Divider/>
 
             <Link to="/privacy-policy"
-              className='px-2 hover:bg-gray-100 py-1 flex items-center gap-1.5 text-gray-600'
+              className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium transition-colors'
               onClick={handleClose}>
               🔒 Privacy Policy
             </Link>
 
-            <button onClick={handleLogout} className='text-left px-2 hover:bg-orange-200 py-1'>Log Out</button>
+            <button onClick={handleLogout} className='text-left px-2.5 py-1.5 rounded-lg text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors'>Log Out</button>
 
         </div>
     </div>

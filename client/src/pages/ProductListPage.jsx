@@ -89,20 +89,20 @@ const ProductListPage = () => {
   }, [categoryId, subCategoryId])
 
   return (
-    <section className='w-full bg-gradient-to-b from-white to-gray-50 min-h-[85vh] pb-24 lg:pb-10 animate-fadeIn relative'>
-      <div className='sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm'>
+    <section className='w-full bg-gradient-to-b from-white to-gray-50 dark:from-slate-950 dark:to-[#0b1329] min-h-[85vh] pb-24 lg:pb-10 animate-fadeIn relative transition-colors'>
+      <div className='sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 shadow-sm'>
         <div className='container mx-auto px-4 py-3.5 flex items-center gap-4 w-full'>
           <button
             onClick={() => navigate(-1)}
-            className='p-2.5 hover:bg-gray-50 active:scale-95 transition-all rounded-full text-gray-800 flex items-center justify-center border border-gray-100 bg-white shadow-sm'
+            className='p-2.5 hover:bg-gray-50 dark:hover:bg-slate-800 active:scale-95 transition-all rounded-full text-gray-800 dark:text-slate-100 flex items-center justify-center border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm'
           >
             <FaChevronLeft size={16} />
           </button>
           <div>
-            <h1 className='text-sm font-black tracking-tight text-slate-900 uppercase select-none capitalize'>
+            <h1 className='text-sm font-black tracking-tight text-slate-900 dark:text-white uppercase select-none capitalize'>
               {pageTitle}
             </h1>
-            <p className='text-[11px] text-green-700 font-bold tracking-wide mt-0.5 uppercase'>
+            <p className='text-[11px] text-green-700 dark:text-emerald-400 font-bold tracking-wide mt-0.5 uppercase'>
               {loading ? "Loading..." : `${products.length} Products Available`}
             </p>
           </div>
@@ -113,18 +113,18 @@ const ProductListPage = () => {
         {loading ? (
           <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4'>
             {[...Array(10)].map((_, index) => (
-              <div key={index} className='bg-white h-64 w-full rounded-3xl border border-gray-100/70 shadow-sm animate-pulse p-4 space-y-4'>
-                <div className='bg-slate-100 h-32 w-full rounded-2xl' />
-                <div className='bg-slate-100 h-4 w-3/4 rounded-lg' />
-                <div className='bg-slate-100 h-4 w-1/2 rounded-lg' />
+              <div key={index} className='bg-white dark:bg-slate-900 h-64 w-full rounded-3xl border border-gray-100/70 dark:border-slate-800 shadow-sm animate-pulse p-4 space-y-4'>
+                <div className='bg-slate-100 dark:bg-slate-800 h-32 w-full rounded-2xl' />
+                <div className='bg-slate-100 dark:bg-slate-800 h-4 w-3/4 rounded-lg' />
+                <div className='bg-slate-100 dark:bg-slate-800 h-4 w-1/2 rounded-lg' />
               </div>
             ))}
           </div>
         ) : products.length === 0 ? (
-          <div className='flex flex-col items-center justify-center min-h-[45vh] bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm max-w-lg mx-auto mt-10'>
+          <div className='flex flex-col items-center justify-center min-h-[45vh] bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-gray-100 dark:border-slate-800 shadow-sm max-w-lg mx-auto mt-10'>
             <p className='text-3xl mb-2'>📦</p>
-            <p className='text-slate-800 font-black text-sm tracking-wide uppercase text-center'>No Products Found</p>
-            <p className='text-xs text-gray-400 font-medium text-center mt-1'>
+            <p className='text-slate-800 dark:text-white font-black text-sm tracking-wide uppercase text-center'>No Products Found</p>
+            <p className='text-xs text-gray-400 dark:text-slate-400 font-medium text-center mt-1'>
               Check back shortly! New inventory stocks land in 10 minutes.
             </p>
             <button

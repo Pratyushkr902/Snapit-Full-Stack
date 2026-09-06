@@ -90,7 +90,7 @@ const CardProduct = ({ data }) => {
 
             <div className='flex flex-col mt-1.5 gap-0.5 flex-1'>
                 <div className='flex items-center gap-1'>
-                    <div className='rounded text-[7px] lg:text-[9px] px-1 py-0.5 text-green-700 bg-green-50 border border-green-100 font-bold uppercase'>
+                    <div className='rounded text-[7px] lg:text-[9px] px-1 py-0.5 text-green-700 dark:text-emerald-300 bg-green-50 dark:bg-emerald-950/50 border border-green-100 dark:border-emerald-800/60 font-bold uppercase'>
                         10 min
                     </div>
                     {Boolean(data?.discount) && (
@@ -105,11 +105,11 @@ const CardProduct = ({ data }) => {
                 </div>
 
                 <div className='flex items-center gap-1 mt-0.5'>
-                    <span className='text-[7px] lg:text-[9px] px-1.5 py-0.5 rounded-full border border-slate-200 text-slate-500 bg-slate-50 font-bold'>
+                    <span className='text-[7px] lg:text-[9px] px-1.5 py-0.5 rounded-full border border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-300 bg-slate-50 dark:bg-zinc-900 font-bold'>
                         {data?.unit}
                     </span>
                     {data?.variantGroup && (
-                        <span className='text-[7px] lg:text-[9px] px-1.5 py-0.5 rounded-full border border-green-200 text-green-600 bg-green-50 font-bold'>
+                        <span className='text-[7px] lg:text-[9px] px-1.5 py-0.5 rounded-full border border-green-200 dark:border-emerald-800/60 text-green-600 dark:text-emerald-400 bg-green-50 dark:bg-emerald-950/40 font-bold'>
                             + more sizes
                         </span>
                     )}
@@ -121,7 +121,7 @@ const CardProduct = ({ data }) => {
                             {DisplayPriceInRupees(pricewithDiscount(data?.price || 0, data?.discount || 0))}
                         </div>
                         {Boolean(data?.discount) && (
-                            <span className='text-[8px] lg:text-[10px] line-through text-neutral-400'>
+                            <span className='text-[8px] lg:text-[10px] line-through text-neutral-400 dark:text-zinc-500'>
                                 {DisplayPriceInRupees(data.price)}
                             </span>
                         )}
@@ -129,8 +129,8 @@ const CardProduct = ({ data }) => {
 
                     <div className='flex-shrink-0 w-[60px] lg:w-[90px]' onClick={(e) => e.preventDefault()}>
                         {data?.stock == 0 ? (
-                            <div className='border border-red-100 bg-red-50 px-1 py-1 rounded text-center'>
-                                <p className='text-red-500 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
+                            <div className='border border-red-100 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 px-1 py-1 rounded text-center'>
+                                <p className='text-red-500 dark:text-red-400 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
                                     Out of<br />stock
                                 </p>
                             </div>
