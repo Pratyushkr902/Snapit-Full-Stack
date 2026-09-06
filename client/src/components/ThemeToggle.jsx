@@ -88,3 +88,4 @@ const ThemeToggle = ({ variant = 'icon', className = '' }) => {
 }
 
 export default ThemeToggle
+

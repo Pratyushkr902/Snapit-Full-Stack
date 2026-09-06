@@ -16,8 +16,8 @@ const CARDS = [
   },
   {
     key: 'store-orders',
-    title: '📦 Store Packing Screen',
-    desc: 'All store item packing queues, merchant order status & pickup alerts',
+    title: '📦 Store Packing & Live Orders',
+    desc: 'Unified store item packing checklist, live customer orders & town dispatch',
     icon: '📦',
     path: '/dashboard/store-orders',
     color: '#ea580c',

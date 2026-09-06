@@ -22,6 +22,7 @@ const AdminPermision = ({ children }) => {
 
     const hasAccess = isAdmin(user?.role)
         || (isSeller      && isSellerRoute)
+        || (isRestoSeller && isSellerRoute)
         || (isRider       && isRiderRoute)
         || (isRestoSeller && isRestoSellerRoute)
 

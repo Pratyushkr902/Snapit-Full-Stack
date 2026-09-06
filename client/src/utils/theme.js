@@ -42,3 +42,4 @@ export const toggleTheme = () => {
 if (typeof window !== 'undefined') {
   applyTheme(getStoredTheme())
 }
+

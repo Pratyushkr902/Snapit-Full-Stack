@@ -28,7 +28,7 @@ const formatTimeAgo = (dateStr) => {
   })
 }
 
-const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50 }) => {
+const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50, hideStoreOrdersLink = false }) => {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [orderFilter, setOrderFilter] = useState('ALL')
@@ -169,17 +169,19 @@ const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50 }
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/dashboard/store-orders"
-            style={{
-              background: '#ea580c', color: '#fff',
-              padding: '7px 13px', borderRadius: 8,
-              fontSize: 11, fontWeight: 800, textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            📦 Store Packing Screen
-          </Link>
+          {!hideStoreOrdersLink && (
+            <Link
+              to="/dashboard/store-orders"
+              style={{
+                background: '#ea580c', color: '#fff',
+                padding: '7px 13px', borderRadius: 8,
+                fontSize: 11, fontWeight: 800, textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              📦 Store Packing Screen
+            </Link>
+          )}
           <Link
             to="/rider-panel"
             style={{
@@ -392,7 +394,17 @@ const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50 }
                   <div>
                     <p style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Customer</p>
                     <p style={{ fontWeight: 800, color: '#f1f5f9', marginTop: 2 }}>{customerName}</p>
-                    <p style={{ color: '#94a3b8', fontSize: 11 }}>📞 {customerPhone}</p>
+                    {customerPhone && customerPhone !== 'N/A' ? (
+                      <a
+                        href={`tel:${customerPhone}`}
+                        style={{ color: '#38bdf8', fontSize: 11, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        className="hover:underline"
+                      >
+                        📞 {customerPhone}
+                      </a>
+                    ) : (
+                      <p style={{ color: '#94a3b8', fontSize: 11 }}>📞 N/A</p>
+                    )}
                   </div>
 
                   <div>
@@ -400,7 +412,15 @@ const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50 }
                     {order.rider_name ? (
                       <div style={{ marginTop: 2 }}>
                         <p style={{ fontWeight: 800, color: '#38bdf8' }}>🚴 {order.rider_name}</p>
-                        {order.rider_contact && <p style={{ color: '#94a3b8', fontSize: 11 }}>📞 {order.rider_contact}</p>}
+                        {order.rider_contact ? (
+                          <a
+                            href={`tel:${order.rider_contact}`}
+                            style={{ color: '#34d399', fontSize: 11, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            className="hover:underline"
+                          >
+                            📞 {order.rider_contact}
+                          </a>
+                        ) : null}
                       </div>
                     ) : (
                       <p style={{ fontWeight: 700, color: '#fbbf24', marginTop: 2 }}>⚠️ Open for Rider Claim</p>

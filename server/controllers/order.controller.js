@@ -1569,6 +1569,13 @@ export async function getOrderItems(request, response) {
         if (cleanRole === 'ADMIN' || cleanRole === 'SUPER_ADMIN' || cleanRole === 'RIDER') {
             // Admins and Delivery Fleet see all active and completed town orders
             filter = {}
+        } else if (cleanRole === 'SELLER' || cleanRole === 'RESTO_SELLER') {
+            const sellerUser = await UserModel.findById(userId).select('store_name').lean()
+            if (sellerUser?.store_name) {
+                filter = { involved_stores: sellerUser.store_name }
+            } else {
+                filter = { userId }
+            }
         } else {
             filter = { userId }
         }
