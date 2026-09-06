@@ -118,8 +118,8 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                 notification: {
                     title,
                     body,
-                    icon: '/snapit-icon-192.png',
-                    badge: '/snapit-icon-192.png',
+                    icon: 'https://snapit.pages.dev/snapit-icon-192.png',
+                    badge: 'https://snapit.pages.dev/snapit-icon-192.png',
                     vibrate: [200, 100, 200],
                     tag: `${androidTag}_${Date.now()}`,
                     renotify: true,
