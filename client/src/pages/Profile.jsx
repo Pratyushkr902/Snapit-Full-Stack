@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { FaRegUserCircle } from "react-icons/fa";
 import { IoArrowBack } from "react-icons/io5";
 import UserProfileAvatarEdit from '../components/UserProfileAvatarEdit';
@@ -11,7 +11,6 @@ import toast from 'react-hot-toast';
 import { setUserDetails } from '../store/userSlice';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import CampusAmbassadorCard from '../components/CampusAmbassadorCard';
-import ThemeToggle from '../components/ThemeToggle';
 
 const Profile = () => {
     const user     = useSelector(state => state.user)
@@ -111,67 +110,6 @@ const Profile = () => {
                     {loading ? "Loading..." : "Submit"}
                 </button>
             </form>
-
-            {/* Appearance / Dark Mode */}
-            <div className='my-6 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-neutral-200 dark:border-slate-800 shadow-sm'>
-                <h4 className='font-bold text-sm text-neutral-800 dark:text-neutral-100 mb-2'>
-                    Appearance
-                </h4>
-                <ThemeToggle variant="row" />
-            </div>
-
-            {/* Notification Test Utility */}
-            <div className='my-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 shadow-sm'>
-                <div className='flex items-center justify-between gap-3'>
-                    <div>
-                        <h4 className='font-bold text-sm text-emerald-950 flex items-center gap-1.5'>
-                            <span>🔔</span> Push Notifications Test
-                        </h4>
-                        <p className='text-xs text-emerald-700 mt-0.5'>
-                            Send a live test notification to verify delivery on this device.
-                        </p>
-                    </div>
-                    <button
-                        type='button'
-                        onClick={async () => {
-                            try {
-                                toast.loading('Sending test alert...', { id: 'test-push' })
-                                const res = await Axios({ ...SummaryApi.testPushNotification })
-                                if (res.data?.success) {
-                                    toast.success(res.data.message || 'Notification dispatched!', { id: 'test-push' })
-                                } else {
-                                    toast.error(res.data?.message || 'Failed to dispatch test notification.', { id: 'test-push' })
-                                }
-                            } catch (err) {
-                                toast.error(err?.response?.data?.message || err.message, { id: 'test-push' })
-                            }
-                        }}
-                        className='px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all flex-shrink-0'
-                    >
-                        Test Push 📲
-                    </button>
-                </div>
-            </div>
-
-            {/* Legal & Privacy Policy */}
-            <div className='my-6 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-neutral-200 dark:border-slate-800 shadow-sm'>
-                <div className='flex items-center justify-between gap-3'>
-                    <div>
-                        <h4 className='font-bold text-sm text-neutral-800 dark:text-neutral-100 flex items-center gap-1.5'>
-                            <span>🔒</span> Privacy Policy
-                        </h4>
-                        <p className='text-xs text-neutral-500 dark:text-neutral-400 mt-0.5'>
-                            Review data collection, location permissions & user safety policies.
-                        </p>
-                    </div>
-                    <Link
-                        to='/privacy-policy'
-                        className='px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-100 font-bold text-xs rounded-xl transition-all flex-shrink-0'
-                    >
-                        View Policy →
-                    </Link>
-                </div>
-            </div>
         </div>
     )
 }
