@@ -29,6 +29,23 @@ body {
   overflow-x: clip;
   width: 100%;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* Hardware accelerated layer promotion for modals, sticky headers & fixed bars */
+.gpu-layer,
+.fixed,
+.sticky {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Contain layout paint for fast rendering */
+.contain-paint {
+  contain: paint;
 }
 
 html.dark body {
@@ -209,8 +226,8 @@ html.dark textarea::placeholder {
   color: #64748b;
 }
 
-/* Smooth transition for theme switching */
-body, header, nav, div, card {
+/* Smooth transition for theme switching without layout thrashing */
+body, header, nav {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 

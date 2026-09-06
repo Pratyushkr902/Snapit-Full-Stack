@@ -58,6 +58,9 @@ function App() {
     currentNormalizedRoute.includes('/food') || 
     currentNormalizedRoute.includes('/restaurant');
 
+  // Dedicated cart page (Zepto/Blinkit style full-screen cart)
+  const isCartPage = currentNormalizedRoute.includes('/cart');
+
   // Full-screen dedicated location selection page (Zepto/Blinkit style)
   const isSelectLocation = 
     currentNormalizedRoute.includes('select-location') || 
@@ -274,14 +277,14 @@ function App() {
         <div className="App">
           <AppUpdateModal />
           <NotificationPermissionBanner />
-          {!isDashboard && !isFoodPage && !isSelectLocation && <StoreClosedOverlay />}
-          {!isDashboard && !isSelectLocation && <Header openCart={() => setShowCart(true)} />}
+          {!isDashboard && !isFoodPage && !isSelectLocation && !isCartPage && <StoreClosedOverlay />}
+          {!isDashboard && !isSelectLocation && !isCartPage && <Header openCart={() => setShowCart(true)} />}
           
-          <main className={isDashboard || isSelectLocation ? '' : 'min-h-[78vh]'}>
+          <main className={isDashboard || isSelectLocation || isCartPage ? '' : 'min-h-[78vh]'}>
             <Outlet />
           </main>
           
-          {!isDashboard && !isSelectLocation && <Footer />}
+          {!isDashboard && !isSelectLocation && !isCartPage && <Footer />}
           {/* {!isDashboard && <WhatsAppButton />} */}
           
           <Toaster position="top-center" reverseOrder={false} />
@@ -295,7 +298,7 @@ function App() {
           )}
 
           {/* {!isDashboard && <WhatsAppButton />} */}
-          {!isDashboard && !isSelectLocation && <ChatBox />}
+          {!isDashboard && !isSelectLocation && !isCartPage && <ChatBox />}
         </div>
       </GlobalProvider>
     </RemoteConfigProvider>

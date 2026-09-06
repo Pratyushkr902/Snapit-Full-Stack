@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
+    target: 'es2020',
+    cssCodeSplit: true,
+    assetsInlineLimit: 4096,
     sourcemap: false, // 🔒 Production secure: hides raw source code & node_modules from DevTools
     rollupOptions: {
       output: {
