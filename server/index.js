@@ -13,7 +13,7 @@ import rateLimit from 'express-rate-limit'
 import compression from 'compression'
 import connectDB from './config/connectDB.js'
 import cron from 'node-cron'
-import { abuseGuard } from './middleware/abuseGuard.js'
+import { abuseGuard, isAdminRequest } from './middleware/abuseGuard.js'
 
 // ─── PRE-REGISTER MODELS ──────────────────────────────────────────────────────
 import './models/user.model.js'
@@ -161,6 +161,7 @@ const authLimiter = rateLimit({
     standardHeaders:        true,
     legacyHeaders:          false,
     skipSuccessfulRequests: true,
+    skip:                   (req) => req.method === 'OPTIONS' || isAdminRequest(req),
     message: { message: 'Too many attempts. Please try again in 15 minutes.', error: true, success: false },
 })
 
@@ -170,22 +171,25 @@ const registerLimiter = rateLimit({
     standardHeaders:        true,
     legacyHeaders:          false,
     skipSuccessfulRequests: true,
+    skip:                   (req) => req.method === 'OPTIONS' || isAdminRequest(req),
     message: { message: 'Too many accounts created from this IP. Please try again later.', error: true, success: false },
 })
 
 const apiLimiter = rateLimit({
     windowMs:        60 * 1000,
-    max:             600, // Balanced for Indian mobile carrier CGNAT shared IPs
+    max:             1200, // Balanced for Indian mobile carrier CGNAT shared IPs
     standardHeaders: true,
     legacyHeaders:   false,
+    skip:            (req) => req.method === 'OPTIONS' || isAdminRequest(req),
     message: { message: 'Too many requests. Please slow down.', error: true, success: false },
 })
 
 const financialLimiter = rateLimit({
     windowMs:        60 * 1000,
-    max:             30,
+    max:             120,
     standardHeaders: true,
     legacyHeaders:   false,
+    skip:            (req) => req.method === 'GET' || req.method === 'OPTIONS' || isAdminRequest(req),
     message: { message: 'Too many financial requests. Please slow down.', error: true, success: false },
 })
 
@@ -359,8 +363,6 @@ app.use('/api/user/reset-password',             authLimiter)
 app.use('/api/wallet',                          financialLimiter)
 app.use('/api/order',                           financialLimiter)
 app.use('/api/coins',                           financialLimiter)
-app.use('/api/admin/accounts',                  financialLimiter) // ✅ NEW
-app.use('/api/admin-management',                authLimiter)
 
 // General API limiter on everything else
 app.use('/api', apiLimiter)

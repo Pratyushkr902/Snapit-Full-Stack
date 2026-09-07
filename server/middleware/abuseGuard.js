@@ -1,4 +1,33 @@
+import jwt from 'jsonwebtoken'
 import FrozenIpModel from '../models/frozenIp.model.js'
+
+export function isAdminRequest(request) {
+    try {
+        let token = null
+        const authHeader = request?.headers?.authorization || request?.headers?.Authorization
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1]
+        }
+        if (!token) {
+            token = request?.cookies?.accessToken || request?.cookies?.accesstoken
+        }
+        if (!token) return false
+
+        const decoded = jwt.decode(token)
+        if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+            return false
+        }
+
+        const secretKey = process.env.SECRET_KEY_ACCESS_TOKEN
+        if (secretKey) {
+            const verified = jwt.verify(token, secretKey)
+            return Boolean(verified && (verified.role === 'ADMIN' || verified.role === 'SUPER_ADMIN'))
+        }
+        return true
+    } catch {
+        return false
+    }
+}
 
 const WINDOW_MS = 60 * 1000
 const AUTH_LIMIT = 100         // login/otp hits per minute per IP (safe for shared office/home Wi-Fi)
@@ -52,6 +81,7 @@ function recordHit(ip, bucket) {
 // type: 'auth' for login/otp routes, 'general' for everything else
 export const abuseGuard = (type = 'general') => async (request, response, next) => {
     if (request.method === 'OPTIONS') return next()
+    if (isAdminRequest(request)) return next()
     try {
         const ip = getClientIp(request)
 
