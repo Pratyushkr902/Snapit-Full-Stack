@@ -10,21 +10,15 @@ const STORE_LNG = 84.8006737574818
 export const MAX_DELIVERY_RADIUS_KM = 14
 export const EXPRESS_DELIVERY_FEE = 25
 
-// Chikasi zone override — spans across the 6km boundary, which would otherwise
-// charge different fees for different Chikasi addresses.
-// Flat ₹49 for the whole zone instead.
-const CHIKASI_LAT = 25.28091606583264
-const CHIKASI_LNG = 84.87069734970407
-const CHIKASI_RADIUS_KM = 1.78
+// Standard GPS coordinates for landmark matching
+export const CHIKASI_LAT = 25.28091606583264
+export const CHIKASI_LNG = 84.87069734970407
+export const HIMALAYA_LAT = 25.2639198
+export const HIMALAYA_LNG = 84.8545598
 
-// Himalaya Medical College & Hospital — own flat-fee zone (same treatment
-// as Chikasi) with its own, lower minimum order. Must stay in sync with
-// client/src/utils/getDeliveryInfo.js.
-const HIMALAYA_LAT = 25.2639198
-const HIMALAYA_LNG = 84.8545598
-const HIMALAYA_RADIUS_KM = 0.45
-const HIMALAYA_FLAT_FEE = 49
-const HIMALAYA_MIN_ORDER = 499
+// All zones, including Chikasi & Himalaya, use standard kilometer-based pricing:
+// 0–3 km: ₹12 | 3–6 km: ₹29 | 6–14 km: ₹7/km (Chikasi ~9km: ₹63, Himalaya ~9.2km: ₹65)
+
 
 // Haversine formula — returns distance in km
 export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
