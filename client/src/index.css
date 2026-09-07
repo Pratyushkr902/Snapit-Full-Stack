@@ -144,6 +144,11 @@ html.dark .App {
   padding-top: max(env(safe-area-inset-top, 0px), 54px);
 }
 
+.pt-safe-homepage {
+  padding-top: 0px;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 .pt-safe-panel {
   padding-top: 58px;
   padding-top: max(env(safe-area-inset-top, 0px), 58px);

@@ -15,6 +15,7 @@ import { useFullCart } from '../utils/foodCartStore';
 const Header = ({ openCart }) => {
     const [isMobile] = useMobile()
     const location = useLocation()
+    const isHomePage = location.pathname === '/' || location.pathname === ''
     const isSearchPage = location.pathname === "/search"
     const navigate = useNavigate()
     const user = useSelector((state) => state?.user)
@@ -65,12 +66,16 @@ const Header = ({ openCart }) => {
     }
 
     return (
-        <header className='sticky top-0 z-40 bg-white dark:bg-slate-950 border-b border-transparent dark:border-slate-800/80 shadow-sm pt-safe-header lg:pt-0 transition-colors'>
+        <header className={`sticky top-0 z-40 bg-white dark:bg-slate-950 border-b border-neutral-100/80 dark:border-slate-800/80 shadow-xs transition-colors ${
+            isHomePage ? 'pt-safe-homepage' : 'pt-safe-header lg:pt-0'
+        }`}>
 
             {/* ════════════════════════════════
                 DESKTOP HEADER  (lg and above)
             ════════════════════════════════ */}
-            <div className='hidden lg:flex container mx-auto items-center px-4 py-3 gap-6 justify-between h-24'>
+            <div className={`hidden lg:flex container mx-auto items-center px-4 gap-6 justify-between ${
+                isHomePage ? 'py-2.5 h-20' : 'py-3 h-24'
+            }`}>
 
                 {/* Logo + delivery */}
                 <div className='flex items-center gap-3 flex-shrink-0'>
@@ -160,7 +165,9 @@ const Header = ({ openCart }) => {
             <div className='lg:hidden flex flex-col'>
 
                 {/* Row 1 — always visible on mobile */}
-                <div className='flex items-center justify-between px-3 pt-2 pb-1'>
+                <div className={`flex items-center justify-between px-3 ${
+                    isHomePage ? 'pt-1.5 pb-1' : 'pt-2 pb-1'
+                }`}>
                     {/* Left: logo + delivery */}
                     <div className='flex items-center gap-2 min-w-0 flex-1'>
                         <Link to="/" className='flex-shrink-0'>
@@ -219,7 +226,9 @@ const Header = ({ openCart }) => {
 
                 {/* Search bar — only shown on general browsing pages */}
                 {!shouldHideMobileSearch && (
-                    <div className='px-3 pb-2'>
+                    <div className={`px-3 ${
+                        isHomePage ? 'pt-0.5 pb-2' : 'pb-2'
+                    }`}>
                         <Search />
                     </div>
                 )}
