@@ -141,7 +141,14 @@ const CartMobilePage = () => {
                                         {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
                                     </p>
                                 </div>
-                                {deliveryFee > 0 && !isEstimate && !isSnapitPlus && (
+                                {deliveryInfo?.amountNeededForFreeDelivery > 0 && (
+                                    <div className='bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60'>
+                                        <p className='text-[11px] text-emerald-800 dark:text-emerald-300 font-bold text-center'>
+                                            ⚡ Add items worth <span className='font-black'>₹{deliveryInfo.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-600 dark:text-emerald-400'>FREE Delivery</span> (Within 5 km)!
+                                        </p>
+                                    </div>
+                                )}
+                                {deliveryFee > 0 && !isEstimate && !isSnapitPlus && !deliveryInfo?.amountNeededForFreeDelivery && (
                                     <div className='bg-purple-50 dark:bg-purple-950/40 p-2 rounded-xl border border-purple-100 dark:border-purple-800/60'>
                                         <p className='text-[10px] text-purple-600 dark:text-purple-300 text-center font-bold uppercase tracking-tight'>
                                             Join Snapit Plus for FREE DELIVERY on every order

@@ -46,13 +46,17 @@ self.addEventListener('push', (event) => {
   const badge = `${origin}/snapit-icon-192.png`;
   const targetUrl = payload.data?.url || (payload.data?.orderId ? `/#/dashboard/order-tracking/${payload.data.orderId}` : '/');
 
+  const tag = payload.data?.orderId 
+    ? `snapit_order_${payload.data.orderId}` 
+    : (payload.data?.type || payload.notification?.tag || 'snapit_promo');
+
   const options = {
     body,
     icon,
     badge,
     data: { url: targetUrl },
-    tag: payload.data?.orderId ? `snapit_order_${payload.data.orderId}` : `snapit_${Date.now()}`,
-    renotify: true
+    tag,
+    renotify: false
   };
 
   event.waitUntil(

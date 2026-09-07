@@ -413,6 +413,24 @@ const CheckoutPage = () => {
             )}
           </div>
 
+          {/* Free Delivery Banner (Within 5 km) */}
+          {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.distanceKm <= 5 && (
+            deliveryFee === 0 ? (
+              <div className='mx-4 mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-2xs flex items-center gap-2'>
+                <span className='text-base'>🎉</span>
+                <p className='text-xs font-bold text-emerald-800'>
+                  You unlocked <span className='font-black text-emerald-700'>FREE Delivery</span> on this order!
+                </p>
+              </div>
+            ) : deliveryInfo.amountNeededForFreeDelivery > 0 ? (
+              <div className='mx-4 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-2xs flex items-center justify-between'>
+                <p className='text-xs font-bold text-amber-900'>
+                  🛵 Add items worth <span className='font-black text-amber-800'>₹{deliveryInfo.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-700'>FREE Delivery</span>!
+                </p>
+              </div>
+            ) : null
+          )}
+
           {/* Long Distance Delivery Tier Explanation Banner */}
           {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.isLongDistance && (
             deliveryInfo.longDistanceTier === 'FLAT_ABOVE_499' ? (

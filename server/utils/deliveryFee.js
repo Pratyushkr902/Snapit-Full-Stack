@@ -48,9 +48,17 @@ export const getDistanceFromOrigin = (originLat, originLng, customerLat, custome
 //   - ₹499 & above → Flat ₹60
 // >14 km   → not serviceable
 const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
-  // Free delivery on high-value orders (₹499+) — protected unit economics
-  if (Number(subTotalAmt) >= 499) return 0
+  const amount = Number(subTotalAmt) || 0
+
+  // 1. Free delivery up to 5 km on orders of ₹149 and above!
+  if (distanceKm <= 5 && amount >= 149) return 0
+
+  // 2. Free delivery on high-value orders (₹499+) anywhere within 14 km
+  if (amount >= 499) return 0
+
+  // 3. Standard distance charges for orders below ₹149 (or beyond 5 km)
   if (distanceKm <= 3) return 12
+  if (distanceKm <= 5) return 29
   if (distanceKm <= 6) return 29
   if (distanceKm <= 14) {
     return Math.round(distanceKm * 7)

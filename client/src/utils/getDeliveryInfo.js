@@ -29,8 +29,13 @@ export const getDistanceFromStore = (customerLat, customerLng) =>
 //   - ₹499 & above → Flat ₹60
 // >14 km   → not serviceable
 export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
-  if (Number(cartTotal) >= 499) return 0
+  const numTotal = Number(cartTotal) || 0
+  // Free delivery up to 5 km on orders ₹149+
+  if (distanceKm <= 5 && numTotal >= 149) return 0
+  // Free delivery on high-value orders (₹499+) anywhere in serviceable range
+  if (numTotal >= 499) return 0
   if (distanceKm <= 3) return 12
+  if (distanceKm <= 5) return 29
   if (distanceKm <= 6) return 29
   if (distanceKm <= 14) {
     return Math.round(distanceKm * 7)
@@ -61,7 +66,9 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   const isEvening = isAfterEveningCutoff()
 
   const numCartTotal = Number(cartTotal) || 0
-  const daytimeCharge = numCartTotal >= 499 ? 0 : dist <= 3 ? 12 : dist <= 6 ? 29 : Math.round(dist * 7)
+  const daytimeCharge = (dist <= 5 && numCartTotal >= 149) || numCartTotal >= 499 
+    ? 0 
+    : dist <= 3 ? 12 : dist <= 6 ? 29 : Math.round(dist * 7)
 
   // After 7:30 PM, deliveries beyond 5km are closed for rider night safety
   if (dist > 5 && isEvening) {
@@ -96,9 +103,15 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   let charge = 12
   let longDistanceTier = null // 'PER_KM' | 'FLAT_ABOVE_499'
   let amountNeededForFlatRate = 0
+  let amountNeededForFreeDelivery = 0
 
-  if (dist <= 3) {
-    charge = 12
+  if (dist <= 5) {
+    if (numCartTotal >= 149) {
+      charge = 0
+    } else {
+      charge = dist <= 3 ? 12 : 29
+      amountNeededForFreeDelivery = Math.max(0, 149 - numCartTotal)
+    }
   } else if (dist <= 6) {
     charge = 29
   } else {
@@ -136,6 +149,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
     ratePerKm: 7,
     flatAbove499Fee: 60,
     amountNeededForFlatRate,
+    amountNeededForFreeDelivery,
     minOrder: 0,
   }
 }

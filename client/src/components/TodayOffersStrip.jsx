@@ -2,6 +2,7 @@ import React from 'react'
 import toast from 'react-hot-toast'
 
 const COUPON_PILLS = [
+  { code: 'FREEDEL', note: 'Free Delivery on ₹149+ (5km)', icon: '🛵', color: 'bg-green-50 text-green-900 border-green-300 hover:border-green-400' },
   { code: 'SNAPIT50', note: 'Special Deals', icon: '🏡', color: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:border-emerald-300' },
   { code: 'WELCOME', note: '1st Order', icon: '⚡', color: 'bg-amber-50 text-amber-900 border-amber-200 hover:border-amber-300' },
   { code: 'BIRYANIFREE', note: 'Alka & Biryani', icon: '🍗', color: 'bg-orange-50 text-orange-800 border-orange-200 hover:border-orange-300' },
