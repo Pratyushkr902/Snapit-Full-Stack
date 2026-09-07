@@ -67,10 +67,6 @@ const UserMenuMobile = () => {
           </button>
           <h1 className='text-lg font-black text-slate-900 dark:text-white tracking-tight'>My Account</h1>
         </div>
-        <Link to='/wallet' className='px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-black flex items-center gap-1 active:scale-95 transition-transform'>
-          <span>👛</span>
-          <span>Wallet</span>
-        </Link>
       </div>
 
       <div className='text-sm grid gap-1.5 p-3'>
