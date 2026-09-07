@@ -66,6 +66,9 @@ function App() {
     currentNormalizedRoute.includes('select-location') || 
     currentNormalizedRoute.includes('/address');
 
+  // Dedicated mobile user account page
+  const isUserPage = currentNormalizedRoute === '/user' || currentNormalizedRoute.startsWith('/user/');
+
   useEffect(() => {
     if (isCheckoutOrCartPage) {
       setShowCart(false)
@@ -277,14 +280,14 @@ function App() {
         <div className="App">
           <AppUpdateModal />
           <NotificationPermissionBanner />
-          {!isDashboard && !isFoodPage && !isSelectLocation && !isCartPage && <StoreClosedOverlay />}
-          {!isDashboard && !isSelectLocation && !isCartPage && <Header openCart={() => setShowCart(true)} />}
+          {!isDashboard && !isFoodPage && !isSelectLocation && !isCartPage && !isUserPage && <StoreClosedOverlay />}
+          {!isDashboard && !isSelectLocation && !isCartPage && !isUserPage && <Header openCart={() => setShowCart(true)} />}
           
-          <main className={isDashboard || isSelectLocation || isCartPage ? '' : 'min-h-[78vh]'}>
+          <main className={isDashboard || isSelectLocation || isCartPage || isUserPage ? '' : 'min-h-[78vh]'}>
             <Outlet />
           </main>
           
-          {!isDashboard && !isSelectLocation && !isCartPage && <Footer />}
+          {!isDashboard && !isSelectLocation && !isCartPage && !isUserPage && <Footer />}
           {/* {!isDashboard && <WhatsAppButton />} */}
           
           <Toaster position="top-center" reverseOrder={false} />

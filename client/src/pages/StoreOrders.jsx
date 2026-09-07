@@ -182,7 +182,7 @@ const StoreOrders = () => {
         <div className='min-h-screen bg-slate-50 dark:bg-slate-950 pb-28 text-slate-800 dark:text-slate-100 transition-colors'>
 
             {/* ── TOP STICKY APP HEADER (Native mobile & desktop) ── */}
-            <header className='sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm px-3 sm:px-6 py-3'>
+            <header className='sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm px-3 sm:px-6 pb-3 pt-safe-header'>
                 <div className='max-w-7xl mx-auto flex items-center justify-between gap-2'>
                     {/* Back + Title */}
                     <div className='flex items-center gap-2.5 min-w-0'>

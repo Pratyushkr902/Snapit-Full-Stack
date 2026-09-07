@@ -498,9 +498,9 @@ export default function RestaurantDetailPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
 
-      {/* ── Banner ── */}
-      <div className="relative">
-        {bannerSrc && (
+      {/* ── Banner / Top Navigation ── */}
+      {bannerSrc ? (
+        <div className="relative">
           <div className="h-48 sm:h-64 bg-gray-200 overflow-hidden">
             <img
               src={bannerSrc}
@@ -512,16 +512,30 @@ export default function RestaurantDetailPage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           </div>
-        )}
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2.5 rounded-xl shadow"
-        >
-          <svg className="w-5 h-5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-      </div>
+          <button
+            onClick={() => navigate(-1)}
+            className="absolute top-safe-btn left-4 bg-white/90 backdrop-blur-sm p-2.5 rounded-xl shadow z-20 active:scale-95 transition-all"
+            aria-label="Back"
+          >
+            <svg className="w-5 h-5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
+      ) : (
+        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 pb-3 pt-safe-header flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 rounded-full bg-gray-100 active:scale-95 transition-all"
+            aria-label="Back"
+          >
+            <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <span className="font-bold text-gray-900 text-base truncate">{restaurant?.name || 'Restaurant'}</span>
+        </div>
+      )}
 
       {loading ? <Skeleton /> : !restaurant ? (
         <div className="flex flex-col items-center py-20">

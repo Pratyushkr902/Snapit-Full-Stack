@@ -101,7 +101,7 @@ const SuperAdminDashboard = () => {
 
   return (
     <SuperAdminPermision>
-      <div className="pt-safe pt-12 sm:pt-6 px-3 sm:px-6 pb-28 max-w-6xl mx-auto w-full overflow-hidden">
+      <div className="pt-safe-header px-3 sm:px-6 pb-28 max-w-6xl mx-auto w-full overflow-hidden">
         {/* Mobile Header */}
         <div className='flex items-center gap-3 mb-6'>
           <button

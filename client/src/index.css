@@ -135,13 +135,23 @@ html.dark .App {
 }
 
 .pt-safe-top {
-  padding-top: 36px;
-  padding-top: max(env(safe-area-inset-top, 0px), 36px);
+  padding-top: 48px;
+  padding-top: max(env(safe-area-inset-top, 0px), 48px);
 }
 
 .pt-safe-header {
-  padding-top: 50px;
-  padding-top: max(env(safe-area-inset-top, 0px), 50px);
+  padding-top: 54px;
+  padding-top: max(env(safe-area-inset-top, 0px), 54px);
+}
+
+.pt-safe-panel {
+  padding-top: 58px;
+  padding-top: max(env(safe-area-inset-top, 0px), 58px);
+}
+
+.top-safe-btn {
+  top: 54px;
+  top: max(env(safe-area-inset-top, 0px) + 8px, 54px);
 }
 
 .pb-safe {

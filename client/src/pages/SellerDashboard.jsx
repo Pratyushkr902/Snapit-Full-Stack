@@ -207,7 +207,7 @@ const SellerDashboard = () => {
     return (
         <div className='min-h-screen bg-slate-950 text-white pb-20'>
             {/* Header */}
-            <div className='sticky top-0 z-30 bg-slate-950 border-b border-slate-800 px-4 pt-3 pb-2 flex items-center justify-between'>
+            <div className='sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 px-4 pb-2 pt-safe-header flex items-center justify-between'>
                 <div>
                     <h1 className='text-lg font-black'>My Store</h1>
                     <p className='text-[10px] text-slate-500 font-bold uppercase tracking-widest'>Snapit Seller</p>

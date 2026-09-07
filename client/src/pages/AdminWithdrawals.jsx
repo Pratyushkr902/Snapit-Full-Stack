@@ -48,7 +48,7 @@ const AdminWithdrawals = () => {
 
   return (
     <SuperAdminPermision>
-      <div style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
+      <div className="pt-safe-header" style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
         <button onClick={() => navigate('/dashboard/super-admin')}
           style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '800', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '14px', padding: 0 }}>
           ← Back to Super Admin Panel

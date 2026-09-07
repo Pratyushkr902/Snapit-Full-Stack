@@ -219,7 +219,7 @@ export default function RestoSellerDashboard() {
     <div className='min-h-screen bg-slate-950 text-white'>
 
       {/* ── Header ── */}
-      <div className='bg-slate-900 border-b border-slate-800 px-4 py-4'>
+      <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 pb-4 pt-safe-header'>
         <div className='flex items-center justify-between gap-3 flex-wrap'>
           <div className='flex items-center gap-3 min-w-0'>
             <div className='w-10 h-10 rounded-2xl overflow-hidden bg-slate-800 flex-shrink-0'>

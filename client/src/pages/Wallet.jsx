@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { IoArrowBack } from 'react-icons/io5'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
 import { useGlobalContext } from '../provider/GlobalProvider'
@@ -81,7 +83,7 @@ const loadRazorpay = () =>
 const Spinner = ({ dark }) => <span className={`spin-el${dark ? ' dark' : ''}`} />
 
 const Skeleton = () => (
-  <div style={{ padding:'16px', maxWidth:'480px', margin:'0 auto' }}>
+  <div className="pt-safe-header" style={{ padding:'16px', maxWidth:'480px', margin:'0 auto' }}>
     <div className="shimmer" style={{ height:'190px', marginBottom:'16px' }} />
     <div className="shimmer" style={{ height:'56px', marginBottom:'12px' }} />
     <div className="shimmer" style={{ height:'300px' }} />
@@ -99,6 +101,7 @@ const PLUS_FEATURES = [
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 const Wallet = () => {
+  const navigate = useNavigate()
   const [balance,      setBalance]      = useState(0)
   const [transactions, setTransactions] = useState([])
   const [amount,       setAmount]       = useState('')
@@ -363,6 +366,19 @@ const Wallet = () => {
   return (
     <div className="wallet-root">
       <style>{STYLES}</style>
+
+      {/* Notch & Status Bar Safe Header */}
+      <div className="bg-white/95 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/80 px-4 pb-3 pt-safe-header flex items-center justify-between">
+        <button
+          onClick={() => navigate(-1)}
+          className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer shadow-sm"
+          aria-label="Go back"
+        >
+          <IoArrowBack size={18} />
+        </button>
+        <h1 className="text-base font-black text-slate-800 tracking-tight">Snapit Wallet</h1>
+        <div className="w-9" />
+      </div>
 
       <div style={{ maxWidth:'480px', margin:'0 auto', padding:'16px' }}>
 

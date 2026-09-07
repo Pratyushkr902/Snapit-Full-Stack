@@ -188,7 +188,7 @@ const SellerEarnings = () => {
         <div className="min-h-screen bg-gray-50">
 
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-5">
+            <div className="bg-white border-b border-gray-200 px-6 pb-5 pt-safe-header">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">

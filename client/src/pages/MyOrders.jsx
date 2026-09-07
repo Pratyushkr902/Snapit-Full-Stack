@@ -114,7 +114,7 @@ const MyOrders = () => {
     <div className='bg-neutral-50 min-h-screen pb-10'>
 
       {/* Header with Back Button */}
-      <div className='bg-white shadow-md p-4 font-bold text-xl sticky top-0 z-10 flex items-center gap-3'>
+      <div className='bg-white dark:bg-slate-900 shadow-md px-4 pb-4 pt-safe-header font-bold text-xl sticky top-0 z-10 flex items-center gap-3'>
         <button onClick={() => navigate(-1)} className='text-neutral-500 hover:text-neutral-800 transition-colors'>
           <IoArrowBack size={22} />
         </button>

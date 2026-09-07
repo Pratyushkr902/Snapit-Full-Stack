@@ -446,7 +446,7 @@ const FoodCheckoutPage = () => {
     <section className='bg-gray-100 min-h-screen pb-32'>
 
       {/* ── Top bar ─────────────────────────────────────────────────── */}
-      <div className='sticky top-0 z-20 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3'>
+      <div className='sticky top-0 z-20 bg-white border-b border-gray-100 px-4 pb-3 pt-safe-header flex items-center gap-3'>
         <button
           onClick={() => navigate(-1)}
           className='w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 bg-white'

@@ -63,7 +63,7 @@ const AdminRefunds = () => {
     const filtered = filterStatus === 'all' ? refunds : refunds.filter(r => r.status === filterStatus)
 
     return (
-        <section className='min-h-screen bg-gray-50 p-4'>
+        <section className='min-h-screen bg-gray-50 p-4 pt-safe-header'>
             <div className='max-w-4xl mx-auto'>
                 <div className='flex items-center gap-3 mb-1'>
                     <button

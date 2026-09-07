@@ -807,7 +807,7 @@ const RiderDashboard = () => {
         .reduce((acc, curr) => acc + (Number(curr?.totalAmt) || 0), 0);
 
     if (loading) return (
-        <div className='flex flex-col items-center justify-center min-h-screen bg-slate-950'>
+        <div className='flex flex-col items-center justify-center min-h-screen bg-slate-950 pt-safe-header'>
             <div className='relative w-16 h-16 mb-6'>
                 <div className='absolute inset-0 border-4 border-blue-500/30 rounded-full'></div>
                 <div className='absolute inset-0 border-4 border-t-blue-400 rounded-full animate-spin'></div>
@@ -821,7 +821,7 @@ const RiderDashboard = () => {
         <div className='min-h-screen bg-slate-950 text-white w-full max-w-full overflow-x-hidden pb-12 font-sans'>
 
             {/* ── TOP HEADER BAR ── */}
-            <header className='sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-4 py-2.5 w-full'>
+            <header className='sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-4 pb-2.5 pt-safe-header w-full shadow-md'>
                 <div className='max-w-5xl mx-auto space-y-2'>
                     
                     {/* Top Row: Navigation + Duty Switcher + Refresh */}

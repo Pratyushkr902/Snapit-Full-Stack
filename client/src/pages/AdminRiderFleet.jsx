@@ -179,7 +179,7 @@ const AdminRiderFleet = () => {
     <div className='min-h-screen bg-slate-950 text-white pb-12 w-full max-w-full overflow-x-hidden'>
       
       {/* ── HEADER ── */}
-      <div className='sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-3 sm:px-4 py-3 w-full'>
+      <div className='sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-3 sm:px-4 pb-3 pt-safe-header w-full'>
         <div className='max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2 sm:gap-3'>
           <div className='flex items-center gap-2.5 min-w-0'>
             <button

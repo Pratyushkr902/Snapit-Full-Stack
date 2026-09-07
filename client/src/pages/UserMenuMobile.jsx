@@ -12,6 +12,7 @@ import { ACCESS_TOKEN_KEY } from '../constants/storageKeys'
 
 import secureStorage from '../utils/secureStorage'
 import ThemeToggle from '../components/ThemeToggle'
+import { IoArrowBack } from 'react-icons/io5'
 
 const UserMenuMobile = () => {
   const user = useSelector((state) => state.user)
@@ -52,10 +53,29 @@ const UserMenuMobile = () => {
   }
 
   return (
-    <div className='text-sm grid gap-1 p-3 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors'>
+    <div className='bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors pb-24'>
 
-      {/* USER INFO */}
-      <div className='p-3.5 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-800/80 mb-1'>
+      {/* ── TOP STICKY NOTCH-SAFE HEADER ── */}
+      <div className='sticky top-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800/80 px-4 pb-3 pt-safe-header flex items-center justify-between shadow-xs'>
+        <div className='flex items-center gap-2.5'>
+          <button
+            onClick={() => navigate(-1)}
+            className='w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 active:scale-90 transition-transform'
+            aria-label='Back'
+          >
+            <IoArrowBack size={18} />
+          </button>
+          <h1 className='text-lg font-black text-slate-900 dark:text-white tracking-tight'>My Account</h1>
+        </div>
+        <Link to='/wallet' className='px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-black flex items-center gap-1 active:scale-95 transition-transform'>
+          <span>👛</span>
+          <span>Wallet</span>
+        </Link>
+      </div>
+
+      <div className='text-sm grid gap-1.5 p-3'>
+        {/* USER INFO CARD */}
+        <div className='p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-800/80 mb-1 shadow-xs'>
         <p className='font-bold text-slate-900 dark:text-white text-base'>{user?.name || user?.mobile}</p>
         <p className='text-xs text-slate-500 dark:text-slate-400 mt-0.5'>{user?.email}</p>
         {role && (
@@ -166,6 +186,7 @@ const UserMenuMobile = () => {
         Log Out
       </button>
 
+      </div>
     </div>
   )
 }

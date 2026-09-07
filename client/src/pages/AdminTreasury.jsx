@@ -196,7 +196,7 @@ const AdminTreasury = () => {
   const transactions = data?.transactions || []
 
   return (
-    <div className='p-4 sm:p-6 max-w-6xl mx-auto font-sans min-h-screen pb-24'>
+    <div className='p-4 sm:p-6 pt-safe-header max-w-6xl mx-auto font-sans min-h-screen pb-24'>
       {/* Header */}
       <div className='flex flex-wrap items-center justify-between gap-4 mb-6'>
         <div>

@@ -221,7 +221,7 @@ export default function AdminSellerStorePanel() {
     <div className='min-h-screen bg-slate-950 text-white'>
 
       {/* ── Header ── */}
-      <div className='bg-slate-900 border-b border-slate-800 px-4 py-4'>
+      <div className='sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 pb-4 pt-safe-header'>
         <div className='flex items-center justify-between'>
           <div>
             <p className='font-black text-white text-base'>🏪 Store Panel</p>
