@@ -96,7 +96,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     visibility: 'public',
                     defaultSound: true,
                     defaultVibrateTimings: true,
-                    tag: `${androidTag}_${Date.now()}`,
+                    tag: androidTag,
                 },
             },
             apns: {
@@ -121,8 +121,8 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                     icon: 'https://snapit.pages.dev/snapit-icon-192.png',
                     badge: 'https://snapit.pages.dev/snapit-icon-192.png',
                     vibrate: [200, 100, 200],
-                    tag: `${androidTag}_${Date.now()}`,
-                    renotify: true,
+                    tag: androidTag,
+                    renotify: false,
                     requireInteraction: false
                 },
                 data: {

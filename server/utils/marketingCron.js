@@ -32,12 +32,31 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
       DeviceTokenModel.find({
         token: { $exists: true, $ne: null, $ne: '' },
         lastActiveAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Active in last 30 days
-      }).select('token userId').lean()
+      }).sort({ lastActiveAt: -1 }).select('token userId platform lastActiveAt').lean()
     ])
 
     const tokenMap = new Map()
+    const seenUserPlatform = new Set()
 
-    // 1. Add canonical active token per registered user
+    // 1. Add newest active token per user and platform from DeviceToken registry (avoids duplicate pushes to same device)
+    deviceDocs.forEach(d => {
+      const cleanToken = d.token?.trim()
+      if (!cleanToken || cleanToken.length <= 10) return
+
+      if (d.userId) {
+        const userKey = `${String(d.userId)}_${d.platform || 'unknown'}`
+        if (!seenUserPlatform.has(userKey)) {
+          seenUserPlatform.add(userKey)
+          tokenMap.set(cleanToken, { name: 'Customer', userId: d.userId })
+        }
+      } else {
+        if (!tokenMap.has(cleanToken)) {
+          tokenMap.set(cleanToken, { name: 'Customer' })
+        }
+      }
+    })
+
+    // 2. For users who only have token in UserModel and not in DeviceTokenModel
     users.forEach(u => {
       let bestToken = null
       if (u.fcmToken && typeof u.fcmToken === 'string' && u.fcmToken.trim().length > 10) {
@@ -47,16 +66,12 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
         if (valid.length > 0) bestToken = valid[valid.length - 1].trim()
       }
 
-      if (bestToken && !tokenMap.has(bestToken)) {
-        tokenMap.set(bestToken, u)
-      }
-    })
-
-    // 2. Add all unique registered and guest devices from DeviceToken registry
-    deviceDocs.forEach(d => {
-      const cleanToken = d.token?.trim()
-      if (cleanToken && cleanToken.length > 10 && !tokenMap.has(cleanToken)) {
-        tokenMap.set(cleanToken, { name: 'Customer' })
+      if (bestToken) {
+        const userKeyPrefix = String(u._id)
+        const alreadyHasDevice = Array.from(seenUserPlatform).some(k => k.startsWith(userKeyPrefix))
+        if (!alreadyHasDevice && !tokenMap.has(bestToken)) {
+          tokenMap.set(bestToken, u)
+        }
       }
     })
 
