@@ -787,6 +787,24 @@ const FoodCheckoutPage = () => {
 
       {/* ── Bill details ─────────────────────────────────────────────── */}
       <div className='bg-white mt-2 px-4 py-4'>
+        {/* Free Delivery Banner for Food (Within 5 km) */}
+        {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.distanceKm <= 5 && (
+          deliveryFee === 0 ? (
+            <div className='mb-3.5 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-2xs flex items-center gap-2'>
+              <span className='text-base'>🎉</span>
+              <p className='text-xs font-bold text-emerald-800'>
+                You unlocked <span className='font-black text-emerald-700'>FREE Delivery</span> on this food order!
+              </p>
+            </div>
+          ) : restaurantPricing[0]?.info?.amountNeededForFreeDelivery > 0 ? (
+            <div className='mb-3.5 p-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-2xs flex items-center justify-between'>
+              <p className='text-xs font-bold text-amber-900'>
+                🛵 Add food worth <span className='font-black text-amber-800'>₹{restaurantPricing[0].info.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-700'>FREE Delivery</span>!
+              </p>
+            </div>
+          ) : null
+        )}
+
         {/* Long Distance Delivery Tier Explanation Banner for Food */}
         {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.isLongDistance && (
           restaurantPricing[0]?.info?.longDistanceTier === 'FLAT_ABOVE_499' ? (
