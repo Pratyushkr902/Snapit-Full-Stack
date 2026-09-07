@@ -766,8 +766,16 @@ export async function saveFcmTokenController(request, response) {
             { upsert: true, new: true }
         ).catch(() => {})
 
-        // 2. If logged in, save to User model (replace with clean active token to prevent 2x duplicate pushes)
+        // 2. If logged in, clean up older tokens for this user on this platform to prevent duplicate devices
         if (userId) {
+            if (platform) {
+                await DeviceTokenModel.deleteMany({
+                    userId,
+                    platform,
+                    token: { $ne: cleanToken }
+                }).catch(() => {})
+            }
+
             await UserModel.findByIdAndUpdate(userId, {
                 fcmToken: cleanToken,
                 fcmTokens: [cleanToken]

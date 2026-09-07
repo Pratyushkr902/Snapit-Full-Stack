@@ -225,17 +225,7 @@ const useNotifications = () => {
                 }
               )
 
-              if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                try {
-                  new Notification(title, {
-                    body,
-                    icon: '/snapit-icon-192.png',
-                    badge: '/snapit-icon-192.png'
-                  })
-                } catch (e) {
-                  // Fallback to in-app toast
-                }
-              }
+              // In-app toast already displayed above with sound; do not spawn a duplicate native OS window notification
             })
           }
         }

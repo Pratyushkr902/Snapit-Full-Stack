@@ -201,39 +201,42 @@ const saveAndSend = async ({
 }) => {
   let fcmMessageId = null;
 
-  // Auto-resolve all active FCM tokens from DeviceTokenModel AND UserModel
+  // Auto-resolve single primary active FCM token (prioritizing native mobile app)
   let targetTokens = [];
-  if (fcmToken && typeof fcmToken === 'string' && fcmToken.trim().length > 10) {
-    targetTokens.push(fcmToken.trim());
-  }
-  
   if (recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
     try {
       const DeviceTokenModel = (await import("../models/deviceToken.model.js")).default;
       const deviceDocs = await DeviceTokenModel.find({
         userId: recipientId,
         lastActiveAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-      }).select("token").lean();
+      }).sort({ lastActiveAt: -1 }).select("token platform lastActiveAt").lean();
       
-      deviceDocs.forEach(d => {
-        if (d.token && typeof d.token === 'string' && d.token.trim().length > 10) {
-          targetTokens.push(d.token.trim());
-        }
-      });
+      const nativeDev = deviceDocs.find(d => d.platform === 'android' || d.platform === 'ios');
+      const webDev = deviceDocs.find(d => d.platform === 'web');
 
-      const UserModel = mongoose.models.User || mongoose.model("User");
-      const userDoc = await UserModel.findById(recipientId).select("fcmToken fcmTokens").lean();
-      if (userDoc?.fcmToken && typeof userDoc.fcmToken === 'string' && userDoc.fcmToken.trim().length > 10) {
-        targetTokens.push(userDoc.fcmToken.trim());
+      if (nativeDev?.token) {
+        targetTokens.push(nativeDev.token.trim());
+      } else if (webDev?.token) {
+        targetTokens.push(webDev.token.trim());
+      } else if (deviceDocs[0]?.token) {
+        targetTokens.push(deviceDocs[0].token.trim());
       }
-      if (Array.isArray(userDoc?.fcmTokens)) {
-        userDoc.fcmTokens.forEach(t => {
-          if (t && typeof t === 'string' && t.trim().length > 10) targetTokens.push(t.trim());
-        });
+
+      if (targetTokens.length === 0) {
+        const UserModel = mongoose.models.User || mongoose.model("User");
+        const userDoc = await UserModel.findById(recipientId).select("fcmToken fcmTokens").lean();
+        if (userDoc?.fcmToken && typeof userDoc.fcmToken === 'string' && userDoc.fcmToken.trim().length > 10) {
+          targetTokens.push(userDoc.fcmToken.trim());
+        }
       }
     } catch (e) {
       console.warn(`[FCM Token Lookup Error] recipientId=${recipientId}:`, e.message);
     }
+  }
+
+  // Fallback to explicitly passed fcmToken if no device resolved
+  if (targetTokens.length === 0 && fcmToken && typeof fcmToken === 'string' && fcmToken.trim().length > 10) {
+    targetTokens.push(fcmToken.trim());
   }
 
   const uniqueTokens = [...new Set(targetTokens.filter(t => typeof t === 'string' && t.trim().length > 10))];

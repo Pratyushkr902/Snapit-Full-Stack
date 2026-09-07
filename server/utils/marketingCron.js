@@ -36,28 +36,46 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
     ])
 
     const tokenMap = new Map()
-    const seenUserPlatform = new Set()
+    const userDevices = new Map() // userId -> chosen deviceDoc
+    const guestTokens = new Set()
 
-    // 1. Add newest active token per user and platform from DeviceToken registry (avoids duplicate pushes to same device)
+    // 1. Group device tokens per user and select their SINGLE best device
+    // Priority: android/ios > web. If multiple of same type, pick newest lastActiveAt.
     deviceDocs.forEach(d => {
       const cleanToken = d.token?.trim()
       if (!cleanToken || cleanToken.length <= 10) return
 
       if (d.userId) {
-        const userKey = `${String(d.userId)}_${d.platform || 'unknown'}`
-        if (!seenUserPlatform.has(userKey)) {
-          seenUserPlatform.add(userKey)
-          tokenMap.set(cleanToken, { name: 'Customer', userId: d.userId })
+        const uid = String(d.userId)
+        if (!userDevices.has(uid)) {
+          userDevices.set(uid, d)
+        } else {
+          const existing = userDevices.get(uid)
+          const isExistingNative = existing.platform === 'android' || existing.platform === 'ios'
+          const isCurrentNative = d.platform === 'android' || d.platform === 'ios'
+          // Upgrade web to native app
+          if (!isExistingNative && isCurrentNative) {
+            userDevices.set(uid, d)
+          }
         }
       } else {
-        if (!tokenMap.has(cleanToken)) {
-          tokenMap.set(cleanToken, { name: 'Customer' })
-        }
+        guestTokens.add(cleanToken)
       }
     })
 
+    const seenUsers = new Set()
+
+    // Add exactly ONE device token per registered user
+    for (const [uid, dev] of userDevices.entries()) {
+      tokenMap.set(dev.token.trim(), { name: 'Customer', userId: uid, platform: dev.platform })
+      seenUsers.add(uid)
+    }
+
     // 2. For users who only have token in UserModel and not in DeviceTokenModel
     users.forEach(u => {
+      const uid = String(u._id)
+      if (seenUsers.has(uid)) return // Already have their primary active device!
+
       let bestToken = null
       if (u.fcmToken && typeof u.fcmToken === 'string' && u.fcmToken.trim().length > 10) {
         bestToken = u.fcmToken.trim()
@@ -66,14 +84,18 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
         if (valid.length > 0) bestToken = valid[valid.length - 1].trim()
       }
 
-      if (bestToken) {
-        const userKeyPrefix = String(u._id)
-        const alreadyHasDevice = Array.from(seenUserPlatform).some(k => k.startsWith(userKeyPrefix))
-        if (!alreadyHasDevice && !tokenMap.has(bestToken)) {
-          tokenMap.set(bestToken, u)
-        }
+      if (bestToken && !tokenMap.has(bestToken)) {
+        tokenMap.set(bestToken, { name: u.name || 'Customer', userId: uid })
+        seenUsers.add(uid)
       }
     })
+
+    // 3. Add guest / anonymous devices (skip if token is already registered to a user)
+    for (const gToken of guestTokens) {
+      if (!tokenMap.has(gToken)) {
+        tokenMap.set(gToken, { name: 'Customer' })
+      }
+    }
 
     const uniqueTokens = Array.from(tokenMap.keys())
     if (uniqueTokens.length === 0) return { success: true, deliveredCount: 0, totalDevices: 0 }

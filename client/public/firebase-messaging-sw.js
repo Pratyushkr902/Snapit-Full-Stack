@@ -14,6 +14,9 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// Service Worker In-Memory Deduplication Cache (prevents duplicate notification spawns within 5s)
+const recentNotifs = new Map();
+
 // ── Native W3C Push Handler (Guarantees iOS Safari & WebKit Display) ─────────
 self.addEventListener('push', (event) => {
   let payload = {};
@@ -38,6 +41,22 @@ self.addEventListener('push', (event) => {
     payload.body ||
     'Your order status has been updated';
 
+  // Deduplication check: suppress duplicate pushes received within 5 seconds
+  const dedupKey = `${title}__${body}`.trim();
+  const now = Date.now();
+  if (recentNotifs.has(dedupKey) && (now - recentNotifs.get(dedupKey) < 5000)) {
+    console.log('[firebase-messaging-sw.js] 🔇 Duplicate push suppressed:', dedupKey);
+    return;
+  }
+  recentNotifs.set(dedupKey, now);
+
+  // Clean stale keys
+  if (recentNotifs.size > 50) {
+    for (const [k, time] of recentNotifs.entries()) {
+      if (now - time > 15000) recentNotifs.delete(k);
+    }
+  }
+
   const origin = self.location.origin || 'https://snapit.pages.dev';
   let icon = payload.notification?.icon || payload.data?.icon || `${origin}/snapit-icon-192.png`;
   if (typeof icon === 'string' && !icon.startsWith('http://') && !icon.startsWith('https://')) {
@@ -48,7 +67,7 @@ self.addEventListener('push', (event) => {
 
   const tag = payload.data?.orderId 
     ? `snapit_order_${payload.data.orderId}` 
-    : (payload.data?.type || payload.notification?.tag || 'snapit_promo');
+    : (payload.notification?.tag || payload.data?.type || 'snapit_promo');
 
   const options = {
     body,
