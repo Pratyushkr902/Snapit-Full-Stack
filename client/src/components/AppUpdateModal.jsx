@@ -76,11 +76,12 @@ const AppUpdateModal = () => {
             return
           }
 
-          // Check if user dismissed recently (within 24 hours)
+          // Check if user dismissed recently (within 1 hour)
+          const remindIntervalHours = Number(data?.remindIntervalHours ?? 1)
           const lastDismissed = localStorage.getItem(DISMISS_KEY)
           if (lastDismissed) {
             const diffHours = (Date.now() - Number(lastDismissed)) / (1000 * 60 * 60)
-            if (diffHours < 24) return
+            if (diffHours < remindIntervalHours) return
           }
 
           setUpdateInfo(data)

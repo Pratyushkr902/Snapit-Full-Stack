@@ -9,6 +9,7 @@ export const getAppVersionController = async (req, res) => {
         latestVersionCode: 83,
         minRequiredVersionCode: 82,
         forceUpdate: false,
+        remindIntervalHours: 1,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit-ashy.vercel.app/app-release.apk",
         title: "Update Available 🚀",
