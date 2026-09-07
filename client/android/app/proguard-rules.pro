@@ -27,5 +27,9 @@
 # Suppress harmless build warnings from third-party libraries
 -dontwarn org.apache.cordova.**
 -dontwarn com.getcapacitor.**
+-dontwarn androidx.**
+
+# Keep app classes
+-keep public class com.snapit.grocery.** { *; }
 
 
