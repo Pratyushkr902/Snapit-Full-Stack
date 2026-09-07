@@ -87,7 +87,11 @@ const AdminMarketingHub = () => {
     }
   }
 
+  const [triggeringType, setTriggeringType] = useState(null)
+
   const handleTriggerSchedule = async (type, name) => {
+    if (triggeringType || sending) return
+    setTriggeringType(type)
     try {
       toast.loading(`Executing ${name}...`, { id: 'trigger-cron' })
       const res = await Axios({
@@ -104,6 +108,8 @@ const AdminMarketingHub = () => {
       }
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message, { id: 'trigger-cron' })
+    } finally {
+      setTimeout(() => setTriggeringType(null), 3000)
     }
   }
 
@@ -145,10 +151,11 @@ const AdminMarketingHub = () => {
           </div>
           <button
             type='button'
+            disabled={Boolean(triggeringType || sending)}
             onClick={() => handleTriggerSchedule('BREAKFAST', 'Breakfast Rush')}
-            className='w-full py-1 text-[11px] font-bold bg-amber-200/80 hover:bg-amber-300 text-amber-950 rounded-lg transition-all active:scale-95'
+            className='w-full py-1 text-[11px] font-bold bg-amber-200/80 hover:bg-amber-300 disabled:opacity-50 text-amber-950 rounded-lg transition-all active:scale-95'
           >
-            ⚡ Test Run Breakfast
+            {triggeringType === 'BREAKFAST' ? '⏳ Sending...' : '⚡ Test Run Breakfast'}
           </button>
         </div>
 
@@ -166,10 +173,11 @@ const AdminMarketingHub = () => {
           </div>
           <button
             type='button'
+            disabled={Boolean(triggeringType || sending)}
             onClick={() => handleTriggerSchedule('CHAI_TIME', 'Chai & Snacks')}
-            className='w-full py-1 text-[11px] font-bold bg-orange-200/80 hover:bg-orange-300 text-orange-950 rounded-lg transition-all active:scale-95'
+            className='w-full py-1 text-[11px] font-bold bg-orange-200/80 hover:bg-orange-300 disabled:opacity-50 text-orange-950 rounded-lg transition-all active:scale-95'
           >
-            ⚡ Test Run Chai Time
+            {triggeringType === 'CHAI_TIME' ? '⏳ Sending...' : '⚡ Test Run Chai Time'}
           </button>
         </div>
 
@@ -187,10 +195,11 @@ const AdminMarketingHub = () => {
           </div>
           <button
             type='button'
+            disabled={Boolean(triggeringType || sending)}
             onClick={() => handleTriggerSchedule('DINNER', 'Dinner Feast')}
-            className='w-full py-1 text-[11px] font-bold bg-rose-200/80 hover:bg-rose-300 text-rose-950 rounded-lg transition-all active:scale-95'
+            className='w-full py-1 text-[11px] font-bold bg-rose-200/80 hover:bg-rose-300 disabled:opacity-50 text-rose-950 rounded-lg transition-all active:scale-95'
           >
-            ⚡ Test Run Dinner
+            {triggeringType === 'DINNER' ? '⏳ Sending...' : '⚡ Test Run Dinner'}
           </button>
         </div>
 
@@ -208,10 +217,11 @@ const AdminMarketingHub = () => {
           </div>
           <button
             type='button'
+            disabled={Boolean(triggeringType || sending)}
             onClick={() => handleTriggerSchedule('CART_NUDGE', 'Cart Recovery Sweep')}
-            className='w-full py-1 text-[11px] font-bold bg-blue-200/80 hover:bg-blue-300 text-blue-950 rounded-lg transition-all active:scale-95'
+            className='w-full py-1 text-[11px] font-bold bg-blue-200/80 hover:bg-blue-300 disabled:opacity-50 text-blue-950 rounded-lg transition-all active:scale-95'
           >
-            ⚡ Run Cart Nudge Now
+            {triggeringType === 'CART_NUDGE' ? '⏳ Running...' : '⚡ Run Cart Nudge Now'}
           </button>
         </div>
       </div>

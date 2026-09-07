@@ -19,9 +19,29 @@ export async function acquireCronLock(lockKey) {
   }
 }
 
+// Distributed broadcast debounce: guarantees no two broadcasts run within 30 seconds
+const BROADCAST_DEBOUNCE_MS = 30 * 1000
+let lastBroadcastTimestamp = 0
+
 // Helper: Broadcast to all active unique devices in batches
 export async function broadcastToAllUsers({ title, shayari, body, type, promoTag = 'DAILY_CRAVING' }) {
   try {
+    const now = Date.now()
+    if (now - lastBroadcastTimestamp < BROADCAST_DEBOUNCE_MS) {
+      console.warn(`🛑 [Marketing Engine] Broadcast "${title}" skipped by in-memory debounce (${Math.round((now - lastBroadcastTimestamp) / 1000)}s since previous broadcast).`)
+      return { success: false, message: 'Throttled: A broadcast was already sent in the last 30 seconds.' }
+    }
+
+    // Atomic distributed lock in MongoDB across instances (30s slot)
+    const broadcastLockKey = `BROADCAST_LOCK_${Math.floor(now / 30000)}`
+    const lockAcquired = await acquireCronLock(broadcastLockKey)
+    if (!lockAcquired) {
+      console.warn(`🛑 [Marketing Engine] Broadcast "${title}" blocked by distributed MongoDB lock. Duplicate execution prevented.`)
+      return { success: false, message: 'Broadcast already dispatched by another instance.' }
+    }
+
+    lastBroadcastTimestamp = now
+
     const [users, deviceDocs] = await Promise.all([
       UserModel.find({
         $or: [
@@ -324,6 +344,14 @@ export async function checkAbandonedCarts() {
 // TRIGGER MANUAL CRON SCHEDULE ON DEMAND
 // ─────────────────────────────────────────────────────────────────────────────
 export async function triggerMarketingSchedule(type) {
+  const windowSlot = Math.floor(Date.now() / 60000)
+  const lockKey = `TRIGGER_${type}_${windowSlot}`
+  const acquired = await acquireCronLock(lockKey)
+  if (!acquired) {
+    console.log(`🔒 [Marketing Engine] Schedule "${type}" was already triggered in the last minute. Skipping duplicate.`)
+    return { success: true, message: `${type} already executed recently.` }
+  }
+
   if (type === 'BREAKFAST') {
     const template = MORNING_TEMPLATES[Math.floor(Math.random() * MORNING_TEMPLATES.length)]
     return await broadcastToAllUsers({ ...template, type: 'BREAKFAST_PROMO', promoTag: 'MORNING_RUSH' })

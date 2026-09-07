@@ -89,6 +89,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
             },
             android: {
                 priority: 'high',
+                collapseKey: androidTag,
                 notification: {
                     title,
                     body,
@@ -115,7 +116,8 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
             },
             webpush: {
                 headers: {
-                    'Urgency': 'high'
+                    'Urgency': 'high',
+                    'Topic': androidTag
                 },
                 notification: {
                     title,

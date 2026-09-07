@@ -41,10 +41,14 @@ self.addEventListener('push', (event) => {
     payload.body ||
     'Your order status has been updated';
 
-  // Deduplication check: suppress duplicate pushes received within 5 seconds
-  const dedupKey = `${title}__${body}`.trim();
+  // Deduplication check: suppress duplicate pushes received within 10 seconds
+  const tag = payload.data?.orderId 
+    ? `snapit_order_${payload.data.orderId}` 
+    : (payload.notification?.tag || payload.data?.type || 'snapit_promo');
+
+  const dedupKey = `${tag}__${title}__${body}`.trim();
   const now = Date.now();
-  if (recentNotifs.has(dedupKey) && (now - recentNotifs.get(dedupKey) < 5000)) {
+  if (recentNotifs.has(dedupKey) && (now - recentNotifs.get(dedupKey) < 10000)) {
     console.log('[firebase-messaging-sw.js] 🔇 Duplicate push suppressed:', dedupKey);
     return;
   }
@@ -53,21 +57,25 @@ self.addEventListener('push', (event) => {
   // Clean stale keys
   if (recentNotifs.size > 50) {
     for (const [k, time] of recentNotifs.entries()) {
-      if (now - time > 15000) recentNotifs.delete(k);
+      if (now - time > 20000) recentNotifs.delete(k);
     }
   }
 
+  // Firebase Messaging Compat SDK automatically handles and renders notifications
+  // when payload.notification is present. Calling showNotification here results in
+  // two identical notifications appearing side-by-side in the system tray.
+  if (payload.notification) {
+    console.log('[firebase-messaging-sw.js] Handled automatically by Firebase SDK.');
+    return;
+  }
+
   const origin = self.location.origin || 'https://snapit.pages.dev';
-  let icon = payload.notification?.icon || payload.data?.icon || `${origin}/snapit-icon-192.png`;
+  let icon = payload.data?.icon || `${origin}/snapit-icon-192.png`;
   if (typeof icon === 'string' && !icon.startsWith('http://') && !icon.startsWith('https://')) {
     icon = `${origin}${icon.startsWith('/') ? '' : '/'}${icon}`;
   }
   const badge = `${origin}/snapit-icon-192.png`;
   const targetUrl = payload.data?.url || (payload.data?.orderId ? `/#/dashboard/order-tracking/${payload.data.orderId}` : '/');
-
-  const tag = payload.data?.orderId 
-    ? `snapit_order_${payload.data.orderId}` 
-    : (payload.notification?.tag || payload.data?.type || 'snapit_promo');
 
   const options = {
     body,
