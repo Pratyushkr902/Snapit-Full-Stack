@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import sendEmailBrevo from './sendEmail.js'
 
 let resend = null
 function getResendClient() {
@@ -22,14 +23,20 @@ const sendEmailResend = async ({ sendTo, subject, html }) => {
             html,
         })
         if (error) {
-            console.error('🚨 Resend error:', JSON.stringify(error))
-            return null
+            console.warn('🚨 Resend returned error, falling back to Brevo:', JSON.stringify(error))
+            return await sendEmailBrevo({ sendTo, subject, html })
         }
         console.log('✅ OTP email sent via Resend:', data?.id)
         return data
     } catch (error) {
-        console.error('🚨 Resend failed:', error.message)
-        return null
+        console.warn('🚨 Resend exception, falling back to Brevo:', error.message)
+        try {
+            return await sendEmailBrevo({ sendTo, subject, html })
+        } catch (brevoErr) {
+            console.error('🚨 Brevo fallback also failed:', brevoErr.message)
+            return null
+        }
     }
 }
 export default sendEmailResend
+
