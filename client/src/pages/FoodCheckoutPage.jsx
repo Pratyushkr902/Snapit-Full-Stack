@@ -10,6 +10,7 @@ import { useGlobalContext } from '../provider/GlobalProvider'
 import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
 import { useFullCart, foodCartStore } from '../utils/foodCartStore'
 import { isStoreOpen } from '../components/StoreClosedOverlay'
+import { isGenericPaliganjCentroid, getUserLocation } from '../utils/serviceArea'
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -621,7 +622,13 @@ const FoodCheckoutPage = () => {
                       }`}>
                         {isRecipient ? '🎁 Recipient' : address.address_type || '🏠 Home'}
                       </span>
-                      {address.lat && <span className='text-[10px] text-green-700 font-bold'>📍 Pinned</span>}
+                      {address.lat && (
+                        isGenericPaliganjCentroid(address.lat, address.lng) ? (
+                          <span className='text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold'>⚠️ Centroid (Rajeshwar Path)</span>
+                        ) : (
+                          <span className='text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold'>🎯 Doorstep GPS</span>
+                        )
+                      )}
                     </div>
 
                     {isRecipient && (
@@ -635,6 +642,52 @@ const FoodCheckoutPage = () => {
                     )}
                     <p className='font-semibold text-gray-800 text-xs'>{address.address_line}</p>
                     <p className='text-[11px] text-gray-500'>{address.city}, {address.pincode}</p>
+
+                    {selected && isGenericPaliganjCentroid(address.lat, address.lng) && (
+                      <div className='mt-2 pt-2 border-t border-amber-200/80 flex items-center justify-between gap-2'>
+                        <p className='text-[10px] text-amber-800 font-medium'>
+                          📍 Pinned at Paliganj center centroid. Update to exact doorstep:
+                        </p>
+                        <button
+                          type='button'
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            try {
+                              toast.loading('Getting your live GPS fix...', { id: 'food-refine-gps' });
+                              const loc = await getUserLocation();
+                              toast.dismiss('food-refine-gps');
+                              if (loc?.lat && loc?.lng) {
+                                await Axios({
+                                  ...SummaryApi.updateAddress,
+                                  data: {
+                                    _id: address._id,
+                                    address_line: address.address_line,
+                                    city: address.city,
+                                    state: address.state,
+                                    country: address.country,
+                                    pincode: address.pincode,
+                                    mobile: address.mobile,
+                                    lat: loc.lat,
+                                    lng: loc.lng,
+                                    isExactGps: true,
+                                    gpsAccuracy: loc.accuracy
+                                  }
+                                });
+                                toast.success(`🎯 Updated to exact GPS doorstep (±${Math.round(loc.accuracy || 5)}m)!`);
+                                fetchAddress?.();
+                              }
+                            } catch (err) {
+                              toast.dismiss('food-refine-gps');
+                              toast.error('Could not get GPS. Please check location permissions.');
+                            }
+                          }}
+                          className='px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex-shrink-0 shadow active:scale-95'
+                        >
+                          1-Tap GPS Fix
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${selected ? 'border-red-500' : 'border-gray-300'}`}>
                     {selected && <div className='w-2.5 h-2.5 rounded-full bg-red-500' />}

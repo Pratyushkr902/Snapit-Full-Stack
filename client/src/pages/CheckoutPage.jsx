@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 import { isStoreOpen } from '../components/StoreClosedOverlay'
+import { isGenericPaliganjCentroid, getUserLocation } from '../utils/serviceArea'
 
 const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
@@ -19,7 +20,7 @@ const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 // sync with server/utils/serviceArea.js and silently block valid zones.
 
 const CheckoutPage = () => {
-  const { fetchCartItem, fetchOrder, totalPrice } = useGlobalContext() || {}
+  const { fetchCartItem, fetchOrder, fetchAddress, totalPrice } = useGlobalContext() || {}
   const [openAddress, setOpenAddress]       = useState(false)
   const addressList                          = useSelector(state => state.addresses.addressList)
   const [selectAddress, setSelectAddress]   = useState(0)
@@ -349,7 +350,11 @@ const CheckoutPage = () => {
                           </span>
 
                           {address.lat && (
-                            <span className='text-[10px] text-green-700 font-bold'>📍 Pinned</span>
+                            isGenericPaliganjCentroid(address.lat, address.lng) ? (
+                              <span className='text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold'>⚠️ Centroid (Rajeshwar Path)</span>
+                            ) : (
+                              <span className='text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold'>🎯 Doorstep GPS</span>
+                            )
                           )}
                         </div>
 
@@ -368,6 +373,52 @@ const CheckoutPage = () => {
                         <p className='text-xs text-slate-500'>{address.city}, {address.pincode}</p>
                         {address.delivery_instructions && (
                           <p className='text-[11px] text-slate-500 italic'>Note: {address.delivery_instructions}</p>
+                        )}
+
+                        {Number(selectAddress) === index && isGenericPaliganjCentroid(address.lat, address.lng) && (
+                          <div className='mt-2 pt-2 border-t border-amber-200/80 flex items-center justify-between gap-2'>
+                            <p className='text-[11px] text-amber-800 font-medium'>
+                              📍 Pinned at Paliganj center. Refine to exact doorstep GPS:
+                            </p>
+                            <button
+                              type='button'
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                try {
+                                  toast.loading('Getting your live GPS fix...', { id: 'refine-gps' });
+                                  const loc = await getUserLocation();
+                                  toast.dismiss('refine-gps');
+                                  if (loc?.lat && loc?.lng) {
+                                    await Axios({
+                                      ...SummaryApi.updateAddress,
+                                      data: {
+                                        _id: address._id,
+                                        address_line: address.address_line,
+                                        city: address.city,
+                                        state: address.state,
+                                        country: address.country,
+                                        pincode: address.pincode,
+                                        mobile: address.mobile,
+                                        lat: loc.lat,
+                                        lng: loc.lng,
+                                        isExactGps: true,
+                                        gpsAccuracy: loc.accuracy
+                                      }
+                                    });
+                                    toast.success(`🎯 Updated to exact GPS doorstep (±${Math.round(loc.accuracy || 5)}m)!`);
+                                    fetchAddress?.();
+                                  }
+                                } catch (err) {
+                                  toast.dismiss('refine-gps');
+                                  toast.error('Could not get GPS. Please check location permissions.');
+                                }
+                              }}
+                              className='px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex-shrink-0 shadow active:scale-95'
+                            >
+                              1-Tap GPS Fix
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

@@ -189,3 +189,36 @@ export async function getUserLocation() {
   })
 }
 
+// Check if coordinates represent the generic administrative Paliganj boundary centroid (Rajeshwar Path)
+export function isGenericPaliganjCentroid(lat, lng) {
+  if (lat == null || lng == null) return false
+  const nLat = Number(lat)
+  const nLng = Number(lng)
+  return Math.abs(nLat - 25.2920631) < 0.002 && Math.abs(nLng - 84.8169694) < 0.002
+}
+
+// Match text against known delivery villages
+export function resolveVillageFromText(text) {
+  if (!text) return null
+  const clean = String(text).toLowerCase()
+  if (/himalaya|hmch|bams|mbbs/i.test(clean)) return { lat: 25.2639198, lng: 84.8545598, name: 'Himalaya Medical College' }
+  if (/chiksi|chikasi/i.test(clean)) return { lat: 25.28091606583264, lng: 84.87069734970407, name: 'Chikasi' }
+  if (/purani\s*bazar|purani\s*bazaar/i.test(clean)) return { lat: 25.3273174, lng: 84.8008332, name: 'Purani Bazar' }
+  if (/indira\s*nagar/i.test(clean)) return { lat: 25.3334727, lng: 84.8003608, name: 'Indira Nagar' }
+  if (/dharhara/i.test(clean)) return { lat: 25.3375327, lng: 84.8117994, name: 'Dharhara' }
+  if (/sarsi/i.test(clean)) return { lat: 25.3050, lng: 84.8320, name: 'Sarsi' }
+  if (/kurkuri/i.test(clean)) return { lat: 25.2780, lng: 84.8050, name: 'Kurkuri' }
+  if (/acchua/i.test(clean)) return { lat: 25.3120, lng: 84.7980, name: 'Acchua' }
+  if (/chandos/i.test(clean)) return { lat: 25.2650, lng: 84.8400, name: 'Chandos' }
+  if (/milki/i.test(clean)) return { lat: 25.3200, lng: 84.8100, name: 'Milki' }
+  if (/akhtiyarpur/i.test(clean)) return { lat: 25.2750, lng: 84.8280, name: 'Akhtiyarpur' }
+  if (/balipakar/i.test(clean)) return { lat: 25.3010, lng: 84.7920, name: 'Balipakar' }
+  if (/ular\s*more/i.test(clean)) return { lat: 25.361971450391845, lng: 84.83978080090998, name: 'Ular More' }
+  if (/rampur\s*nagawa/i.test(clean)) return { lat: 25.298481843473738, lng: 84.7537306481682, name: 'Rampur Nagawa' }
+  if (/nirakhpur/i.test(clean)) return { lat: 25.30966360261287, lng: 84.76346494046578, name: 'Nirakhpur Pali' }
+  if (/dariyapur/i.test(clean)) return { lat: 25.332830390539364, lng: 84.79224964406752, name: 'Dariyapur' }
+  if (/fatehpur/i.test(clean)) return { lat: 25.344837251618888, lng: 84.78541480320204, name: 'Fatehpur' }
+  if (/rakasiya/i.test(clean)) return { lat: 25.357181306430718, lng: 84.83059257743433, name: 'Rakasiya' }
+  return null
+}
+

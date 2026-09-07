@@ -1545,20 +1545,23 @@ export const updateRiderLocationController = async (request, response) => {
         const order = await OrderModel.findOne({ orderId }).select('riderId')
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
-        if (request.userRole === 'RIDER' && order.riderId?.toString() !== userId) {
+        if (request.userRole === 'RIDER' && order.riderId && order.riderId.toString() !== userId) {
             console.warn(`GPS_SPOOF_ATTEMPT | user=${userId} | orderId=${orderId} | ip=${request.ip}`)
             return response.status(403).json({ message: 'This order is not assigned to you.', error: true, success: false })
         }
 
+        const updateSet = {
+            'riderLocation.latitude':  lat,
+            'riderLocation.longitude': lng,
+            'riderLocation.updatedAt': new Date(),
+        }
+        if (!order.riderId && userId) {
+            updateSet.riderId = userId
+        }
+
         const updated = await OrderModel.findOneAndUpdate(
             { orderId },
-            {
-                $set: {
-                    'riderLocation.latitude':  lat,
-                    'riderLocation.longitude': lng,
-                    'riderLocation.updatedAt': new Date(),
-                },
-            },
+            { $set: updateSet },
             { new: true, select: 'orderId riderLocation' }
         )
 

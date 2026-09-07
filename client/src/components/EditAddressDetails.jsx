@@ -17,7 +17,7 @@ import {
   IoAlertCircle
 } from "react-icons/io5"
 import { useGlobalContext } from '../provider/GlobalProvider'
-import { isInDeliveryZone, getUserLocation, SERVICEABLE_VILLAGES } from '../utils/serviceArea'
+import { isInDeliveryZone, getUserLocation, SERVICEABLE_VILLAGES, isGenericPaliganjCentroid } from '../utils/serviceArea'
 import { reverseGeocode } from '../utils/reverseGeocode'
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -132,6 +132,8 @@ const EditAddressDetails = ({ close, data }) => {
   const initialLat = Number(data?.lat) || 25.2921
   const initialLng = Number(data?.lng) || 84.8170
   const [coords, setCoords] = useState({ lat: initialLat, lng: initialLng })
+  const [isExactGps, setIsExactGps] = useState(() => Boolean(data?.isExactGps || (data?.lat && !isGenericPaliganjCentroid(data.lat, data.lng))))
+  const [gpsAccuracy, setGpsAccuracy] = useState(() => data?.gpsAccuracy || null)
   const [zoneStatus, setZoneStatus] = useState(() => isInDeliveryZone(initialLat, initialLng))
   const [resolvedAddressSummary, setResolvedAddressSummary] = useState(data?.address_line || 'Paliganj, Bihar')
 
@@ -192,6 +194,8 @@ const EditAddressDetails = ({ close, data }) => {
       toast.loading('Detecting exact GPS coordinates...', { id: 'gps-fetch' })
       const { lat, lng, accuracy } = await getUserLocation()
       toast.dismiss('gps-fetch')
+      setGpsAccuracy(accuracy)
+      setIsExactGps(true)
 
       if (accuracy != null && accuracy > 150) {
         toast('📍 GPS accuracy is ±' + Math.round(accuracy) + 'm. Drag pin to your exact building.', { icon: 'ℹ️' })
@@ -210,6 +214,7 @@ const EditAddressDetails = ({ close, data }) => {
 
   const handleSelectVillage = (villageName) => {
     const vCoords = VILLAGE_COORDS[villageName] || { lat: 25.2921, lng: 84.8170 }
+    setIsExactGps(false)
     handleLocationUpdate(vCoords)
     toast.success(`📍 Pinned to ${villageName}`)
   }
@@ -246,6 +251,8 @@ const EditAddressDetails = ({ close, data }) => {
         delivery_instructions: formData.delivery_instructions || activeInstructions.join(', ') || '',
         lat:                   coords.lat,
         lng:                   coords.lng,
+        isExactGps:            Boolean(isExactGps && !isGenericPaliganjCentroid(coords.lat, coords.lng)),
+        gpsAccuracy:           isExactGps ? gpsAccuracy : null,
       }
 
       const response = await Axios({
@@ -313,7 +320,10 @@ const EditAddressDetails = ({ close, data }) => {
                 <MapFlyController center={coords} zoom={16} />
                 <ZeptoInteractiveMarker
                   position={coords}
-                  onPositionChange={handleLocationUpdate}
+                  onPositionChange={(newPos) => {
+                    setIsExactGps(true)
+                    handleLocationUpdate(newPos)
+                  }}
                 />
               </MapContainer>
 
@@ -329,9 +339,39 @@ const EditAddressDetails = ({ close, data }) => {
               </button>
 
               <div className='absolute top-3 left-3 z-[1000] bg-slate-900/85 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-[10px] font-bold shadow-md pointer-events-none flex items-center gap-1'>
-                <span>👆 Tap or drag pin to exact gate</span>
+                <span>📍 {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+                {gpsAccuracy && (
+                  <span className='bg-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded text-[9px] font-black'>
+                    ±{Math.round(gpsAccuracy)}m
+                  </span>
+                )}
               </div>
             </div>
+
+            {/* GPS Precision Status Badge */}
+            {isGenericPaliganjCentroid(coords.lat, coords.lng) ? (
+              <div className='p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-amber-700 dark:text-amber-300'>
+                <div className='flex items-center gap-2 text-xs font-bold min-w-0'>
+                  <span className='text-sm flex-shrink-0'>⚠️</span>
+                  <span className='truncate text-[11px]'>Pinned at Paliganj center centroid. Tap "Use Live GPS" to pin your exact doorstep.</span>
+                </div>
+                <button
+                  type='button'
+                  onClick={handleDetectLocation}
+                  className='px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider rounded-xl flex-shrink-0 shadow transition active:scale-95'
+                >
+                  Fix GPS
+                </button>
+              </div>
+            ) : (
+              <div className='p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2 text-emerald-800 dark:text-emerald-300'>
+                <div className='flex items-center gap-2 text-xs font-bold min-w-0'>
+                  <span className='text-sm flex-shrink-0'>🎯</span>
+                  <span className='truncate text-[11px]'>Verified Doorstep Pin {gpsAccuracy ? `(Accuracy ±${Math.round(gpsAccuracy)}m)` : ''}</span>
+                </div>
+                <span className='text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider'>GPS Active</span>
+              </div>
+            )}
 
             {/* Resolved Location Banner */}
             <div className={`p-3 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${

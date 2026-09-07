@@ -18,7 +18,7 @@ import {
   IoAlertCircle
 } from "react-icons/io5"
 import { useGlobalContext } from '../provider/GlobalProvider'
-import { isInDeliveryZone, getUserLocation, SERVICEABLE_VILLAGES } from '../utils/serviceArea'
+import { isInDeliveryZone, getUserLocation, SERVICEABLE_VILLAGES, isGenericPaliganjCentroid } from '../utils/serviceArea'
 import { reverseGeocode } from '../utils/reverseGeocode'
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -132,6 +132,7 @@ const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
   const [orderFor, setOrderFor] = useState('SELF')
   const [addressType, setAddressType] = useState('HOME')
   const [coords, setCoords] = useState(() => initialCoords || { lat: 25.2921, lng: 84.8170 })
+  const [isExactGps, setIsExactGps] = useState(() => Boolean(initialCoords && !isGenericPaliganjCentroid(initialCoords.lat, initialCoords.lng)))
   const [zoneStatus, setZoneStatus] = useState(() => isInDeliveryZone((initialCoords || { lat: 25.2921, lng: 84.8170 }).lat, (initialCoords || { lat: 25.2921, lng: 84.8170 }).lng))
   const [gpsAccuracy, setGpsAccuracy] = useState(() => initialAccuracy || null)
   const [locationChecking, setLocationChecking] = useState(false)
@@ -187,8 +188,33 @@ const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
   // Sync with initialCoords if passed from "Use my Current Location"
   useEffect(() => {
     if (initialCoords?.lat && initialCoords?.lng) {
+      setIsExactGps(!isGenericPaliganjCentroid(initialCoords.lat, initialCoords.lng))
       handleLocationUpdate(initialCoords)
     }
+  }, [initialCoords, handleLocationUpdate])
+
+  // Auto-acquire device GPS on mount if no initialCoords passed
+  useEffect(() => {
+    let isCancelled = false
+    if (!initialCoords) {
+      (async () => {
+        try {
+          setLocationChecking(true)
+          const loc = await getUserLocation()
+          if (!isCancelled && loc?.lat && loc?.lng) {
+            setGpsAccuracy(loc.accuracy)
+            setIsExactGps(true)
+            await handleLocationUpdate({ lat: loc.lat, lng: loc.lng })
+            toast.success(`🎯 Auto-pinned to your exact location (±${Math.round(loc.accuracy || 5)}m)!`, { id: 'gps-auto-fix' })
+          }
+        } catch (err) {
+          console.log('[AddAddress] Auto-GPS prompt skipped or unavailable:', err?.message)
+        } finally {
+          if (!isCancelled) setLocationChecking(false)
+        }
+      })()
+    }
+    return () => { isCancelled = true }
   }, [initialCoords, handleLocationUpdate])
 
   // Detect Live GPS Location (Zepto 1-tap style)
@@ -199,6 +225,7 @@ const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
       const { lat, lng, accuracy } = await getUserLocation()
       toast.dismiss('gps-fetch')
       setGpsAccuracy(accuracy)
+      setIsExactGps(true)
 
       if (accuracy != null && accuracy > 50) {
         toast('📍 GPS accuracy is ±' + Math.round(accuracy) + 'm. Drag pin to your exact building/gate.', { icon: 'ℹ️' })
@@ -218,6 +245,7 @@ const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
   // Quick village chip selection
   const handleSelectVillage = (villageName) => {
     const vCoords = VILLAGE_COORDS[villageName] || { lat: 25.2921, lng: 84.8170 }
+    setIsExactGps(false)
     handleLocationUpdate(vCoords)
     toast.success(`📍 Pinned to ${villageName}`)
   }
@@ -255,6 +283,8 @@ const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
         delivery_instructions: formData.delivery_instructions || activeInstructions.join(', ') || '',
         lat:                   coords.lat,
         lng:                   coords.lng,
+        isExactGps:            Boolean(isExactGps && !isGenericPaliganjCentroid(coords.lat, coords.lng)),
+        gpsAccuracy:           isExactGps ? gpsAccuracy : null,
       }
 
       const response = await Axios({
@@ -330,7 +360,10 @@ const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
                 <MapFlyController center={coords} zoom={16} />
                 <ZeptoInteractiveMarker
                   position={coords}
-                  onPositionChange={handleLocationUpdate}
+                  onPositionChange={(newPos) => {
+                    setIsExactGps(true)
+                    handleLocationUpdate(newPos)
+                  }}
                 />
               </MapContainer>
 
@@ -355,6 +388,31 @@ const AddAddress = ({ close, initialCoords, initialAccuracy }) => {
                 )}
               </div>
             </div>
+
+            {/* GPS Precision Status Badge */}
+            {isGenericPaliganjCentroid(coords.lat, coords.lng) ? (
+              <div className='p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-amber-700 dark:text-amber-300'>
+                <div className='flex items-center gap-2 text-xs font-bold min-w-0'>
+                  <span className='text-sm flex-shrink-0'>⚠️</span>
+                  <span className='truncate text-[11px]'>Pinned at Paliganj center centroid. Tap "Use Live GPS" to pin your exact doorstep.</span>
+                </div>
+                <button
+                  type='button'
+                  onClick={handleDetectLocation}
+                  className='px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider rounded-xl flex-shrink-0 shadow transition active:scale-95'
+                >
+                  Fix GPS
+                </button>
+              </div>
+            ) : (
+              <div className='p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2 text-emerald-800 dark:text-emerald-300'>
+                <div className='flex items-center gap-2 text-xs font-bold min-w-0'>
+                  <span className='text-sm flex-shrink-0'>🎯</span>
+                  <span className='truncate text-[11px]'>Verified Doorstep Pin {gpsAccuracy ? `(Accuracy ±${Math.round(gpsAccuracy)}m)` : ''}</span>
+                </div>
+                <span className='text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider'>GPS Active</span>
+              </div>
+            )}
 
             {/* Resolved Location Banner (Zepto Delivery Time & Zone) */}
             <div className={`p-3 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${

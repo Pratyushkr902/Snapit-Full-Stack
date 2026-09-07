@@ -12,7 +12,7 @@ const STORE_LOCATION = { lat: 25.33121156659458, lng: 84.8006737574818 }
 // actually deliver to them.
 const MAX_DELIVERY_RADIUS_KM = 14
 
-const DELIVERY_ZONES = [
+export const DELIVERY_ZONES = [
   { name: 'Paliganj',  lat: 25.2921, lng: 84.8170, radiusKm: 2.0 },
   { name: 'Sarsi',     lat: 25.3050, lng: 84.8320, radiusKm: 2.0 },
   { name: 'Kurkuri',   lat: 25.2780, lng: 84.8050, radiusKm: 2.0 },

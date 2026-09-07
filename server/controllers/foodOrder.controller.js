@@ -134,7 +134,7 @@ const extractBody = (body) => {
 // ── Price ONE restaurant's group server-side: subtotal from DB-sourced prices,
 // delivery fee from THAT restaurant's location → deliveryLocation, min-order check. ──
 const priceGroup = async (group, deliveryLocation, user) => {
-  const restaurant = await RestaurantModel.findById(group.restaurantId).select('location name')
+  const restaurant = await RestaurantModel.findById(group.restaurantId).select('location name address')
   if (!restaurant?.location?.lat || !restaurant?.location?.lng) {
     console.warn(`PRICE_TAMPER | food-order | restaurant=${group.restaurantId} missing location, cannot verify delivery fee server-side`)
     const err = new Error('Restaurant delivery info unavailable. Please try again shortly.')
@@ -228,7 +228,7 @@ const priceGroup = async (group, deliveryLocation, user) => {
     ? deliveryFee
     : (distanceKm <= 3 ? 12 : (distanceKm <= 6 ? 29 : (Math.round(distanceKm * 7) || 29)))
 
-  return { ...group, restaurantName: restaurant.name, subTotalAmt, deliveryFee, riderFee, distanceKm }
+  return { ...group, restaurantName: restaurant.name, restaurantLocation: restaurant.location, restaurantAddress: restaurant.address, subTotalAmt, deliveryFee, riderFee, distanceKm }
 }
 
 // ── Price every restaurant group, then fold tip/coupon/wallet into the FIRST
@@ -298,11 +298,12 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
     scheduledDelivery:    fields.scheduledDelivery,
     restaurantId: group.restaurantId,
     store_details: {
+      storeId:  group.restaurantId,
       name:     group.restaurantName || 'Restaurant',
-      address:  '',
+      address:  group.restaurantAddress?.street || group.restaurantAddress?.area || 'Paliganj',
       location: {
-        lat: fields.deliveryLocation?.lat || 25.2921,
-        lng: fields.deliveryLocation?.lng || 84.817,
+        lat: group.restaurantLocation?.lat || 25.330951,
+        lng: group.restaurantLocation?.lng || 84.800609,
       },
     },
     // FIX: was never set, so notifySellersOfNewOrder() always found zero matching

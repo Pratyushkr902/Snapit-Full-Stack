@@ -64,6 +64,14 @@ const addressSchema = new mongoose.Schema({
         type : Number,
         default : null
     },
+    isExactGps : {
+        type : Boolean,
+        default : false
+    },
+    gpsAccuracy : {
+        type : Number,
+        default : null
+    },
 },{
     timestamps : true
 })

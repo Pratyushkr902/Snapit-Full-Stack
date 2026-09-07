@@ -10,6 +10,7 @@ import { IoArrowBack } from "react-icons/io5";
 import { io } from 'socket.io-client';
 import CollectPayment from '../components/CollectPayment';
 import RiderCashRemittanceModal from '../components/RiderCashRemittanceModal';
+import { isGenericPaliganjCentroid } from '../utils/serviceArea';
 
 const STORE_EMOJI = {
     'Pali Mega Mart':                 '🛒',
@@ -323,7 +324,12 @@ const RiderDashboard = () => {
             toast.error('Customer phone number not available');
             return;
         }
-        const message = `Hello! Snapit delivery partner Manish yahan se. Aapka order #${order.orderId?.slice(-6) || ''} leke main nikal raha hoon. Doorstep pe 10-15 min mein pahunch raha hoon! 🛵`;
+        const lat = order.delivery_lat || order.delivery_address?.lat;
+        const lng = order.delivery_lng || order.delivery_address?.lng;
+        const isCentroid = isGenericPaliganjCentroid(lat, lng);
+        const message = isCentroid
+            ? `Namaste! Main Snapit delivery partner yahan se. Aapka order #${order.orderId?.slice(-6) || ''} leke nikal raha hoon. Kripya apni live WhatsApp location share kar dijiye taki main seedhe aapke gate pe pahunch sakoon! 📍🛵`
+            : `Hello! Snapit delivery partner Manish yahan se. Aapka order #${order.orderId?.slice(-6) || ''} leke main nikal raha hoon. Doorstep pe 10-15 min mein pahunch raha hoon! 🛵`;
         window.open(`https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(message)}`, '_blank');
     };
 
@@ -532,8 +538,9 @@ const RiderDashboard = () => {
                     }
                 }).catch(err => console.warn('[RiderDuty] HTTP location sync note:', err?.message));
 
-                if (activeOrders.length > 0) {
-                    activeOrders.forEach(o => {
+                const activeSyncOrders = (ordersRef.current || []).filter(o => ['Out for Delivery', 'Confirmed', 'Processing'].includes(o?.delivery_status));
+                if (activeSyncOrders.length > 0) {
+                    activeSyncOrders.forEach(o => {
                         if (o?.orderId) {
                             Axios({
                                 url: `/api/order/rider-location/${o.orderId}`,
@@ -1214,19 +1221,64 @@ const RiderDashboard = () => {
                                                     )}
 
                                                     {/* 1-Tap Google Maps Turn-by-Turn Driving Navigation for Rider */}
-                                                    {(order.delivery_lat || order.delivery_address?.lat) && (order.delivery_lng || order.delivery_address?.lng) && (
-                                                        <div className='mt-2'>
-                                                            <a
-                                                                href={`https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat || order.delivery_address?.lat},${order.delivery_lng || order.delivery_address?.lng}&travelmode=driving`}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className='flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-1.5 px-3 rounded-xl shadow-md active:scale-95 transition-all'
-                                                            >
-                                                                <FaMapMarkedAlt size={12}/>
-                                                                <span>🧭 Navigate to Customer Door (GPS)</span>
-                                                            </a>
-                                                        </div>
-                                                    )}
+                                                    {(() => {
+                                                        const lat = order.delivery_lat || order.delivery_address?.lat;
+                                                        const lng = order.delivery_lng || order.delivery_address?.lng;
+                                                        const isCentroid = isGenericPaliganjCentroid(lat, lng);
+                                                        const textAddr = [
+                                                            order.delivery_address?.floor_door,
+                                                            order.delivery_address?.address_line,
+                                                            order.delivery_address?.landmark,
+                                                            order.delivery_address?.city || 'Paliganj',
+                                                            'Bihar'
+                                                        ].filter(Boolean).join(', ');
+
+                                                        const navUrl = isCentroid && textAddr
+                                                            ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(textAddr)}&travelmode=driving`
+                                                            : (lat && lng
+                                                                ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
+                                                                : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(textAddr || 'Paliganj, Bihar')}&travelmode=driving`);
+
+                                                        const rawPinUrl = (lat && lng) ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+
+                                                        return (
+                                                            <div className='mt-2 space-y-1'>
+                                                                {isCentroid ? (
+                                                                    <div className='flex items-center justify-between gap-1 text-[10px] bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2.5 py-1 rounded-xl font-bold'>
+                                                                        <span className='truncate'>⚠️ Paliganj Centroid — Navigating to customer address</span>
+                                                                        {rawPinUrl && (
+                                                                            <a href={rawPinUrl} target="_blank" rel="noreferrer" className='underline text-amber-300 font-bold flex-shrink-0'>
+                                                                                Pin
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className='flex items-center gap-1.5 text-[10px] text-emerald-400 font-bold px-1'>
+                                                                        <span>🎯 Precise Doorstep GPS (Live Navigation)</span>
+                                                                    </div>
+                                                                )}
+
+                                                                <a
+                                                                    href={navUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className={`flex items-center justify-center gap-1.5 text-white text-xs font-black py-2 px-3 rounded-xl shadow-md active:scale-95 transition-all ${
+                                                                        isCentroid
+                                                                            ? 'bg-amber-600 hover:bg-amber-500'
+                                                                            : 'bg-blue-600 hover:bg-blue-500'
+                                                                    }`}
+                                                                >
+                                                                    <FaMapMarkedAlt size={13}/>
+                                                                    <span>
+                                                                        {isCentroid
+                                                                            ? '🧭 Navigate to Address (Google Maps)'
+                                                                            : '🧭 Navigate to Customer Door (GPS)'
+                                                                        }
+                                                                    </span>
+                                                                </a>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
 
                                                 <div className='flex gap-1.5 flex-shrink-0'>
@@ -1245,11 +1297,15 @@ const RiderDashboard = () => {
                                                         <FaPhone size={14}/>
                                                     </a>
                                                     <a href={
-                                                        order.delivery_lat && order.delivery_lng
-                                                            ? `https://www.google.com/maps?q=${order.delivery_lat},${order.delivery_lng}`
-                                                            : order.delivery_address?.lat && order.delivery_address?.lng
-                                                                ? `https://www.google.com/maps?q=${order.delivery_address.lat},${order.delivery_address.lng}`
-                                                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "")}`
+                                                        (() => {
+                                                            const lat = order.delivery_lat || order.delivery_address?.lat;
+                                                            const lng = order.delivery_lng || order.delivery_address?.lng;
+                                                            if (isGenericPaliganjCentroid(lat, lng) && order.delivery_address?.address_line) {
+                                                                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.delivery_address.address_line}, ${order.delivery_address.city || 'Paliganj'}, Bihar`)}`;
+                                                            }
+                                                            if (lat && lng) return `https://www.google.com/maps?q=${lat},${lng}`;
+                                                            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "Paliganj, Bihar")}`;
+                                                        })()
                                                     }
                                                         target="_blank" rel="noreferrer"
                                                         className='w-9 h-9 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all active:scale-90'
