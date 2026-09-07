@@ -5,15 +5,15 @@ export const getAppVersionController = async (req, res) => {
       success: true,
       error: false,
       data: {
-        latestVersion: "2.6.44",
-        latestVersionCode: 83,
+        latestVersion: "2.6.45",
+        latestVersionCode: 84,
         minRequiredVersionCode: 82,
         forceUpdate: false,
         remindIntervalHours: 1,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit-ashy.vercel.app/app-release.apk",
         title: "Update Available 🚀",
-        message: "A new version of Snapit (v2.6.44) is ready with enhanced GPS delivery precision, edge-to-edge layout, and cart fixes!",
+        message: "A new version of Snapit (v2.6.45) is ready with critical stability, smooth launch fixes, and speed optimizations!",
         releaseNotes: [
           "🎯 High-Precision Doorstep GPS Delivery for Riders",
           "📱 Modern Edge-to-Edge & Notch-safe layout for Android 15",
