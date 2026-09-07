@@ -103,16 +103,6 @@ const Header = ({ openCart }) => {
 
                 {/* Right actions */}
                 <div className='flex items-center gap-3 flex-shrink-0'>
-                    {user?._id && (
-                        <Link to="/wallet" className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 transition-all group shadow-sm">
-                            <span className='text-xl group-hover:scale-110 transition-transform'>💰</span>
-                            <div className='flex flex-col'>
-                                <span className='font-black text-slate-700 dark:text-slate-300 text-[10px] uppercase leading-none'>Balance</span>
-                                <span className='font-bold text-green-700 dark:text-emerald-400 text-sm'>{DisplayPriceInRupees(user?.walletBalance || 0)}</span>
-                            </div>
-                        </Link>
-                    )}
-
                     {user?._id ? (
                         <div className='relative' ref={menuRef}>
                             <div onClick={() => setOpenUserMenu(p => !p)} className='flex select-none items-center gap-1 cursor-pointer group'>
@@ -188,7 +178,6 @@ const Header = ({ openCart }) => {
 
                     {/* Right: user + cart icons */}
                     <div className='flex items-center gap-3 flex-shrink-0 ml-2'>
-                        <Link to='/wallet' className='flex flex-col items-center text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'><span className='text-lg'>💰</span><span className='text-[9px] font-bold'>Wallet</span></Link>
                         <button className='text-neutral-600 dark:text-slate-300 active:scale-90 transition-transform' onClick={handleMobileUser}>
                             <FaRegCircleUser size={22} />
                         </button>
