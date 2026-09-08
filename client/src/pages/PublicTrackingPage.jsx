@@ -185,6 +185,36 @@ const PublicTrackingPage = () => {
           </div>
         </div>
 
+        {/* Delivery Proof Photo */}
+        {order.delivery_status === 'Delivered' && order.deliveryProofPhoto && (
+          <div className='bg-slate-900/90 border border-emerald-500/40 rounded-3xl p-5 space-y-3 shadow-xl'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <span className='text-lg'>📸</span>
+                <div>
+                  <p className='text-xs font-black text-white'>Doorstep Delivery Proof</p>
+                  <p className='text-[10px] text-slate-400'>Captured by delivery partner</p>
+                </div>
+              </div>
+              <a
+                href={order.deliveryProofPhoto}
+                target='_blank'
+                rel='noreferrer'
+                className='text-[10px] font-bold text-emerald-400 hover:underline'
+              >
+                View Full ↗
+              </a>
+            </div>
+            <a href={order.deliveryProofPhoto} target='_blank' rel='noreferrer' className='block overflow-hidden rounded-2xl border border-slate-800 bg-slate-950'>
+              <img
+                src={order.deliveryProofPhoto}
+                alt='Doorstep Delivery Proof'
+                className='w-full max-h-56 object-contain mx-auto hover:scale-105 transition-transform'
+              />
+            </a>
+          </div>
+        )}
+
         {/* Live Map */}
         <div className='bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl'>
           <div className='px-4 py-3 border-b border-slate-800 flex items-center justify-between'>

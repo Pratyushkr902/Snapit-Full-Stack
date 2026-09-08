@@ -299,6 +299,36 @@ const TrackingPage = () => {
         </div>
       )}
 
+      {/* Doorstep Delivery Proof Photo */}
+      {order.delivery_status === 'Delivered' && order.deliveryProofPhoto && (
+        <div className='mx-4 my-3 bg-white rounded-2xl p-4 shadow-sm border border-emerald-100'>
+          <div className='flex items-center justify-between mb-2.5'>
+            <div className='flex items-center gap-2'>
+              <span className='text-lg'>📸</span>
+              <div>
+                <p className='font-bold text-xs text-slate-800'>Delivery Proof Photo</p>
+                <p className='text-[10px] text-slate-500'>Photo captured by rider at delivery</p>
+              </div>
+            </div>
+            <a
+              href={order.deliveryProofPhoto}
+              target="_blank"
+              rel="noreferrer"
+              className='text-[11px] font-bold text-emerald-600 hover:underline'
+            >
+              View Full ↗
+            </a>
+          </div>
+          <a href={order.deliveryProofPhoto} target="_blank" rel="noreferrer" className='block overflow-hidden rounded-xl border border-slate-200 bg-slate-50'>
+            <img
+              src={order.deliveryProofPhoto}
+              alt="Delivery Proof"
+              className='w-full max-h-56 object-contain mx-auto hover:scale-105 transition-transform'
+            />
+          </a>
+        </div>
+      )}
+
       {/* Cancelled Banner */}
       {order.delivery_status === 'Cancelled' && (
         <div className='bg-rose-600 text-white px-4 py-3 flex items-center justify-between'>

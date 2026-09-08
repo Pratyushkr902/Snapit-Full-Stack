@@ -568,6 +568,30 @@ const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50, 
                         📝 Delivery Note: {order.delivery_instructions}
                       </div>
                     )}
+                    {order.deliveryProofPhoto && (
+                      <div style={{ background: '#052e16', border: '1px solid #166534', padding: '10px 12px', borderRadius: 8, marginBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: '#4ade80', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span>📸</span> Delivery Proof Photo (Captured by Rider)
+                          </span>
+                          <a
+                            href={order.deliveryProofPhoto}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: 10, color: '#38bdf8', fontWeight: 700, textDecoration: 'none' }}
+                          >
+                            Open Full Image ↗
+                          </a>
+                        </div>
+                        <a href={order.deliveryProofPhoto} target="_blank" rel="noreferrer" style={{ display: 'block', overflow: 'hidden', borderRadius: 6 }}>
+                          <img
+                            src={order.deliveryProofPhoto}
+                            alt="Delivery Proof"
+                            style={{ width: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 6, background: '#022c22' }}
+                          />
+                        </a>
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       {items.map((item, idx) => (
                         <div

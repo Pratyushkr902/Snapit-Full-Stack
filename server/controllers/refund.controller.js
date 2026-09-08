@@ -175,7 +175,7 @@ export const getAllRefunds = async (req, res) => {
                 const r = refund.toObject();
 
                 // Attach delivery proof photo for comparison
-                r.deliveryProofPhoto = r.orderId?.deliveryProof?.photo || null;
+                r.deliveryProofPhoto = r.orderId?.deliveryProofPhoto || r.orderId?.deliveryProof?.photo || null;
                 r.deliveredAt        = r.orderId?.deliveredAt          || null;
 
                 // Attach user fraud score so admin knows if this user is a repeat claimer
