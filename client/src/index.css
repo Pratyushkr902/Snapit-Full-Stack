@@ -87,12 +87,24 @@ html.dark .App {
   
 }
 
+.scrollbarCustom {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.dark .scrollbarCustom {
+  scrollbar-color: #334155 transparent;
+}
 .scrollbarCustom::-webkit-scrollbar {
-  width: 6px;
-  @apply bg-slate-100 dark:bg-slate-800;
+  width: 5px;
+}
+.scrollbarCustom::-webkit-scrollbar-track {
+  background: transparent;
 }
 .scrollbarCustom::-webkit-scrollbar-thumb {
   @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+}
+.scrollbarCustom::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400 dark:bg-slate-600;
 }
 
 /* Tap feedback for tappable cards */

@@ -44,33 +44,35 @@ const UserMenu = ({close}) => {
    }
 
   return (
-    <div className='text-slate-800 dark:text-slate-100'>
-        <div className='font-bold text-slate-900 dark:text-white'>My Account</div>
-        <div className='text-sm flex items-center gap-2 mt-0.5'>
-          <span className='max-w-52 text-ellipsis line-clamp-1 text-slate-700 dark:text-slate-200'>
-            {user?.name || user?.mobile}
-            <span className='ml-1 font-bold text-red-600 dark:text-red-400'>
-              {role === "ADMIN"        ? "(Admin)"      :
-               role === "SUPER_ADMIN"  ? "(Super Admin)":
-               role === "RIDER"        ? "(Rider)"      :
-               role === "SELLER"       ? "(Seller)"     :
-               role === "RESTO_SELLER" ? "(Restaurant)" : ""}
+    <div className='text-slate-800 dark:text-slate-100 flex flex-col'>
+        <div className='flex-shrink-0'>
+          <div className='font-bold text-slate-900 dark:text-white'>My Account</div>
+          <div className='text-sm flex items-center gap-2 mt-0.5'>
+            <span className='max-w-52 text-ellipsis line-clamp-1 text-slate-700 dark:text-slate-200'>
+              {user?.name || user?.mobile}
+              <span className='ml-1 font-bold text-red-600 dark:text-red-400'>
+                {role === "ADMIN"        ? "(Admin)"      :
+                 role === "SUPER_ADMIN"  ? "(Super Admin)":
+                 role === "RIDER"        ? "(Rider)"      :
+                 role === "SELLER"       ? "(Seller)"     :
+                 role === "RESTO_SELLER" ? "(Restaurant)" : ""}
+              </span>
             </span>
-          </span>
-          <Link onClick={handleClose} to={"/dashboard/profile"} className='hover:text-primary-200 text-slate-500 dark:text-slate-400'>
-            <HiOutlineExternalLink size={15}/>
-          </Link>
+            <Link onClick={handleClose} to={"/dashboard/profile"} className='hover:text-primary-200 text-slate-500 dark:text-slate-400'>
+              <HiOutlineExternalLink size={15}/>
+            </Link>
+          </div>
+
+          <Divider/>
+
+          <div className='my-1'>
+            <ThemeToggle variant="row" />
+          </div>
+
+          <Divider/>
         </div>
 
-        <Divider/>
-
-        <div className='my-1'>
-          <ThemeToggle variant="row" />
-        </div>
-
-        <Divider/>
-
-        <div className='text-sm grid gap-1'>
+        <div className='text-sm grid gap-1 max-h-[min(58vh,420px)] overflow-y-auto overscroll-contain scrollbarCustom pr-1.5 my-1'>
 
             {/* ADMIN ONLY LINKS */}
             {(role === "ADMIN" || role === "SUPER_ADMIN") && (
@@ -188,9 +190,13 @@ const UserMenu = ({close}) => {
               onClick={handleClose}>
               🔒 Privacy Policy
             </Link>
+        </div>
 
-            <button onClick={handleLogout} className='text-left px-2.5 py-1.5 rounded-lg text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors'>Log Out</button>
-
+        <div className='flex-shrink-0 pt-1.5 border-t border-slate-100 dark:border-slate-800 mt-1'>
+          <button onClick={handleLogout} className='w-full text-left px-2.5 py-1.5 rounded-lg text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors flex items-center justify-between active:scale-95'>
+            <span>Log Out</span>
+            <span className='text-xs'>🚪</span>
+          </button>
         </div>
     </div>
   )
