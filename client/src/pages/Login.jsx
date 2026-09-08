@@ -113,7 +113,10 @@ const Login = () => {
                 toast.error(res.data?.message || 'Failed to send code', { id: 'otp-send', duration: 4000 })
             }
         } catch (err) {
-            const errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Failed to send code. Please try again.'
+            let errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Failed to send code. Please try again.'
+            if (typeof errMsg === 'string' && errMsg.toLowerCase().includes('network error')) {
+                errMsg = 'Unable to reach server. Please check your internet connection.'
+            }
             toast.error(errMsg, { id: 'otp-send', duration: 4000 })
         } finally {
             setLoading(false)
@@ -153,7 +156,10 @@ const Login = () => {
                 toast.error(res.data?.message || 'Invalid verification code', { id: 'otp-verify', duration: 4000 })
             }
         } catch (err) {
-            const errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Verification failed. Please try again.'
+            let errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Verification failed. Please try again.'
+            if (typeof errMsg === 'string' && errMsg.toLowerCase().includes('network error')) {
+                errMsg = 'Unable to reach server. Please check your internet connection.'
+            }
             toast.error(errMsg, { id: 'otp-verify', duration: 4000 })
         } finally {
             setLoading(false)
@@ -234,7 +240,10 @@ const Login = () => {
                 setAuthMode('otp')
                 await handleSendOtp()
             } else {
-                const errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Login failed. Please check credentials.'
+                let errMsg = err?.rateLimitMessage || err?.response?.data?.message || err?.message || 'Login failed. Please check credentials.'
+                if (typeof errMsg === 'string' && errMsg.toLowerCase().includes('network error')) {
+                    errMsg = 'Unable to reach server. Please check your internet connection.'
+                }
                 toast.error(errMsg, { id: 'pwd-login', duration: 4000 })
             }
         } finally {
