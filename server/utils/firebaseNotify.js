@@ -77,6 +77,7 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
                 ? 'cart_nudge'
                 : (String(data?.type || '').includes('PROMO') || String(data?.type || '').includes('DELIVERY') || data?.type === 'TEA_SNACK')
                     ? 'daily_promo'
+                    : (data?.type ? String(data.type).toLowerCase() : 'general_alert')
         const webpushTopic = String(androidTag || 'snapit_alert').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32)
         const message = {
             token,
