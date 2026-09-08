@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 import { isStoreOpen } from '../components/StoreClosedOverlay'
-import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText } from '../utils/serviceArea'
+import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
 
 const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
@@ -36,26 +36,6 @@ const CheckoutPage = () => {
 
   const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
 
-  const HIMALAYA_COORDS = { lat: 25.2639198, lng: 84.8545598 }
-  const CHIKASI_COORDS = { lat: 25.28091606583264, lng: 84.87069734970407 }
-
-  const getEffectiveAddressCoords = (addr) => {
-    if (!addr) return null
-    const combined = `${addr.address_line || ''} ${addr.city || ''} ${addr.landmark || ''} ${addr.floor_door || ''} ${addr.delivery_instructions || ''}`
-    const isCentroid = isGenericPaliganjCentroid(addr.lat, addr.lng)
-    const village = resolveVillageFromText(combined)
-
-    if (addr.lat != null && addr.lng != null && !Number.isNaN(Number(addr.lat)) && !Number.isNaN(Number(addr.lng)) && !isCentroid) {
-      return { lat: Number(addr.lat), lng: Number(addr.lng) }
-    }
-    if (village) return { lat: village.lat, lng: village.lng }
-    if (/himalaya|hmch|bams|mbbs/i.test(combined)) return HIMALAYA_COORDS
-    if (/chiksi|chikasi/i.test(combined)) return CHIKASI_COORDS
-    if (addr.lat != null && addr.lng != null && !Number.isNaN(Number(addr.lat)) && !Number.isNaN(Number(addr.lng))) {
-      return { lat: Number(addr.lat), lng: Number(addr.lng) }
-    }
-    return null
-  }
 
   // Read coords directly from selected address
   const selectedAddress = addressList[selectAddress]

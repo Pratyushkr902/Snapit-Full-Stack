@@ -10,6 +10,7 @@ import imageEmpty from '../assets/empty_cart.webp'
 import toast from 'react-hot-toast'
 import { optimizeImage } from '../utils/optimizeImage'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
+import { getEffectiveAddressCoords } from '../utils/serviceArea'
 
 const PricewithDiscount = (price, discount) => {
     const finalPrice = (Number(price) || 0) - (Number(discount) || 0);
@@ -29,8 +30,9 @@ const DisplayCartItem = ({close}) => {
     // this was a hardcoded flat ₹12 regardless of distance, which didn't match
     // the checkout price for anyone outside the 0-4km slab.
     const defaultAddress = addressList?.[0]
-    const deliveryInfo = (defaultAddress?.lat && defaultAddress?.lng)
-        ? getDeliveryInfo(defaultAddress.lat, defaultAddress.lng, totalPrice, isSnapitPlus)
+    const effectiveCoords = getEffectiveAddressCoords(defaultAddress)
+    const deliveryInfo = (effectiveCoords?.lat && effectiveCoords?.lng)
+        ? getDeliveryInfo(effectiveCoords.lat, effectiveCoords.lng, totalPrice, isSnapitPlus)
         : null
 
     // Fallback flat ₹12 only when we have no address/coords to estimate from —

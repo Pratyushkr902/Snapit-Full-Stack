@@ -821,6 +821,11 @@ export async function paymentController(request, response) {
                 }
             }
 
+            const serviceabilityError = checkDeliveryServiceability(verifiedLat, verifiedLng)
+            if (serviceabilityError) {
+                return response.status(400).json({ message: serviceabilityError, error: true, success: false })
+            }
+
             const currentUser = await UserModel.findById(userId)
             const assignedStore = await resolveStore(verifiedLat, verifiedLng)
             const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)

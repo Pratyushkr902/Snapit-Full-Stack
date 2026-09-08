@@ -201,8 +201,10 @@ export function isGenericPaliganjCentroid(lat, lng) {
 export function resolveVillageFromText(text) {
   if (!text) return null
   const clean = String(text).toLowerCase()
-  if (/himalaya|hmch|bams|mbbs/i.test(clean)) return { lat: 25.2639198, lng: 84.8545598, name: 'Himalaya Medical College' }
+  if (/himalaya|hmch|hamch|ayurvedic\s*college|ayurveda\s*college|bams|mbbs/i.test(clean)) return { lat: 25.2639198, lng: 84.8545598, name: 'Himalaya Medical College' }
   if (/chiksi|chikasi/i.test(clean)) return { lat: 25.28091606583264, lng: 84.87069734970407, name: 'Chikasi' }
+  if (/kalyanpur|kalyanpuri|paipura/i.test(clean)) return { lat: 25.35483228778216, lng: 84.79708175239959, name: 'Kalyanpuri Paipura' }
+  if (/lalganj|sehra/i.test(clean)) return { lat: 25.292485478533443, lng: 84.82586927749715, name: 'Lalganj Sehra' }
   if (/purani\s*bazar|purani\s*bazaar/i.test(clean)) return { lat: 25.3273174, lng: 84.8008332, name: 'Purani Bazar' }
   if (/indira\s*nagar/i.test(clean)) return { lat: 25.3334727, lng: 84.8003608, name: 'Indira Nagar' }
   if (/dharhara/i.test(clean)) return { lat: 25.3375327, lng: 84.8117994, name: 'Dharhara' }
@@ -219,6 +221,23 @@ export function resolveVillageFromText(text) {
   if (/dariyapur/i.test(clean)) return { lat: 25.332830390539364, lng: 84.79224964406752, name: 'Dariyapur' }
   if (/fatehpur/i.test(clean)) return { lat: 25.344837251618888, lng: 84.78541480320204, name: 'Fatehpur' }
   if (/rakasiya/i.test(clean)) return { lat: 25.357181306430718, lng: 84.83059257743433, name: 'Rakasiya' }
+  return null
+}
+
+// Unified effective address coordinates resolver across cart and checkout
+export function getEffectiveAddressCoords(addr) {
+  if (!addr) return null
+  const combined = `${addr.address_line || ''} ${addr.city || ''} ${addr.landmark || ''} ${addr.floor_door || ''} ${addr.delivery_instructions || ''}`
+  const isCentroid = isGenericPaliganjCentroid(addr.lat, addr.lng)
+  const village = resolveVillageFromText(combined)
+
+  if (addr.lat != null && addr.lng != null && !Number.isNaN(Number(addr.lat)) && !Number.isNaN(Number(addr.lng)) && !isCentroid) {
+    return { lat: Number(addr.lat), lng: Number(addr.lng) }
+  }
+  if (village) return { lat: village.lat, lng: village.lng }
+  if (addr.lat != null && addr.lng != null && !Number.isNaN(Number(addr.lat)) && !Number.isNaN(Number(addr.lng))) {
+    return { lat: Number(addr.lat), lng: Number(addr.lng) }
+  }
   return null
 }
 

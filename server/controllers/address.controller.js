@@ -30,11 +30,17 @@ export const isGenericPaliganjCentroid = (lat, lng) => {
 export const resolveVillageFromText = (text) => {
   if (!text) return null
   const clean = String(text).toLowerCase()
-  if (/himalaya|hmch|bams|mbbs/i.test(clean)) {
+  if (/himalaya|hmch|hamch|ayurvedic\s*college|ayurveda\s*college|bams|mbbs/i.test(clean)) {
     return { lat: 25.2639198, lng: 84.8545598, name: 'Himalaya Medical College' }
   }
   if (/chiksi|chikasi/i.test(clean)) {
     return { lat: 25.28091606583264, lng: 84.87069734970407, name: 'Chikasi' }
+  }
+  if (/kalyanpur|kalyanpuri|paipura/i.test(clean)) {
+    return { lat: 25.35483228778216, lng: 84.79708175239959, name: 'Kalyanpuri Paipura' }
+  }
+  if (/lalganj|sehra/i.test(clean)) {
+    return { lat: 25.292485478533443, lng: 84.82586927749715, name: 'Lalganj Sehra' }
   }
   if (/purani\s*bazar|purani\s*bazaar/i.test(clean)) {
     return { lat: 25.3273174, lng: 84.8008332, name: 'Purani Bazar' }

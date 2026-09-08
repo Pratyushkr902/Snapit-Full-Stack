@@ -32,12 +32,11 @@ export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
   const numTotal = Number(cartTotal) || 0
   // Free delivery up to 5 km on orders ₹149+
   if (distanceKm <= 5 && numTotal >= 149) return 0
-  // Free delivery on high-value orders (₹499+) anywhere in serviceable range
-  if (numTotal >= 499) return 0
   if (distanceKm <= 3) return 12
   if (distanceKm <= 5) return 29
   if (distanceKm <= 6) return 29
   if (distanceKm <= 14) {
+    if (numTotal >= 499) return 60
     return Math.round(distanceKm * 7)
   }
   return null
@@ -66,9 +65,9 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   const isEvening = isAfterEveningCutoff()
 
   const numCartTotal = Number(cartTotal) || 0
-  const daytimeCharge = (dist <= 5 && numCartTotal >= 149) || numCartTotal >= 499 
+  const daytimeCharge = (dist <= 5 && numCartTotal >= 149) 
     ? 0 
-    : dist <= 3 ? 12 : dist <= 6 ? 29 : Math.round(dist * 7)
+    : dist <= 3 ? 12 : dist <= 6 ? 29 : numCartTotal >= 499 ? 60 : Math.round(dist * 7)
 
   // After 7:30 PM, deliveries beyond 5km are closed for rider night safety
   if (dist > 5 && isEvening) {

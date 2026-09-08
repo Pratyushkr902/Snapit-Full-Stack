@@ -9,6 +9,7 @@ import AddToCartButton from '../components/AddToCartButton'
 import imageEmpty from '../assets/empty_cart.webp'
 import toast from 'react-hot-toast'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
+import { getEffectiveAddressCoords } from '../utils/serviceArea'
 
 const PricewithDiscount = (price, discount) => {
     const finalPrice = (Number(price) || 0) - (Number(discount) || 0);
@@ -24,8 +25,9 @@ const CartMobilePage = () => {
     const navigate = useNavigate()
 
     const defaultAddress = addressList?.[0]
-    const deliveryInfo = (defaultAddress?.lat && defaultAddress?.lng)
-        ? getDeliveryInfo(defaultAddress.lat, defaultAddress.lng, totalPrice, isSnapitPlus)
+    const effectiveCoords = getEffectiveAddressCoords(defaultAddress)
+    const deliveryInfo = (effectiveCoords?.lat && effectiveCoords?.lng)
+        ? getDeliveryInfo(effectiveCoords.lat, effectiveCoords.lng, totalPrice, isSnapitPlus)
         : null
 
     const deliveryFee = deliveryInfo
