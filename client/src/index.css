@@ -89,10 +89,10 @@ html.dark .App {
 
 .scrollbarCustom::-webkit-scrollbar {
   width: 6px;
-  @apply bg-slate-100;
+  @apply bg-slate-100 dark:bg-slate-800;
 }
 .scrollbarCustom::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full;
+  @apply bg-slate-300 dark:bg-slate-700 rounded-full;
 }
 
 /* Tap feedback for tappable cards */

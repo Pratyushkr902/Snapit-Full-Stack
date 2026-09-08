@@ -120,8 +120,8 @@ const Header = ({ openCart }) => {
                                 {openUserMenu ? <GoTriangleUp size={22} className='text-slate-700 dark:text-slate-200' /> : <GoTriangleDown size={22} className='text-slate-700 dark:text-slate-200' />}
                             </div>
                             {openUserMenu && (
-                                <div className='absolute right-0 top-10 z-50'>
-                                    <div className='bg-white dark:bg-slate-900 rounded-xl p-4 min-w-52 shadow-2xl border border-slate-100 dark:border-slate-800'>
+                                <div className='absolute right-0 top-11 z-50'>
+                                    <div className='bg-white dark:bg-slate-900 rounded-2xl p-4 w-72 max-h-[calc(100vh-80px)] overflow-y-auto shadow-2xl border border-slate-100 dark:border-slate-800 overscroll-contain scrollbarCustom'>
                                         <UserMenu close={() => setOpenUserMenu(false)} />
                                     </div>
                                 </div>
