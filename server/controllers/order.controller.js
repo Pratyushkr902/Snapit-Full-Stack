@@ -42,6 +42,7 @@ import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
 import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { shouldQueueOrder } from '../middleware/abuseGuard.js'
 import { sendPushNotification, notifyAllRiders } from '../utils/firebaseNotify.js'
+import { isGenericPaliganjCentroid, resolveVillageFromText } from './address.controller.js'
 import {
     notifyUserOrderPlaced,
     notifyUserOrderConfirmed,
@@ -370,13 +371,17 @@ export async function CashOnDeliveryOrderController(request, response) {
         const CHIKASI_LAT = 25.28091606583264
         const CHIKASI_LNG = 84.87069734970407
 
-        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
+        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''} ${address.floor_door || ''} ${address.delivery_instructions || ''}`
         let verifiedLat = address.lat
         let verifiedLng = address.lng
 
-        // Only fallback to text regex if saved address doesn't have valid coordinates
-        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
-            if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+        // Fallback to text matching if saved address doesn't have valid coordinates OR has generic Paliganj centroid
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng)) || isGenericPaliganjCentroid(verifiedLat, verifiedLng)) {
+            const villageMatch = resolveVillageFromText(combinedText)
+            if (villageMatch) {
+                verifiedLat = villageMatch.lat
+                verifiedLng = villageMatch.lng
+            } else if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
                 verifiedLat = HIMALAYA_LAT
                 verifiedLng = HIMALAYA_LNG
             } else if (/chiksi|chikasi/i.test(combinedText)) {
@@ -568,13 +573,17 @@ export async function WalletPaymentOrderController(request, response) {
         const CHIKASI_LAT = 25.28091606583264
         const CHIKASI_LNG = 84.87069734970407
 
-        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
+        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''} ${address.floor_door || ''} ${address.delivery_instructions || ''}`
         let verifiedLat = address.lat
         let verifiedLng = address.lng
 
-        // Only fallback to text regex if saved address doesn't have valid coordinates
-        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
-            if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+        // Fallback to text matching if saved address doesn't have valid coordinates OR has generic Paliganj centroid
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng)) || isGenericPaliganjCentroid(verifiedLat, verifiedLng)) {
+            const villageMatch = resolveVillageFromText(combinedText)
+            if (villageMatch) {
+                verifiedLat = villageMatch.lat
+                verifiedLng = villageMatch.lng
+            } else if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
                 verifiedLat = HIMALAYA_LAT
                 verifiedLng = HIMALAYA_LNG
             } else if (/chiksi|chikasi/i.test(combinedText)) {
@@ -795,11 +804,15 @@ export async function paymentController(request, response) {
             const HIMALAYA_LNG = 84.8545598
             const CHIKASI_LAT = 25.28091606583264
             const CHIKASI_LNG = 84.87069734970407
-            const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
+            const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''} ${address.floor_door || ''} ${address.delivery_instructions || ''}`
 
-            // Only fallback to text regex if saved address doesn't have valid coordinates
-            if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
-                if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+            // Fallback to text matching if saved address doesn't have valid coordinates OR has generic Paliganj centroid
+            if (!isValidCoord(Number(verifiedLat), Number(verifiedLng)) || isGenericPaliganjCentroid(verifiedLat, verifiedLng)) {
+                const villageMatch = resolveVillageFromText(combinedText)
+                if (villageMatch) {
+                    verifiedLat = villageMatch.lat
+                    verifiedLng = villageMatch.lng
+                } else if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
                     verifiedLat = HIMALAYA_LAT
                     verifiedLng = HIMALAYA_LNG
                 } else if (/chiksi|chikasi/i.test(combinedText)) {
@@ -879,13 +892,17 @@ export async function verifyPaymentController(request, response) {
         const CHIKASI_LAT = 25.28091606583264
         const CHIKASI_LNG = 84.87069734970407
 
-        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''}`
+        const combinedText = `${address.address_line || ''} ${address.city || ''} ${address.landmark || ''} ${address.floor_door || ''} ${address.delivery_instructions || ''}`
         let verifiedLat = address.lat
         let verifiedLng = address.lng
 
-        // Only fallback to text regex if saved address doesn't have valid coordinates
-        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
-            if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
+        // Fallback to text matching if saved address doesn't have valid coordinates OR has generic Paliganj centroid
+        if (!isValidCoord(Number(verifiedLat), Number(verifiedLng)) || isGenericPaliganjCentroid(verifiedLat, verifiedLng)) {
+            const villageMatch = resolveVillageFromText(combinedText)
+            if (villageMatch) {
+                verifiedLat = villageMatch.lat
+                verifiedLng = villageMatch.lng
+            } else if (/himalaya|hmch|bams|mbbs/i.test(combinedText)) {
                 verifiedLat = HIMALAYA_LAT
                 verifiedLng = HIMALAYA_LNG
             } else if (/chiksi|chikasi/i.test(combinedText)) {

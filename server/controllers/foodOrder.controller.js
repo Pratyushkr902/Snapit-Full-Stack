@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import OrderModel from '../models/order.model.js'
 import UserModel  from '../models/user.model.js'
 import AddressModel from '../models/address.model.js'
+import { isGenericPaliganjCentroid, resolveVillageFromText } from './address.controller.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import Razorpay   from 'razorpay'
 import {
@@ -437,13 +438,20 @@ const prepareMultiRestaurantOrder = async (req) => {
   const CHIKASI_LAT = 25.28091606583264
   const CHIKASI_LNG = 84.87069734970407
 
-  const combined = `${addressDoc?.address_line || ''} ${addressDoc?.city || ''} ${addressDoc?.landmark || ''}`
-  if (addressDoc?.lat && addressDoc?.lng && !isNaN(Number(addressDoc.lat)) && !isNaN(Number(addressDoc.lng)) && Number(addressDoc.lat) !== 0) {
+  const combined = `${addressDoc?.address_line || ''} ${addressDoc?.city || ''} ${addressDoc?.landmark || ''} ${addressDoc?.floor_door || ''} ${addressDoc?.delivery_instructions || ''}`
+  const isCentroid = isGenericPaliganjCentroid(addressDoc?.lat, addressDoc?.lng)
+  const villageMatch = resolveVillageFromText(combined)
+
+  if (addressDoc?.lat && addressDoc?.lng && !isNaN(Number(addressDoc.lat)) && !isNaN(Number(addressDoc.lng)) && Number(addressDoc.lat) !== 0 && !isCentroid) {
     fields.deliveryLocation = { lat: Number(addressDoc.lat), lng: Number(addressDoc.lng) }
+  } else if (villageMatch) {
+    fields.deliveryLocation = { lat: villageMatch.lat, lng: villageMatch.lng }
   } else if (/himalaya|hmch|bams|mbbs/i.test(combined)) {
     fields.deliveryLocation = { lat: HIMALAYA_LAT, lng: HIMALAYA_LNG }
   } else if (/chiksi|chikasi/i.test(combined)) {
     fields.deliveryLocation = { lat: CHIKASI_LAT, lng: CHIKASI_LNG }
+  } else if (addressDoc?.lat && addressDoc?.lng) {
+    fields.deliveryLocation = { lat: Number(addressDoc.lat), lng: Number(addressDoc.lng) }
   }
 
   const groups = await buildGroupsByRestaurant(fields.items)

@@ -1324,8 +1324,9 @@ const RiderDashboard = () => {
                                                         (() => {
                                                             const lat = order.delivery_lat || order.delivery_address?.lat;
                                                             const lng = order.delivery_lng || order.delivery_address?.lng;
-                                                            if (isGenericPaliganjCentroid(lat, lng) && order.delivery_address?.address_line) {
-                                                                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.delivery_address.address_line}, ${order.delivery_address.city || 'Paliganj'}, Bihar`)}`;
+                                                            if (isGenericPaliganjCentroid(lat, lng)) {
+                                                                const queryParts = [order.delivery_address?.floor_door, order.delivery_address?.address_line, order.delivery_address?.landmark, order.delivery_address?.city || 'Paliganj', 'Bihar'].filter(Boolean).join(', ');
+                                                                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts || 'Paliganj, Bihar')}`;
                                                             }
                                                             if (lat && lng) return `https://www.google.com/maps?q=${lat},${lng}`;
                                                             return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "Paliganj, Bihar")}`;

@@ -10,7 +10,7 @@ import { useGlobalContext } from '../provider/GlobalProvider'
 import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
 import { useFullCart, foodCartStore } from '../utils/foodCartStore'
 import { isStoreOpen } from '../components/StoreClosedOverlay'
-import { isGenericPaliganjCentroid, getUserLocation } from '../utils/serviceArea'
+import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText } from '../utils/serviceArea'
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -127,7 +127,14 @@ const FoodCheckoutPage = () => {
 
   const getEffectiveAddressCoords = (addr) => {
     if (!addr) return null
-    const combined = `${addr.address_line || ''} ${addr.city || ''} ${addr.landmark || ''}`
+    const combined = `${addr.address_line || ''} ${addr.city || ''} ${addr.landmark || ''} ${addr.floor_door || ''} ${addr.delivery_instructions || ''}`
+    const isCentroid = isGenericPaliganjCentroid(addr.lat, addr.lng)
+    const village = resolveVillageFromText(combined)
+
+    if (addr.lat != null && addr.lng != null && !Number.isNaN(Number(addr.lat)) && !Number.isNaN(Number(addr.lng)) && !isCentroid) {
+      return { lat: Number(addr.lat), lng: Number(addr.lng) }
+    }
+    if (village) return { lat: village.lat, lng: village.lng }
     if (/himalaya|hmch|bams|mbbs/i.test(combined)) return HIMALAYA_COORDS
     if (/chiksi|chikasi/i.test(combined)) return CHIKASI_COORDS
     if (addr.lat != null && addr.lng != null && !Number.isNaN(Number(addr.lat)) && !Number.isNaN(Number(addr.lng))) {

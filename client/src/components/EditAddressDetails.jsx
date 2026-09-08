@@ -17,7 +17,7 @@ import {
   IoAlertCircle
 } from "react-icons/io5"
 import { useGlobalContext } from '../provider/GlobalProvider'
-import { isInDeliveryZone, getUserLocation, SERVICEABLE_VILLAGES, isGenericPaliganjCentroid } from '../utils/serviceArea'
+import { isInDeliveryZone, getUserLocation, SERVICEABLE_VILLAGES, isGenericPaliganjCentroid, resolveVillageFromText } from '../utils/serviceArea'
 import { reverseGeocode } from '../utils/reverseGeocode'
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -235,6 +235,20 @@ const EditAddressDetails = ({ close, data }) => {
     }
 
     try {
+      let finalLat = coords.lat
+      let finalLng = coords.lng
+      let finalExactGps = Boolean(isExactGps && !isGenericPaliganjCentroid(coords.lat, coords.lng))
+
+      if (isGenericPaliganjCentroid(coords.lat, coords.lng)) {
+        const fullText = `${formData.addressline || ''} ${formData.floor_door || ''} ${formData.landmark || ''} ${formData.city || ''}`
+        const matched = resolveVillageFromText(fullText)
+        if (matched) {
+          finalLat = matched.lat
+          finalLng = matched.lng
+          finalExactGps = false
+        }
+      }
+
       const payload = {
         _id:                   formData._id,
         address_line:          formData.addressline,
@@ -249,10 +263,10 @@ const EditAddressDetails = ({ close, data }) => {
         landmark:              formData.landmark || '',
         floor_door:            formData.floor_door || '',
         delivery_instructions: formData.delivery_instructions || activeInstructions.join(', ') || '',
-        lat:                   coords.lat,
-        lng:                   coords.lng,
-        isExactGps:            Boolean(isExactGps && !isGenericPaliganjCentroid(coords.lat, coords.lng)),
-        gpsAccuracy:           isExactGps ? gpsAccuracy : null,
+        lat:                   finalLat,
+        lng:                   finalLng,
+        isExactGps:            finalExactGps,
+        gpsAccuracy:           finalExactGps ? gpsAccuracy : null,
       }
 
       const response = await Axios({

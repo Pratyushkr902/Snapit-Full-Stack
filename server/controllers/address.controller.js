@@ -209,7 +209,7 @@ export const addAddressController = async (request, response) => {
             isExactGps, gpsAccuracy
         } = request.body
 
-        const combinedText = `${address_line || ''} ${city || ''} ${landmark || ''}`
+        const combinedText = `${address_line || ''} ${city || ''} ${landmark || ''} ${floor_door || ''} ${delivery_instructions || ''}`
         let finalLat = null
         let finalLng = null
         let exactGpsFlag = Boolean(isExactGps)
@@ -343,7 +343,7 @@ export const updateAddressController = async (request, response) => {
             isExactGps, gpsAccuracy
         } = request.body
 
-        const combinedText = `${address_line || ''} ${city || ''} ${landmark || ''}`
+        const combinedText = `${address_line || ''} ${city || ''} ${landmark || ''} ${floor_door || ''} ${delivery_instructions || ''}`
         let finalLat = null
         let finalLng = null
         let exactGpsFlag = Boolean(isExactGps)
