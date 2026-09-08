@@ -1562,8 +1562,37 @@ export const updateRiderLocationController = async (request, response) => {
         const updated = await OrderModel.findOneAndUpdate(
             { orderId },
             { $set: updateSet },
-            { new: true, select: 'orderId riderLocation' }
+            { new: true, select: 'orderId riderLocation riderId' }
         )
+
+        const finalRiderId = updated?.riderId || order.riderId || userId
+        if (finalRiderId) {
+            const rId = String(finalRiderId)
+            const today = getTodayDateIST()
+            RiderDutyModel.findOneAndUpdate(
+                { riderId: finalRiderId, date: today },
+                {
+                    $set: {
+                        'lastLocation.latitude':  lat,
+                        'lastLocation.longitude': lng,
+                        'lastLocation.updatedAt': new Date()
+                    }
+                },
+                { upsert: true }
+            ).catch(() => {})
+
+            const io = request.app?.get('io')
+            const latestFleet = request.app?.get('latestRiderFleetPositions')
+            const fleetPayload = {
+                riderId: rId,
+                latitude: lat,
+                longitude: lng,
+                isDutyOn: true,
+                timestamp: Date.now()
+            }
+            if (latestFleet) latestFleet.set(rId, fleetPayload)
+            if (io) io.to('admin_live_fleet').emit('rider_fleet_updated', fleetPayload)
+        }
 
         return response.json({ message: 'Location saved.', error: false, success: true, data: updated.riderLocation })
     } catch (error) {

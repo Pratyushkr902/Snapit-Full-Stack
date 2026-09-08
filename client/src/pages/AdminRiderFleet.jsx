@@ -7,7 +7,7 @@ import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 import { io } from 'socket.io-client'
-import { FaMotorcycle, FaPhone, FaMapMarkerAlt, FaClock, FaCheckCircle, FaMoneyBillWave, FaCompass, FaLayerGroup, FaExpand, FaCompress } from 'react-icons/fa'
+import { FaMotorcycle, FaPhone, FaMapMarkerAlt, FaClock, FaCheckCircle, FaMoneyBillWave, FaCompass, FaLayerGroup, FaExpand, FaCompress, FaCrosshairs } from 'react-icons/fa'
 import { IoArrowBack, IoRefresh, IoMapOutline, IoGridOutline } from 'react-icons/io5'
 
 // Fix Leaflet default marker assets in Vite
@@ -62,15 +62,61 @@ const createRiderMapIcon = (rider, isSelected) => {
   })
 }
 
-// ── Map Helper: Recenter to Selected Target ──
-function MapController({ selectedCoords }) {
-  const map = useMap()
+// ── Helper: Format relative GPS fix age ──
+const formatGpsAge = (date) => {
+  if (!date) return 'No fix'
+  const diffSec = Math.max(0, Math.round((Date.now() - new Date(date).getTime()) / 1000))
+  if (diffSec < 60) return 'Live now'
+  const mins = Math.floor(diffSec / 60)
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
 
+// ── Map Helper: Recenter / Auto-Fit to Selected Target or Fleet ──
+function MapController({ selectedCoords, ridersWithGps, centerTrigger }) {
+  const map = useMap()
+  const initialFitDone = useRef(false)
+
+  // Fly to selected rider if explicitly chosen
   useEffect(() => {
     if (selectedCoords && selectedCoords[0] && selectedCoords[1]) {
       map.flyTo(selectedCoords, 16, { animate: true, duration: 1.2 })
     }
   }, [selectedCoords, map])
+
+  // Fit all active fleet on first data arrival or manual center trigger
+  const fitAllFleet = useCallback(() => {
+    if (!map) return
+    if (ridersWithGps && ridersWithGps.length > 0) {
+      const validPoints = ridersWithGps
+        .map(r => [r.lastLocation.latitude, r.lastLocation.longitude])
+        .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng))
+
+      if (validPoints.length === 1) {
+        map.flyTo(validPoints[0], 15, { animate: true, duration: 1.2 })
+      } else if (validPoints.length > 1) {
+        const bounds = L.latLngBounds(validPoints)
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 })
+      }
+    } else {
+      map.setView(DEFAULT_CENTER, 14)
+    }
+  }, [ridersWithGps, map])
+
+  useEffect(() => {
+    if (!initialFitDone.current && ridersWithGps.length > 0 && !selectedCoords) {
+      fitAllFleet()
+      initialFitDone.current = true
+    }
+  }, [ridersWithGps, selectedCoords, fitAllFleet])
+
+  useEffect(() => {
+    if (centerTrigger > 0) {
+      fitAllFleet()
+    }
+  }, [centerTrigger, fitAllFleet])
 
   return null
 }
@@ -83,6 +129,7 @@ const AdminRiderFleet = () => {
   const [selectedRider, setSelectedRider] = useState(null)
   const [filter, setFilter] = useState('ALL') // 'ALL' | 'ON_DUTY' | 'OFF_DUTY' | 'DELIVERING'
   const [viewMode, setViewMode] = useState('SPLIT') // 'SPLIT' | 'MAP' | 'CARDS'
+  const [centerTrigger, setCenterTrigger] = useState(0)
   const socketRef = useRef(null)
   const markerRefs = useRef({})
 
@@ -118,6 +165,33 @@ const AdminRiderFleet = () => {
 
     socket.emit('join_admin_fleet')
 
+    // Handle initial fleet positions snapshot from server memory
+    socket.on('admin_fleet_snapshot', (snapshots) => {
+      if (!Array.isArray(snapshots) || snapshots.length === 0) return
+      setFleet(prev => {
+        const snapMap = new Map(snapshots.map(s => [String(s.riderId), s]))
+        return prev.map(r => {
+          const s = snapMap.get(String(r.riderId))
+          if (s) {
+            return {
+              ...r,
+              isDutyOn: s.isDutyOn !== undefined ? s.isDutyOn : r.isDutyOn,
+              lastLocation: {
+                latitude: Number(s.latitude),
+                longitude: Number(s.longitude),
+                heading: s.heading,
+                speed: s.speed,
+                battery: s.battery,
+                updatedAt: new Date(s.timestamp || Date.now()),
+                isFreshGps: true
+              }
+            }
+          }
+          return r
+        })
+      })
+    })
+
     socket.on('rider_fleet_updated', (data) => {
       if (!data?.riderId) return
       setFleet(prev => {
@@ -127,12 +201,13 @@ const AdminRiderFleet = () => {
               ...r,
               isDutyOn: data.isDutyOn !== undefined ? data.isDutyOn : r.isDutyOn,
               lastLocation: {
-                latitude: data.latitude,
-                longitude: data.longitude,
+                latitude: Number(data.latitude),
+                longitude: Number(data.longitude),
                 heading: data.heading,
                 speed: data.speed,
                 battery: data.battery,
-                updatedAt: new Date(data.timestamp || Date.now())
+                updatedAt: new Date(data.timestamp || Date.now()),
+                isFreshGps: true
               }
             }
           }
@@ -144,6 +219,7 @@ const AdminRiderFleet = () => {
 
     return () => {
       socket.emit('leave_admin_fleet')
+      socket.off('admin_fleet_snapshot')
       socket.off('rider_fleet_updated')
       socket.disconnect()
       clearInterval(pollInterval)
@@ -306,6 +382,17 @@ const AdminRiderFleet = () => {
               </span>
             </div>
 
+            <div className='absolute top-3 right-3 z-[400] flex items-center gap-2'>
+              <button
+                onClick={() => { setSelectedRider(null); setCenterTrigger(c => c + 1); }}
+                className='bg-slate-950/85 hover:bg-slate-900 border border-slate-700/80 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 backdrop-blur transition'
+                title='Recenter on all active riders'
+              >
+                <FaCrosshairs size={11} className='text-emerald-400' />
+                <span>Center Fleet</span>
+              </button>
+            </div>
+
             <MapContainer
               center={
                 selectedRider?.lastLocation?.latitude && selectedRider?.lastLocation?.longitude
@@ -385,6 +472,13 @@ const AdminRiderFleet = () => {
                             <span className='font-black text-amber-700'>{fmtINR(rider.cashInHand)}</span>
                           </p>
 
+                          <p className='text-slate-600 flex justify-between'>
+                            <span className='font-bold'>GPS Fix:</span>
+                            <span className={`font-bold ${rider.lastLocation?.isFreshGps ? 'text-emerald-600' : 'text-slate-600'}`}>
+                              {formatGpsAge(rider.lastLocation?.updatedAt)}
+                            </span>
+                          </p>
+
                           {rider.lastLocation?.speed !== null && rider.lastLocation?.speed !== undefined && (
                             <p className='text-slate-600 flex justify-between'>
                               <span className='font-bold'>Speed:</span>
@@ -415,6 +509,8 @@ const AdminRiderFleet = () => {
                     ? [selectedRider.lastLocation.latitude, selectedRider.lastLocation.longitude]
                     : null
                 }
+                ridersWithGps={ridersWithGps}
+                centerTrigger={centerTrigger}
               />
             </MapContainer>
           </div>
@@ -565,8 +661,12 @@ const AdminRiderFleet = () => {
                                 </p>
                               </div>
                             ) : (
-                              <span className='text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex-shrink-0'>
-                                ● Live Pin
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 border ${
+                                rider.lastLocation?.isFreshGps
+                                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+                                  : 'text-slate-400 bg-slate-800/80 border-slate-700'
+                              }`}>
+                                {formatGpsAge(rider.lastLocation?.updatedAt)}
                               </span>
                             )}
                           </div>

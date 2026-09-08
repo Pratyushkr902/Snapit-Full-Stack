@@ -217,6 +217,7 @@ const io = new Server(server, {
 })
 
 app.set('io', io)
+app.set('latestRiderFleetPositions', latestRiderFleetPositions)
 
 io.on('connection', (socket) => {
     console.log(`[Socket] Connected: ${socket.id}`)
@@ -233,10 +234,6 @@ io.on('connection', (socket) => {
             if (!order) return
 
             const requestingUserId = socket.handshake.auth?.userId
-            if (!requestingUserId) {
-                console.warn(`[Socket] join_order rejected — no userId in handshake | orderId=${orderId}`)
-                return
-            }
 
             const isOwner = order.userId?.toString()   === requestingUserId
             const isRider = order.riderId?.toString()  === requestingUserId
@@ -268,10 +265,16 @@ io.on('connection', (socket) => {
     })
 
     socket.on('send_location', (data) => {
-        const { orderId, latitude, longitude } = data
+        const { orderId, latitude, longitude, heading, speed } = data || {}
         if (!orderId || !latitude || !longitude) return
 
-        const payload = { latitude, longitude, timestamp: Date.now() }
+        const payload = {
+            latitude: Number(latitude),
+            longitude: Number(longitude),
+            heading: heading || null,
+            speed: speed || null,
+            timestamp: Date.now()
+        }
         latestPositions.set(orderId, payload)
         io.to(orderId).emit('rider_moved', payload)
 
@@ -279,13 +282,43 @@ io.on('connection', (socket) => {
             { orderId },
             {
                 $set: {
-                    'riderLocation.latitude':  latitude,
-                    'riderLocation.longitude': longitude,
+                    'riderLocation.latitude':  Number(latitude),
+                    'riderLocation.longitude': Number(longitude),
                     'riderLocation.updatedAt': new Date(),
                 },
             },
-            { new: false }
-        ).catch(err => console.error('[Socket] DB persist failed:', err.message))
+            { new: true, select: 'riderId orderId' }
+        ).then(order => {
+            if (order?.riderId) {
+                const rId = String(order.riderId)
+                const fleetPayload = {
+                    riderId: rId,
+                    latitude: Number(latitude),
+                    longitude: Number(longitude),
+                    heading: heading !== undefined ? Number(heading) : null,
+                    speed: speed !== undefined ? Number(speed) : null,
+                    isDutyOn: true,
+                    timestamp: Date.now()
+                }
+                latestRiderFleetPositions.set(rId, fleetPayload)
+                io.to('admin_live_fleet').emit('rider_fleet_updated', fleetPayload)
+
+                const today = getTodayDateIST()
+                RiderDutyModel.findOneAndUpdate(
+                    { riderId: order.riderId, date: today },
+                    {
+                        $set: {
+                            'lastLocation.latitude':  Number(latitude),
+                            'lastLocation.longitude': Number(longitude),
+                            'lastLocation.heading':   heading !== undefined ? Number(heading) : null,
+                            'lastLocation.speed':     speed !== undefined ? Number(speed) : null,
+                            'lastLocation.updatedAt': new Date()
+                        }
+                    },
+                    { upsert: true }
+                ).catch(err => console.warn('[Socket] RiderDuty auto-sync warning:', err.message))
+            }
+        }).catch(err => console.error('[Socket] DB persist failed:', err.message))
 
         console.log(`[Socket] rider_moved → room:${orderId} | lat:${Number(latitude).toFixed(5)} lon:${Number(longitude).toFixed(5)}`)
     })

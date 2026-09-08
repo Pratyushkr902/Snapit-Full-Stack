@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 import { io } from 'socket.io-client'
-import { FaMotorcycle, FaPhone, FaMapMarkerAlt, FaClock, FaMoneyBillWave, FaExternalLinkAlt, FaSync } from 'react-icons/fa'
+import { FaMotorcycle, FaPhone, FaMapMarkerAlt, FaClock, FaMoneyBillWave, FaExternalLinkAlt, FaSync, FaCrosshairs } from 'react-icons/fa'
 import { IoMapOutline, IoListOutline } from 'react-icons/io5'
 
 const DEFAULT_CENTER = [25.3286, 84.7997]
@@ -22,9 +22,60 @@ const formatDutyTime = (minutes) => {
   return `${hrs}h ${mins}m`
 }
 
+const formatGpsAge = (date) => {
+  if (!date) return 'No fix'
+  const diffSec = Math.max(0, Math.round((Date.now() - new Date(date).getTime()) / 1000))
+  if (diffSec < 60) return 'Live (Just now)'
+  const mins = Math.floor(diffSec / 60)
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
+// ── Auto Center / Bound Controller for Widget ──
+function WidgetMapController({ ridersWithGps, centerTrigger }) {
+  const map = useMap()
+  const initialFitDone = useRef(false)
+
+  const fitFleet = useCallback(() => {
+    if (!map) return
+    if (ridersWithGps && ridersWithGps.length > 0) {
+      const validPoints = ridersWithGps
+        .map(r => [r.lastLocation.latitude, r.lastLocation.longitude])
+        .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng))
+
+      if (validPoints.length === 1) {
+        map.flyTo(validPoints[0], 15, { animate: true, duration: 1 })
+      } else if (validPoints.length > 1) {
+        const bounds = L.latLngBounds(validPoints)
+        map.fitBounds(bounds, { padding: [35, 35], maxZoom: 16 })
+      }
+    } else {
+      map.setView(DEFAULT_CENTER, 14)
+    }
+  }, [ridersWithGps, map])
+
+  useEffect(() => {
+    if (!initialFitDone.current && ridersWithGps.length > 0) {
+      fitFleet()
+      initialFitDone.current = true
+    }
+  }, [ridersWithGps, fitFleet])
+
+  useEffect(() => {
+    if (centerTrigger > 0) {
+      fitFleet()
+    }
+  }, [centerTrigger, fitFleet])
+
+  return null
+}
+
 const createWidgetRiderIcon = (rider) => {
   const isDelivering = Boolean(rider.activeOrder)
   const isOnDuty = rider.isDutyOn
+  const isFresh = rider.lastLocation?.isFreshGps || (rider.lastLocation?.updatedAt && (Date.now() - new Date(rider.lastLocation.updatedAt).getTime() < 15 * 60 * 1000))
   const bgColor = isDelivering ? '#2563eb' : (isOnDuty ? '#16a34a' : '#475569')
   const ringColor = isDelivering ? '#93c5fd' : (isOnDuty ? '#86efac' : '#94a3b8')
 
@@ -32,8 +83,9 @@ const createWidgetRiderIcon = (rider) => {
     className: 'snapit-osm-widget-marker',
     html: `
       <div style="position:relative; display:flex; flex-direction:column; align-items:center; cursor:pointer; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));">
-        <div style="background:${bgColor}; border:2px solid ${ringColor}; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${ringColor}80; color:#fff; font-size:15px;">
+        <div style="background:${bgColor}; border:2px solid ${ringColor}; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${ringColor}80; color:#fff; font-size:15px; position:relative;">
           🛵
+          ${isFresh ? '<span style="position:absolute; top:-2px; right:-2px; width:8px; height:8px; background:#22c55e; border-radius:50%; border:1.5px solid #0f172a;"></span>' : ''}
         </div>
         <div style="background:rgba(15,23,42,0.95); color:#fff; font-weight:800; font-size:9px; padding:1px 5px; border-radius:4px; margin-top:2px; white-space:nowrap; border:1px solid rgba(255,255,255,0.2);">
           ${(rider.name || 'Rider').split(' ')[0]}
@@ -52,6 +104,7 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [widgetView, setWidgetView] = useState('LIST') // 'LIST' | 'MAP'
+  const [centerTrigger, setCenterTrigger] = useState(0)
   const socketRef = useRef(null)
 
   const fetchFleet = useCallback(async (silent = false) => {
@@ -85,6 +138,33 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
 
     socket.emit('join_admin_fleet')
 
+    // Initial snapshot from in-memory positions
+    socket.on('admin_fleet_snapshot', (snapshots) => {
+      if (!Array.isArray(snapshots) || snapshots.length === 0) return
+      setFleet(prev => {
+        const snapMap = new Map(snapshots.map(s => [String(s.riderId), s]))
+        return prev.map(r => {
+          const s = snapMap.get(String(r.riderId))
+          if (s) {
+            return {
+              ...r,
+              isDutyOn: s.isDutyOn !== undefined ? s.isDutyOn : r.isDutyOn,
+              lastLocation: {
+                latitude: Number(s.latitude),
+                longitude: Number(s.longitude),
+                heading: s.heading,
+                speed: s.speed,
+                battery: s.battery,
+                updatedAt: new Date(s.timestamp || Date.now()),
+                isFreshGps: true
+              }
+            }
+          }
+          return r
+        })
+      })
+    })
+
     socket.on('rider_fleet_updated', (data) => {
       if (!data?.riderId) return
       setFleet(prev => {
@@ -94,12 +174,13 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
               ...r,
               isDutyOn: data.isDutyOn !== undefined ? data.isDutyOn : r.isDutyOn,
               lastLocation: {
-                latitude: data.latitude,
-                longitude: data.longitude,
+                latitude: Number(data.latitude),
+                longitude: Number(data.longitude),
                 heading: data.heading,
                 speed: data.speed,
                 battery: data.battery,
-                updatedAt: new Date(data.timestamp || Date.now())
+                updatedAt: new Date(data.timestamp || Date.now()),
+                isFreshGps: true
               }
             }
           }
@@ -111,6 +192,7 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
 
     return () => {
       socket.emit('leave_admin_fleet')
+      socket.off('admin_fleet_snapshot')
       socket.off('rider_fleet_updated')
       socket.disconnect()
       clearInterval(pollInterval)
@@ -212,6 +294,16 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
         </div>
       ) : widgetView === 'MAP' ? (
         <div className='h-[320px] rounded-2xl overflow-hidden border border-slate-800 relative'>
+          {/* Quick Center Button */}
+          <button
+            onClick={() => setCenterTrigger(c => c + 1)}
+            className='absolute top-3 right-3 z-[400] bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-xl shadow flex items-center gap-1.5 backdrop-blur transition'
+            title='Recenter on active riders'
+          >
+            <FaCrosshairs size={11} className='text-emerald-400' />
+            <span>Center Fleet</span>
+          </button>
+
           <MapContainer
             center={ridersWithGps[0] ? [ridersWithGps[0].lastLocation.latitude, ridersWithGps[0].lastLocation.longitude] : DEFAULT_CENTER}
             zoom={14}
@@ -219,6 +311,8 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
             style={{ height: '100%', width: '100%' }}
             className='z-0'
           >
+            <WidgetMapController ridersWithGps={ridersWithGps} centerTrigger={centerTrigger} />
+
             <TileLayer
               attribution='&copy; OpenStreetMap'
               url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
@@ -248,7 +342,7 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
                 icon={createWidgetRiderIcon(rider)}
               >
                 <Popup className='snapit-custom-popup'>
-                  <div className='p-1.5 text-slate-900 text-xs'>
+                  <div className='p-1.5 text-slate-900 text-xs min-w-[190px]'>
                     <p className='font-black text-sm text-slate-950 flex items-center justify-between gap-2 border-b pb-1'>
                       <span>🛵 {rider.name}</span>
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${rider.isDutyOn ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
@@ -257,6 +351,9 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
                     </p>
                     <p className='text-slate-600 mt-1'>Duty: <strong>{formatDutyTime(rider.todayDutyMinutes)}</strong></p>
                     <p className='text-slate-600'>Cash: <strong className='text-amber-700'>{fmtINR(rider.cashInHand)}</strong></p>
+                    <p className='text-slate-500 font-medium text-[10px] mt-0.5'>
+                      GPS: <strong className={rider.lastLocation?.isFreshGps ? 'text-emerald-700' : 'text-slate-700'}>{formatGpsAge(rider.lastLocation?.updatedAt)}</strong>
+                    </p>
                     {rider.lastLocation?.speed !== null && rider.lastLocation?.speed > 0 && (
                       <p className='text-emerald-600 font-bold'>Speed: {Math.round(rider.lastLocation.speed * 3.6)} km/h</p>
                     )}
@@ -346,7 +443,9 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
                           {Math.round(rider.lastLocation.speed * 3.6)} km/h
                         </span>
                       ) : (
-                        <span className='text-[9px] text-slate-500 font-bold'>GPS Live</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${rider.lastLocation?.isFreshGps ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-400'}`}>
+                          {formatGpsAge(rider.lastLocation?.updatedAt)}
+                        </span>
                       )}
                     </div>
                   )}

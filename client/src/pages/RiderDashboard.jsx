@@ -116,12 +116,35 @@ const RiderDashboard = () => {
     });
     const processLocationRef = useRef(null);
 
-    const handleRequestGps = () => {
+    const handleRequestGps = async () => {
+        toast('Requesting device GPS location…', { icon: '📍' });
+        try {
+            const { Capacitor } = await import('@capacitor/core');
+            if (Capacitor.isNativePlatform()) {
+                const { Geolocation } = await import('@capacitor/geolocation');
+                await Geolocation.requestPermissions();
+                const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 });
+                if (pos?.coords && processLocationRef.current) {
+                    processLocationRef.current(
+                        pos.coords.latitude,
+                        pos.coords.longitude,
+                        pos.coords.heading,
+                        pos.coords.speed,
+                        pos.coords.accuracy
+                    );
+                    toast.success('🟢 GPS Connected! Location streaming live.', { duration: 4000 });
+                    return;
+                }
+            }
+        } catch (nativeErr) {
+            console.warn('[RiderGPS] Native GPS check note:', nativeErr?.message);
+        }
+
         if (!navigator.geolocation) {
             toast.error('Geolocation is not supported by your browser', { icon: '📍' });
             return;
         }
-        toast('Requesting device GPS location…', { icon: '📍' });
+
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 toast.success('🟢 GPS Connected! Location streaming live.', { duration: 4000 });
@@ -712,6 +735,7 @@ const RiderDashboard = () => {
                 toast.success('Order picked up — now Out for Delivery!');
                 setIsTracking(true);
                 fetchRiderOrders(true);
+                handleRequestGps().catch(() => {});
             }
         } catch (error) {
             console.error('Pickup update failed:', error?.response?.data || error);
