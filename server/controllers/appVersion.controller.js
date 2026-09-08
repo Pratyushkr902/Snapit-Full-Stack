@@ -5,20 +5,20 @@ export const getAppVersionController = async (req, res) => {
       success: true,
       error: false,
       data: {
-        latestVersion: "2.6.48",
-        latestVersionCode: 88,
+        latestVersion: "2.6.49",
+        latestVersionCode: 89,
         minRequiredVersionCode: 84,
         forceUpdate: false,
         remindIntervalHours: 1,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit-ashy.vercel.app/app-release.apk",
         title: "Update Available 🚀",
-        message: "A new version of Snapit (v2.6.48) is ready with critical stability, smooth launch fixes, and speed optimizations!",
+        message: "A new version of Snapit (v2.6.49) is ready with precise road-distance delivery fee, high-accuracy GPS, and instant rider order sync!",
         releaseNotes: [
-          "🎯 High-Precision Doorstep GPS Delivery for Riders",
-          "📱 Modern Edge-to-Edge & Notch-safe layout for Android 15",
-          "🛒 Zepto/Blinkit-style mobile bottom sheet cart & address flows",
-          "⚡ Supercharged app speed, GPU layer acceleration, and instant rendering"
+          "🚀 Zomato & Zepto standard precise road-distance fee calculation",
+          "🧭 Enhanced doorstep GPS address resolution",
+          "⚡ Supercharged Rider Command and order sync speed",
+          "📱 Improved scrollable account navigation & fixed logout"
         ]
       }
     });
