@@ -18,15 +18,20 @@ const useNotifications = () => {
   const syncTokenToBackend = async (token) => {
     if (!token || typeof token !== 'string' || token.trim().length < 10) return
     try {
+      const isIos = typeof window !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+      const platform = Capacitor.isNativePlatform()
+        ? (Capacitor.getPlatform() || 'android')
+        : (isIos ? 'ios' : 'web')
+
       await Axios({
         ...SummaryApi.saveFcmToken,
         data: {
           fcmToken: token.trim(),
-          platform: Capacitor.getPlatform() || (Capacitor.isNativePlatform() ? 'android' : 'web'),
-          appVersion: CURRENT_APP_VERSION || '2.6.44'
+          platform,
+          appVersion: CURRENT_APP_VERSION || '2.6.48'
         }
       })
-      console.log('✅ FCM Token synced with server')
+      console.log('✅ FCM Token synced with server for platform:', platform)
     } catch (err) {
       console.warn('FCM sync note:', err?.message)
     }

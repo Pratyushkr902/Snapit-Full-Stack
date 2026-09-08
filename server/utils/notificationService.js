@@ -211,14 +211,14 @@ const saveAndSend = async ({
         lastActiveAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
       }).sort({ lastActiveAt: -1 }).select("token platform lastActiveAt").lean();
       
-      const nativeDev = deviceDocs.find(d => d.platform === 'android' || d.platform === 'ios');
+      const androidDev = deviceDocs.find(d => d.platform === 'android');
+      const iosDev = deviceDocs.find(d => d.platform === 'ios');
       const webDev = deviceDocs.find(d => d.platform === 'web');
 
-      if (nativeDev?.token) {
-        targetTokens.push(nativeDev.token.trim());
-      } else if (webDev?.token) {
-        targetTokens.push(webDev.token.trim());
-      } else if (deviceDocs[0]?.token) {
+      if (androidDev?.token) targetTokens.push(androidDev.token.trim());
+      if (iosDev?.token) targetTokens.push(iosDev.token.trim());
+      if (webDev?.token && !androidDev && !iosDev) targetTokens.push(webDev.token.trim());
+      if (targetTokens.length === 0 && deviceDocs[0]?.token) {
         targetTokens.push(deviceDocs[0].token.trim());
       }
 

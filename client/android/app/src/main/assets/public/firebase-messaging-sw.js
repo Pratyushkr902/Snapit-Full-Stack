@@ -61,16 +61,8 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  // Firebase Messaging Compat SDK automatically handles and renders notifications
-  // when payload.notification is present. Calling showNotification here results in
-  // two identical notifications appearing side-by-side in the system tray.
-  if (payload.notification) {
-    console.log('[firebase-messaging-sw.js] Handled automatically by Firebase SDK.');
-    return;
-  }
-
   const origin = self.location.origin || 'https://snapit.pages.dev';
-  let icon = payload.data?.icon || `${origin}/snapit-icon-192.png`;
+  let icon = payload.notification?.icon || payload.data?.icon || `${origin}/snapit-icon-192.png`;
   if (typeof icon === 'string' && !icon.startsWith('http://') && !icon.startsWith('https://')) {
     icon = `${origin}${icon.startsWith('/') ? '' : '/'}${icon}`;
   }

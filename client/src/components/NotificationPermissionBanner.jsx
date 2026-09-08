@@ -45,9 +45,14 @@ const NotificationPermissionBanner = () => {
       const token = await requestNotificationPermission()
       if (token) {
         localStorage.setItem('snapit_web_fcm_token', token)
+        const isIos = typeof window !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
         await Axios({
           ...SummaryApi.saveFcmToken,
-          data: { fcmToken: token }
+          data: {
+            fcmToken: token,
+            platform: isIos ? 'ios' : 'web',
+            appVersion: '2.6.48'
+          }
         })
         toast.success('🔔 Order notifications enabled!')
         setShowPrompt(false)

@@ -56,26 +56,28 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
     ])
 
     const tokenMap = new Map()
-    const userDevices = new Map() // userId -> chosen deviceDoc
+    const userDevices = new Map() // userPlatformKey -> newest deviceDoc
     const guestTokens = new Set()
 
-    // 1. Group device tokens per user and select their SINGLE best device
-    // Priority: android/ios > web. If multiple of same type, pick newest lastActiveAt.
+    // 1. Group device tokens per user PER PLATFORM (e.g. 1 android, 1 ios, 1 web)
+    // Avoids 4x duplicates on the same device while ensuring an iOS device is not suppressed by an Android device
     deviceDocs.forEach(d => {
       const cleanToken = d.token?.trim()
       if (!cleanToken || cleanToken.length <= 10) return
 
       if (d.userId) {
         const uid = String(d.userId)
-        if (!userDevices.has(uid)) {
-          userDevices.set(uid, d)
+        const platform = d.platform || 'unknown'
+        const userPlatformKey = `${uid}__${platform}`
+
+        if (!userDevices.has(userPlatformKey)) {
+          userDevices.set(userPlatformKey, d)
         } else {
-          const existing = userDevices.get(uid)
-          const isExistingNative = existing.platform === 'android' || existing.platform === 'ios'
-          const isCurrentNative = d.platform === 'android' || d.platform === 'ios'
-          // Upgrade web to native app
-          if (!isExistingNative && isCurrentNative) {
-            userDevices.set(uid, d)
+          const existing = userDevices.get(userPlatformKey)
+          const existingTime = existing.lastActiveAt ? new Date(existing.lastActiveAt).getTime() : 0
+          const currentTime = d.lastActiveAt ? new Date(d.lastActiveAt).getTime() : 0
+          if (currentTime > existingTime) {
+            userDevices.set(userPlatformKey, d)
           }
         }
       } else {
@@ -85,10 +87,10 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
 
     const seenUsers = new Set()
 
-    // Add exactly ONE device token per registered user
-    for (const [uid, dev] of userDevices.entries()) {
-      tokenMap.set(dev.token.trim(), { name: 'Customer', userId: uid, platform: dev.platform })
-      seenUsers.add(uid)
+    // Add exactly ONE device token per user per platform
+    for (const [, dev] of userDevices.entries()) {
+      tokenMap.set(dev.token.trim(), { name: 'Customer', userId: dev.userId, platform: dev.platform })
+      seenUsers.add(String(dev.userId))
     }
 
     // 2. For users who only have token in UserModel and not in DeviceTokenModel
