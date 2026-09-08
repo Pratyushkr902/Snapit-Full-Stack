@@ -76,8 +76,8 @@ const generateScratchCards = () => {
 const populateOrder = (query) =>
     query
         .populate('delivery_address')
-        .populate('cartItems.productId')
-        .populate('userId', 'name mobile')   // FIX: was never populated — rider dashboard always fell back to "Snapit User"
+        .populate({ path: 'cartItems.productId', select: 'name unit image' })
+        .populate('userId', 'name mobile')
         .lean()
 
 const toSafeOrder = (o) => ({
@@ -1658,7 +1658,7 @@ export async function getOrderItems(request, response) {
         }
 
         const orders = await populateOrder(
-            OrderModel.find(filter).sort({ createdAt: -1 })
+            OrderModel.find(filter).sort({ createdAt: -1 }).limit(100)
         )
 
         return response.json({ message: 'Orders fetched.', error: false, success: true, data: orders.map(toSafeOrder) })

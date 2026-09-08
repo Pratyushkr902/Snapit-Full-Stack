@@ -256,7 +256,9 @@ export const getAdminLiveRidersController = async (req, res) => {
     const activeOrders = await OrderModel.find({
       delivery_status: { $in: ['Out for Delivery', 'Confirmed'] },
       riderId: { $exists: true, $ne: null }
-    }).select('orderId totalAmt delivery_status payment_status delivery_address userId restaurantId createdAt deliveredAt riderId').lean();
+    }).select('orderId totalAmt delivery_status payment_status delivery_address userId restaurantId createdAt deliveredAt riderId')
+      .populate('delivery_address')
+      .lean();
 
     const activeOrderMap = new Map();
     activeOrders.forEach(o => {
