@@ -4,7 +4,11 @@
 const STORE_LAT = 25.33121156659458
 const STORE_LNG = 84.8006737574818
 
-// Haversine formula — returns distance in km
+// Road circuity multiplier (1.25x) converts Haversine straight-line distance to
+// actual driving road distance, matching Google Maps / Zomato / Zepto road routing.
+export const ROAD_FACTOR = 1.25
+
+// Haversine formula with road circuity — returns real road distance in km
 export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
   const R    = 6371
   const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -15,7 +19,8 @@ export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLng / 2) *
       Math.sin(dLng / 2)
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const aerialKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return Math.round(aerialKm * ROAD_FACTOR * 10) / 10
 }
 
 export const getDistanceFromStore = (customerLat, customerLng) =>
@@ -35,7 +40,7 @@ export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
   if (distanceKm <= 3) return 12
   if (distanceKm <= 5) return 29
   if (distanceKm <= 6) return 29
-  if (distanceKm <= 14) {
+  if (distanceKm <= 16) {
     if (numTotal >= 499) return 60
     return Math.round(distanceKm * 7)
   }
@@ -45,7 +50,7 @@ export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
 export const getDeliveryETA = (distanceKm) => {
   if (distanceKm <= 5)  return '15 min'
   if (distanceKm <= 7)  return '20–25 min'
-  if (distanceKm <= 14) return '30–40 min'
+  if (distanceKm <= 16) return '30–40 min'
   return null
 }
 
@@ -85,7 +90,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
     }
   }
 
-  if (dist > 14) {
+  if (dist > 16) {
     return {
       serviceable: false,
       distanceKm: Math.round(dist * 10) / 10,
@@ -114,7 +119,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   } else if (dist <= 6) {
     charge = 29
   } else {
-    // 6.0 – 14.0 km
+    // 6.0 – 16.0 km
     if (numCartTotal >= 499) {
       charge = 60
       longDistanceTier = 'FLAT_ABOVE_499'

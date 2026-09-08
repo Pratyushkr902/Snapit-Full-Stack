@@ -7,7 +7,7 @@
 const STORE_LAT = 25.33121156659458
 const STORE_LNG = 84.8006737574818
 
-export const MAX_DELIVERY_RADIUS_KM = 14
+export const MAX_DELIVERY_RADIUS_KM = 16
 export const EXPRESS_DELIVERY_FEE = 25
 
 // Standard GPS coordinates for landmark matching
@@ -20,7 +20,11 @@ export const HIMALAYA_LNG = 84.8545598
 // 0–3 km: ₹12 | 3–6 km: ₹29 | 6–14 km: ₹7/km (Chikasi ~9km: ₹63, Himalaya ~9.2km: ₹65)
 
 
-// Haversine formula — returns distance in km
+// Road circuity multiplier (1.25x) converts Haversine straight-line distance to
+// actual driving road distance, matching Google Maps / Zomato / Zepto road routing.
+export const ROAD_FACTOR = 1.25
+
+// Haversine formula with road circuity — returns real road distance in km
 export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
   const R = 6371
   const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -29,8 +33,10 @@ export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2)
+  const aerialKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return Math.round(aerialKm * ROAD_FACTOR * 10) / 10
 }
 
 export const getDistanceFromStore = (customerLat, customerLng) =>
@@ -57,7 +63,7 @@ const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
   if (distanceKm <= 3) return 12
   if (distanceKm <= 5) return 29
   if (distanceKm <= 6) return 29
-  if (distanceKm <= 14) {
+  if (distanceKm <= 16) {
     // Orders ₹499 & above beyond 6km get subsidized Flat ₹60
     if (amount >= 499) return 60
     return Math.round(distanceKm * 7)

@@ -9,7 +9,7 @@ const STORE_LOCATION = { lat: 25.33121156659458, lng: 84.8006737574818 }
 // friendly display name; they must never be the pass/fail gate, or customers
 // who fall between two circles (e.g. Acchua residents outside the 2km pin)
 // get wrongly told "not serviceable" even though we can actually deliver to them.
-const MAX_DELIVERY_RADIUS_KM = 14
+const MAX_DELIVERY_RADIUS_KM = 16
 
 const DELIVERY_ZONES = [
   { name: 'Paliganj',  lat: 25.2921, lng: 84.8170, radiusKm: 2.0 },
@@ -73,7 +73,7 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
 // store distance decides "how far is delivery actually coming from" — and the
 // UI label "X km from our store" should always use the latter.
 export function isInDeliveryZone(lat, lng) {
-  const storeDistanceKm = getDistanceKm(lat, lng, STORE_LOCATION.lat, STORE_LOCATION.lng)
+  const storeDistanceKm = getDistanceKm(lat, lng, STORE_LOCATION.lat, STORE_LOCATION.lng) * 1.25
   const serviceable = storeDistanceKm <= MAX_DELIVERY_RADIUS_KM
 
   let nearest = null
