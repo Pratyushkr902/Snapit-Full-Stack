@@ -766,12 +766,15 @@ export async function saveFcmTokenController(request, response) {
             { upsert: true, new: true }
         ).catch(() => {})
 
-        // 2. If logged in, clean up older tokens for this user so they only have ONE active device token
+        // 2. If logged in, clean up older tokens for this user on the SAME platform (e.g. 1 android, 1 web)
         if (userId) {
-            await DeviceTokenModel.deleteMany({
-                userId,
-                token: { $ne: cleanToken }
-            }).catch(() => {})
+            if (platform) {
+                await DeviceTokenModel.deleteMany({
+                    userId,
+                    platform,
+                    token: { $ne: cleanToken }
+                }).catch(() => {})
+            }
 
             // Also clear this token if it was previously attached to a different account on the same device
             await UserModel.updateMany(
@@ -781,7 +784,7 @@ export async function saveFcmTokenController(request, response) {
 
             await UserModel.findByIdAndUpdate(userId, {
                 fcmToken: cleanToken,
-                fcmTokens: [cleanToken]
+                $addToSet: { fcmTokens: cleanToken }
             }).catch(() => {})
         }
 
