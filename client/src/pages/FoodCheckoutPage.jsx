@@ -98,9 +98,9 @@ const FoodCheckoutPage = () => {
   const [openAddress,   setOpenAddress]     = useState(false)
   const [placing,       setPlacing]         = useState(false)
 
-  const [tipAmt,        setTipAmt]          = useState(20)
+  const [tipAmt,        setTipAmt]          = useState(0)
   const [customTip,     setCustomTip]       = useState('')
-  const [activeTipIdx,  setActiveTipIdx]    = useState(1)
+  const [activeTipIdx,  setActiveTipIdx]    = useState(0)
 
   const [couponCode,       setCouponCode]       = useState('')
   const [couponDiscount,   setCouponDiscount]   = useState(0)
@@ -166,7 +166,7 @@ const FoodCheckoutPage = () => {
         if (r.info.isEveningClosed) {
           toast.error(`🌙 Delivery beyond 5 km is closed after 7:30 PM (${r.info.distanceKm} km from ${r.restaurantName}).`, { duration: 6000 })
         } else {
-          toast.error(`Your address is ${r.info.distanceKm} km away and outside the 14 km delivery range for ${r.restaurantName}.`, { duration: 5000 })
+          toast.error(`Your address is ${r.info.distanceKm} km away and outside the 16 km delivery range for ${r.restaurantName}.`, { duration: 5000 })
         }
         return false
       }

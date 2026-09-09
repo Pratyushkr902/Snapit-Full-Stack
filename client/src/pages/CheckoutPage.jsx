@@ -92,7 +92,7 @@ const CheckoutPage = () => {
       if (deliveryInfo.isEveningClosed) {
         toast.error(`🌙 Delivery beyond 5 km is closed after 7:30 PM (${deliveryInfo.distanceKm} km away). Deliveries resume tomorrow at 8:00 AM!`, { duration: 6000 })
       } else {
-        toast.error(`Your address is ${deliveryInfo.distanceKm} km away and outside our 14 km delivery range.`, { duration: 5000 })
+        toast.error(`Your address is ${deliveryInfo.distanceKm} km away and outside our 16 km delivery range.`, { duration: 5000 })
       }
       return false
     }
