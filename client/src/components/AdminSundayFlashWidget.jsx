@@ -45,9 +45,11 @@ const AdminSundayFlashWidget = () => {
     return () => clearInterval(poller)
   }, [])
 
+  const isLive = Boolean(status.isLive || status.isActive)
+
   // Local ticking timer
   useEffect(() => {
-    if (status.isActive && countdown > 0) {
+    if (isLive && countdown > 0) {
       intervalRef.current = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
@@ -64,7 +66,7 @@ const AdminSundayFlashWidget = () => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [status.isActive, countdown > 0])
+  }, [isLive, countdown > 0])
 
   const handleTrigger = async () => {
     const confirm = window.confirm(
@@ -138,7 +140,7 @@ const AdminSundayFlashWidget = () => {
               <h2 className='text-lg sm:text-xl font-black text-white tracking-tight'>
                 Sunday Flash Offer Engine
               </h2>
-              {status.isActive ? (
+              {isLive ? (
                 <span className='inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-red-500 text-white animate-pulse shadow-xs'>
                   <span className='w-2 h-2 rounded-full bg-white animate-ping' />
                   LIVE NOW
@@ -157,7 +159,7 @@ const AdminSundayFlashWidget = () => {
 
         {/* Action Buttons */}
         <div className='flex items-center gap-2.5 flex-wrap'>
-          {status.isActive ? (
+          {isLive ? (
             <button
               onClick={handleStop}
               disabled={actionLoading}
@@ -193,11 +195,11 @@ const AdminSundayFlashWidget = () => {
             <FaClock className='text-xs' />
             Window Timer
           </p>
-          <p className={`text-2xl font-black mt-1 font-mono ${status.isActive ? 'text-orange-400 animate-pulse' : 'text-stone-400'}`}>
-            {status.isActive ? formatTimer(countdown) : '05:00'}
+          <p className={`text-2xl font-black mt-1 font-mono ${isLive ? 'text-orange-400 animate-pulse' : 'text-stone-400'}`}>
+            {isLive ? formatTimer(countdown) : '05:00'}
           </p>
           <p className='text-[10px] text-stone-400 mt-0.5'>
-            {status.isActive ? 'Window ends automatically' : 'Duration: 5 Minutes'}
+            {isLive ? 'Window ends automatically' : 'Duration: 5 Minutes'}
           </p>
         </div>
 

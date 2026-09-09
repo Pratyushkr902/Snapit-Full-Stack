@@ -55,9 +55,11 @@ export const getSundayFlashStatus = async (req, res) => {
       success: true,
       data: {
         isLive,
+        isActive: isLive,
         remainingSeconds,
         startTime: offer.startTime,
         endTime: offer.endTime,
+        claimedCount: offer.claimedUserIds?.length || 0,
         maxFoodValue: offer.maxFoodValue || 149,
         durationMinutes: offer.durationMinutes || 5,
         title: offer.title || "SUNDAY FLASH OFFER 🔥",

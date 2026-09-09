@@ -47,7 +47,38 @@ const SundayFlashBanner = ({ onStatusChange }) => {
   }, [secondsLeft]);
 
   if (!flashData?.isLive || secondsLeft <= 0) {
-    return null;
+    return (
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white p-3.5 sm:p-4 shadow-md mb-3 border border-orange-300/40">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wider uppercase text-yellow-300 border border-yellow-400/30">
+                🔥 SUNDAY FLASH OFFER
+              </span>
+              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[11px] font-bold text-white">
+                ⏰ EVERY SUNDAY AT 5:00 PM
+              </span>
+              <span className="inline-flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-yellow-200">
+                ⚡ 5 MINS WINDOW
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-white leading-tight">
+              Food up to ₹149 is 100% FREE! (₹0 Food Cost)
+            </h3>
+            <p className="text-xs text-yellow-100 font-medium mt-0.5">
+              Only delivery charge is taken: 🚴 0–3 km: ₹29 • 3–14 km: ₹9/km • 1 user = 1 order
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <div className="bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 text-center">
+              <span className="text-[10px] text-yellow-300 font-bold block uppercase tracking-wider">Window</span>
+              <span className="text-sm font-black text-white font-mono">5 Mins</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const mins = Math.floor(secondsLeft / 60);
