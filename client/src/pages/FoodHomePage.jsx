@@ -170,10 +170,8 @@ const FoodHomePage = () => {
         </div>
       )}
 
-      {/* ── Sunday Flash Offer 5-min Countdown Banner ── */}
-      <div className='px-4 pt-2'>
-        <SundayFlashBanner />
-      </div>
+      {/* ── Sunday Flash Offer Live 5-Min Countdown Banner (renders only when live) ── */}
+      <SundayFlashBanner />
 
       {/* ── Restaurant Cards ── */}
       <div className='px-4 pt-2'>

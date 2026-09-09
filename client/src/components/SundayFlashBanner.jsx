@@ -55,7 +55,7 @@ const SundayFlashBanner = ({ onStatusChange }) => {
   const timeFormatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-500 text-white p-4 shadow-xl mb-4 border border-orange-400/40">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-500 text-white p-4 shadow-xl mx-4 mt-2 mb-4 border border-orange-400/40">
       {/* Background Animated Pulse Glow */}
       <div className="absolute -right-8 -top-8 w-32 h-32 bg-yellow-300/20 rounded-full blur-2xl pointer-events-none animate-pulse" />
       <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-red-900/30 rounded-full blur-2xl pointer-events-none" />
