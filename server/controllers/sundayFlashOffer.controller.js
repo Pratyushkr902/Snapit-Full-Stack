@@ -98,22 +98,23 @@ export const getSundayFlashStatus = async (req, res) => {
  */
 export const triggerSundayFlashOffer = async (req, res) => {
   try {
-    const durationMinutes = Number(req.body?.durationMinutes) || 5;
-    const startTime = new Date();
-    const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
-
     let offer = await SundayFlashOfferModel.findOne().sort({ updatedAt: -1 });
     if (!offer) {
       offer = new SundayFlashOfferModel();
     }
 
+    const durationMinutes = Number(req.body?.durationMinutes) || offer.durationMinutes || 5;
+    const maxFoodValue = Number(req.body?.maxFoodValue) || offer.maxFoodValue || 149;
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
+
     offer.isActive = true;
     offer.startTime = startTime;
     offer.endTime = endTime;
     offer.durationMinutes = durationMinutes;
-    offer.maxFoodValue = 149;
-    offer.deliveryRules = { baseKm: 3, baseCharge: 29, perKmRate: 9, maxKm: 14 };
-    // Reset claimed users for this new 5-minute window
+    offer.maxFoodValue = maxFoodValue;
+    offer.deliveryRules = offer.deliveryRules || { baseKm: 3, baseCharge: 29, perKmRate: 9, maxKm: 14 };
+    // Reset claimed users for this new flash window
     offer.claimedUserIds = [];
     offer.claimedMobiles = [];
 
@@ -125,8 +126,8 @@ export const triggerSundayFlashOffer = async (req, res) => {
     try {
       await broadcastToAllUsers({
         title: "SUNDAY FLASH OFFER 🔥",
-        shayari: "5 MINUTES. ₹149 FOOD. ₹0 FOOD COST.",
-        body: "Order food up to ₹149 FREE! ⏰ Only for 5 minutes! 🚴 0–3km: ₹29, 3–14km: ₹9/km",
+        shayari: `${durationMinutes} MINUTES. ₹${maxFoodValue} FOOD. ₹0 FOOD COST.`,
+        body: `Order food up to ₹${maxFoodValue} FREE! ⏰ Only for ${durationMinutes} minutes! 🚴 0–3km: ₹29, 3–14km: ₹9/km`,
         type: "SUNDAY_FLASH_OFFER",
         promoTag: "SUNDAY_FLASH",
       });
@@ -141,7 +142,7 @@ export const triggerSundayFlashOffer = async (req, res) => {
         startTime,
         endTime,
         durationMinutes,
-        maxFoodValue: 149,
+        maxFoodValue,
       },
     });
   } catch (error) {
