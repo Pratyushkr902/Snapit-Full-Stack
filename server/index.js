@@ -63,6 +63,8 @@ import deliveryRouter       from './route/delivery.routes.js'   // ✅ NEW
 import sellerAdminRouter    from './route/sellerAdmin.routes.js' // ✅ NEW
 import dailyAccountRouter   from './route/dailyAccount.route.js' // ✅ NEW
 import festiveOfferRouter   from './route/festiveOffer.route.js' // ✅ Festive Offers
+import sundayFlashRouter    from './route/sundayFlashOffer.route.js' // 🔥 Sunday Flash Offer
+import { startSundayFlashCron } from './cron/sundayFlash.cron.js'    // 🔥 Sunday Flash Cron
 import treasuryRouter       from './route/treasury.route.js'       // ✅ COD Cash Treasury & Partner Split
 import appVersionRouter     from './route/appVersion.route.js'     // ✅ In-App Update & Version Check
 import riderDutyRouter      from './route/riderDuty.route.js'      // ✅ Rider Duty Shift & Fleet Tracking
@@ -429,6 +431,7 @@ app.use('/api/delivery',        deliveryRouter)          // ✅ NEW
 app.use('/api/admin/accounts',  dailyAccountRouter)       // ✅ NEW
 app.use('/api/admin-management', adminManagementRouter)
 app.use('/api/festive-offer',    festiveOfferRouter)       // ✅ Festive Offers
+app.use('/api/sunday-flash',     sundayFlashRouter)        // 🔥 Sunday Flash Offer
 app.use('/api/treasury',         treasuryRouter)           // ✅ COD Cash Treasury & Partner Split
 app.use('/api/app-version',      appVersionRouter)         // ✅ In-App Update & Version Check
 app.use('/api/rider-duty',       riderDutyRouter)          // ✅ Rider Duty Shift & Fleet Tracking
@@ -529,6 +532,7 @@ connectDB().then(() => {
     initMarketingCron()
     startAutoConfirmCron()
     startScheduledOrdersCron()
+    startSundayFlashCron()
     server.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Snapit running on port ${PORT}`)
         console.log(`⏰ MRP cron: daily midnight IST`)

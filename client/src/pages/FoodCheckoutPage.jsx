@@ -116,6 +116,46 @@ const FoodCheckoutPage = () => {
   const [activeTags,    setActiveTags]      = useState([])
   const [instructions,  setInstructions]    = useState('')
 
+  // ── Sunday Flash Offer 5-Minute Window ──────────────────────────────────────
+  const [flashOffer, setFlashOffer] = useState(null)
+  const [flashSecondsLeft, setFlashSecondsLeft] = useState(0)
+
+  useEffect(() => {
+    const fetchFlashStatus = async () => {
+      try {
+        const res = await Axios({ method: 'GET', url: '/api/sunday-flash/status' })
+        if (res.data?.success && res.data?.data) {
+          setFlashOffer(res.data.data)
+          setFlashSecondsLeft(res.data.data.remainingSeconds || 0)
+        }
+      } catch (e) {
+        // Non-fatal
+      }
+    }
+    fetchFlashStatus()
+    const intv = setInterval(fetchFlashStatus, 15000)
+    return () => clearInterval(intv)
+  }, [])
+
+  useEffect(() => {
+    if (flashSecondsLeft <= 0) return
+    const ticker = setInterval(() => {
+      setFlashSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(ticker)
+          toast('⏰ Sunday Flash Offer 5-minute window has ended.', { icon: '⌛' })
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(ticker)
+  }, [flashSecondsLeft])
+
+  const isFlashActive = Boolean(
+    flashOffer?.isLive && flashSecondsLeft > 0 && !flashOffer?.alreadyClaimed
+  )
+
   // ── Calculations ────────────────────────────────────────────────────────────
   const isSnapitPlus = Boolean(
     user?.isSnapitPlusMember &&
@@ -133,26 +173,47 @@ const FoodCheckoutPage = () => {
       return s + price * qty
     }, 0)
 
+    const isFlashEligible = Boolean(
+      isFlashActive && subtotal > 0 && subtotal <= (flashOffer?.maxFoodValue || 149)
+    )
+
     const hasLoc = Boolean(r.restaurantLat && r.restaurantLng)
     const info = (effectiveAddrCoords && hasLoc)
       ? getDeliveryInfoFromOrigin(r.restaurantLat, r.restaurantLng, effectiveAddrCoords.lat, effectiveAddrCoords.lng, subtotal, isSnapitPlus)
       : null
-    const fee = hasLoc
-      ? (info?.charge ?? FALLBACK_DELIVERY_FEE)
-      : (isSnapitPlus ? 0 : FALLBACK_DELIVERY_FEE)
-    const minOrder = Math.max(99, Number(r.minOrderValue || r.minOrder || info?.minOrder || 99))
 
-    return { ...r, subtotal, fee, minOrder, info }
+    let fee = FALLBACK_DELIVERY_FEE
+    if (isFlashEligible) {
+      // Sunday Flash delivery: 0–3 km: ₹29 | 3–14 km: ₹9/km
+      const dist = info?.distanceKm || 0
+      fee = dist <= 3 ? 29 : Math.round(dist * 9)
+    } else {
+      fee = hasLoc
+        ? (info?.charge ?? FALLBACK_DELIVERY_FEE)
+        : (isSnapitPlus ? 0 : FALLBACK_DELIVERY_FEE)
+    }
+
+    const minOrder = isFlashEligible
+      ? 0
+      : Math.max(99, Number(r.minOrderValue || r.minOrder || info?.minOrder || 99))
+
+    return { ...r, subtotal, fee, minOrder, info, isFlashEligible }
   })
 
-  const subTotal    = restaurantPricing.reduce((s, r) => s + r.subtotal, 0)
+  const subTotal = restaurantPricing.reduce((s, r) => s + r.subtotal, 0)
+  const isFlashEligible = Boolean(
+    isFlashActive && subTotal > 0 && subTotal <= (flashOffer?.maxFoodValue || 149)
+  )
+  const flashDiscount = isFlashEligible ? subTotal : 0
   const deliveryFee = restaurantPricing.reduce((s, r) => s + r.fee, 0)
 
-  const walletBal   = Number(user?.walletBalance || 0)
-  const preWallet   = subTotal - couponDiscount + deliveryFee + tipAmt
+  const walletBal = Number(user?.walletBalance || 0)
+  // Customer pays ₹0 for food when eligible for Sunday Flash Offer
+  const payableFood = Math.max(0, subTotal - flashDiscount - couponDiscount)
+  const preWallet = payableFood + deliveryFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
-  const grandTotal  = Math.max(0, preWallet - walletDeduct)
-  const totalSaved  = 48 + couponDiscount + walletDeduct
+  const grandTotal = Math.max(0, preWallet - walletDeduct)
+  const totalSaved = 48 + flashDiscount + couponDiscount + walletDeduct
 
   const unserviceableResto = restaurantPricing.find(r => r.info && !r.info.serviceable)
 
@@ -170,7 +231,7 @@ const FoodCheckoutPage = () => {
         }
         return false
       }
-      if (r.subtotal < r.minOrder) {
+      if (!isFlashEligible && r.subtotal < r.minOrder) {
         toast.error(`Minimum order of ₹${r.minOrder} required for ${r.restaurantName}. Add ₹${r.minOrder - r.subtotal} more to proceed!`, { duration: 5000 })
         return false
       }
@@ -281,12 +342,14 @@ const FoodCheckoutPage = () => {
       walletAmountUsed: walletDeduct || undefined,
       items,
       deliveryLocation: { lat: coords.lat, lng: coords.lng },
+      isSundayFlash: isFlashEligible,
+      offerKey: isFlashEligible ? 'SUNDAY_FLASH_FREE_FOOD' : undefined,
       ...extra,
     }
   }, [
     activeTags, instructions, addressList, selectAddress, scheduleNow, scheduleSlot,
     tipAmt, appliedCouponCode, couponDiscount, walletDeduct,
-    restaurantItemLists,
+    restaurantItemLists, isFlashEligible,
   ])
 
   // ── Payment handlers ─────────────────────────────────────────────────────────
@@ -450,6 +513,52 @@ const FoodCheckoutPage = () => {
           </p>
         </div>
       </div>
+
+      {/* ── Sunday Flash Offer Banner in Checkout ── */}
+      {isFlashActive && (
+        <div className='mx-4 mt-3'>
+          {isFlashEligible ? (
+            <div className='bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-500 text-white p-3.5 rounded-2xl shadow-md border border-orange-300/50 flex items-center justify-between'>
+              <div>
+                <div className='flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-yellow-200'>
+                  <span className='animate-bounce'>🔥</span> SUNDAY FLASH OFFER APPLIED
+                </div>
+                <div className='text-sm font-extrabold text-white mt-0.5'>
+                  Food is 100% FREE (₹{subTotal} Saved)! Pay delivery only.
+                </div>
+                <div className='text-[11px] text-yellow-100 mt-1'>
+                  🚴 0–3 km: ₹29 | 3–14 km: ₹9/km
+                </div>
+              </div>
+              <div className='bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-xl text-center border border-yellow-300/40'>
+                <div className='text-[9px] uppercase font-bold text-yellow-300'>Ends in</div>
+                <div className='text-sm font-black font-mono tracking-wider text-white'>
+                  {Math.floor(flashSecondsLeft / 60)}:{String(flashSecondsLeft % 60).padStart(2, '0')}
+                </div>
+              </div>
+            </div>
+          ) : subTotal > (flashOffer?.maxFoodValue || 149) ? (
+            <div className='bg-amber-50 border-2 border-amber-400 p-3.5 rounded-2xl shadow-sm text-amber-900'>
+              <div className='flex items-center justify-between gap-2'>
+                <div className='flex items-center gap-1.5 font-bold text-xs text-amber-950'>
+                  <span>⚠️</span> Sunday Flash Offer Limit: Max ₹149 Food
+                </div>
+                <div className='bg-amber-900/80 text-yellow-200 px-2 py-0.5 rounded font-mono text-[11px] font-bold'>
+                  {Math.floor(flashSecondsLeft / 60)}:{String(flashSecondsLeft % 60).padStart(2, '0')}
+                </div>
+              </div>
+              <p className='text-xs text-amber-800 mt-1 leading-relaxed'>
+                Your food cart is <strong>₹{subTotal}</strong>. Sunday Flash Offer applies to orders <strong>up to ₹149 only</strong>. Remove items worth <strong>₹{subTotal - 149}</strong> to get your food <strong>100% FREE</strong>!
+              </p>
+            </div>
+          ) : null}
+        </div>
+      )}
+      {flashOffer?.isLive && flashOffer?.alreadyClaimed && (
+        <div className='mx-4 mt-3 bg-gray-50 border border-gray-300 text-gray-700 p-3 rounded-2xl text-xs font-semibold text-center'>
+          ℹ️ You have already claimed your 1 free order for this Sunday Flash Offer window.
+        </div>
+      )}
 
       {/* ── Multi-restaurant cart warning (if user had items from multiple restos) ── */}
       {restaurants.length > 1 && (
@@ -768,7 +877,7 @@ const FoodCheckoutPage = () => {
                 <input
                   value={couponCode}
                   onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
-                  placeholder='Try SNAPIT50, WELCOME, CAKE50, BIRYANIFREE, SNAPIT'
+                  placeholder='Enter coupon code (e.g. FIRSTUSER)'
                   className='flex-1 min-w-0 h-10 border border-gray-200 rounded-xl px-3 text-sm text-gray-700 outline-none focus:border-red-400 transition-colors'
                   disabled={couponLoading}
                 />
@@ -880,8 +989,16 @@ const FoodCheckoutPage = () => {
         <div className='space-y-1.5'>
           <div className='flex justify-between text-sm'>
             <span className='text-gray-500'>Item total</span>
-            <span className='font-semibold text-gray-800'>₹{subTotal}</span>
+            <span className={`font-semibold ${isFlashEligible ? 'line-through text-gray-400' : 'text-gray-800'}`}>₹{subTotal}</span>
           </div>
+          {isFlashEligible && (
+            <div className='flex justify-between text-sm bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200/60'>
+              <span className='text-emerald-800 font-bold flex items-center gap-1'>
+                <span>🔥</span> Sunday Flash (Food 100% FREE)
+              </span>
+              <span className='font-black text-emerald-600'>−₹{flashDiscount}</span>
+            </div>
+          )}
           {couponDiscount > 0 && (
             <div className='flex justify-between text-sm'>
               <span className='text-gray-500'>Coupon ({appliedCouponCode})</span>
@@ -899,13 +1016,17 @@ const FoodCheckoutPage = () => {
               <span className='text-gray-500'>🛵 Delivery fee{restaurantPricing.length > 1 ? ` (${restaurantPricing.length} restaurants)` : ''}</span>
               {restaurantPricing[0]?.info?.serviceable && (
                 <p className='text-[10px] text-gray-400 font-medium'>
-                  {restaurantPricing[0].info.distanceKm <= 3
-                    ? '0–3 km local rate (₹12)'
-                    : restaurantPricing[0].info.distanceKm <= 6
-                    ? '3–6 km rate (₹29)'
-                    : restaurantPricing[0].info.longDistanceTier === 'FLAT_ABOVE_499'
-                    ? `Flat ₹60 for ₹499+ orders (${restaurantPricing[0].info.distanceKm} km)`
-                    : `${restaurantPricing[0].info.distanceKm} km @ ₹7/km`}
+                  {isFlashEligible
+                    ? (restaurantPricing[0].info.distanceKm <= 3
+                        ? 'Sunday Flash 0–3 km rate (₹29)'
+                        : `Sunday Flash ${restaurantPricing[0].info.distanceKm} km @ ₹9/km`)
+                    : (restaurantPricing[0].info.distanceKm <= 3
+                        ? '0–3 km local rate (₹12)'
+                        : restaurantPricing[0].info.distanceKm <= 6
+                        ? '3–6 km rate (₹29)'
+                        : restaurantPricing[0].info.longDistanceTier === 'FLAT_ABOVE_499'
+                        ? `Flat ₹60 for ₹499+ orders (${restaurantPricing[0].info.distanceKm} km)`
+                        : `${restaurantPricing[0].info.distanceKm} km @ ₹7/km`)}
                 </p>
               )}
             </div>

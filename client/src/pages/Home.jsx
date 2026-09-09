@@ -1,6 +1,5 @@
 import React, { useMemo, useEffect } from 'react'
 import HomeBanner from '../components/HomeBanner'
-import TodayOffersStrip from '../components/TodayOffersStrip'
 import { useDispatch, useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { useNavigate } from 'react-router-dom'

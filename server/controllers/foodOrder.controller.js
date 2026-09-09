@@ -16,6 +16,7 @@ import {
 } from '../utils/deliveryFee.js'
 import RestaurantModel from '../models/restaurant.model.js'
 import FestiveOfferModel from '../models/festiveOffer.model.js'
+import { validateSundayFlashOrder, recordSundayFlashClaim } from './sundayFlashOffer.controller.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
 import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { validateCoupon } from '../utils/couponValidation.js'
@@ -116,6 +117,7 @@ const extractBody = (body) => {
     walletAmountUsed     = 0,
     deliveryInstructions = null,
     scheduledDelivery    = null,
+    isSundayFlash        = false,
   } = body
 
   return {
@@ -129,12 +131,14 @@ const extractBody = (body) => {
     walletAmountUsed:     Math.max(0, Number(walletAmountUsed || 0)),
     deliveryInstructions: deliveryInstructions || null,
     scheduledDelivery:    scheduledDelivery    || null,
+    isSundayFlash:        Boolean(isSundayFlash || offerKey === 'SUNDAY_FLASH_FREE_FOOD'),
   }
 }
 
 // ── Price ONE restaurant's group server-side: subtotal from DB-sourced prices,
 // delivery fee from THAT restaurant's location → deliveryLocation, min-order check. ──
-const priceGroup = async (group, deliveryLocation, user) => {
+const priceGroup = async (group, fields, user) => {
+  const deliveryLocation = fields?.deliveryLocation || fields
   const restaurant = await RestaurantModel.findById(group.restaurantId).select('location name address')
   if (!restaurant?.location?.lat || !restaurant?.location?.lng) {
     console.warn(`PRICE_TAMPER | food-order | restaurant=${group.restaurantId} missing location, cannot verify delivery fee server-side`)
@@ -181,22 +185,43 @@ const priceGroup = async (group, deliveryLocation, user) => {
     }
   }
 
-  const deliveryFee = calcDeliveryFeeFromOrigin(
-    restaurant.location.lat, restaurant.location.lng, lat, lng, subTotalAmt, user
-  )
+  // ── Sunday Flash Offer validation ──
+  let sundayFlashValidation = null
+  if (fields?.isSundayFlash) {
+    sundayFlashValidation = await validateSundayFlashOrder({
+      userId: user?._id,
+      userMobile: user?.mobile,
+      subTotalAmt,
+      distanceKm
+    })
+    if (!sundayFlashValidation.valid) {
+      const err = new Error(sundayFlashValidation.reason)
+      err.statusCode = 400
+      throw err
+    }
+  }
 
-  const isPlusForMinOrder = Boolean(
-    user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
-    new Date() < new Date(user.snapitPlusExpiresAt)
-  )
-  const minOrderRequired = Math.max(
-    Number(restaurant.minOrderValue || restaurant.minOrder || 99),
-    getMinOrderAmountFromOrigin(restaurant.location?.lat, restaurant.location?.lng, lat, lng, isPlusForMinOrder)
-  )
-  if (subTotalAmt < minOrderRequired) {
-    const err = new Error(`Minimum order of ₹${minOrderRequired} required at ${restaurant.name}. Please add items worth ₹${minOrderRequired - subTotalAmt} more.`)
-    err.statusCode = 400
-    throw err
+  const deliveryFee = sundayFlashValidation?.valid
+    ? sundayFlashValidation.deliveryFee
+    : calcDeliveryFeeFromOrigin(
+        restaurant.location.lat, restaurant.location.lng, lat, lng, subTotalAmt, user
+      )
+
+  // Only check restaurant minimum order if NOT a Sunday Flash Offer order
+  if (!sundayFlashValidation?.valid) {
+    const isPlusForMinOrder = Boolean(
+      user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
+      new Date() < new Date(user.snapitPlusExpiresAt)
+    )
+    const minOrderRequired = Math.max(
+      Number(restaurant.minOrderValue || restaurant.minOrder || 99),
+      getMinOrderAmountFromOrigin(restaurant.location?.lat, restaurant.location?.lng, lat, lng, isPlusForMinOrder)
+    )
+    if (subTotalAmt < minOrderRequired) {
+      const err = new Error(`Minimum order of ₹${minOrderRequired} required at ${restaurant.name}. Please add items worth ₹${minOrderRequired - subTotalAmt} more.`)
+      err.statusCode = 400
+      throw err
+    }
   }
 
   // Check if festive offer / freebie applies (only when explicitly active)
@@ -229,7 +254,19 @@ const priceGroup = async (group, deliveryLocation, user) => {
     ? deliveryFee
     : (distanceKm <= 3 ? 12 : (distanceKm <= 6 ? 29 : (Math.round(distanceKm * 7) || 29)))
 
-  return { ...group, restaurantName: restaurant.name, restaurantLocation: restaurant.location, restaurantAddress: restaurant.address, subTotalAmt, deliveryFee, riderFee, distanceKm }
+  return {
+    ...group,
+    restaurantName: restaurant.name,
+    restaurantLocation: restaurant.location,
+    restaurantAddress: restaurant.address,
+    subTotalAmt,
+    deliveryFee,
+    riderFee,
+    distanceKm,
+    isSundayFlash: Boolean(sundayFlashValidation?.valid),
+    sundayFlashDiscount: sundayFlashValidation?.foodDiscount || 0,
+    offerId: sundayFlashValidation?.offerId || null,
+  }
 }
 
 // ── Price every restaurant group, then fold tip/coupon/wallet into the FIRST
@@ -238,13 +275,13 @@ const priceGroup = async (group, deliveryLocation, user) => {
 // couponDiscount is never trusted. ──
 const priceAllGroups = async (groups, fields, user) => {
   const priced = []
-  for (const g of groups) priced.push(await priceGroup(g, fields.deliveryLocation, user))
+  for (const g of groups) priced.push(await priceGroup(g, fields, user))
 
   const totalSubTotal = priced.reduce((s, g) => s + g.subTotalAmt, 0)
   let { code: validCouponCode, discount: couponDiscount } = validateCoupon(fields.couponCode, totalSubTotal)
 
   if (validCouponCode && ['FIRSTUSER', 'FIRSTFREE', 'WELCOME60', 'FIRST50'].includes(validCouponCode)) {
-    const previousOrder = await OrderModel.findOne({ userId: user._id })
+    const previousOrder = await OrderModel.findOne({ userId: user._id, delivery_status: { $ne: 'Cancelled' } })
     if (previousOrder) {
       validCouponCode = null
       couponDiscount = 0
@@ -255,9 +292,12 @@ const priceAllGroups = async (groups, fields, user) => {
     g.tip              = idx === 0 ? fields.tip : 0
     g.couponDiscount   = idx === 0 ? couponDiscount : 0
     g.walletAmountUsed = idx === 0 ? fields.walletAmountUsed : 0
-    g.offerKey         = idx === 0 ? fields.offerKey : null
+    g.offerKey         = g.isSundayFlash ? 'SUNDAY_FLASH_FREE_FOOD' : (idx === 0 ? fields.offerKey : null)
     g.couponCode       = idx === 0 ? validCouponCode : null
-    g.totalAmt = g.subTotalAmt + g.deliveryFee + g.tip - g.couponDiscount - g.walletAmountUsed
+
+    // For Sunday Flash: 100% food cost is waived up to ₹149 (customer pays ₹0 for food)
+    const foodPayable = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
+    g.totalAmt = foodPayable + g.deliveryFee + g.tip - g.couponDiscount - g.walletAmountUsed
   })
 
   const grandTotal = priced.reduce((s, g) => s + g.totalAmt, 0)
@@ -294,6 +334,8 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
     offerKey:         group.offerKey,
     couponCode:       group.couponCode,
     couponDiscount:   group.couponDiscount,
+    discount_amount:  (group.sundayFlashDiscount || 0) + (group.couponDiscount || 0),
+    isSundayFlashOffer: Boolean(group.isSundayFlash),
     walletAmountUsed: group.walletAmountUsed,
     deliveryInstructions: fields.deliveryInstructions || addressDoc?.delivery_instructions || '',
     scheduledDelivery:    fields.scheduledDelivery,
@@ -502,6 +544,9 @@ export async function foodOrderCOD(req, res) {
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
+      if (group.isSundayFlash && group.offerId) {
+        recordSundayFlashClaim(group.offerId, req.userId, user?.mobile).catch(() => {})
+      }
     }
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
 
@@ -544,6 +589,9 @@ export async function foodOrderWallet(req, res) {
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
+      if (group.isSundayFlash && group.offerId) {
+        recordSundayFlashClaim(group.offerId, req.userId, user?.mobile).catch(() => {})
+      }
     }
 
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
@@ -615,6 +663,9 @@ export async function foodOrderVerifyPayment(req, res) {
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
+      if (group.isSundayFlash && group.offerId) {
+        recordSundayFlashClaim(group.offerId, req.userId, user?.mobile).catch(() => {})
+      }
     }
 
     console.log(`[foodOrderVerifyPayment] ✅ group=${groupOrderId} paymentId=${razorpay_payment_id} restaurants=${orders.length}`)

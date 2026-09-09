@@ -462,7 +462,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             const couponVal = validateCoupon(couponCode, actualSubTotal)
             if (couponVal?.code && couponVal?.discount > 0) {
                 if (couponVal.code === 'FIRSTUSER' || couponVal.code === 'FIRSTFREE' || couponVal.code === 'WELCOME60' || couponVal.code === 'FIRST50') {
-                    const previousOrder = await OrderModel.findOne({ userId })
+                    const previousOrder = await OrderModel.findOne({ userId, delivery_status: { $ne: 'Cancelled' } })
                     if (!previousOrder) {
                         validCouponCode = couponVal.code
                         validDiscountAmt = couponVal.discount
@@ -657,7 +657,7 @@ export async function WalletPaymentOrderController(request, response) {
             const couponVal = validateCoupon(couponCode, actualSubTotal)
             if (couponVal?.code && couponVal?.discount > 0) {
                 if (couponVal.code === 'FIRSTUSER' || couponVal.code === 'FIRSTFREE' || couponVal.code === 'WELCOME60' || couponVal.code === 'FIRST50') {
-                    const previousOrder = await OrderModel.findOne({ userId })
+                    const previousOrder = await OrderModel.findOne({ userId, delivery_status: { $ne: 'Cancelled' } })
                     if (!previousOrder) {
                         validCouponCode = couponVal.code
                         validDiscountAmt = couponVal.discount
@@ -837,7 +837,7 @@ export async function paymentController(request, response) {
                 const couponVal = validateCoupon(couponCode, actualSubTotal)
                 if (couponVal?.code && couponVal?.discount > 0) {
                     if (couponVal.code === 'FIRSTUSER' || couponVal.code === 'FIRSTFREE' || couponVal.code === 'WELCOME60' || couponVal.code === 'FIRST50') {
-                        const previousOrder = await OrderModel.findOne({ userId })
+                        const previousOrder = await OrderModel.findOne({ userId, delivery_status: { $ne: 'Cancelled' } })
                         if (!previousOrder) validDiscountAmt = couponVal.discount
                     } else {
                         validDiscountAmt = couponVal.discount
@@ -980,7 +980,7 @@ export async function verifyPaymentController(request, response) {
             const couponVal = validateCoupon(couponCode, actualSubTotal)
             if (couponVal?.code && couponVal?.discount > 0) {
                 if (couponVal.code === 'FIRSTUSER' || couponVal.code === 'FIRSTFREE' || couponVal.code === 'WELCOME60' || couponVal.code === 'FIRST50') {
-                    const previousOrder = await OrderModel.findOne({ userId })
+                    const previousOrder = await OrderModel.findOne({ userId, delivery_status: { $ne: 'Cancelled' } })
                     if (!previousOrder) {
                         validCouponCode = couponVal.code
                         validDiscountAmt = couponVal.discount
@@ -1872,7 +1872,7 @@ export const applyCouponController = async (request, response) => {
         const discount = validation.discount
 
         if (code === 'FIRSTUSER' || code === 'FIRSTFREE' || code === 'WELCOME60' || code === 'FIRST50') {
-            const previousOrder = await OrderModel.findOne({ userId })
+            const previousOrder = await OrderModel.findOne({ userId, delivery_status: { $ne: 'Cancelled' } })
             if (previousOrder) {
                 return response.status(400).json({ message: 'This code is for first-time customers only.', error: true, success: false })
             }

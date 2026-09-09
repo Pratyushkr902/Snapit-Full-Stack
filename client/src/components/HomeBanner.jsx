@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
+import sundayFlashBanner from '../assets/sunday_flash_banner.jpg';
 import banner1 from '../assets/banner1.webp';
 import banner2 from '../assets/banner2.webp';
 import banner3 from '../assets/banner3.webp';
 
 const bannerData = [
-  { image: banner1, link: '/search?q=chicken' },
-  { image: banner2, link: '/search?q=drink' },
-  { image: banner3, link: '/search?q=oats' },
+  { image: sundayFlashBanner, link: '/food', alt: 'Snapit Sunday Flash Offer - Food Free up to ₹149' },
+  { image: banner1, link: '/search?q=chicken', alt: 'Snapit Fresh Chicken & Meat' },
+  { image: banner2, link: '/search?q=drink', alt: 'Snapit Beverages & Drinks' },
+  { image: banner3, link: '/search?q=oats', alt: 'Snapit Groceries & Oats' },
 ];
 
 const HomeBanner = () => {
@@ -26,8 +28,8 @@ const HomeBanner = () => {
         {!swiperReady && (
           <div className='relative w-full h-full'>
             <img
-              src={banner1}
-              alt='Snapit Exclusive Offers & Fast Delivery'
+              src={sundayFlashBanner}
+              alt='Snapit Sunday Flash Offer - Food Free up to ₹149'
               className='absolute inset-0 w-full h-full object-contain object-center'
               fetchPriority='high'
               loading='eager'

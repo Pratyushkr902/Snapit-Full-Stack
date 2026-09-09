@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
-import TodayOffersStrip from '../components/TodayOffersStrip'
+import SundayFlashBanner from '../components/SundayFlashBanner'
 
 // ── Haversine distance (km) ───────────────────────────────────────────────────
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -170,8 +170,10 @@ const FoodHomePage = () => {
         </div>
       )}
 
-      {/* ── Limited Offer Promo Codes Strip ── */}
-      <TodayOffersStrip className='mt-2 mb-1' />
+      {/* ── Sunday Flash Offer 5-min Countdown Banner ── */}
+      <div className='px-4 pt-2'>
+        <SundayFlashBanner />
+      </div>
 
       {/* ── Restaurant Cards ── */}
       <div className='px-4 pt-2'>

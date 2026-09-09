@@ -19,7 +19,6 @@ import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
 import { useRestaurantCart } from '../utils/foodCartStore'
 import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
-import TodayOffersStrip from '../components/TodayOffersStrip'
 
 // ── Fallbacks ─────────────────────────────────────────────────────────────────
 const FALLBACK_IMG = FALLBACK_IMAGE
@@ -582,9 +581,6 @@ export default function RestaurantDetailPage() {
 
             {/* ── Distance + Address bar (Zomato-style) ── */}
             <LocationBar restaurant={restaurant} userLocation={userLocation} />
-
-            {/* ── Zomato-Style Limited Promo Codes for this Restaurant ── */}
-            <TodayOffersStrip className="mx-1 my-1.5" />
           </div>
 
           {/* ── Category Tabs ── */}

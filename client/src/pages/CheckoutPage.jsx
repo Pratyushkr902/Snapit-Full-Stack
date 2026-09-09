@@ -424,12 +424,12 @@ const CheckoutPage = () => {
           <div className='mx-4 mt-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
             <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-1'>Promo Code</p>
             <p className='text-[10px] text-slate-400 mb-2'>
-              Special Offer? Use <span className='font-black text-slate-600'>SNAPIT</span>, <span className='font-black text-slate-600'>WELCOME</span>, or <span className='font-black text-slate-600'>CAKE50</span>
+              First order? Use <span className='font-black text-slate-600'>FIRSTUSER</span> for an instant surprise discount!
             </p>
             <div className='flex flex-col sm:flex-row gap-2'>
               <input type='text' value={couponCode} onChange={e => setCouponCode(e.target.value)}
                 disabled={couponApplied}
-                placeholder={couponApplied ? 'Code applied! 🎉' : 'Try SNAPIT, WELCOME, CAKE50'}
+                placeholder={couponApplied ? 'Code applied! 🎉' : 'Enter FIRSTUSER'}
                 className='w-full px-3 py-2.5 border border-slate-200 rounded-xl uppercase text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-400 disabled:bg-green-50 disabled:border-green-200' />
               {couponApplied ? (
                 <button onClick={() => { setCouponApplied(false); setDiscountAmount(0); setDiscountLabel(''); setCouponCode('') }}
