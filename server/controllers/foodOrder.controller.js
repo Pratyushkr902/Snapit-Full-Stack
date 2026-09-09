@@ -16,8 +16,13 @@ import {
 } from '../utils/deliveryFee.js'
 import RestaurantModel from '../models/restaurant.model.js'
 import FestiveOfferModel from '../models/festiveOffer.model.js'
-import { validateSundayFlashOrder, recordSundayFlashClaim } from './sundayFlashOffer.controller.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
+import {
+  validateSundayFlashOrder,
+  recordSundayFlashClaim,
+  claimSundayFlashAtomic,
+  rollbackSundayFlashClaim,
+} from './sundayFlashOffer.controller.js'
 import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { validateCoupon } from '../utils/couponValidation.js'
 import { notifyAllRiders } from '../utils/firebaseNotify.js'
@@ -73,10 +78,24 @@ const buildGroupsByRestaurant = async (items) => {
       throw err
     }
 
-    // Determine price: support variant specific price (e.g. Regular/Medium/Large)
-    const effectivePrice = (i.price && Number(i.price) > 0)
-      ? Number(i.price)
-      : (db.discountedPrice > 0 ? db.discountedPrice : db.price)
+    // Determine canonical price from DB (discountedPrice if > 0, else base price)
+    const dbBasePrice = Number(db.discountedPrice > 0 ? db.discountedPrice : db.price) || 0
+    let customizationExtra = 0
+    if (Array.isArray(i.selectedCustomizations) && Array.isArray(db.customizations)) {
+      for (const sel of i.selectedCustomizations) {
+        for (const grp of db.customizations) {
+          const matchOpt = grp.options?.find(o => o.name === sel.optionName || o.name === sel.name)
+          if (matchOpt?.extraPrice) {
+            customizationExtra += Number(matchOpt.extraPrice)
+          }
+        }
+      }
+    }
+    const verifiedCanonicalPrice = dbBasePrice + customizationExtra
+
+    // Anti-tamper defense: price can never be lower than the server-verified database price
+    const clientPrice = Number(i.price || 0)
+    const effectivePrice = clientPrice > verifiedCanonicalPrice ? clientPrice : verifiedCanonicalPrice
 
     const margin       = Number(db.snapitMargin || 0)
     const restaurantId = String(db.restaurantId)
@@ -278,7 +297,11 @@ const priceAllGroups = async (groups, fields, user) => {
   for (const g of groups) priced.push(await priceGroup(g, fields, user))
 
   const totalSubTotal = priced.reduce((s, g) => s + g.subTotalAmt, 0)
-  let { code: validCouponCode, discount: couponDiscount } = validateCoupon(fields.couponCode, totalSubTotal)
+  const hasSundayFlash = priced.some(g => g.isSundayFlash)
+
+  let { code: validCouponCode, discount: couponDiscount } = hasSundayFlash
+    ? { code: null, discount: 0 }
+    : validateCoupon(fields.couponCode, totalSubTotal)
 
   if (validCouponCode && ['FIRSTUSER', 'FIRSTFREE', 'WELCOME60', 'FIRST50'].includes(validCouponCode)) {
     const previousOrder = await OrderModel.findOne({ userId: user._id, delivery_status: { $ne: 'Cancelled' } })
@@ -297,7 +320,8 @@ const priceAllGroups = async (groups, fields, user) => {
 
     // For Sunday Flash: 100% food cost is waived up to ₹149 (customer pays ₹0 for food)
     const foodPayable = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
-    g.totalAmt = foodPayable + g.deliveryFee + g.tip - g.couponDiscount - g.walletAmountUsed
+    const payablePreWallet = foodPayable + g.deliveryFee + g.tip - g.couponDiscount
+    g.totalAmt = Math.max(0, payablePreWallet - g.walletAmountUsed)
   })
 
   const grandTotal = priced.reduce((s, g) => s + g.totalAmt, 0)
@@ -499,6 +523,13 @@ const prepareMultiRestaurantOrder = async (req) => {
   const groups = await buildGroupsByRestaurant(fields.items)
   if (!groups.length) { const e = new Error('No valid items in order'); e.statusCode = 400; throw e }
 
+  const allMobiles = [
+    user?.mobile,
+    addressDoc?.mobile,
+    addressDoc?.recipient_mobile,
+  ].filter(Boolean)
+  fields.mobiles = allMobiles
+
   if (fields.walletAmountUsed > 0 && fields.walletAmountUsed > Number(user.walletBalance || 0)) {
     const e = new Error(`Insufficient wallet balance. Have ₹${user.walletBalance || 0}, need ₹${fields.walletAmountUsed}`)
     e.statusCode = 400
@@ -515,11 +546,21 @@ const prepareMultiRestaurantOrder = async (req) => {
 
 // ── POST /api/restaurant/food-order/cash-on-delivery ───────────────────────
 export async function foodOrderCOD(req, res) {
+  let flashGroup = null
+  let flashClaimed = false
+  let fields, user, addressDoc, priced, grandTotal, groupOrderId
+
   try {
     // COD never touches wallet balance — strip any client-supplied
     // walletAmountUsed before pricing so it can't fake a discount here.
     req.body.walletAmountUsed = 0
-    const { fields, user, addressDoc, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const prep = await prepareMultiRestaurantOrder(req)
+    fields = prep.fields
+    user = prep.user
+    addressDoc = prep.addressDoc
+    priced = prep.priced
+    grandTotal = prep.grandTotal
+    groupOrderId = prep.groupOrderId
 
     if (user?.isCodBlocked) {
       return res.status(403).json({
@@ -527,6 +568,23 @@ export async function foodOrderCOD(req, res) {
         error: true,
         success: false
       })
+    }
+
+    // ── ATOMIC SUNDAY FLASH CLAIM LOCK ──
+    // Atomically reserves the claim in MongoDB BEFORE creating orders.
+    // Concurrency defense: Prevents multiple parallel checkouts from getting >1 free order.
+    flashGroup = priced.find(g => g.isSundayFlash && g.offerId)
+    if (flashGroup) {
+      const claimRes = await claimSundayFlashAtomic({
+        offerId: flashGroup.offerId,
+        userId: req.userId,
+        userMobile: user?.mobile,
+        mobiles: fields.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
+      })
+      if (!claimRes.success) {
+        return res.status(400).json({ success: false, message: claimRes.reason })
+      }
+      flashClaimed = true
     }
 
     const assignedRider = await assignAvailableRider()
@@ -544,9 +602,6 @@ export async function foodOrderCOD(req, res) {
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
-      if (group.isSundayFlash && group.offerId) {
-        recordSundayFlashClaim(group.offerId, req.userId, user?.mobile).catch(() => {})
-      }
     }
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
 
@@ -554,6 +609,14 @@ export async function foodOrderCOD(req, res) {
     return res.json({ success: true, message: 'Food order placed!', data: orders })
 
   } catch (err) {
+    if (flashClaimed && flashGroup) {
+      await rollbackSundayFlashClaim({
+        offerId: flashGroup.offerId,
+        userId: req.userId,
+        userMobile: user?.mobile,
+        mobiles: fields?.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
+      })
+    }
     console.error('[foodOrderCOD] ❌', err.message)
     return res.status(err.statusCode || 500).json({ success: false, message: err.message })
   }
@@ -561,8 +624,18 @@ export async function foodOrderCOD(req, res) {
 
 // ── POST /api/restaurant/food-order/wallet ─────────────────────────────────
 export async function foodOrderWallet(req, res) {
+  let flashGroup = null
+  let flashClaimed = false
+  let fields, user, addressDoc, priced, grandTotal, groupOrderId
+
   try {
-    const { fields, user, addressDoc, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const prep = await prepareMultiRestaurantOrder(req)
+    fields = prep.fields
+    user = prep.user
+    addressDoc = prep.addressDoc
+    priced = prep.priced
+    grandTotal = prep.grandTotal
+    groupOrderId = prep.groupOrderId
 
     const walletBal = Number(user.walletBalance || 0)
     const deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : grandTotal
@@ -571,6 +644,21 @@ export async function foodOrderWallet(req, res) {
         success: false,
         message: `Insufficient wallet balance. Have ₹${walletBal}, need ₹${deductAmt}`,
       })
+
+    // ── ATOMIC SUNDAY FLASH CLAIM LOCK ──
+    flashGroup = priced.find(g => g.isSundayFlash && g.offerId)
+    if (flashGroup) {
+      const claimRes = await claimSundayFlashAtomic({
+        offerId: flashGroup.offerId,
+        userId: req.userId,
+        userMobile: user?.mobile,
+        mobiles: fields.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
+      })
+      if (!claimRes.success) {
+        return res.status(400).json({ success: false, message: claimRes.reason })
+      }
+      flashClaimed = true
+    }
 
     await deductWallet(req.userId, deductAmt, priced[0]?.restaurantName)
     const assignedRider = await assignAvailableRider()
@@ -589,9 +677,6 @@ export async function foodOrderWallet(req, res) {
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
-      if (group.isSundayFlash && group.offerId) {
-        recordSundayFlashClaim(group.offerId, req.userId, user?.mobile).catch(() => {})
-      }
     }
 
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
@@ -599,6 +684,14 @@ export async function foodOrderWallet(req, res) {
     return res.json({ success: true, message: 'Paid via wallet!', data: orders })
 
   } catch (err) {
+    if (flashClaimed && flashGroup) {
+      await rollbackSundayFlashClaim({
+        offerId: flashGroup.offerId,
+        userId: req.userId,
+        userMobile: user?.mobile,
+        mobiles: fields?.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
+      })
+    }
     console.error('[foodOrderWallet] ❌', err.message)
     return res.status(err.statusCode || 500).json({ success: false, message: err.message })
   }
@@ -627,6 +720,10 @@ export async function foodOrderCreatePayment(req, res) {
 
 // ── POST /api/restaurant/food-order/verify-payment ────────────────────────
 export async function foodOrderVerifyPayment(req, res) {
+  let flashGroup = null
+  let flashClaimed = false
+  let fields, user, addressDoc, priced, grandTotal, groupOrderId
+
   try {
     const {
       razorpay_order_id,
@@ -644,7 +741,28 @@ export async function foodOrderVerifyPayment(req, res) {
     }
 
     req.body = rest
-    const { fields, user, addressDoc, priced, grandTotal, groupOrderId } = await prepareMultiRestaurantOrder(req)
+    const prep = await prepareMultiRestaurantOrder(req)
+    fields = prep.fields
+    user = prep.user
+    addressDoc = prep.addressDoc
+    priced = prep.priced
+    grandTotal = prep.grandTotal
+    groupOrderId = prep.groupOrderId
+
+    // ── ATOMIC SUNDAY FLASH CLAIM LOCK ──
+    flashGroup = priced.find(g => g.isSundayFlash && g.offerId)
+    if (flashGroup) {
+      const claimRes = await claimSundayFlashAtomic({
+        offerId: flashGroup.offerId,
+        userId: req.userId,
+        userMobile: user?.mobile,
+        mobiles: fields.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
+      })
+      if (!claimRes.success) {
+        return res.status(400).json({ success: false, message: claimRes.reason })
+      }
+      flashClaimed = true
+    }
 
     await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
     const assignedRider = await assignAvailableRider()
@@ -663,15 +781,20 @@ export async function foodOrderVerifyPayment(req, res) {
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
-      if (group.isSundayFlash && group.offerId) {
-        recordSundayFlashClaim(group.offerId, req.userId, user?.mobile).catch(() => {})
-      }
     }
 
     console.log(`[foodOrderVerifyPayment] ✅ group=${groupOrderId} paymentId=${razorpay_payment_id} restaurants=${orders.length}`)
     return res.json({ success: true, message: 'Food order placed!', data: orders })
 
   } catch (err) {
+    if (flashClaimed && flashGroup) {
+      await rollbackSundayFlashClaim({
+        offerId: flashGroup.offerId,
+        userId: req.userId,
+        userMobile: user?.mobile,
+        mobiles: fields?.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
+      })
+    }
     console.error('[foodOrderVerifyPayment] ❌', err.message)
     return res.status(err.statusCode || 500).json({ success: false, message: err.message })
   }

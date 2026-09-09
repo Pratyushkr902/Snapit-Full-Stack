@@ -182,7 +182,24 @@ export const stopSundayFlashOffer = async (req, res) => {
  * 3. 1 user = 1 order rule (blocks repeated orders by same user or mobile)
  * 4. ₹29 for 0–3 km, ₹9/km for 3–14 km delivery fee
  */
-export const validateSundayFlashOrder = async ({ userId, userMobile, subTotalAmt, distanceKm }) => {
+/**
+ * Normalize phone numbers for consistent abuse prevention
+ */
+const normalizeMobiles = (mobiles) => {
+  const list = Array.isArray(mobiles) ? mobiles : [mobiles];
+  return [
+    ...new Set(
+      list
+        .map((m) => String(m || "").replace(/[^0-9]/g, "").slice(-10))
+        .filter((m) => m.length === 10)
+    ),
+  ];
+};
+
+/**
+ * Server-side helper to validate Sunday Flash Offer rules for an order preview.
+ */
+export const validateSundayFlashOrder = async ({ userId, userMobile, mobiles, subTotalAmt, distanceKm }) => {
   const offer = await SundayFlashOfferModel.findOne().sort({ updatedAt: -1 });
   const now = new Date();
 
@@ -200,6 +217,8 @@ export const validateSundayFlashOrder = async ({ userId, userMobile, subTotalAmt
     };
   }
 
+  const phoneNumbersToCheck = normalizeMobiles([userMobile, ...(mobiles || [])]);
+
   // 1. One user = One order check
   if (userId && offer.claimedUserIds?.some((id) => String(id) === String(userId))) {
     return {
@@ -208,14 +227,17 @@ export const validateSundayFlashOrder = async ({ userId, userMobile, subTotalAmt
     };
   }
 
-  if (userMobile && offer.claimedMobiles?.includes(String(userMobile))) {
+  if (
+    phoneNumbersToCheck.length > 0 &&
+    offer.claimedMobiles?.some((claimed) => phoneNumbersToCheck.includes(String(claimed)))
+  ) {
     return {
       valid: false,
       reason: "An order has already been placed for this mobile number in this Flash Offer.",
     };
   }
 
-  // 2. Food limit check: maximum food value is ₹149
+  // 2. Food limit check: maximum food value is ₹149 (or configured cap)
   const foodTotal = Number(subTotalAmt) || 0;
   if (foodTotal <= 0) {
     return {
@@ -227,7 +249,7 @@ export const validateSundayFlashOrder = async ({ userId, userMobile, subTotalAmt
   if (foodTotal > (offer.maxFoodValue || 149)) {
     return {
       valid: false,
-      reason: `Sunday Flash Offer is valid only for orders up to ₹${offer.maxFoodValue || 149}. Your cart is ₹${foodTotal}. Please keep your order within ₹149 to get free food.`,
+      reason: `Sunday Flash Offer is valid only for orders up to ₹${offer.maxFoodValue || 149}. Your food subtotal is ₹${foodTotal}. Please keep your order within ₹${offer.maxFoodValue || 149} to get free food.`,
     };
   }
 
@@ -251,17 +273,81 @@ export const validateSundayFlashOrder = async ({ userId, userMobile, subTotalAmt
 };
 
 /**
- * Records that a user/mobile has successfully claimed the flash offer.
+ * ATOMIC CLAIM: Locks the offer claim at the database level using atomic findOneAndUpdate.
+ * Prevents race conditions when a user fires parallel checkout requests.
+ */
+export const claimSundayFlashAtomic = async ({ offerId, userId, userMobile, mobiles }) => {
+  try {
+    const now = new Date();
+    const cleanMobiles = normalizeMobiles([userMobile, ...(mobiles || [])]);
+
+    const query = {
+      _id: offerId,
+      isActive: true,
+      startTime: { $lte: now },
+      endTime: { $gte: now },
+      claimedUserIds: { $ne: userId },
+    };
+
+    if (cleanMobiles.length > 0) {
+      query.claimedMobiles = { $nin: cleanMobiles };
+    }
+
+    const update = {
+      $addToSet: {
+        claimedUserIds: userId,
+        ...(cleanMobiles.length > 0 ? { claimedMobiles: { $each: cleanMobiles } } : {}),
+      },
+    };
+
+    const claimedDoc = await SundayFlashOfferModel.findOneAndUpdate(query, update, { returnDocument: 'after' });
+    if (!claimedDoc) {
+      return {
+        success: false,
+        reason: "You have already claimed your 1 free order for this Sunday Flash Offer, or the window has expired.",
+      };
+    }
+
+    return {
+      success: true,
+      offer: claimedDoc,
+    };
+  } catch (err) {
+    console.error("[claimSundayFlashAtomic] error:", err);
+    return { success: false, reason: "Database error verifying flash offer claim." };
+  }
+};
+
+/**
+ * ROLLBACK CLAIM: Reverts a claim in case order insertion fails downstream.
+ */
+export const rollbackSundayFlashClaim = async ({ offerId, userId, userMobile, mobiles }) => {
+  try {
+    const cleanMobiles = normalizeMobiles([userMobile, ...(mobiles || [])]);
+    const update = {
+      $pull: {
+        claimedUserIds: userId,
+        ...(cleanMobiles.length > 0 ? { claimedMobiles: { $in: cleanMobiles } } : {}),
+      },
+    };
+    await SundayFlashOfferModel.findByIdAndUpdate(offerId, update);
+  } catch (err) {
+    console.error("[rollbackSundayFlashClaim] error:", err);
+  }
+};
+
+/**
+ * Records that a user/mobile has successfully claimed the flash offer (backwards compatibility).
  */
 export const recordSundayFlashClaim = async (offerId, userId, userMobile) => {
   try {
-    const update = {};
-    if (userId) update.$addToSet = { claimedUserIds: userId };
-    if (userMobile) {
-      if (!update.$addToSet) update.$addToSet = {};
-      update.$addToSet.claimedMobiles = String(userMobile);
-    }
-
+    const cleanMobiles = normalizeMobiles([userMobile]);
+    const update = {
+      $addToSet: {
+        claimedUserIds: userId,
+        ...(cleanMobiles.length > 0 ? { claimedMobiles: { $each: cleanMobiles } } : {}),
+      },
+    };
     await SundayFlashOfferModel.findByIdAndUpdate(offerId, update);
   } catch (err) {
     console.error("[recordSundayFlashClaim] error:", err);

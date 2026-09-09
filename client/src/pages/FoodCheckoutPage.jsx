@@ -254,6 +254,10 @@ const FoodCheckoutPage = () => {
   }
 
   const applyCoupon = async () => {
+    if (isFlashEligible) {
+      setCouponError('Sunday Flash Offer already provides 100% FREE food! Promo codes cannot be combined.')
+      return
+    }
     const code = couponCode.trim().toUpperCase()
     if (!code) { setCouponError('Please enter a coupon code'); return }
     if (!VALID_COUPONS.includes(code)) {

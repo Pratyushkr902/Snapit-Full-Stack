@@ -7,7 +7,7 @@ import ProductModel from '../models/product.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import RestaurantModel from '../models/restaurant.model.js'
 
-const ADMIN_LIKE_ROLES = ['ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER']
+const ADMIN_LIKE_ROLES = ['ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER', 'SUPER_ADMIN']
 
 function getISTHour() {
   const now = new Date()
@@ -97,8 +97,9 @@ async function assertRestaurantItemsAvailable(list_items) {
  * @param {String} [opts.userRole] - role of the placing user (bypasses global-hours check)
  */
 export async function assertStoreOpenForOrder({ list_items = [], userRole, orderType = 'grocery' } = {}) {
-  // Global 9:00 AM – 9:00 PM IST operating gate applies to all orders
-  if (!isWithinGlobalHours()) {
+  // Global 9:00 AM – 9:00 PM IST operating gate applies to all customer orders
+  const isAdmin = ADMIN_LIKE_ROLES.includes(userRole)
+  if (!isAdmin && !isWithinGlobalHours()) {
     const err = new Error('Snapit is closed for the night (9:00 PM – 9:00 AM IST). Orders open at 9:00 AM tomorrow!')
     err.statusCode = 400
     throw err
