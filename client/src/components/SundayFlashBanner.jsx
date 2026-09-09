@@ -55,8 +55,8 @@ const SundayFlashBanner = ({ onStatusChange }) => {
               <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wider uppercase text-yellow-300 border border-yellow-400/30">
                 🔥 SUNDAY FLASH OFFER
               </span>
-              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[11px] font-bold text-white">
-                ⏰ EVERY SUNDAY AT 5:00 PM
+              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[11px] font-bold text-white uppercase">
+                ⏰ EVERY SUNDAY AT {flashData?.formattedScheduleTime || '5:00 PM'}
               </span>
               <span className="inline-flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-yellow-200">
                 ⚡ 5 MINS WINDOW

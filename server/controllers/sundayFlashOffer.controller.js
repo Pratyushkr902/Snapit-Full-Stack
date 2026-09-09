@@ -1,6 +1,15 @@
 import SundayFlashOfferModel from "../models/sundayFlashOffer.model.js";
 import UserModel from "../models/user.model.js";
 import { broadcastToAllUsers } from "../utils/marketingCron.js";
+import { rescheduleSundayFlashCron } from "../cron/sundayFlash.cron.js";
+
+export const formatTimeIST = (hour, minute) => {
+  const h = Number(hour) || 0;
+  const m = Number(minute) || 0;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+};
 
 /**
  * Calculate delivery charge under Sunday Flash Offer rules:
@@ -51,6 +60,10 @@ export const getSundayFlashStatus = async (req, res) => {
       alreadyClaimed = offer.claimedUserIds.some((id) => String(id) === String(userId));
     }
 
+    const hour = offer.scheduledHourIST !== undefined ? offer.scheduledHourIST : 17;
+    const minute = offer.scheduledMinuteIST !== undefined ? offer.scheduledMinuteIST : 0;
+    const formattedScheduleTime = formatTimeIST(hour, minute);
+
     return res.json({
       success: true,
       data: {
@@ -62,6 +75,11 @@ export const getSundayFlashStatus = async (req, res) => {
         claimedCount: offer.claimedUserIds?.length || 0,
         maxFoodValue: offer.maxFoodValue || 149,
         durationMinutes: offer.durationMinutes || 5,
+        scheduledHourIST: hour,
+        scheduledMinuteIST: minute,
+        scheduledTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+        formattedScheduleTime,
+        scheduleText: `Every Sunday at ${formattedScheduleTime}`,
         title: offer.title || "SUNDAY FLASH OFFER 🔥",
         subtitle: offer.subtitle || "5 MINUTES. ₹149 FOOD. ₹0 FOOD COST.",
         deliveryRules: offer.deliveryRules || { baseKm: 3, baseCharge: 29, perKmRate: 9, maxKm: 14 },
@@ -246,5 +264,69 @@ export const recordSundayFlashClaim = async (offerId, userId, userMobile) => {
     await SundayFlashOfferModel.findByIdAndUpdate(offerId, update);
   } catch (err) {
     console.error("[recordSundayFlashClaim] error:", err);
+  }
+};
+
+/**
+ * POST /api/sunday-flash/update-schedule
+ * Super Admin updates the scheduled day and time (IST) for Sunday Flash Offer.
+ */
+export const updateSundayFlashSchedule = async (req, res) => {
+  try {
+    const {
+      scheduledTime,
+      scheduledHourIST,
+      scheduledMinuteIST,
+      durationMinutes,
+      maxFoodValue,
+    } = req.body;
+
+    let hour = scheduledHourIST !== undefined ? Number(scheduledHourIST) : undefined;
+    let minute = scheduledMinuteIST !== undefined ? Number(scheduledMinuteIST) : undefined;
+
+    if (scheduledTime && typeof scheduledTime === "string") {
+      const parts = scheduledTime.split(":");
+      if (parts.length >= 2) {
+        hour = parseInt(parts[0], 10);
+        minute = parseInt(parts[1], 10);
+      }
+    }
+
+    if (hour === undefined || isNaN(hour) || hour < 0 || hour > 23) hour = 17;
+    if (minute === undefined || isNaN(minute) || minute < 0 || minute > 59) minute = 0;
+
+    let offer = await SundayFlashOfferModel.findOne().sort({ updatedAt: -1 });
+    if (!offer) {
+      offer = new SundayFlashOfferModel();
+    }
+
+    offer.scheduledHourIST = hour;
+    offer.scheduledMinuteIST = minute;
+    if (durationMinutes) offer.durationMinutes = Number(durationMinutes);
+    if (maxFoodValue) offer.maxFoodValue = Number(maxFoodValue);
+
+    await offer.save();
+
+    // Dynamically reschedule background cron task immediately
+    await rescheduleSundayFlashCron(hour, minute, 0);
+
+    const formattedTime = formatTimeIST(hour, minute);
+
+    return res.json({
+      success: true,
+      message: `Sunday Flash Offer successfully scheduled for Every Sunday at ${formattedTime} IST!`,
+      data: {
+        scheduledHourIST: hour,
+        scheduledMinuteIST: minute,
+        scheduledTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+        formattedScheduleTime: formattedTime,
+        scheduleText: `Every Sunday at ${formattedTime}`,
+        durationMinutes: offer.durationMinutes,
+        maxFoodValue: offer.maxFoodValue,
+      },
+    });
+  } catch (err) {
+    console.error("[updateSundayFlashSchedule] error:", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

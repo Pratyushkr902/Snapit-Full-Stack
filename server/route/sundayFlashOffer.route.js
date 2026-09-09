@@ -3,6 +3,7 @@ import {
   getSundayFlashStatus,
   triggerSundayFlashOffer,
   stopSundayFlashOffer,
+  updateSundayFlashSchedule,
 } from "../controllers/sundayFlashOffer.controller.js";
 import auth from "../middleware/auth.js";
 import { admin } from "../middleware/Admin.js";
@@ -57,5 +58,8 @@ sundayFlashRouter.post("/trigger", adminOrInternalAuth, triggerSundayFlashOffer)
 
 // Stop flash window
 sundayFlashRouter.post("/stop", adminOrInternalAuth, stopSundayFlashOffer);
+
+// Super Admin updates scheduled time & rules
+sundayFlashRouter.post("/update-schedule", adminOrInternalAuth, updateSundayFlashSchedule);
 
 export default sundayFlashRouter;
