@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import SuperAdminPermision from '../layouts/SuperAdminPermision'
 import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
+import AdminSundayFlashWidget from '../components/AdminSundayFlashWidget'
 import AdminMarketingHub from '../components/AdminMarketingHub'
 
 const CARDS = [
@@ -123,6 +124,9 @@ const SuperAdminDashboard = () => {
 
         {/* 🛵 LIVE RIDER FLEET OVERVIEW */}
         <AdminLiveFleetWidget />
+
+        {/* 🔥 SUNDAY FLASH OFFER ENGINE (Manual Trigger & Live Monitor) */}
+        <AdminSundayFlashWidget />
 
         {/* 📢 AUTOMATED MARKETING & ALL-USER BROADCAST HUB */}
         <AdminMarketingHub />
