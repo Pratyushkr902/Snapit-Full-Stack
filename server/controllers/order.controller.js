@@ -184,12 +184,16 @@ const buildTaggedCartItems = async (list_items, storeName) => {
         if (!product) {
             return { ...item, _invalid: true, _reason: 'A product in your cart no longer exists.' }
         }
-        if (!product.stock || product.stock <= 0) {
+        const effectiveStock = (Array.isArray(product.store_inventory) && product.store_inventory.length > 0)
+            ? product.store_inventory.filter(s => s.isAvailable !== false).reduce((sum, s) => sum + (Number(s.stock) || 0), 0)
+            : (Number(product.stock) || 0)
+
+        if (effectiveStock <= 0) {
             return { ...item, _invalid: true, _reason: `${product.name} is out of stock.` }
         }
         const requestedQty = Math.max(1, Math.min(Math.floor(Number(item.quantity) || 1), 50))
-        if (requestedQty > product.stock) {
-            return { ...item, _invalid: true, _reason: `Only ${product.stock} left of ${product.name}.` }
+        if (requestedQty > effectiveStock) {
+            return { ...item, _invalid: true, _reason: `Only ${effectiveStock} left of ${product.name}.` }
         }
         // FIX: use the product's OWN store, not a single order-wide hardcoded storeName.
         const inventoryEntry = product.store_inventory?.find(inv => inv.isAvailable !== false)
@@ -395,7 +399,8 @@ export async function CashOnDeliveryOrderController(request, response) {
         }
 
         for (const item of list_items) {
-            if (!isObjectId(item.productId?._id)) {
+            const rawId = item.productId?._id || item.productId
+            if (!isObjectId(rawId)) {
                 return response.status(400).json({ message: 'Invalid product reference.', error: true, success: false })
             }
         }
@@ -597,7 +602,8 @@ export async function WalletPaymentOrderController(request, response) {
         }
 
         for (const item of list_items) {
-            if (!isObjectId(item.productId?._id)) {
+            const rawId = item.productId?._id || item.productId
+            if (!isObjectId(rawId)) {
                 return response.status(400).json({ message: 'Invalid product reference.', error: true, success: false })
             }
         }
@@ -921,7 +927,8 @@ export async function verifyPaymentController(request, response) {
         }
 
         for (const item of list_items) {
-            if (!isObjectId(item.productId?._id)) {
+            const rawId = item.productId?._id || item.productId
+            if (!isObjectId(rawId)) {
                 return response.status(400).json({ message: 'Invalid product reference.', error: true, success: false })
             }
         }
