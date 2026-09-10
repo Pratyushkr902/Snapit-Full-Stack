@@ -30,9 +30,9 @@ const CartMobilePage = () => {
         ? getDeliveryInfo(effectiveCoords.lat, effectiveCoords.lng, totalPrice, isSnapitPlus)
         : null
 
-    const deliveryFee = deliveryInfo
+    const deliveryFee = totalPrice >= 149 ? 0 : (deliveryInfo
         ? deliveryInfo.charge
-        : (isSnapitPlus ? 0 : 12)
+        : (isSnapitPlus ? 0 : 12))
     const isEstimate = !deliveryInfo
     const grandTotal = totalPrice + deliveryFee;
 
@@ -146,7 +146,7 @@ const CartMobilePage = () => {
                                 {deliveryInfo?.amountNeededForFreeDelivery > 0 && (
                                     <div className='bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60'>
                                         <p className='text-[11px] text-emerald-800 dark:text-emerald-300 font-bold text-center'>
-                                            ⚡ Add items worth <span className='font-black'>₹{deliveryInfo.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-600 dark:text-emerald-400'>FREE Delivery</span> (Within 5 km)!
+                                            ⚡ Add items worth <span className='font-black'>₹{deliveryInfo.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-600 dark:text-emerald-400'>FREE Delivery</span>!
                                         </p>
                                     </div>
                                 )}

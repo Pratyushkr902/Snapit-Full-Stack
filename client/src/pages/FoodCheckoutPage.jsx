@@ -187,6 +187,8 @@ const FoodCheckoutPage = () => {
       // Sunday Flash delivery: 0–3 km: ₹29 | 3–14 km: ₹9/km
       const dist = info?.distanceKm || 0
       fee = dist <= 3 ? 29 : Math.round(dist * 9)
+    } else if (subtotal >= 149) {
+      fee = 0
     } else {
       fee = hasLoc
         ? (info?.charge ?? FALLBACK_DELIVERY_FEE)
@@ -940,8 +942,8 @@ const FoodCheckoutPage = () => {
 
       {/* ── Bill details ─────────────────────────────────────────────── */}
       <div className='bg-white mt-2 px-4 py-4'>
-        {/* Free Delivery Banner for Food (Within 5 km) */}
-        {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.distanceKm <= 5 && (
+        {/* Free Delivery Banner for Food */}
+        {restaurantPricing[0]?.info?.serviceable && (
           deliveryFee === 0 ? (
             <div className='mb-3.5 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-2xs flex items-center gap-2'>
               <span className='text-base'>🎉</span>
@@ -959,7 +961,7 @@ const FoodCheckoutPage = () => {
         )}
 
         {/* Long Distance Delivery Tier Explanation Banner for Food */}
-        {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.isLongDistance && (
+        {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.isLongDistance && deliveryFee > 0 && (
           restaurantPricing[0]?.info?.longDistanceTier === 'FLAT_ABOVE_499' ? (
             <div className='mb-3.5 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl'>
               <div className='flex items-center justify-between text-xs font-black text-emerald-900'>

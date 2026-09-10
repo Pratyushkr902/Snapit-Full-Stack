@@ -35,8 +35,8 @@ export const getDistanceFromStore = (customerLat, customerLng) =>
 // >14 km   → not serviceable
 export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
   const numTotal = Number(cartTotal) || 0
-  // Free delivery up to 5 km on orders ₹149+
-  if (distanceKm <= 5 && numTotal >= 149) return 0
+  // Free delivery on all orders of ₹149 and above!
+  if (numTotal >= 149) return 0
   if (distanceKm <= 3) return 12
   if (distanceKm <= 5) return 29
   if (distanceKm <= 6) return 29
@@ -70,7 +70,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   const isEvening = isAfterEveningCutoff()
 
   const numCartTotal = Number(cartTotal) || 0
-  const daytimeCharge = (dist <= 5 && numCartTotal >= 149) 
+  const daytimeCharge = numCartTotal >= 149 
     ? 0 
     : dist <= 3 ? 12 : dist <= 6 ? 29 : numCartTotal >= 499 ? 60 : Math.round(dist * 7)
 
@@ -109,24 +109,25 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   let amountNeededForFlatRate = 0
   let amountNeededForFreeDelivery = 0
 
-  if (dist <= 5) {
-    if (numCartTotal >= 149) {
-      charge = 0
-    } else {
-      charge = dist <= 3 ? 12 : 29
-      amountNeededForFreeDelivery = Math.max(0, 149 - numCartTotal)
-    }
-  } else if (dist <= 6) {
-    charge = 29
+  if (numCartTotal >= 149) {
+    charge = 0
+    amountNeededForFreeDelivery = 0
   } else {
-    // 6.0 – 16.0 km
-    if (numCartTotal >= 499) {
-      charge = 60
-      longDistanceTier = 'FLAT_ABOVE_499'
+    amountNeededForFreeDelivery = Math.max(0, 149 - numCartTotal)
+    if (dist <= 3) {
+      charge = 12
+    } else if (dist <= 6) {
+      charge = 29
     } else {
-      charge = Math.round(dist * 7)
-      longDistanceTier = 'PER_KM'
-      amountNeededForFlatRate = Math.max(0, 499 - numCartTotal)
+      // 6.0 – 16.0 km
+      if (numCartTotal >= 499) {
+        charge = 60
+        longDistanceTier = 'FLAT_ABOVE_499'
+      } else {
+        charge = Math.round(dist * 7)
+        longDistanceTier = 'PER_KM'
+        amountNeededForFlatRate = Math.max(0, 499 - numCartTotal)
+      }
     }
   }
 

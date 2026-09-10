@@ -56,16 +56,14 @@ export const getDistanceFromOrigin = (originLat, originLng, customerLat, custome
 const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
   const amount = Number(subTotalAmt) || 0
 
-  // 1. Free delivery up to 5 km on orders of ₹149 and above!
-  if (distanceKm <= 5 && amount >= 149) return 0
+  // 1. FREE DELIVERY on all orders of ₹149 and above!
+  if (amount >= 149) return 0
 
-  // 2. Standard distance charges for orders below ₹149 (or beyond 5 km)
+  // 2. Standard distance charges for orders below ₹149
   if (distanceKm <= 3) return 12
   if (distanceKm <= 5) return 29
   if (distanceKm <= 6) return 29
   if (distanceKm <= 16) {
-    // Orders ₹499 & above beyond 6km get subsidized Flat ₹60
-    if (amount >= 499) return 60
     return Math.round(distanceKm * 7)
   }
   return null
@@ -98,6 +96,8 @@ export const isOutOfDeliveryRange = (lat, lng) => {
 
 // Returns the delivery fee (number) for an order.
 export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
+  if (Number(subTotalAmt) >= 149) return 0
+
   const dist = getDistanceFromStore(lat, lng)
   const isPlus = Boolean(
     user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
@@ -110,11 +110,13 @@ export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
   }
 
   const charge = getDeliveryChargeByDistance(dist, subTotalAmt)
-  return charge === null ? 60 : charge
+  return charge === null ? 29 : charge
 }
 
 // Restaurant/food orders — same tier logic, measured from restaurant's location.
 export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, customerLng, subTotalAmt = 0, user = null) => {
+  if (Number(subTotalAmt) >= 149) return 0
+
   const dist = getDistanceFromOrigin(originLat, originLng, customerLat, customerLng)
   const isPlus = Boolean(
     user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
@@ -127,7 +129,7 @@ export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, cus
   }
 
   const charge = getDeliveryChargeByDistance(dist, subTotalAmt)
-  return charge === null ? 60 : charge
+  return charge === null ? 29 : charge
 }
 
 // Restaurant/food orders — minimum order amount.

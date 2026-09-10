@@ -45,7 +45,7 @@ const CheckoutPage = () => {
     ? getDeliveryInfo(effectiveCoords.lat, effectiveCoords.lng, totalPrice, isSnapitPlus)
     : null
 
-  const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
+  const deliveryFee = totalPrice >= 149 ? 0 : (deliveryInfo ? deliveryInfo.charge : 12)
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
   // Coords for backend — from effective address or store fallback
@@ -451,8 +451,8 @@ const CheckoutPage = () => {
             )}
           </div>
 
-          {/* Free Delivery Banner (Within 5 km) */}
-          {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.distanceKm <= 5 && (
+          {/* Free Delivery Banner */}
+          {deliveryInfo && deliveryInfo.serviceable && (
             deliveryFee === 0 ? (
               <div className='mx-4 mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-2xs flex items-center gap-2'>
                 <span className='text-base'>🎉</span>
@@ -470,7 +470,7 @@ const CheckoutPage = () => {
           )}
 
           {/* Long Distance Delivery Tier Explanation Banner */}
-          {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.isLongDistance && (
+          {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.isLongDistance && deliveryFee > 0 && (
             deliveryInfo.longDistanceTier === 'FLAT_ABOVE_499' ? (
               <div className='mx-4 mb-4 p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl shadow-sm'>
                 <div className='flex items-center justify-between text-xs font-black text-emerald-900'>

@@ -222,9 +222,9 @@ const priceGroup = async (group, fields, user) => {
 
   const deliveryFee = sundayFlashValidation?.valid
     ? sundayFlashValidation.deliveryFee
-    : calcDeliveryFeeFromOrigin(
+    : (subTotalAmt >= 149 ? 0 : calcDeliveryFeeFromOrigin(
         restaurant.location.lat, restaurant.location.lng, lat, lng, subTotalAmt, user
-      )
+      ))
 
   // Only check restaurant minimum order if NOT a Sunday Flash Offer order
   if (!sundayFlashValidation?.valid) {
