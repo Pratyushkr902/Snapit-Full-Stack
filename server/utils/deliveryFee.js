@@ -99,45 +99,35 @@ export const isOutOfDeliveryRange = (lat, lng) => {
 // Returns the delivery fee (number) for an order.
 export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
   const dist = getDistanceFromStore(lat, lng)
-  const amount = Number(subTotalAmt) || 0
-
-  // Free delivery up to 5 km on orders of ₹149 and above
-  if (dist <= 5 && amount >= 149) return 0
-
   const isPlus = Boolean(
     user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
     new Date() < new Date(user.snapitPlusExpiresAt)
   )
 
   if (isPlus) {
-    if (dist > 6 && amount >= 399) return 0
-    if (dist <= 6 && amount >= 149) return 0
+    if (dist > 6 && Number(subTotalAmt) >= 399) return 0
+    if (dist <= 6 && Number(subTotalAmt) >= 149) return 0
   }
 
   const charge = getDeliveryChargeByDistance(dist, subTotalAmt)
-  return charge === null ? 29 : charge
+  return charge === null ? 60 : charge
 }
 
 // Restaurant/food orders — same tier logic, measured from restaurant's location.
 export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, customerLng, subTotalAmt = 0, user = null) => {
   const dist = getDistanceFromOrigin(originLat, originLng, customerLat, customerLng)
-  const amount = Number(subTotalAmt) || 0
-
-  // Free delivery up to 5 km on orders of ₹149 and above
-  if (dist <= 5 && amount >= 149) return 0
-
   const isPlus = Boolean(
     user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
     new Date() < new Date(user.snapitPlusExpiresAt)
   )
 
   if (isPlus) {
-    if (dist > 6 && amount >= 399) return 0
-    if (dist <= 6 && amount >= 149) return 0
+    if (dist > 6 && Number(subTotalAmt) >= 399) return 0
+    if (dist <= 6 && Number(subTotalAmt) >= 149) return 0
   }
 
   const charge = getDeliveryChargeByDistance(dist, subTotalAmt)
-  return charge === null ? 29 : charge
+  return charge === null ? 60 : charge
 }
 
 // Restaurant/food orders — minimum order amount.
