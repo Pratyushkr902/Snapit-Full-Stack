@@ -45,7 +45,7 @@ const CheckoutPage = () => {
     ? getDeliveryInfo(effectiveCoords.lat, effectiveCoords.lng, totalPrice, isSnapitPlus)
     : null
 
-  const deliveryFee = totalPrice >= 149 ? 0 : (deliveryInfo ? deliveryInfo.charge : 12)
+  const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
   const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
 
   // Coords for backend — from effective address or store fallback
@@ -451,8 +451,8 @@ const CheckoutPage = () => {
             )}
           </div>
 
-          {/* Free Delivery Banner */}
-          {deliveryInfo && deliveryInfo.serviceable && (
+          {/* Free Delivery Banner (Within 5 km) */}
+          {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.distanceKm <= 5 && (
             deliveryFee === 0 ? (
               <div className='mx-4 mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-2xs flex items-center gap-2'>
                 <span className='text-base'>🎉</span>
@@ -463,7 +463,7 @@ const CheckoutPage = () => {
             ) : deliveryInfo.amountNeededForFreeDelivery > 0 ? (
               <div className='mx-4 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-2xs flex items-center justify-between'>
                 <p className='text-xs font-bold text-amber-900'>
-                  🛵 Add items worth <span className='font-black text-amber-800'>₹{deliveryInfo.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-700'>FREE Delivery</span>!
+                  🛵 Add items worth <span className='font-black text-amber-800'>₹{deliveryInfo.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-700'>FREE Delivery</span> (Within 5 km)!
                 </p>
               </div>
             ) : null
