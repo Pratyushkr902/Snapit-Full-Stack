@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { FaArrowLeft, FaWhatsapp } from "react-icons/fa6"
-import { MdEmail, MdPerson, MdPhoneAndroid } from "react-icons/md"
+import { FaArrowLeft, FaWhatsapp, FaRegEye, FaRegEyeSlash } from "react-icons/fa6"
+import { MdEmail, MdPerson, MdPhoneAndroid, MdLockOutline } from "react-icons/md"
 import toast from 'react-hot-toast'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
@@ -10,24 +10,26 @@ import { setUserDetails } from '../store/userSlice'
 import fetchUserDetails from '../utils/fetchUserDetails'
 import secureStorage from '../utils/secureStorage'
 import snapitLogo from '/logo.png'
-import { auth } from '../utils/firebase'
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth'
 
 const Login = () => {
     const [searchParams] = useSearchParams()
     const refCode = searchParams.get('ref') || ''
 
-    // 'mobile_otp' (default) or 'email_otp'
-    const [authMode, setAuthMode] = useState('mobile_otp')
+    // 'mobile_pin' (default) or 'email_otp'
+    const [authMode, setAuthMode] = useState('mobile_pin')
 
-    // ── Mobile OTP state (Firebase Phone Auth) ──
-    const [firebaseStep, setFirebaseStep] = useState('input') // 'input' or 'verify'
-    const [custName, setCustName] = useState('')
-    const [custMobile, setCustMobile] = useState('')
-    const [firebaseOtp, setFirebaseOtp] = useState(['', '', '', '', '', ''])
-    const [confirmationResult, setConfirmationResult] = useState(null)
-    const firebaseOtpRefs = useRef([])
-    const recaptchaVerifierRef = useRef(null)
+    // ── Mobile PIN Mode: 'login' or 'register' ──
+    const [mobileMode, setMobileMode] = useState('login')
+    const [mobileNumber, setMobileNumber] = useState('')
+    const [pin, setPin] = useState('')
+    const [showPin, setShowPin] = useState(false)
+
+    // Register inputs
+    const [regName, setRegName] = useState('')
+    const [regMobile, setRegMobile] = useState('')
+    const [regPin, setRegPin] = useState('')
+    const [showRegPin, setShowRegPin] = useState(false)
+    const [regRefCode, setRegRefCode] = useState(refCode)
 
     // ── Email OTP state ──
     const [step, setStep] = useState('input') // 'input' or 'verify'
@@ -50,12 +52,12 @@ const Login = () => {
         toast.dismiss()
     }, [])
 
-    // Auto-dismiss toasts when switching mode or step
+    // Auto-dismiss toasts when switching mode
     useEffect(() => {
         toast.dismiss()
-    }, [authMode, step, firebaseStep])
+    }, [authMode, mobileMode, step])
 
-    // Countdown timer for Resend OTP
+    // Countdown timer for Resend Email OTP
     useEffect(() => {
         let timer
         if (countdown > 0) {
@@ -70,13 +72,6 @@ const Login = () => {
             otpInputRefs.current[0].focus()
         }
     }, [step])
-
-    // Auto-focus first Phone OTP input
-    useEffect(() => {
-        if (firebaseStep === 'verify' && firebaseOtpRefs.current[0]) {
-            firebaseOtpRefs.current[0].focus()
-        }
-    }, [firebaseStep])
 
     // Save tokens and update redux
     const handleLoginSuccess = async (token, refresh) => {
@@ -100,176 +95,92 @@ const Login = () => {
         navigate(redirectPath, { replace: true })
     }
 
-    // ── 1. FIREBASE PHONE OTP: SEND SMS ──
-    const handleSendFirebaseOtp = async (e) => {
-        e?.preventDefault()
+    // ── 1. MOBILE LOGIN (10-Digit Mobile + 4-Digit PIN) ──
+    const handleMobileLogin = async (e) => {
+        e.preventDefault()
         toast.dismiss()
-        const clean = custMobile.replace(/\D/g, '')
+        const clean = mobileNumber.replace(/\D/g, '')
         if (clean.length !== 10) {
             toast.error('Please enter a valid 10-digit mobile number')
             return
         }
-
-        if (!auth) {
-            toast.error('Authentication service is initializing. Please try again or switch to Email OTP.')
+        if (!pin.trim()) {
+            toast.error('Please enter your 4-digit PIN')
             return
         }
 
         try {
             setLoading(true)
-            toast.loading('Sending verification code...', { id: 'firebase-otp' })
-
-            // Clean up any existing verifier and clear DOM container
-            if (recaptchaVerifierRef.current) {
-                try { recaptchaVerifierRef.current.clear() } catch {}
-                recaptchaVerifierRef.current = null
-            }
-            const container = document.getElementById('recaptcha-container')
-            if (container) container.innerHTML = ''
-
-            recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                size: 'invisible',
-                callback: () => {},
-                'expired-callback': () => {
-                    toast.error('Verification expired. Please request a new code.')
-                }
-            })
-            await recaptchaVerifierRef.current.render()
-
-            const formattedPhone = `+91${clean}`
-            const confirmation = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifierRef.current)
-            setConfirmationResult(confirmation)
-            setFirebaseStep('verify')
-            setCountdown(60)
-            toast.success(`Code sent to +91 ${clean}`, { id: 'firebase-otp', duration: 4000 })
-        } catch (err) {
-            console.error("Firebase send OTP error:", err)
-            console.error("Firebase customData:", err?.customData)
-            if (recaptchaVerifierRef.current) {
-                try { recaptchaVerifierRef.current.clear() } catch {}
-                recaptchaVerifierRef.current = null
-            }
-            const container = document.getElementById('recaptcha-container')
-            if (container) container.innerHTML = ''
-
-            const innerError = err?.customData?._tokenResponse?.error?.message || ''
-            let msg = 'Failed to send SMS OTP.'
-            const code = err?.code || ''
-
-            if (innerError.includes('BILLING_NOT_ENABLED') || code === 'auth/internal-error') {
-                msg = 'Firebase requires Blaze plan (pay-as-you-go) to send real SMS. You can also test with numbers added under "Phone numbers for testing" in Firebase.'
-            } else if (code === 'auth/invalid-phone-number') {
-                msg = 'Invalid 10-digit mobile number format.'
-            } else if (code === 'auth/too-many-requests') {
-                msg = 'Too many attempts. Please wait a few minutes before trying again.'
-            } else if (code === 'auth/operation-not-allowed') {
-                msg = 'Phone provider is not enabled. In Firebase Console > Authentication > Sign-in method, click Phone and toggle Enable -> Save.'
-            } else if (code === 'auth/unauthorized-domain') {
-                msg = `Domain "${window?.location?.hostname}" is not authorized. Add it in Firebase Console > Authentication > Settings > Authorized domains.`
-            } else if (code === 'auth/invalid-app-credential') {
-                msg = 'Phone verification check failed. Please ensure Phone is Enabled in Firebase Console.'
-            } else if (code === 'auth/quota-exceeded') {
-                msg = 'Daily SMS limit reached. Please use Email OTP.'
-            } else if (innerError) {
-                msg = `${innerError} (${code || 'auth/error'})`
-            } else if (err?.message) {
-                msg = `${err.message} (${code || 'auth/error'})`
-            }
-            toast.error(msg, { id: 'firebase-otp', duration: 8000 })
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    // ── FIREBASE PHONE OTP: VERIFY ──
-    const handleVerifyFirebaseOtp = async (e) => {
-        e?.preventDefault()
-        toast.dismiss()
-        const otpCode = firebaseOtp.join('').trim()
-        if (otpCode.length !== 6) {
-            toast.error('Please enter the 6-digit verification code')
-            return
-        }
-
-        if (!confirmationResult) {
-            toast.error('Session expired. Please request a new code.')
-            setFirebaseStep('input')
-            return
-        }
-
-        try {
-            setLoading(true)
-            toast.loading('Verifying code...', { id: 'firebase-verify' })
-
-            const userCredential = await confirmationResult.confirm(otpCode)
-            const idToken = await userCredential.user.getIdToken()
-
+            toast.loading('Signing in...', { id: 'mobile-login' })
             const res = await Axios({
-                url: SummaryApi.firebasePhoneLogin?.url || '/api/user/firebase-phone-login',
-                method: SummaryApi.firebasePhoneLogin?.method || 'post',
-                data: {
-                    idToken,
-                    name: custName.trim() || undefined,
-                    referralCode: refCode || undefined
-                }
+                ...SummaryApi.login,
+                data: { email: clean, password: pin.trim() }
             })
 
             if (res.data?.success) {
-                toast.success('Login successful', { id: 'firebase-verify', duration: 3000 })
+                toast.success('Welcome back to Snapit', { id: 'mobile-login', duration: 3000 })
                 const token = res.data.data?.accesstoken || res.data.data?.accessToken
                 const refresh = res.data.data?.refreshToken || res.data.data?.refreshtoken
                 await handleLoginSuccess(token, refresh)
             } else {
-                toast.error(res.data?.message || 'Authentication failed. Please try again.', { id: 'firebase-verify', duration: 4000 })
+                toast.error(res.data?.message || 'Login failed. Please check your PIN.', { id: 'mobile-login', duration: 4000 })
             }
         } catch (err) {
-            console.error("Firebase OTP verification error:", err)
-            let msg = err?.response?.data?.message || 'Invalid verification code. Please check and try again.'
-            if (err?.code === 'auth/invalid-verification-code') {
-                msg = 'Incorrect verification code. Please try again.'
-            } else if (err?.code === 'auth/code-expired') {
-                msg = 'Verification code has expired. Please request a new code.'
-            }
-            toast.error(msg, { id: 'firebase-verify', duration: 4000 })
+            const msg = err?.response?.data?.message || err?.message || 'Sign in failed. Please check your mobile number and PIN.'
+            toast.error(msg, { id: 'mobile-login', duration: 5000 })
         } finally {
             setLoading(false)
         }
     }
 
-    const handleFirebaseOtpChange = (index, value) => {
-        if (!/^\d*$/.test(value)) return
-        const newOtp = [...firebaseOtp]
-        newOtp[index] = value.slice(-1)
-        setFirebaseOtp(newOtp)
-
-        if (value && index < 5 && firebaseOtpRefs.current[index + 1]) {
-            firebaseOtpRefs.current[index + 1].focus()
-        }
-    }
-
-    const handleFirebaseOtpKeyDown = (index, e) => {
-        if (e.key === 'Backspace' && !firebaseOtp[index] && index > 0) {
-            firebaseOtpRefs.current[index - 1].focus()
-        }
-    }
-
-    const handleFirebaseOtpPaste = (e) => {
+    // ── 2. MOBILE REGISTRATION (Name + 10-Digit Mobile + 4-Digit PIN) ──
+    const handleMobileRegister = async (e) => {
         e.preventDefault()
-        const pastedData = e.clipboardData.getData('text').trim().slice(0, 6)
-        if (/^\d+$/.test(pastedData)) {
-            const digits = pastedData.split('')
-            const newOtp = [...firebaseOtp]
-            digits.forEach((d, i) => {
-                if (i < 6) newOtp[i] = d
+        toast.dismiss()
+        if (!regName.trim()) {
+            toast.error('Please enter your name')
+            return
+        }
+        const clean = regMobile.replace(/\D/g, '')
+        if (clean.length !== 10) {
+            toast.error('Please enter a valid 10-digit mobile number')
+            return
+        }
+        if (!regPin.trim() || regPin.trim().length < 4) {
+            toast.error('Please choose a PIN of at least 4 digits')
+            return
+        }
+
+        try {
+            setLoading(true)
+            toast.loading('Creating account...', { id: 'mobile-reg' })
+            const res = await Axios({
+                ...SummaryApi.register,
+                data: {
+                    name: regName.trim(),
+                    email: clean,
+                    password: regPin.trim(),
+                    referralCode: regRefCode.trim() || undefined
+                }
             })
-            setFirebaseOtp(newOtp)
-            if (digits.length === 6 && firebaseOtpRefs.current[5]) {
-                firebaseOtpRefs.current[5].focus()
+
+            if (res.data?.success) {
+                toast.success('Account created successfully', { id: 'mobile-reg', duration: 3000 })
+                const token = res.data.data?.accesstoken || res.data.data?.accessToken
+                const refresh = res.data.data?.refreshToken || res.data.data?.refreshtoken
+                await handleLoginSuccess(token, refresh)
+            } else {
+                toast.error(res.data?.message || 'Registration failed', { id: 'mobile-reg', duration: 4000 })
             }
+        } catch (err) {
+            const msg = err?.response?.data?.message || err?.message || 'Registration failed. Please try again.'
+            toast.error(msg, { id: 'mobile-reg', duration: 5000 })
+        } finally {
+            setLoading(false)
         }
     }
 
-    // ── 2. EMAIL OTP FLOW ──
+    // ── 3. EMAIL OTP FLOW ──
     const handleSendOtp = async (e) => {
         e?.preventDefault()
         const cleanEmail = email.trim().toLowerCase()
@@ -381,8 +292,13 @@ const Login = () => {
         }
     }
 
+    const activePhoneForReset = mobileNumber || regMobile || ''
+    const whatsappResetUrl = `https://wa.me/919472026580?text=${encodeURIComponent(
+        `Hi Snapit Support, I forgot my 4-digit PIN for mobile: ${activePhoneForReset || 'my account'}. Please help me reset it.`
+    )}`
+
     const whatsappSupportUrl = `https://wa.me/919472026580?text=${encodeURIComponent(
-        `Hi Snapit Support, I need assistance logging into my account for mobile: ${custMobile || email || 'my account'}`
+        `Hi Snapit Support, I need assistance with my account for mobile: ${activePhoneForReset || email || 'my account'}`
     )}`
 
     return (
@@ -400,29 +316,26 @@ const Login = () => {
                             height={44}
                         />
                         <div>
-                            <h1 className="text-xl font-black text-gray-900 leading-tight">Snapit</h1>
-                            <span className="text-[11px] font-semibold text-gray-500">
+                            <h1 className="text-xl font-bold text-gray-900 leading-tight">Snapit</h1>
+                            <span className="text-xs font-medium text-gray-500">
                                 9-Minute Express Delivery
                             </span>
                         </div>
                     </div>
 
-                    {/* Tab Switcher: Mobile OTP vs Email OTP */}
+                    {/* Top Mode Selector: Mobile & PIN vs Email OTP */}
                     <div className="flex bg-gray-100 p-1 rounded-2xl mb-6">
                         <button
                             type="button"
-                            onClick={() => {
-                                setAuthMode('mobile_otp')
-                                setFirebaseStep('input')
-                            }}
+                            onClick={() => setAuthMode('mobile_pin')}
                             className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                                authMode === 'mobile_otp'
+                                authMode === 'mobile_pin'
                                     ? 'bg-white text-gray-900 shadow-sm'
                                     : 'text-gray-500 hover:text-gray-900'
                             }`}
                         >
                             <MdPhoneAndroid className="text-base" />
-                            <span>Mobile OTP</span>
+                            <span>Mobile & PIN</span>
                         </button>
                         <button
                             type="button"
@@ -441,44 +354,54 @@ const Login = () => {
                         </button>
                     </div>
 
-                    {/* Invisible reCAPTCHA container for Firebase */}
-                    <div id="recaptcha-container"></div>
-
                     {/* ───────────────────────────────────────────────────────────── */}
-                    {/* OPTION 1: MOBILE OTP VIA FIREBASE                             */}
+                    {/* OPTION 1: MOBILE & PIN (Instant 5-Second Login / Register)     */}
                     {/* ───────────────────────────────────────────────────────────── */}
-                    {authMode === 'mobile_otp' && (
+                    {authMode === 'mobile_pin' && (
                         <div>
-                            {firebaseStep === 'input' ? (
-                                <form onSubmit={handleSendFirebaseOtp} className="space-y-4">
+                            {/* Sign In vs Create Account Toggle */}
+                            <div className="flex bg-gray-50 border border-gray-200/80 p-1 rounded-xl mb-5">
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileMode('login')}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                                        mobileMode === 'login'
+                                            ? 'bg-white text-green-800 shadow-sm font-extrabold'
+                                            : 'text-gray-500 hover:text-gray-800'
+                                    }`}
+                                >
+                                    Sign In
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setMobileMode('register')
+                                        if (mobileNumber && !regMobile) setRegMobile(mobileNumber)
+                                    }}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                                        mobileMode === 'register'
+                                            ? 'bg-white text-green-800 shadow-sm font-extrabold'
+                                            : 'text-gray-500 hover:text-gray-800'
+                                    }`}
+                                >
+                                    Create Account
+                                </button>
+                            </div>
+
+                            {mobileMode === 'login' ? (
+                                /* ── Mobile Sign In Form ── */
+                                <form onSubmit={handleMobileLogin} className="space-y-4">
                                     <div>
-                                        <h2 className="text-lg font-bold text-gray-900">Sign in with Mobile</h2>
+                                        <h2 className="text-lg font-bold text-gray-900">Welcome Back</h2>
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Enter your phone number to receive a 6-digit SMS verification code.
+                                            Enter your mobile number and 4-digit PIN to continue.
                                         </p>
                                     </div>
 
-                                    {/* Name Input (Optional for delivery) */}
+                                    {/* Mobile Number */}
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                            Your Name <span className="font-normal text-gray-400">(Optional)</span>
-                                        </label>
-                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
-                                            <MdPerson className="text-gray-400 text-lg mr-2 flex-shrink-0" />
-                                            <input
-                                                type="text"
-                                                value={custName}
-                                                onChange={e => setCustName(e.target.value)}
-                                                placeholder="e.g. Rahul Kumar"
-                                                className="w-full bg-transparent outline-none text-sm font-medium text-gray-900 placeholder-gray-400"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Mobile Number Input */}
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                            Phone Number <span className="text-rose-500">*</span>
+                                            Mobile Number <span className="text-rose-500">*</span>
                                         </label>
                                         <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
                                             <span className="text-sm font-bold text-gray-700 mr-2 flex items-center gap-1 select-none border-r border-gray-200 pr-2">
@@ -488,8 +411,8 @@ const Login = () => {
                                                 type="tel"
                                                 inputMode="numeric"
                                                 maxLength={10}
-                                                value={custMobile}
-                                                onChange={e => setCustMobile(e.target.value.replace(/\D/g, ''))}
+                                                value={mobileNumber}
+                                                onChange={e => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                                                 placeholder="10-digit mobile number"
                                                 className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
                                                 required
@@ -498,82 +421,185 @@ const Login = () => {
                                         </div>
                                     </div>
 
+                                    {/* 4-Digit PIN */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="block text-xs font-semibold text-gray-700">
+                                                4-Digit PIN <span className="text-rose-500">*</span>
+                                            </label>
+                                            <a
+                                                href={whatsappResetUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors"
+                                            >
+                                                <FaWhatsapp size={12} className="text-emerald-600" />
+                                                <span>Forgot PIN?</span>
+                                            </a>
+                                        </div>
+                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
+                                            <MdLockOutline className="text-gray-400 text-lg mr-2 flex-shrink-0" />
+                                            <input
+                                                type={showPin ? "text" : "password"}
+                                                inputMode="numeric"
+                                                maxLength={8}
+                                                value={pin}
+                                                onChange={e => setPin(e.target.value)}
+                                                placeholder="Enter your 4-digit PIN"
+                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPin(prev => !prev)}
+                                                className="text-gray-400 hover:text-gray-600 ml-2 focus:outline-none"
+                                            >
+                                                {showPin ? <FaRegEye className="text-base" /> : <FaRegEyeSlash className="text-base" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     <button
                                         type="submit"
-                                        disabled={loading || custMobile.replace(/\D/g, '').length !== 10}
+                                        disabled={loading || mobileNumber.replace(/\D/g, '').length !== 10 || !pin.trim()}
                                         className={`w-full h-12 rounded-xl text-sm font-bold text-white transition-all shadow-sm flex items-center justify-center gap-2
-                                            ${custMobile.replace(/\D/g, '').length === 10 && !loading
+                                            ${mobileNumber.replace(/\D/g, '').length === 10 && pin.trim() && !loading
                                                 ? 'bg-green-700 hover:bg-green-800 active:scale-[0.99] cursor-pointer'
                                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                             }`}
                                     >
-                                        {loading ? 'Sending code...' : 'Continue'}
+                                        {loading ? 'Signing in...' : 'Sign In'}
                                     </button>
-                                </form>
-                            ) : (
-                                <form onSubmit={handleVerifyFirebaseOtp} className="space-y-5">
-                                    <div>
+
+                                    <div className="text-center pt-2">
                                         <button
                                             type="button"
-                                            onClick={() => setFirebaseStep('input')}
-                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 mb-2 transition-colors"
+                                            onClick={() => {
+                                                setMobileMode('register')
+                                                if (mobileNumber && !regMobile) setRegMobile(mobileNumber)
+                                            }}
+                                            className="text-xs font-semibold text-green-700 hover:text-green-900 transition-colors"
                                         >
-                                            <FaArrowLeft size={10} />
-                                            <span>Change phone number</span>
+                                            New customer? Create account in 5 seconds &rarr;
                                         </button>
-                                        <h2 className="text-lg font-bold text-gray-900">Enter Verification Code</h2>
+                                    </div>
+                                </form>
+                            ) : (
+                                /* ── Mobile Create Account Form ── */
+                                <form onSubmit={handleMobileRegister} className="space-y-4">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-gray-900">Create Account</h2>
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Sent to <span className="font-semibold text-gray-900">+91 {custMobile}</span> via SMS
+                                            Instant signup. Just your name, mobile, and a 4-digit PIN.
                                         </p>
                                     </div>
 
-                                    {/* 6-digit OTP Inputs */}
-                                    <div className="flex justify-between gap-2" onPaste={handleFirebaseOtpPaste}>
-                                        {firebaseOtp.map((digit, index) => (
+                                    {/* Name */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                            Your Name <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
+                                            <MdPerson className="text-gray-400 text-lg mr-2 flex-shrink-0" />
                                             <input
-                                                key={index}
-                                                ref={el => firebaseOtpRefs.current[index] = el}
                                                 type="text"
-                                                inputMode="numeric"
-                                                maxLength={1}
-                                                value={digit}
-                                                onChange={e => handleFirebaseOtpChange(index, e.target.value)}
-                                                onKeyDown={e => handleFirebaseOtpKeyDown(index, e)}
-                                                className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-xl font-bold rounded-2xl border-2 transition-all outline-none
-                                                    ${digit
-                                                        ? 'border-green-600 bg-green-50/40 text-gray-900 shadow-sm'
-                                                        : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-green-600 focus:bg-white'
-                                                    }`}
+                                                value={regName}
+                                                onChange={e => setRegName(e.target.value)}
+                                                placeholder="e.g. Rahul Kumar"
+                                                className="w-full bg-transparent outline-none text-sm font-medium text-gray-900 placeholder-gray-400"
+                                                required
+                                                autoFocus
                                             />
-                                        ))}
+                                        </div>
                                     </div>
+
+                                    {/* Mobile */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                            Mobile Number <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
+                                            <span className="text-sm font-bold text-gray-700 mr-2 flex items-center gap-1 select-none border-r border-gray-200 pr-2">
+                                                +91
+                                            </span>
+                                            <input
+                                                type="tel"
+                                                inputMode="numeric"
+                                                maxLength={10}
+                                                value={regMobile}
+                                                onChange={e => setRegMobile(e.target.value.replace(/\D/g, ''))}
+                                                placeholder="10-digit mobile number"
+                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Set 4-Digit PIN */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                            Set 4-Digit PIN <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
+                                            <MdLockOutline className="text-gray-400 text-lg mr-2 flex-shrink-0" />
+                                            <input
+                                                type={showRegPin ? "text" : "password"}
+                                                inputMode="numeric"
+                                                maxLength={8}
+                                                value={regPin}
+                                                onChange={e => setRegPin(e.target.value)}
+                                                placeholder="Choose a 4-digit PIN (e.g. 1234)"
+                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowRegPin(prev => !prev)}
+                                                className="text-gray-400 hover:text-gray-600 ml-2 focus:outline-none"
+                                            >
+                                                {showRegPin ? <FaRegEye className="text-base" /> : <FaRegEyeSlash className="text-base" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Referral Code (if available in URL) */}
+                                    {refCode && (
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                                Referral Code
+                                            </label>
+                                            <div className="flex items-center bg-emerald-50/60 border border-emerald-200 rounded-xl px-3.5 h-11">
+                                                <input
+                                                    type="text"
+                                                    value={regRefCode}
+                                                    onChange={e => setRegRefCode(e.target.value)}
+                                                    placeholder="Referral Code"
+                                                    className="w-full bg-transparent outline-none text-xs font-bold text-emerald-800 uppercase"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <button
                                         type="submit"
-                                        disabled={loading || firebaseOtp.join('').trim().length !== 6}
+                                        disabled={loading || !regName.trim() || regMobile.replace(/\D/g, '').length !== 10 || regPin.trim().length < 4}
                                         className={`w-full h-12 rounded-xl text-sm font-bold text-white transition-all shadow-sm flex items-center justify-center gap-2
-                                            ${firebaseOtp.join('').trim().length === 6 && !loading
+                                            ${regName.trim() && regMobile.replace(/\D/g, '').length === 10 && regPin.trim().length >= 4 && !loading
                                                 ? 'bg-green-700 hover:bg-green-800 active:scale-[0.99] cursor-pointer'
                                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                             }`}
                                     >
-                                        {loading ? 'Verifying...' : 'Verify & Continue'}
+                                        {loading ? 'Creating Account...' : 'Create Account & Continue'}
                                     </button>
 
-                                    <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
-                                        <span>Didn't receive SMS?</span>
-                                        {countdown > 0 ? (
-                                            <span className="font-semibold text-gray-400">Resend in {countdown}s</span>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                onClick={handleSendFirebaseOtp}
-                                                disabled={loading}
-                                                className="font-bold text-green-700 hover:text-green-900 transition-colors"
-                                            >
-                                                Resend Code
-                                            </button>
-                                        )}
+                                    <div className="text-center pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setMobileMode('login')}
+                                            className="text-xs font-semibold text-green-700 hover:text-green-900 transition-colors"
+                                        >
+                                            Already registered? Sign in &rarr;
+                                        </button>
                                     </div>
                                 </form>
                             )}
@@ -713,8 +739,8 @@ const Login = () => {
                         </div>
                     )}
 
-                    {/* Quick Support Link */}
-                    <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-center">
+                    {/* Support Links */}
+                    <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col items-center gap-2">
                         <a
                             href={whatsappSupportUrl}
                             target="_blank"
@@ -724,6 +750,12 @@ const Login = () => {
                             <FaWhatsapp className="text-sm text-emerald-600" />
                             <span>Need help? Contact Customer Support</span>
                         </a>
+                        <Link
+                            to="/forgot-password"
+                            className="text-[11px] font-medium text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            Forgot password / PIN via registered email? Click here
+                        </Link>
                     </div>
 
                     {/* Terms & Privacy */}
