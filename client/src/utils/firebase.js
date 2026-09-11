@@ -1,56 +1,35 @@
 import { initializeApp } from 'firebase/app'
 import { getMessaging, getToken, onMessage } from 'firebase/messaging'
 import { getRemoteConfig, fetchAndActivate, getValue } from 'firebase/remote-config'
-
-// ─── SECURITY FIX: All credentials moved to environment variables ───────────
-// Never commit API keys. Add these to your .env file (never commit that file).
-// VITE_ prefix is required for Vite to expose them to the client bundle.
-//
-// Required .env entries:
-//   VITE_FIREBASE_API_KEY=
-//   VITE_FIREBASE_AUTH_DOMAIN=
-//   VITE_FIREBASE_PROJECT_ID=
-//   VITE_FIREBASE_STORAGE_BUCKET=
-//   VITE_FIREBASE_MESSAGING_SENDER_ID=
-//   VITE_FIREBASE_APP_ID=
-//   VITE_FIREBASE_MEASUREMENT_ID=
-//   VITE_FIREBASE_VAPID_KEY=
-
-const requiredEnvVars = [
-    'VITE_FIREBASE_API_KEY',
-    'VITE_FIREBASE_AUTH_DOMAIN',
-    'VITE_FIREBASE_PROJECT_ID',
-    'VITE_FIREBASE_STORAGE_BUCKET',
-    'VITE_FIREBASE_MESSAGING_SENDER_ID',
-    'VITE_FIREBASE_APP_ID',
-    'VITE_FIREBASE_VAPID_KEY',
-]
-
-const missingVars = requiredEnvVars.filter(v => !import.meta.env[v])
-if (missingVars.length > 0) {
-    console.error('[Firebase] Missing required env vars:', missingVars.join(', '))
-}
+import { getAuth } from 'firebase/auth'
 
 const firebaseConfig = {
-    apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId:             import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    apiKey:            import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDgwBo2Xfx3wEWKvwiCjfGQgrBrVkffqn4",
+    authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "snapit-da080.firebaseapp.com",
+    projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID || "snapit-da080",
+    storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "snapit-da080.firebasestorage.app",
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "404894201207",
+    appId:             import.meta.env.VITE_FIREBASE_APP_ID || "1:404894201207:android:b375b3cddccdffa64e9d72",
+    measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
 }
 
 // VAPID key for push notifications — must come from env, never hardcoded
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
 
 let app = null
+let auth = null
 let messaging = null
 let remoteConfigInstance = null
 
 try {
     if (firebaseConfig.apiKey) {
         app = initializeApp(firebaseConfig)
+        try {
+            auth = getAuth(app)
+        } catch (authErr) {
+            console.warn('[Firebase] Auth initialization warning:', authErr?.message)
+        }
+
         try {
             if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
                 messaging = getMessaging(app)
@@ -69,6 +48,8 @@ try {
 } catch (err) {
     console.warn('[Firebase] Initialization error:', err?.message)
 }
+
+export { auth }
 
 // Default values (fallback if Firebase is unreachable)
 const DEFAULT_CONFIG = {

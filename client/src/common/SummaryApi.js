@@ -17,6 +17,10 @@ const SummaryApi = {
         url : '/api/user/login',
         method : 'post'
     },
+    firebasePhoneLogin : {
+        url : '/api/user/firebase-phone-login',
+        method : 'post'
+    },
     forgot_password : {
         url : "/api/user/forgot-password",
         method : 'put'

@@ -16,7 +16,8 @@ import {
     getAllRiders,
     saveFcmTokenController,
     updateDobController,
-    testPushNotificationController
+    testPushNotificationController,
+    firebasePhoneLoginController
 } from '../controllers/user.controller.js'
 import auth, { optionalAuth } from '../middleware/auth.js'
 import { admin } from '../middleware/Admin.js'        // ✅ added
@@ -29,6 +30,7 @@ const userRouter = Router()
 // ── Rate-limited public auth routes ──────────────────────────
 userRouter.post('/register',                   validateRegister, registerUserController)
 userRouter.post('/login',                      authLimiter, validateLogin, loginController)
+userRouter.post('/firebase-phone-login',       firebasePhoneLoginController)
 userRouter.post('/forgot-password',            otpLimiter, validateForgotPassword, forgotPasswordController)
 userRouter.put('/forgot-password',             otpLimiter, validateForgotPassword, forgotPasswordController)
 userRouter.put('/verify-forgot-password-otp',  otpLimiter, verifyForgotPasswordOtp)

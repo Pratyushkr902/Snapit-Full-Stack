@@ -942,3 +942,123 @@ export const testPushNotificationController = async (request, response) => {
         return response.status(500).json({ message: error.message || error, error: true, success: false })
     }
 }
+
+export async function firebasePhoneLoginController(request, response) {
+    try {
+        const { idToken, name, referralCode: incomingReferralCode } = request.body
+
+        if (!idToken || typeof idToken !== 'string') {
+            return response.status(400).json({
+                message: "Missing Firebase verification token",
+                error: true,
+                success: false
+            })
+        }
+
+        const { getAuth } = await import('firebase-admin/auth')
+        let decodedToken = null
+        try {
+            decodedToken = await getAuth().verifyIdToken(idToken)
+        } catch (verifyError) {
+            console.error("Firebase verifyIdToken error:", verifyError.message)
+            return response.status(401).json({
+                message: "Invalid or expired Firebase phone token. Please try again.",
+                error: true,
+                success: false
+            })
+        }
+
+        const rawPhone = decodedToken.phone_number
+        if (!rawPhone) {
+            return response.status(400).json({
+                message: "No phone number associated with this Firebase session.",
+                error: true,
+                success: false
+            })
+        }
+
+        const digits = rawPhone.replace(/\D/g, '')
+        const cleanMobile = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits
+        const mobileNum = Number(cleanMobile)
+
+        let user = await UserModel.findOne({
+            $or: [
+                { mobile: mobileNum },
+                { email: `${cleanMobile}@snapit.in` }
+            ]
+        })
+
+        if (!user) {
+            const cleanName = (name && typeof name === 'string' && name.trim()) ? name.trim().slice(0, 50) : `User ${cleanMobile.slice(-4)}`
+            const syntheticEmail = `${cleanMobile}@snapit.in`
+
+            let referredBy = null
+            if (incomingReferralCode && typeof incomingReferralCode === 'string') {
+                const cleanCode = incomingReferralCode.trim().toUpperCase()
+                const referrer = await UserModel.findOne({ referralCode: cleanCode })
+                if (referrer) referredBy = referrer._id
+            }
+
+            const salt = await bcryptjs.genSalt(10)
+            const hashPassword = await bcryptjs.hash(cleanMobile + "_" + Date.now(), salt)
+
+            user = new UserModel({
+                name: cleanName,
+                email: syntheticEmail,
+                password: hashPassword,
+                mobile: mobileNum,
+                verify_email: true,
+                is_phone_verified: true,
+                status: 'Active',
+                role: 'USER',
+                referredBy: referredBy || null
+            })
+            await user.save()
+        } else {
+            if (!user.mobile) user.mobile = mobileNum
+            user.verify_email = true
+            user.is_phone_verified = true
+            if (name && typeof name === 'string' && name.trim() && user.name.startsWith('User ')) {
+                user.name = name.trim().slice(0, 50)
+            }
+            await user.save()
+        }
+
+        if (user.status !== "Active") {
+            return response.status(400).json({
+                message: "Contact Admin. Your account is inactive.",
+                error: true,
+                success: false
+            })
+        }
+
+        const accesstoken = await generatedAccessToken(user._id)
+        const refreshToken = await genertedRefreshToken(user._id)
+
+        response.cookie('accessToken', accesstoken, cookiesOption)
+        response.cookie('refreshToken', refreshToken, cookiesOption)
+
+        return response.json({
+            message: "Login successful! Welcome to Snapit 🎉",
+            error: false,
+            success: true,
+            data: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                mobile: user.mobile,
+                role: user.role,
+                avatar: user.avatar,
+                accesstoken,
+                refreshToken
+            }
+        })
+    } catch (error) {
+        console.error("firebasePhoneLoginController error:", error)
+        return response.status(500).json({
+            message: error.message || "Failed to authenticate phone number",
+            error: true,
+            success: false
+        })
+    }
+}

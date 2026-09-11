@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { FaRegEyeSlash, FaRegEye, FaBolt, FaArrowLeft, FaWhatsapp } from "react-icons/fa6"
-import { MdEmail, MdLock, MdPerson, MdPhoneAndroid } from "react-icons/md"
+import { MdEmail, MdLock, MdPerson, MdPhoneAndroid, MdSms } from "react-icons/md"
 import toast from 'react-hot-toast'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
@@ -11,17 +11,27 @@ import { setUserDetails } from '../store/userSlice'
 import fetchUserDetails from '../utils/fetchUserDetails'
 import secureStorage from '../utils/secureStorage'
 import snapitLogo from '/logo.png'
+import { auth } from '../utils/firebase'
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth'
 
 const Login = () => {
     const [searchParams] = useSearchParams()
     const refCode = searchParams.get('ref') || ''
 
-    // 'mobile' (default: 10-digit phone + PIN) or 'email_otp'
-    const [authMode, setAuthMode] = useState('mobile')
-    // In mobile mode: 'login' or 'register'
-    const [mobileMode, setMobileMode] = useState('login')
+    // 'firebase_otp' (default), 'pin', or 'email_otp'
+    const [authMode, setAuthMode] = useState('firebase_otp')
 
-    // Mobile inputs
+    // ── Firebase Phone OTP state ──
+    const [firebaseStep, setFirebaseStep] = useState('input') // 'input' or 'verify'
+    const [custName, setCustName] = useState('')
+    const [custMobile, setCustMobile] = useState('')
+    const [firebaseOtp, setFirebaseOtp] = useState(['', '', '', '', '', ''])
+    const [confirmationResult, setConfirmationResult] = useState(null)
+    const firebaseOtpRefs = useRef([])
+    const recaptchaVerifierRef = useRef(null)
+
+    // ── Mobile PIN mode: 'login' or 'register' ──
+    const [mobileMode, setMobileMode] = useState('login')
     const [mobileNumber, setMobileNumber] = useState('')
     const [pin, setPin] = useState('')
     const [showPin, setShowPin] = useState(false)
@@ -56,7 +66,7 @@ const Login = () => {
     // Auto-dismiss toasts when switching mode or step
     useEffect(() => {
         toast.dismiss()
-    }, [authMode, mobileMode, step])
+    }, [authMode, mobileMode, step, firebaseStep])
 
     // Countdown timer for Resend OTP
     useEffect(() => {
@@ -73,6 +83,13 @@ const Login = () => {
             otpInputRefs.current[0].focus()
         }
     }, [step])
+
+    // Auto-focus first Phone OTP input when moving to verify step
+    useEffect(() => {
+        if (firebaseStep === 'verify' && firebaseOtpRefs.current[0]) {
+            firebaseOtpRefs.current[0].focus()
+        }
+    }, [firebaseStep])
 
     // Save tokens and update redux
     const handleLoginSuccess = async (token, refresh) => {
@@ -95,6 +112,145 @@ const Login = () => {
         // Redirect to intended destination (e.g. /checkout) or Home
         const redirectPath = searchParams.get('redirect') || '/'
         navigate(redirectPath, { replace: true })
+    }
+
+    // ── FIREBASE PHONE OTP: SEND SMS ──
+    const handleSendFirebaseOtp = async (e) => {
+        e?.preventDefault()
+        toast.dismiss()
+        const clean = custMobile.replace(/\D/g, '')
+        if (clean.length !== 10) {
+            toast.error('Please enter a valid 10-digit mobile number')
+            return
+        }
+
+        if (!auth) {
+            toast.error('Firebase Auth service initializing. Please try PIN login below.')
+            return
+        }
+
+        try {
+            setLoading(true)
+            toast.loading('Sending 6-digit SMS OTP...', { id: 'firebase-otp' })
+
+            if (recaptchaVerifierRef.current) {
+                try { recaptchaVerifierRef.current.clear() } catch {}
+                recaptchaVerifierRef.current = null
+            }
+
+            recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                size: 'invisible',
+                callback: () => {},
+                'expired-callback': () => {
+                    toast.error('Verification expired. Please click Get OTP again.')
+                }
+            })
+
+            const formattedPhone = `+91${clean}`
+            const confirmation = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifierRef.current)
+            setConfirmationResult(confirmation)
+            setFirebaseStep('verify')
+            setCountdown(60)
+            toast.success(`OTP sent to +91 ${clean} 📲`, { id: 'firebase-otp', duration: 4000 })
+        } catch (err) {
+            console.error("Firebase send OTP error:", err)
+            if (recaptchaVerifierRef.current) {
+                try { recaptchaVerifierRef.current.clear() } catch {}
+                recaptchaVerifierRef.current = null
+            }
+            let msg = 'Failed to send SMS OTP.'
+            if (err.code === 'auth/invalid-phone-number') msg = 'Invalid phone number format.'
+            else if (err.code === 'auth/too-many-requests') msg = 'Too many attempts. Please wait a few minutes or use PIN login.'
+            else if (err.code === 'auth/operation-not-allowed') {
+                msg = 'Please enable "Phone" sign-in provider in Firebase Console under Authentication > Sign-in method.'
+            } else if (err.message) msg = err.message
+            toast.error(msg, { id: 'firebase-otp', duration: 6000 })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // ── FIREBASE PHONE OTP: VERIFY ──
+    const handleVerifyFirebaseOtp = async (e) => {
+        e?.preventDefault()
+        toast.dismiss()
+        const otpCode = firebaseOtp.join('').trim()
+        if (otpCode.length !== 6) {
+            toast.error('Please enter the 6-digit OTP received on your mobile')
+            return
+        }
+
+        if (!confirmationResult) {
+            toast.error('Session expired. Please request a new OTP.')
+            setFirebaseStep('input')
+            return
+        }
+
+        try {
+            setLoading(true)
+            toast.loading('Verifying code...', { id: 'firebase-verify' })
+            const credential = await confirmationResult.confirm(otpCode)
+            const idToken = await credential.user.getIdToken()
+
+            const res = await Axios({
+                ...SummaryApi.firebasePhoneLogin,
+                data: {
+                    idToken,
+                    name: custName.trim() || undefined,
+                    referralCode: refCode || undefined
+                }
+            })
+
+            if (res.data?.success) {
+                toast.success('Welcome to Snapit! 🎉', { id: 'firebase-verify', duration: 3000 })
+                const token = res.data.data?.accesstoken || res.data.data?.accessToken
+                const refresh = res.data.data?.refreshToken || res.data.data?.refreshtoken
+                await handleLoginSuccess(token, refresh)
+            } else {
+                toast.error(res.data?.message || 'Verification failed', { id: 'firebase-verify', duration: 4000 })
+            }
+        } catch (err) {
+            console.error("Firebase verify error:", err)
+            let msg = 'Invalid or expired OTP. Please try again.'
+            if (err.code === 'auth/invalid-verification-code') msg = 'Incorrect OTP code.'
+            else if (err.code === 'auth/code-expired') msg = 'OTP expired. Please request a new code.'
+            toast.error(msg, { id: 'firebase-verify', duration: 4500 })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleFirebaseOtpChange = (index, value) => {
+        if (!/^\d*$/.test(value)) return
+        const newOtp = [...firebaseOtp]
+        newOtp[index] = value.slice(-1)
+        setFirebaseOtp(newOtp)
+
+        if (value && index < 5 && firebaseOtpRefs.current[index + 1]) {
+            firebaseOtpRefs.current[index + 1].focus()
+        }
+    }
+
+    const handleFirebaseOtpKeyDown = (index, e) => {
+        if (e.key === 'Backspace' && !firebaseOtp[index] && index > 0) {
+            firebaseOtpRefs.current[index - 1].focus()
+        }
+    }
+
+    const handleFirebaseOtpPaste = (e) => {
+        e.preventDefault()
+        const pastedData = e.clipboardData.getData('text').trim().slice(0, 6)
+        if (/^\d+$/.test(pastedData)) {
+            const digits = pastedData.split('')
+            const newOtp = [...firebaseOtp]
+            digits.forEach((d, i) => {
+                if (i < 6) newOtp[i] = d
+            })
+            setFirebaseOtp(newOtp)
+            if (digits.length === 6 && firebaseOtpRefs.current[5]) {
+                firebaseOtpRefs.current[5].focus()
+            }
+        }
     }
 
     // ── 1. MOBILE LOGIN (10-Digit + PIN) ──
@@ -332,20 +488,201 @@ const Login = () => {
                             </div>
                         </div>
 
-                        {/* Switch between Mobile (Default) and Email OTP */}
+                    </div>
+
+                    {/* Top Auth Mode Tabs */}
+                    <div className="flex bg-gray-100 p-1 rounded-2xl mb-5">
                         <button
                             type="button"
-                            onClick={() => setAuthMode(prev => prev === 'mobile' ? 'email_otp' : 'mobile')}
-                            className="text-[11px] font-bold text-green-800 bg-green-50 border border-green-200 px-3 py-1.5 rounded-xl hover:bg-green-100 transition-colors"
+                            onClick={() => setAuthMode('firebase_otp')}
+                            className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
+                                authMode === 'firebase_otp'
+                                    ? 'bg-white text-green-800 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-800'
+                            }`}
                         >
-                            {authMode === 'mobile' ? '✉️ Email OTP' : '📱 Mobile'}
+                            📲 Mobile OTP
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setAuthMode('pin')}
+                            className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
+                                authMode === 'pin'
+                                    ? 'bg-white text-green-800 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                        >
+                            🔑 4-Digit PIN
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setAuthMode('email_otp')}
+                            className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
+                                authMode === 'email_otp'
+                                    ? 'bg-white text-green-800 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                        >
+                            ✉️ Email
                         </button>
                     </div>
 
+                    {/* Invisible reCAPTCHA container for Firebase */}
+                    <div id="recaptcha-container"></div>
+
                     {/* ───────────────────────────────────────────────────────────── */}
-                    {/* OPTION 1: MOBILE NUMBER + PIN (Default & Fast for Paliganj)     */}
+                    {/* OPTION 1: FIREBASE PHONE AUTH (Name + Mobile + OTP)            */}
                     {/* ───────────────────────────────────────────────────────────── */}
-                    {authMode === 'mobile' && (
+                    {authMode === 'firebase_otp' && (
+                        <div>
+                            {firebaseStep === 'input' ? (
+                                <form onSubmit={handleSendFirebaseOtp} className="space-y-4">
+                                    <div>
+                                        <h2 className="text-lg font-black text-gray-900">Sign in with Mobile OTP ⚡</h2>
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                            Enter your name and mobile number. We'll send a 6-digit SMS OTP.
+                                        </p>
+                                    </div>
+
+                                    {/* Name Input */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                                            Your Name <span className="text-xs font-normal text-gray-400">(for delivery)</span>
+                                        </label>
+                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
+                                            <MdPerson className="text-gray-400 text-lg mr-2 flex-shrink-0" />
+                                            <input
+                                                type="text"
+                                                value={custName}
+                                                onChange={e => setCustName(e.target.value)}
+                                                placeholder="e.g. Rahul Kumar"
+                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Mobile Number Input */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                                            Mobile Number <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
+                                            <span className="text-sm font-black text-gray-700 mr-2 flex items-center gap-1 select-none border-r border-gray-300 pr-2">
+                                                <span>🇮🇳</span> +91
+                                            </span>
+                                            <input
+                                                type="tel"
+                                                inputMode="numeric"
+                                                maxLength={10}
+                                                value={custMobile}
+                                                onChange={e => setCustMobile(e.target.value.replace(/\D/g, ''))}
+                                                placeholder="10-digit mobile number"
+                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
+                                                required
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={loading || custMobile.replace(/\D/g, '').length !== 10}
+                                        className={`w-full h-12 rounded-xl text-sm font-black text-white transition-all shadow-sm flex items-center justify-center gap-2
+                                            ${custMobile.replace(/\D/g, '').length === 10 && !loading
+                                                ? 'bg-green-700 hover:bg-green-800 active:scale-[0.99] cursor-pointer'
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            }`}
+                                    >
+                                        {loading ? 'Sending SMS OTP...' : 'Get OTP via SMS 🚀'}
+                                    </button>
+
+                                    <div className="text-center pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAuthMode('pin')
+                                                if (custMobile && !mobileNumber) setMobileNumber(custMobile)
+                                            }}
+                                            className="text-xs font-bold text-green-700 hover:text-green-900 transition-colors"
+                                        >
+                                            🔑 Prefer 4-Digit PIN instead? Sign in here &rarr;
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <form onSubmit={handleVerifyFirebaseOtp} className="space-y-5">
+                                    <div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFirebaseStep('input')}
+                                            className="inline-flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-gray-800 mb-2 transition-colors"
+                                        >
+                                            <FaArrowLeft size={10} />
+                                            <span>Change number</span>
+                                        </button>
+                                        <h2 className="text-lg font-black text-gray-900">Enter 6-Digit OTP 📩</h2>
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                            Code sent to <span className="font-bold text-gray-800">+91 {custMobile}</span> via SMS
+                                        </p>
+                                    </div>
+
+                                    {/* 6-digit OTP Inputs */}
+                                    <div className="flex justify-between gap-2" onPaste={handleFirebaseOtpPaste}>
+                                        {firebaseOtp.map((digit, index) => (
+                                            <input
+                                                key={index}
+                                                ref={el => firebaseOtpRefs.current[index] = el}
+                                                type="text"
+                                                inputMode="numeric"
+                                                maxLength={1}
+                                                value={digit}
+                                                onChange={e => handleFirebaseOtpChange(index, e.target.value)}
+                                                onKeyDown={e => handleFirebaseOtpKeyDown(index, e)}
+                                                className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-xl font-black rounded-2xl border-2 transition-all outline-none
+                                                    ${digit
+                                                        ? 'border-green-600 bg-green-50/50 text-gray-900 shadow-sm'
+                                                        : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-green-500 focus:bg-white'
+                                                    }`}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={loading || firebaseOtp.join('').trim().length !== 6}
+                                        className={`w-full h-12 rounded-xl text-sm font-black text-white transition-all shadow-sm flex items-center justify-center gap-2
+                                            ${firebaseOtp.join('').trim().length === 6 && !loading
+                                                ? 'bg-green-700 hover:bg-green-800 active:scale-[0.99] cursor-pointer'
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            }`}
+                                    >
+                                        {loading ? 'Verifying...' : 'Verify & Log In 🎉'}
+                                    </button>
+
+                                    <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
+                                        <span>Didn't receive SMS?</span>
+                                        {countdown > 0 ? (
+                                            <span className="font-bold text-gray-400">Resend in {countdown}s</span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={handleSendFirebaseOtp}
+                                                disabled={loading}
+                                                className="font-bold text-green-700 hover:text-green-900 transition-colors"
+                                            >
+                                                Resend Code
+                                            </button>
+                                        )}
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ───────────────────────────────────────────────────────────── */}
+                    {/* OPTION 2: MOBILE NUMBER + PIN                                  */}
+                    {/* ───────────────────────────────────────────────────────────── */}
+                    {authMode === 'pin' && (
                         <div>
                             {/* Sub-tab: Sign In vs Create Account */}
                             <div className="flex bg-gray-100 p-1 rounded-2xl mb-5">
