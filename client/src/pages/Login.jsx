@@ -134,6 +134,7 @@ const Login = () => {
                     toast.error('Verification expired. Please request a new code.')
                 }
             })
+            await recaptchaVerifierRef.current.render()
 
             const formattedPhone = `+91${clean}`
             const confirmation = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifierRef.current)
@@ -143,6 +144,7 @@ const Login = () => {
             toast.success(`Code sent to +91 ${clean}`, { id: 'firebase-otp', duration: 4000 })
         } catch (err) {
             console.error("Firebase send OTP error:", err)
+            console.error("Firebase customData:", err?.customData)
             if (recaptchaVerifierRef.current) {
                 try { recaptchaVerifierRef.current.clear() } catch {}
                 recaptchaVerifierRef.current = null
@@ -150,24 +152,30 @@ const Login = () => {
             const container = document.getElementById('recaptcha-container')
             if (container) container.innerHTML = ''
 
+            const innerError = err?.customData?._tokenResponse?.error?.message || ''
             let msg = 'Failed to send SMS OTP.'
             const code = err?.code || ''
-            if (code === 'auth/invalid-phone-number') {
+
+            if (innerError.includes('BILLING_NOT_ENABLED') || code === 'auth/internal-error') {
+                msg = 'Firebase requires Blaze plan (pay-as-you-go) to send real SMS. You can also test with numbers added under "Phone numbers for testing" in Firebase.'
+            } else if (code === 'auth/invalid-phone-number') {
                 msg = 'Invalid 10-digit mobile number format.'
             } else if (code === 'auth/too-many-requests') {
                 msg = 'Too many attempts. Please wait a few minutes before trying again.'
             } else if (code === 'auth/operation-not-allowed') {
-                msg = 'Phone provider is not enabled in Firebase Console. Go to Authentication > Sign-in method > Phone > Enable & Save.'
+                msg = 'Phone provider is not enabled. In Firebase Console > Authentication > Sign-in method, click Phone and toggle Enable -> Save.'
             } else if (code === 'auth/unauthorized-domain') {
                 msg = `Domain "${window?.location?.hostname}" is not authorized. Add it in Firebase Console > Authentication > Settings > Authorized domains.`
             } else if (code === 'auth/invalid-app-credential') {
-                msg = 'Phone verification check failed. Please ensure Phone is Enabled in Firebase Console with test numbers.'
+                msg = 'Phone verification check failed. Please ensure Phone is Enabled in Firebase Console.'
             } else if (code === 'auth/quota-exceeded') {
                 msg = 'Daily SMS limit reached. Please use Email OTP.'
+            } else if (innerError) {
+                msg = `${innerError} (${code || 'auth/error'})`
             } else if (err?.message) {
                 msg = `${err.message} (${code || 'auth/error'})`
             }
-            toast.error(msg, { id: 'firebase-otp', duration: 7000 })
+            toast.error(msg, { id: 'firebase-otp', duration: 8000 })
         } finally {
             setLoading(false)
         }
