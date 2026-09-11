@@ -92,6 +92,11 @@ app.set('trust proxy', 1)
 
 const server = http.createServer(app)
 
+// Railway & Cloudflare reverse proxy keep-alive alignment:
+// Keep socket open longer than the 60s reverse proxy timeout to eliminate ECONNRESET / 502 / Network Errors
+server.keepAliveTimeout = 65000
+server.headersTimeout = 66000
+
 // In-memory cache: latest GPS fix per orderId
 const latestPositions = new Map()
 

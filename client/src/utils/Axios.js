@@ -79,6 +79,37 @@ Axios.interceptors.request.use(
     (error) => Promise.reject(error)
 )
 
+// ─── RETRY CONFIGURATION ─────────────────────────────────────────────────────
+const MAX_AUTO_RETRIES = 2
+const BASE_RETRY_DELAY_MS = 600
+
+const isRetryableNetworkError = (error) => {
+    if (axios.isCancel(error) || error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+        return false
+    }
+    if (!error.response) return true
+    const status = error.response.status
+    return status === 502 || status === 503 || status === 504 || status === 408
+}
+
+const isSafeToAutoRetry = (config) => {
+    if (!config) return false
+    const method = (config.method || 'get').toLowerCase()
+    if (method === 'get' || method === 'head' || method === 'options') return true
+    const url = config.url || ''
+    const safeReadEndpoints = [
+        '/get',
+        '/search-product',
+        '/get-product-details',
+        '/get-product-by-category',
+        '/get-product-by-category-and-subcategory',
+        '/get-variants',
+        '/check-serviceability',
+        '/app-version'
+    ]
+    return safeReadEndpoints.some(ep => url.includes(ep))
+}
+
 // ─── RESPONSE INTERCEPTOR ────────────────────────────────────────────────────
 Axios.interceptors.response.use(
     (response) => response,
@@ -86,11 +117,21 @@ Axios.interceptors.response.use(
         const { config, response } = error
         const originalRequest = config
 
+        // Auto-retry transient network glitches on idempotent requests
+        if (originalRequest && isRetryableNetworkError(error) && isSafeToAutoRetry(originalRequest)) {
+            originalRequest._retryCount = originalRequest._retryCount || 0
+            if (originalRequest._retryCount < MAX_AUTO_RETRIES) {
+                originalRequest._retryCount += 1
+                const delay = BASE_RETRY_DELAY_MS * Math.pow(2, originalRequest._retryCount - 1)
+                await new Promise(res => setTimeout(res, delay))
+                return Axios(originalRequest)
+            }
+        }
+
         // SECURITY FIX: Handle 429 explicitly — surface rate-limit info to the user
         if (response?.status === 429) {
             const retryAfter = response.headers?.['retry-after'] || 60
             const msg = `Too many requests. Please wait ${retryAfter} seconds and try again.`
-            // Attach human-readable message so UI can toast it
             error.rateLimitMessage = msg
             console.warn(`[Rate limited] retry-after: ${retryAfter}s`)
             return Promise.reject(error)

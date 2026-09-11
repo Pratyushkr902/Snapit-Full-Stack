@@ -132,6 +132,17 @@ function App() {
 
   const fetchCategory = useCallback(async () => {
     try {
+      // Immediate 0ms hydration from local cache
+      const cached = localStorage.getItem('cached_categories')
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            dispatch(setAllCategory(parsed))
+          }
+        } catch {}
+      }
+
       dispatch(setLoadingCategory(true))
       const response = await Axios({ ...SummaryApi.getCategory })
       if (response?.data?.success && Array.isArray(response.data.data)) {
@@ -139,6 +150,7 @@ function App() {
           .filter(cat => cat && typeof cat === 'object')
           .sort((a, b) => String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase()))
         dispatch(setAllCategory(sorted))
+        try { localStorage.setItem('cached_categories', JSON.stringify(sorted)) } catch {}
       }
     } catch (error) {
       console.error("Category fetch error", error)
@@ -149,12 +161,24 @@ function App() {
 
   const fetchSubCategory = useCallback(async () => {
     try {
+      // Immediate 0ms hydration from local cache
+      const cached = localStorage.getItem('cached_subcategories')
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            dispatch(setAllSubCategory(parsed))
+          }
+        } catch {}
+      }
+
       const response = await Axios({ ...SummaryApi.getSubCategory })
       if (response?.data?.success && Array.isArray(response.data.data)) {
         const sorted = response.data.data
           .filter(sub => sub && typeof sub === 'object')
           .sort((a, b) => String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase()))
         dispatch(setAllSubCategory(sorted))
+        try { localStorage.setItem('cached_subcategories', JSON.stringify(sorted)) } catch {}
       }
     } catch (error) {
       console.error("SubCategory fetch error", error)
@@ -168,7 +192,18 @@ function App() {
   useEffect(() => {
     fetchCategory()
     fetchSubCategory()
-  }, [fetchCategory, fetchSubCategory]) 
+  }, [fetchCategory, fetchSubCategory])
+
+  // ── Auto-sync upon network reconnection ──
+  useEffect(() => {
+    const handleOnline = () => {
+      fetchCategory()
+      fetchSubCategory()
+      if (user?._id) fetchOrder()
+    }
+    window.addEventListener('online', handleOnline)
+    return () => window.removeEventListener('online', handleOnline)
+  }, [fetchCategory, fetchSubCategory, fetchOrder, user?._id]) 
 
   useEffect(() => {
     if (user?._id) {
