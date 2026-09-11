@@ -124,27 +124,51 @@ export async function registerUserController(request, response) {
             })
         }
 
-        const safeEmail = email.trim().toLowerCase()
-        if (isDisposableEmail(safeEmail)) {
-            return response.status(400).json({
-                message: "Temporary/disposable email addresses are not allowed. Please use a valid personal email.",
-                error: true,
-                success: false
+        const rawIdentifier = String(email || '').trim()
+        const digits = rawIdentifier.replace(/\D/g, '')
+        const isPhone = digits.length === 10 || (digits.length === 12 && digits.startsWith('91'))
+        const mobileNum = isPhone ? Number(digits.length === 12 ? digits.slice(2) : digits) : null
+
+        let cleanEmail = ''
+        let safeEmail = ''
+
+        if (mobileNum) {
+            cleanEmail = `${mobileNum}@snapit.in`
+            safeEmail = cleanEmail
+            const existingMobileUser = await UserModel.findOne({
+                $or: [
+                    { mobile: mobileNum },
+                    { email: cleanEmail },
+                    { email: `${mobileNum}@snapit.express` }
+                ]
             })
-        }
-
-        const cleanEmail = normalizeEmail(safeEmail)
-
-        const user = await UserModel.findOne({
-            $or: [{ email: cleanEmail }, { email: safeEmail }]
-        })
-
-        if (user) {
-            return response.json({
-                message: "Already register email",
-                error: true,
-                success: false
+            if (existingMobileUser) {
+                return response.status(400).json({
+                    message: "An account already exists with this mobile number. Please sign in with your PIN.",
+                    error: true,
+                    success: false
+                })
+            }
+        } else {
+            safeEmail = rawIdentifier.toLowerCase()
+            if (isDisposableEmail(safeEmail)) {
+                return response.status(400).json({
+                    message: "Temporary/disposable email addresses are not allowed. Please use a valid personal email.",
+                    error: true,
+                    success: false
+                })
+            }
+            cleanEmail = normalizeEmail(safeEmail)
+            const existingEmailUser = await UserModel.findOne({
+                $or: [{ email: cleanEmail }, { email: safeEmail }]
             })
+            if (existingEmailUser) {
+                return response.status(400).json({
+                    message: "An account already exists with this email. Please log in.",
+                    error: true,
+                    success: false
+                })
+            }
         }
 
         const salt = await bcryptjs.genSalt(10)
@@ -156,8 +180,11 @@ export async function registerUserController(request, response) {
         const payload = {
             name: name.trim(),
             email: cleanEmail,
+            mobile: mobileNum || null,
             password: hashPassword,
-            referralCode: newReferralCode
+            referralCode: newReferralCode,
+            status: 'Active',
+            verify_email: Boolean(mobileNum)
         }
 
         // Check if incomingReferralCode matches a Campus Ambassador's code
@@ -194,26 +221,45 @@ export async function registerUserController(request, response) {
         const newUser = new UserModel(payload)
         const save = await newUser.save()
 
-        const VerifyEmailUrl = `${process.env.FRONTEND_URL}/#/verify-email?code=${save?._id}`
+        // Generate immediate auth tokens so mobile registration logs the user in instantly
+        const accesstoken = await generatedAccessToken(save._id, save.role)
+        const refreshToken = await genertedRefreshToken(save._id)
 
-        await sendEmail({
-            sendTo: safeEmail,
-            subject: "Verify email from Snapit",
-            html: verifyEmailTemplate({
-                name,
-                url: VerifyEmailUrl
-            })
+        await UserModel.findByIdAndUpdate(save._id, {
+            refresh_token: refreshToken,
+            last_login_date: new Date()
         })
 
+        response.cookie('accessToken', accesstoken, cookiesOption)
+        response.cookie('refreshToken', refreshToken, cookiesOption)
+
+        if (!mobileNum && safeEmail) {
+            try {
+                const VerifyEmailUrl = `${process.env.FRONTEND_URL}/#/verify-email?code=${save?._id}`
+                await sendEmail({
+                    sendTo: safeEmail,
+                    subject: "Verify email from Snapit",
+                    html: verifyEmailTemplate({
+                        name,
+                        url: VerifyEmailUrl
+                    })
+                })
+            } catch (e) {
+                console.warn('[register] email verification mail failed:', e.message)
+            }
+        }
+
         return response.json({
-            message: "User register successfully. Please verify your email.",
+            message: "Account created successfully! Welcome to Snapit 🎉",
             error: false,
             success: true,
             data: {
                 _id: save._id,
                 name: save.name,
                 email: save.email,
-                verify_email: save.verify_email
+                mobile: save.mobile,
+                accesstoken,
+                refreshToken
             }
         })
 
@@ -277,23 +323,33 @@ export async function loginController(request, response) {
             })
         }
 
-        const safeEmail = email.trim().toLowerCase()
+        const rawIdentifier = String(email || '').trim()
+        const digitsOnly = rawIdentifier.replace(/\D/g, '')
+        const isTen = digitsOnly.length === 10
+        const isTwelve = digitsOnly.length === 12 && digitsOnly.startsWith('91')
+        const phone = isTen ? digitsOnly : (isTwelve ? digitsOnly.slice(2) : null)
+
+        const safeEmail = rawIdentifier.toLowerCase()
         const cleanEmail = normalizeEmail(safeEmail)
         
         const queryOr = [
             { email: cleanEmail },
             { email: safeEmail }
         ]
-        if (/^\d{10}$/.test(email.trim())) {
-            queryOr.push({ mobile: Number(email.trim()) })
-            queryOr.push({ mobile: email.trim() })
+        if (phone) {
+            queryOr.push({ mobile: Number(phone) })
+            queryOr.push({ mobile: phone })
+            queryOr.push({ email: `${phone}@snapit.in` })
+            queryOr.push({ email: `${phone}@snapit.express` })
         }
 
         const user = await UserModel.findOne({ $or: queryOr })
 
         if (!user) {
             return response.status(400).json({
-                message: "User not register",
+                message: phone 
+                    ? "Mobile number not registered. Please tap 'Create Account' to join in 5 seconds."
+                    : "No account found with this email or mobile number.",
                 error: true,
                 success: false
             })
@@ -301,7 +357,7 @@ export async function loginController(request, response) {
 
         if (user.status !== "Active") {
             return response.status(400).json({
-                message: "Contact to Admin",
+                message: "Account suspended or inactive. Please contact Snapit Support.",
                 error: true,
                 success: false
             })
@@ -309,7 +365,7 @@ export async function loginController(request, response) {
 
         if (!user.password) {
             return response.status(400).json({
-                message: "This account was created via OTP login. Please log in with OTP instead of a password.",
+                message: "This account was created via Email OTP. Please sign in via the Email OTP tab or WhatsApp support.",
                 error: true,
                 success: false
             })
@@ -319,7 +375,7 @@ export async function loginController(request, response) {
 
         if (!checkPassword) {
             return response.status(400).json({
-                message: "Check your password",
+                message: "Incorrect PIN or Password. Please check or tap 'Forgot PIN' to reset via WhatsApp.",
                 error: true,
                 success: false
             })

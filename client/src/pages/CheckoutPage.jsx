@@ -37,9 +37,9 @@ const CheckoutPage = () => {
   const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
 
 
-  // Read coords directly from selected address
+  // Read coords directly from selected address, falling back to Paliganj center if no pin
   const selectedAddress = addressList[selectAddress]
-  const effectiveCoords = getEffectiveAddressCoords(selectedAddress)
+  const effectiveCoords = getEffectiveAddressCoords(selectedAddress) || (selectedAddress ? STORE_FALLBACK : null)
 
   const deliveryInfo = effectiveCoords
     ? getDeliveryInfo(effectiveCoords.lat, effectiveCoords.lng, totalPrice, isSnapitPlus)
@@ -53,7 +53,6 @@ const CheckoutPage = () => {
     lat: effectiveCoords?.lat || selectedAddress?.lat || STORE_FALLBACK.lat,
     lng: effectiveCoords?.lng || selectedAddress?.lng || STORE_FALLBACK.lng,
   })
-  const addressMissingCoords = !!selectedAddress && !effectiveCoords
 
   // ── Coupon ──
   const handleApplyPromoCoupon = async () => {
@@ -126,7 +125,6 @@ const CheckoutPage = () => {
     try {
       if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select a delivery address')
-      if (addressMissingCoords) return toast.error('This address has no location pin. Please delete and re-add it so delivery charge is calculated correctly.', { duration: 5000 })
       if (!checkServiceArea()) return
       if (totalPrice < 49) {
         return toast.error(`Minimum order of ₹49 required. Please add items worth ₹${49 - totalPrice} more!`, { duration: 5000 })
@@ -210,7 +208,6 @@ const CheckoutPage = () => {
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!selectedAddress) return toast.error('Please select a delivery address')
-      if (addressMissingCoords) return toast.error('This address has no location pin. Please delete and re-add it so delivery charge is calculated correctly.', { duration: 5000 })
       if (!checkServiceArea()) return
       const gatewayToast = toast.loading('Loading payment gateway...')
       let RazorpayClass

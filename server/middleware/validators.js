@@ -16,28 +16,43 @@ export const validateRegister = [
     body('name')
         .trim()
         .notEmpty().withMessage('Name is required')
-        .isLength({ min: 2, max: 50 }).withMessage('Name must be 2-50 characters')
-        .matches(/^[a-zA-Z\s]+$/).withMessage('Name can only contain letters'),
+        .isLength({ min: 2, max: 50 }).withMessage('Name must be 2-50 characters'),
     body('email')
         .trim()
-        .notEmpty().withMessage('Email is required')
-        .isEmail().withMessage('Invalid email format')
-        .normalizeEmail(),
+        .notEmpty().withMessage('Email or 10-digit mobile number is required')
+        .custom(value => {
+            const clean = String(value || '').trim()
+            const digits = clean.replace(/\D/g, '')
+            const isPhone = digits.length === 10 || (digits.length === 12 && digits.startsWith('91'))
+            const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)
+            if (!isPhone && !isEmail) {
+                throw new Error('Please enter a valid 10-digit mobile number or email address')
+            }
+            return true
+        }),
     body('password')
-        .notEmpty().withMessage('Password is required')
-        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+        .notEmpty().withMessage('Password or 4-digit PIN is required')
+        .isLength({ min: 4 }).withMessage('Password or PIN must be at least 4 characters'),
     handleValidationErrors
 ]
 
 export const validateLogin = [
     body('email')
         .trim()
-        .notEmpty().withMessage('Email is required')
-        .isEmail().withMessage('Invalid email format')
-        .normalizeEmail(),
+        .notEmpty().withMessage('Email or 10-digit mobile number is required')
+        .custom(value => {
+            const clean = String(value || '').trim()
+            const digits = clean.replace(/\D/g, '')
+            const isPhone = digits.length === 10 || (digits.length === 12 && digits.startsWith('91'))
+            const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)
+            if (!isPhone && !isEmail) {
+                throw new Error('Please enter a valid 10-digit mobile number or email address')
+            }
+            return true
+        }),
     body('password')
-        .notEmpty().withMessage('Password is required')
-        .isLength({ min: 1, max: 200 }).withMessage('Invalid password'),
+        .notEmpty().withMessage('Password or PIN is required')
+        .isLength({ min: 1, max: 200 }).withMessage('Invalid password or PIN'),
     handleValidationErrors
 ]
 

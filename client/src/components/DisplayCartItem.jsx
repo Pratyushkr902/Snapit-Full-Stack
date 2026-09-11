@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { optimizeImage } from '../utils/optimizeImage'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 import { getEffectiveAddressCoords } from '../utils/serviceArea'
+import { useFullCart } from '../utils/foodCartStore'
 
 const PricewithDiscount = (price, discount) => {
     const finalPrice = (Number(price) || 0) - (Number(discount) || 0);
@@ -24,6 +25,7 @@ const DisplayCartItem = ({close}) => {
     const addressList = useSelector(state => state.addresses.addressList)
     const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
     const navigate = useNavigate()
+    const { grandCount: foodGrandCount, grandTotal: foodGrandTotal } = useFullCart()
 
     // Use the customer's default/first saved address for a real distance-based
     // estimate — matches what CheckoutPage will actually charge. Previously
@@ -59,7 +61,9 @@ const DisplayCartItem = ({close}) => {
             return;
         }
         
-        toast.error('Please login to proceed to checkout');
+        if (close) close();
+        toast('Please login to complete your order', { icon: '🔐' });
+        navigate('/login?redirect=/checkout');
     }
 
     return (
@@ -96,6 +100,25 @@ const DisplayCartItem = ({close}) => {
                     {
                         cartItem && cartItem[0] ? (
                             <>
+                                {foodGrandCount > 0 && (
+                                    <div 
+                                        onClick={() => {
+                                            if (close) close();
+                                            navigate('/food-checkout');
+                                        }}
+                                        className='bg-gradient-to-r from-orange-500 to-amber-500 text-white p-3 rounded-2xl flex items-center justify-between shadow-sm cursor-pointer active:scale-[0.98] transition-all flex-shrink-0'
+                                    >
+                                        <div className='flex items-center gap-2.5'>
+                                            <span className='text-xl'>🍔</span>
+                                            <div>
+                                                <p className='text-xs font-black leading-tight'>Also have {foodGrandCount} Food item{foodGrandCount !== 1 ? 's' : ''} in cart</p>
+                                                <p className='text-[10px] opacity-90'>{DisplayPriceInRupees(foodGrandTotal)} from Paliganj restaurants</p>
+                                            </div>
+                                        </div>
+                                        <span className='text-[11px] font-black underline bg-white/20 px-2 py-1 rounded-lg'>Go to Food &rarr;</span>
+                                    </div>
+                                )}
+
                                 <div className='flex items-center justify-between px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-xs font-bold shadow-sm flex-shrink-0'>
                                     <p className='flex items-center gap-1.5'><span>🎉</span> Your total savings</p>
                                     <p className='text-emerald-700 dark:text-emerald-400 font-extrabold text-sm'>{DisplayPriceInRupees(notDiscountTotalPrice - totalPrice)}</p>
@@ -191,19 +214,42 @@ const DisplayCartItem = ({close}) => {
                                         alt='Empty Cart'
                                     />
                                 </div>
-                                <h3 className='font-black text-slate-800 dark:text-white text-lg mt-4'>Your cart is empty</h3>
+                                <h3 className='font-black text-slate-800 dark:text-white text-lg mt-4'>Your grocery cart is empty</h3>
                                 <p className='text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs'>
                                     Add items to your cart and enjoy superfast 9-minute doorstep delivery!
                                 </p>
-                                <button 
-                                    onClick={() => {
-                                        if (close) close();
-                                        navigate('/');
-                                    }} 
-                                    className='bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm px-8 py-3 rounded-2xl mt-5 active:scale-95 shadow-md shadow-emerald-600/30 transition-all'
-                                >
-                                    Start Shopping
-                                </button>
+
+                                {foodGrandCount > 0 ? (
+                                    <div className='w-full max-w-xs bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/60 rounded-2xl p-4 mt-5 flex flex-col items-center text-center shadow-sm'>
+                                        <span className='text-3xl mb-1'>🍔</span>
+                                        <h4 className='font-black text-orange-950 dark:text-orange-200 text-sm'>
+                                            You have {foodGrandCount} item{foodGrandCount !== 1 ? 's' : ''} in your Food Cart!
+                                        </h4>
+                                        <p className='text-xs text-orange-800/80 dark:text-orange-300/80 mt-0.5 mb-3'>
+                                            Total: {DisplayPriceInRupees(foodGrandTotal)} from restaurants
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                if (close) close();
+                                                navigate('/food-checkout');
+                                            }}
+                                            className='w-full bg-orange-500 hover:bg-orange-600 text-white font-black text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-orange-500/30 transition-all'
+                                        >
+                                            <span>Proceed to Food Checkout</span>
+                                            <FaCaretRight size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => {
+                                            if (close) close();
+                                            navigate('/');
+                                        }} 
+                                        className='bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm px-8 py-3 rounded-2xl mt-5 active:scale-95 shadow-md shadow-emerald-600/30 transition-all'
+                                    >
+                                        Start Shopping
+                                    </button>
+                                )}
                             </div>
                         )
                     }

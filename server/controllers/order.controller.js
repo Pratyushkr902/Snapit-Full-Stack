@@ -401,7 +401,14 @@ export async function CashOnDeliveryOrderController(request, response) {
         }
 
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
-            return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
+            if (lat !== undefined && lng !== undefined && isValidCoord(Number(lat), Number(lng))) {
+                verifiedLat = Number(lat)
+                verifiedLng = Number(lng)
+            } else {
+                verifiedLat = 25.33121156659458
+                verifiedLng = 84.8006737574818
+            }
+            AddressModel.findByIdAndUpdate(address._id, { lat: verifiedLat, lng: verifiedLng, isExactGps: false }).catch(() => {})
         }
 
         for (const item of list_items) {
@@ -427,7 +434,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
         }
 
-        if (lat !== undefined && lng !== undefined && !isValidCoord(Number(lat), Number(lng))) {
+        if (lat !== undefined && lng !== undefined && isNaN(Number(lat))) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
@@ -604,7 +611,14 @@ export async function WalletPaymentOrderController(request, response) {
         }
 
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
-            return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
+            if (lat !== undefined && lng !== undefined && isValidCoord(Number(lat), Number(lng))) {
+                verifiedLat = Number(lat)
+                verifiedLng = Number(lng)
+            } else {
+                verifiedLat = 25.33121156659458
+                verifiedLng = 84.8006737574818
+            }
+            AddressModel.findByIdAndUpdate(address._id, { lat: verifiedLat, lng: verifiedLng, isExactGps: false }).catch(() => {})
         }
 
         for (const item of list_items) {
@@ -623,7 +637,7 @@ export async function WalletPaymentOrderController(request, response) {
             return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
         }
 
-        if (lat !== undefined && lng !== undefined && !isValidCoord(Number(lat), Number(lng))) {
+        if (lat !== undefined && lng !== undefined && isNaN(Number(lat))) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
@@ -833,6 +847,12 @@ export async function paymentController(request, response) {
                 }
             }
 
+            if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
+                verifiedLat = 25.33121156659458
+                verifiedLng = 84.8006737574818
+                AddressModel.findByIdAndUpdate(address._id, { lat: verifiedLat, lng: verifiedLng, isExactGps: false }).catch(() => {})
+            }
+
             const serviceabilityError = checkDeliveryServiceability(verifiedLat, verifiedLng)
             if (serviceabilityError) {
                 return response.status(400).json({ message: serviceabilityError, error: true, success: false })
@@ -929,7 +949,14 @@ export async function verifyPaymentController(request, response) {
         }
 
         if (!isValidCoord(Number(verifiedLat), Number(verifiedLng))) {
-            return response.status(400).json({ message: 'Saved address is missing valid coordinates. Please re-save your address.', error: true, success: false })
+            if (lat !== undefined && lng !== undefined && isValidCoord(Number(lat), Number(lng))) {
+                verifiedLat = Number(lat)
+                verifiedLng = Number(lng)
+            } else {
+                verifiedLat = 25.33121156659458
+                verifiedLng = 84.8006737574818
+            }
+            AddressModel.findByIdAndUpdate(address._id, { lat: verifiedLat, lng: verifiedLng, isExactGps: false }).catch(() => {})
         }
 
         for (const item of list_items) {
@@ -947,7 +974,7 @@ export async function verifyPaymentController(request, response) {
             return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
         }
 
-        if (lat !== undefined && lng !== undefined && !isValidCoord(Number(lat), Number(lng))) {
+        if (lat !== undefined && lng !== undefined && isNaN(Number(lat))) {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
