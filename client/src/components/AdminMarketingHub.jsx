@@ -136,7 +136,7 @@ const AdminMarketingHub = () => {
       </div>
 
       {/* ⏰ Automated Cron Schedules Status */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4 sm:my-5'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 my-4 sm:my-5'>
         {/* 1. Breakfast */}
         <div className='p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 flex flex-col justify-between gap-2'>
           <div className='flex items-start gap-2.5'>
@@ -222,6 +222,28 @@ const AdminMarketingHub = () => {
             className='w-full py-1 text-[11px] font-bold bg-blue-200/80 hover:bg-blue-300 disabled:opacity-50 text-blue-950 rounded-lg transition-all active:scale-95'
           >
             {triggeringType === 'CART_NUDGE' ? '⏳ Running...' : '⚡ Run Cart Nudge Now'}
+          </button>
+        </div>
+
+        {/* 5. Inactive Win-Back */}
+        <div className='p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/70 flex flex-col justify-between gap-2'>
+          <div className='flex items-start gap-2.5'>
+            <span className='text-2xl'>🎁</span>
+            <div>
+              <div className='flex items-center gap-1.5'>
+                <p className='font-bold text-xs text-purple-950'>Win-Back</p>
+                <span className='text-[10px] bg-purple-200/70 text-purple-900 px-1.5 py-0.2 rounded font-semibold'>Re-engage</span>
+              </div>
+              <p className='text-[11px] text-purple-800/90 mt-0.5'>Notify inactive users</p>
+            </div>
+          </div>
+          <button
+            type='button'
+            disabled={Boolean(triggeringType || sending)}
+            onClick={() => handleTriggerSchedule('WINBACK', 'Win-Back Re-engage')}
+            className='w-full py-1 text-[11px] font-bold bg-purple-200/80 hover:bg-purple-300 disabled:opacity-50 text-purple-950 rounded-lg transition-all active:scale-95'
+          >
+            {triggeringType === 'WINBACK' ? '⏳ Sending...' : '⚡ Win-Back All Users'}
           </button>
         </div>
       </div>

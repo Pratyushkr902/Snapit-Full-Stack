@@ -258,6 +258,22 @@ export const DINNER_TEMPLATES = [
   }
 ]
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 3.5 INACTIVE WIN-BACK TEMPLATES
+// ─────────────────────────────────────────────────────────────────────────────
+export const WINBACK_TEMPLATES = [
+  {
+    title: '❤️ We Miss You! Aapke liye ek Khaas Treat 🎁',
+    shayari: '"Aapke bina Snapit adhura sa lagta hai,\nLijiye swaad aur bachat ka tohfa jo dil jeet leta hai!" 🍕🛍️',
+    body: 'Bahut din ho gaye! Aaj hi order karein Paliganj ke top khane aur daily grocery — ₹149+ par 100% FREE DELIVERY (Up to 5 km) + superfast delivery! Open app now ⚡🛵'
+  },
+  {
+    title: '🥺 Humse koi narazgi hai kya?',
+    shayari: '"Kyun roothe ho humse, kyun nahi kiya order?\nSnapit laya hai discount aur FREE delivery ka border!" 🎁✨',
+    body: 'Aapka favourite 10-minute grocery & food partner wapas bula raha hai! Abhi app kholein aur mazeed discounts payein!'
+  }
+]
+
 // In-memory debounce to prevent spamming the same user within 2 hours
 const userLastNudgeMap = new Map()
 
@@ -373,6 +389,10 @@ export async function triggerMarketingSchedule(type) {
   }
   if (type === 'CART_NUDGE') {
     return await checkAbandonedCarts()
+  }
+  if (type === 'WINBACK') {
+    const template = WINBACK_TEMPLATES[Math.floor(Math.random() * WINBACK_TEMPLATES.length)]
+    return await broadcastToAllUsers({ ...template, type: 'WINBACK_PROMO', promoTag: 'WINBACK_ALL_USERS' })
   }
   throw new Error(`Unknown schedule type: ${type}`)
 }

@@ -1,4 +1,4 @@
-import { broadcastToAllUsers, triggerMarketingSchedule, MORNING_TEMPLATES, EVENING_TEMPLATES, DINNER_TEMPLATES } from '../utils/marketingCron.js'
+import { broadcastToAllUsers, triggerMarketingSchedule, MORNING_TEMPLATES, EVENING_TEMPLATES, DINNER_TEMPLATES, WINBACK_TEMPLATES } from '../utils/marketingCron.js'
 
 export const broadcastCampaignController = async (request, response) => {
   try {
@@ -99,12 +99,7 @@ export const getCampaignTemplatesController = async (request, response) => {
         shayari: '"Chakke pe chakka lagega jab match dekhenge,\nSnapit se snacks aayenge tabhi toh maze lenge!" 🏏🥤',
         body: 'Cold drinks, chips, popcorn aur ice cream manga lo 9 minute mein!'
       },
-      {
-        category: 'Inactive Win-Back',
-        title: '🥺 Humse koi galti ho gayi kya?',
-        shayari: '"Kyun roothe ho humse, kyun nahi kiya order?\nSnapit laya hai discount, mita do saara border!" 🎁',
-        body: 'Aapne kaafi dino se order nahi kiya! Yeh lijiye ₹30 cashback aapke wallet mein!'
-      }
+      ...WINBACK_TEMPLATES.map(t => ({ ...t, category: 'Inactive Win-Back' }))
     ]
 
     return response.json({
