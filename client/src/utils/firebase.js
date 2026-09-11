@@ -4,13 +4,13 @@ import { getRemoteConfig, fetchAndActivate, getValue } from 'firebase/remote-con
 import { getAuth } from 'firebase/auth'
 
 const firebaseConfig = {
-    apiKey:            import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDgwBo2Xfx3wEWKvwiCjfGQgrBrVkffqn4",
+    apiKey:            import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAn7lwvs2e4x1vkHN3aqpZL1cwF5_LCFrE",
     authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "snapit-da080.firebaseapp.com",
     projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID || "snapit-da080",
     storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "snapit-da080.firebasestorage.app",
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "404894201207",
-    appId:             import.meta.env.VITE_FIREBASE_APP_ID || "1:404894201207:android:b375b3cddccdffa64e9d72",
-    measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
+    appId:             import.meta.env.VITE_FIREBASE_APP_ID || "1:404894201207:web:1603b3e3dc46f65f4e9d72",
+    measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-MHJZV49XNS",
 }
 
 // VAPID key for push notifications — must come from env, never hardcoded
