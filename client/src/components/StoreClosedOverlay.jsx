@@ -8,7 +8,8 @@ import logo from "../assets/snapit.png";
  * and OPEN_HOUR (9:00 AM) IST — based on Indian Standard Time.
  */
 
-export const CLOSE_HOUR = 21; // 9:00 PM IST (21:00)
+export const CLOSE_HOUR = 21; // 9:30 PM IST (21:30)
+export const CLOSE_MINUTE = 30;
 export const OPEN_HOUR = 9;   // 9:00 AM IST (09:00)
 
 export const ADMIN_LIKE_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER'];
@@ -16,7 +17,11 @@ export const ADMIN_LIKE_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER
 /**
  * Robust IST store status computation regardless of client device timezone.
  */
-export function getStoreStatus() {
+export function getStoreStatus(userRole = null) {
+  if (userRole && ADMIN_LIKE_ROLES.includes(userRole)) {
+    return { isClosed: false, msUntilOpen: 0, openHour: OPEN_HOUR, closeHour: CLOSE_HOUR };
+  }
+
   const now = new Date();
   const nowUtcMs = now.getTime();
   const istOffsetMs = 5.5 * 60 * 60 * 1000;
@@ -24,7 +29,8 @@ export function getStoreStatus() {
   const istDate = new Date(istMs);
 
   const hour = istDate.getUTCHours();
-  const isClosed = hour >= CLOSE_HOUR || hour < OPEN_HOUR;
+  const minute = istDate.getUTCMinutes();
+  const isClosed = hour < OPEN_HOUR || hour > CLOSE_HOUR || (hour === CLOSE_HOUR && minute >= CLOSE_MINUTE);
 
   if (!isClosed) return { isClosed: false, msUntilOpen: 0, openHour: OPEN_HOUR, closeHour: CLOSE_HOUR };
 
@@ -32,7 +38,7 @@ export function getStoreStatus() {
   const month = istDate.getUTCMonth();
   let date = istDate.getUTCDate();
 
-  if (hour >= CLOSE_HOUR) {
+  if (hour > CLOSE_HOUR || (hour === CLOSE_HOUR && minute >= CLOSE_MINUTE)) {
     date += 1;
   }
 
@@ -46,8 +52,9 @@ export function getStoreStatus() {
  * Named export used by CheckoutPage.jsx, AddToCartButton.jsx, ProductDisplayPage.jsx, etc.
  * Admins, sellers, and riders bypass closing hours.
  */
-export function isStoreOpen() {
-  return !getStoreStatus().isClosed;
+export function isStoreOpen(userRole = null) {
+  if (userRole && ADMIN_LIKE_ROLES.includes(userRole)) return true;
+  return !getStoreStatus(userRole).isClosed;
 }
 
 export function formatCountdown(ms) {
@@ -60,16 +67,16 @@ export function formatCountdown(ms) {
 
 export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
   const user = useSelector((state) => state?.user);
-  const [status, setStatus] = useState(getStoreStatus);
+  const [status, setStatus] = useState(() => getStoreStatus(user?.role));
   const [dismissed, setDismissed] = useState(false);
 
   // Update countdown smoothly every second
   useEffect(() => {
     const interval = setInterval(() => {
-      setStatus(getStoreStatus());
+      setStatus(getStoreStatus(user?.role));
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user?.role]);
 
   // Only bypass store closed overlay when actively inside admin dashboard panels (/dashboard)
   const isDashboardRoute = typeof window !== 'undefined' && (

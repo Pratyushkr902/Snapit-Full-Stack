@@ -8,8 +8,19 @@ import Loading from './Loading'
 import { useSelector } from 'react-redux'
 import { FaMinus, FaPlus } from "react-icons/fa6"
 import { useState } from 'react'
-
 import { isStoreOpen } from './StoreClosedOverlay'
+
+export const getEffectiveStock = (item) => {
+    if (!item) return 0
+    if (Array.isArray(item?.store_inventory) && item.store_inventory.length > 0) {
+        const invStock = item.store_inventory.reduce((sum, s) => {
+            const avail = s.isAvailable !== false
+            return sum + (avail ? (Number(s.stock) || 0) : 0)
+        }, 0)
+        if (invStock > 0) return invStock
+    }
+    return Math.max(0, Number(item?.stock) || 0)
+}
 
 const AddToCartButton = ({ data }) => {
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext() || {}
@@ -31,9 +42,9 @@ const AddToCartButton = ({ data }) => {
     const isAvailableCart = Boolean(cartItemDetails?.productId)
     const qty             = cartItemDetails?.quantity ?? 0
 
-    // FIX: compute out-of-stock as a plain flag instead of an early return,
-    // so we can decide the UI *after* we know whether it's already in cart.
-    const isOutOfStock = !data?.stock || data.stock <= 0
+    // FIX: compute out-of-stock using effective stock from store_inventory or root stock
+    const effectiveStock = getEffectiveStock(data)
+    const isOutOfStock = effectiveStock <= 0
 
     const handleADDTocart = async (e) => {
         e.preventDefault()

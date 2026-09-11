@@ -11,7 +11,7 @@ import image1 from '../assets/minute_delivery.png'
 import image2 from '../assets/Best_Prices_Offers.png'
 import image3 from '../assets/Wide_Assortment.webp'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
-import AddToCartButton from '../components/AddToCartButton'
+import AddToCartButton, { getEffectiveStock } from '../components/AddToCartButton'
 import SmartSuggestions from '../components/SmartSuggestions'
 import WishlistButton from '../components/WishlistButton'
 import ProductReviews from '../components/ProductReviews'
@@ -507,7 +507,7 @@ const ProductDisplayPage = () => {
                 <AddToCartButton data={data} />
               </div>
             </div>
-          ) : data.stock === 0 ? (
+          ) : getEffectiveStock(data) <= 0 ? (
             <div className='bg-rose-50 border border-rose-100 p-4 rounded-2xl text-center'>
               <p className='text-rose-600 font-black text-sm uppercase tracking-widest italic'>Out of stock</p>
             </div>

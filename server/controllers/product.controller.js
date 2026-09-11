@@ -21,6 +21,29 @@ const escapeRegex = (str) => {
     return str.trim().slice(0, 100).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 };
 
+// Compute effective stock from store_inventory or root stock
+export const computeEffectiveStock = (prod) => {
+    if (!prod) return 0;
+    if (Array.isArray(prod.store_inventory) && prod.store_inventory.length > 0) {
+        const invStock = prod.store_inventory.reduce((sum, s) => {
+            const sAvailable = s.isAvailable !== false;
+            const sStock = Math.max(0, Number(s.stock) || 0);
+            return sum + (sAvailable ? sStock : 0);
+        }, 0);
+        if (invStock > 0) return invStock;
+    }
+    return Math.max(0, Number(prod.stock) || 0);
+};
+
+export const formatProductOutput = (prod) => {
+    if (!prod) return prod;
+    return {
+        ...prod,
+        stock: computeEffectiveStock(prod),
+        image: secureImages(prod.image)
+    };
+};
+
 // ── Helper: get seller's store name from the authed user ──────
 // IMPORTANT: only trust the canonical store_name field. Falling back to
 // storeName/shop_name/name silently matches products against a seller's
@@ -113,7 +136,7 @@ export const getProductController = async (request, response) => {
             message: "Product data", error: false, success: true,
             totalCount,
             totalNoPage: Math.ceil(totalCount / limit),
-            data: data.map(prod => ({ ...prod, image: secureImages(prod.image) }))
+            data: data.map(formatProductOutput)
         };
         productCache.set(cacheKey, result);
         return response.json(result);
@@ -134,7 +157,7 @@ export const getProductByCategory = async (request, response) => {
 
         return response.json({
             message: "category product list", error: false, success: true,
-            data: product.map(prod => ({ ...prod, image: secureImages(prod.image) }))
+            data: product.map(formatProductOutput)
         });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -157,7 +180,7 @@ export const getProductsByCategories = async (request, response) => {
         for (const categoryId of categoryIds) grouped[categoryId] = [];
 
         for (const prod of products) {
-            const securedProd = { ...prod, image: secureImages(prod.image) };
+            const securedProd = formatProductOutput(prod);
             for (const catId of prod.category) {
                 const key = catId.toString();
                 if (key in grouped) {
@@ -205,7 +228,7 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
 
         return response.json({
             message: "Product list", success: true, error: false,
-            data: data.map(prod => ({ ...prod, image: secureImages(prod.image) })),
+            data: data.map(formatProductOutput),
             totalCount: dataCount, page, limit
         });
     } catch (error) {
@@ -222,7 +245,7 @@ export const getProductDetails = async (request, response) => {
         if (!product) return response.status(404).json({ message: "Product not found", error: true, success: false });
         return response.json({
             message: "product details", error: false, success: true,
-            data: { ...product._doc, image: secureImages(product.image) }
+            data: formatProductOutput(product._doc)
         });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -460,7 +483,7 @@ export const searchProduct = async (request, response) => {
 
         return response.json({
             message: "Product data", error: false, success: true,
-            data: data.map(prod => ({ ...prod, image: secureImages(prod.image) })),
+            data: data.map(formatProductOutput),
             totalCount: dataCount,
             totalPage: Math.ceil(dataCount / limitNum),
             page: pageNum,
@@ -482,7 +505,7 @@ export async function getFrequentlyBought(req, res) {
             category: { $in: product.category },
             _id: { $ne: productId }
         }).select(LIST_FIELDS).limit(5).lean();
-        return res.json({ success: true, data: suggestions.map(prod => ({ ...prod, image: secureImages(prod.image) })) });
+        return res.json({ success: true, data: suggestions.map(formatProductOutput) });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
@@ -592,7 +615,7 @@ export const getSellerProductsController = async (request, response) => {
         return response.json({
             message: "Seller product data", error: false, success: true,
             totalCount, totalNoPage: Math.ceil(totalCount / limit),
-            data: data.map(prod => ({ ...prod, image: secureImages(prod.image) }))
+            data: data.map(formatProductOutput)
         });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });

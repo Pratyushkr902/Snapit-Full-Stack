@@ -9,15 +9,23 @@ import RestaurantModel from '../models/restaurant.model.js'
 
 const ADMIN_LIKE_ROLES = ['ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER', 'SUPER_ADMIN']
 
-function getISTHour() {
+function getISTTime() {
   const now = new Date()
   const istMs = now.getTime() + 5.5 * 3600000
-  return new Date(istMs).getUTCHours()
+  const istDate = new Date(istMs)
+  return {
+    hours: istDate.getUTCHours(),
+    minutes: istDate.getUTCMinutes()
+  }
 }
 
 function isWithinGlobalHours() {
-  const h = getISTHour()
-  return h >= 9 && h < 21
+  const { hours, minutes } = getISTTime()
+  // 9:00 AM – 9:30 PM IST
+  if (hours < 9) return false
+  if (hours > 21) return false
+  if (hours === 21 && minutes >= 30) return false
+  return true
 }
 
 const parseBaseId = (rawId) => {
@@ -100,7 +108,7 @@ export async function assertStoreOpenForOrder({ list_items = [], userRole, order
   // Global 9:00 AM – 9:00 PM IST operating gate applies to all customer orders
   const isAdmin = ADMIN_LIKE_ROLES.includes(userRole)
   if (!isAdmin && !isWithinGlobalHours()) {
-    const err = new Error('Snapit is closed for the night (9:00 PM – 9:00 AM IST). Orders open at 9:00 AM tomorrow!')
+    const err = new Error('Snapit is closed for the night (9:30 PM – 9:00 AM IST). Orders open at 9:00 AM tomorrow!')
     err.statusCode = 400
     throw err
   }

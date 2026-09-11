@@ -3,7 +3,7 @@ import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { Link } from 'react-router-dom'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
-import AddToCartButton from './AddToCartButton'
+import AddToCartButton, { getEffectiveStock } from './AddToCartButton'
 
 import { FALLBACK_IMAGE, getPrimaryImage } from '../utils/optimizeImageUrl'
 
@@ -79,10 +79,10 @@ const CardProduct = ({ data }) => {
 
                 <div className='absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent pointer-events-none' />
 
-                {data?.stock < 10 && data?.stock > 0 && (
+                {getEffectiveStock(data) < 10 && getEffectiveStock(data) > 0 && (
                     <div className='absolute bottom-0 left-0 w-full bg-gradient-to-t from-red-600/20 to-transparent py-1 text-center'>
                         <p className='text-[7px] font-black text-red-600 uppercase'>
-                            Only {data.stock} left
+                            Only {getEffectiveStock(data)} left
                         </p>
                     </div>
                 )}
@@ -128,7 +128,7 @@ const CardProduct = ({ data }) => {
                     </div>
 
                     <div className='flex-shrink-0 w-[60px] lg:w-[90px]' onClick={(e) => e.preventDefault()}>
-                        {data?.stock == 0 ? (
+                        {getEffectiveStock(data) <= 0 ? (
                             <div className='border border-red-100 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 px-1 py-1 rounded text-center'>
                                 <p className='text-red-500 dark:text-red-400 text-[7px] lg:text-[9px] font-black uppercase leading-none'>
                                     Out of<br />stock

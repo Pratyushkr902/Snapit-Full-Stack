@@ -48,12 +48,12 @@ export const getDistanceFromOrigin = (originLat, originLng, customerLat, custome
   getDistanceKm(originLat, originLng, customerLat, customerLng)
 
 // // 0–3 km   → ₹12
-// 3–6 km   → ₹29
-// 6–14 km:
+// 3–7 km   → ₹29 (Paliganj town + residential outskirts)
+// 7–16 km:
 //   - below ₹499  → ₹7/km (Math.round(distance * 7))
 //   - ₹499 & above → Flat ₹60
-// >14 km   → not serviceable
-const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
+// >16 km   → not serviceable
+export const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
   const amount = Number(subTotalAmt) || 0
 
   // 1. Free delivery up to 5 km on orders of ₹149 and above!
@@ -61,24 +61,23 @@ const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
 
   // 2. Standard distance charges for orders below ₹149 (or beyond 5 km)
   if (distanceKm <= 3) return 12
-  if (distanceKm <= 5) return 29
-  if (distanceKm <= 6) return 29
+  if (distanceKm <= 7) return 29
   if (distanceKm <= 16) {
-    // Orders ₹499 & above beyond 6km get subsidized Flat ₹60
+    // Orders ₹499 & above beyond 7km get subsidized Flat ₹60
     if (amount >= 499) return 60
     return Math.round(distanceKm * 7)
   }
   return null
 }
 
-// 7:30 PM IST cutoff rule: After 7:30 PM (19:30 IST), delivery beyond 5 km is closed.
+// 8:30 PM IST cutoff rule: After 8:30 PM (20:30 IST), delivery beyond 5 km is closed.
 export const isAfterEveningCutoff = () => {
   const now = new Date()
   const istMs = now.getTime() + 5.5 * 3600000
   const istDate = new Date(istMs)
   const hours = istDate.getUTCHours()
   const minutes = istDate.getUTCMinutes()
-  return hours > 19 || (hours === 19 && minutes >= 30)
+  return hours > 20 || (hours === 20 && minutes >= 30)
 }
 
 // Returns the minimum cart subtotal required to place an order at this location.
@@ -105,8 +104,8 @@ export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
   )
 
   if (isPlus) {
-    if (dist > 6 && Number(subTotalAmt) >= 399) return 0
-    if (dist <= 6 && Number(subTotalAmt) >= 149) return 0
+    if (dist > 7 && Number(subTotalAmt) >= 399) return 0
+    if (dist <= 7 && Number(subTotalAmt) >= 149) return 0
   }
 
   const charge = getDeliveryChargeByDistance(dist, subTotalAmt)
@@ -122,8 +121,8 @@ export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, cus
   )
 
   if (isPlus) {
-    if (dist > 6 && Number(subTotalAmt) >= 399) return 0
-    if (dist <= 6 && Number(subTotalAmt) >= 149) return 0
+    if (dist > 7 && Number(subTotalAmt) >= 399) return 0
+    if (dist <= 7 && Number(subTotalAmt) >= 149) return 0
   }
 
   const charge = getDeliveryChargeByDistance(dist, subTotalAmt)

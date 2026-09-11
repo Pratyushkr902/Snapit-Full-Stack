@@ -195,7 +195,7 @@ const FoodCheckoutPage = () => {
 
     const minOrder = isFlashEligible
       ? 0
-      : Math.max(99, Number(r.minOrderValue || r.minOrder || info?.minOrder || 99))
+      : Math.max(0, Number(r.minOrderValue ?? r.minOrder ?? info?.minOrder ?? 0))
 
     return { ...r, subtotal, fee, minOrder, info, isFlashEligible }
   })
