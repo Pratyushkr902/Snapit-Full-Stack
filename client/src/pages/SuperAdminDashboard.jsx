@@ -3,6 +3,7 @@ import SuperAdminPermision from '../layouts/SuperAdminPermision'
 import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
 import AdminSundayFlashWidget from '../components/AdminSundayFlashWidget'
 import AdminMarketingHub from '../components/AdminMarketingHub'
+import AdminResetPinModal from '../components/AdminResetPinModal'
 
 const CARDS = [
   {
@@ -95,6 +96,15 @@ const CARDS = [
     color: '#ea580c',
     bg: '#fff7ed',
   },
+  {
+    key: 'reset-pin',
+    title: '🔑 Reset Customer PIN',
+    desc: 'Instant 4-digit PIN reset for customers requesting help on WhatsApp',
+    icon: '🔑',
+    path: '/dashboard/reset-pin',
+    color: '#e11d48',
+    bg: '#ffe4e6',
+  },
 ]
 
 const SuperAdminDashboard = () => {
@@ -130,6 +140,11 @@ const SuperAdminDashboard = () => {
 
         {/* 📢 AUTOMATED MARKETING & ALL-USER BROADCAST HUB */}
         <AdminMarketingHub />
+
+        {/* 🔑 RESET CUSTOMER PIN TOOL */}
+        <div className="mb-6">
+          <AdminResetPinModal />
+        </div>
 
         <div style={{
           display: 'grid',

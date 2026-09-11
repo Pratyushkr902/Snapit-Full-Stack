@@ -312,6 +312,7 @@ const router = createHashRouter([
           { path: "marketing", element: <S><AdminPermision><MarketingHubPage /></AdminPermision></S> },
           { path: "super-admin/marketing", element: <S><MarketingHubPage /></S> },
           { path: "super-admin/banner-offers", element: <S><AdminBannerOffers /></S> },
+          { path: "super-admin/reset-pin", element: <S><AdminPermision><AdminResetPinPage /></AdminPermision></S> },
           {
             path: "product",
             element: <S><AdminPermision><ProductAdmin /></AdminPermision></S>
