@@ -184,9 +184,15 @@ const buildTaggedCartItems = async (list_items, storeName) => {
         if (!product) {
             return { ...item, _invalid: true, _reason: 'A product in your cart no longer exists.' }
         }
-        const effectiveStock = (Array.isArray(product.store_inventory) && product.store_inventory.length > 0)
-            ? product.store_inventory.filter(s => s.isAvailable !== false).reduce((sum, s) => sum + (Number(s.stock) || 0), 0)
-            : (Number(product.stock) || 0)
+        const rootStock = Number(product.stock) || 0
+        const effectiveStock = (rootStock <= 0)
+            ? 0
+            : (Array.isArray(product.store_inventory) && product.store_inventory.length > 0)
+                ? (() => {
+                    const inv = product.store_inventory.filter(s => s.isAvailable !== false).reduce((sum, s) => sum + (Number(s.stock) || 0), 0)
+                    return inv > 0 ? Math.min(rootStock, inv) : rootStock
+                })()
+                : rootStock
 
         if (effectiveStock <= 0) {
             return { ...item, _invalid: true, _reason: `${product.name} is out of stock.` }

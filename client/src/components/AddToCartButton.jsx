@@ -12,14 +12,16 @@ import { isStoreOpen } from './StoreClosedOverlay'
 
 export const getEffectiveStock = (item) => {
     if (!item) return 0
+    const rootStock = Number(item?.stock) || 0
+    if (rootStock <= 0) return 0
     if (Array.isArray(item?.store_inventory) && item.store_inventory.length > 0) {
         const invStock = item.store_inventory.reduce((sum, s) => {
             const avail = s.isAvailable !== false
             return sum + (avail ? (Number(s.stock) || 0) : 0)
         }, 0)
-        if (invStock > 0) return invStock
+        return invStock > 0 ? Math.min(rootStock, invStock) : rootStock
     }
-    return Math.max(0, Number(item?.stock) || 0)
+    return rootStock
 }
 
 const AddToCartButton = ({ data }) => {

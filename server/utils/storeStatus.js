@@ -21,10 +21,10 @@ function getISTTime() {
 
 function isWithinGlobalHours() {
   const { hours, minutes } = getISTTime()
-  // 9:00 AM – 9:30 PM IST
+  // 9:00 AM – 8:30 PM IST
   if (hours < 9) return false
-  if (hours > 21) return false
-  if (hours === 21 && minutes >= 30) return false
+  if (hours > 20) return false
+  if (hours === 20 && minutes >= 30) return false
   return true
 }
 
@@ -105,10 +105,10 @@ async function assertRestaurantItemsAvailable(list_items) {
  * @param {String} [opts.userRole] - role of the placing user (bypasses global-hours check)
  */
 export async function assertStoreOpenForOrder({ list_items = [], userRole, orderType = 'grocery' } = {}) {
-  // Global 9:00 AM – 9:00 PM IST operating gate applies to all customer orders
+  // Global 9:00 AM – 8:30 PM IST operating gate applies to all customer orders
   const isAdmin = ADMIN_LIKE_ROLES.includes(userRole)
   if (!isAdmin && !isWithinGlobalHours()) {
-    const err = new Error('Snapit is closed for the night (9:30 PM – 9:00 AM IST). Orders open at 9:00 AM tomorrow!')
+    const err = new Error('Snapit is closed for the night (8:30 PM – 9:00 AM IST). Orders open at 9:00 AM tomorrow!')
     err.statusCode = 400
     throw err
   }

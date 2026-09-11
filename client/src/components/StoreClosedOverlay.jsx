@@ -4,11 +4,11 @@ import logo from "../assets/snapit.png";
 
 /**
  * StoreClosedOverlay (Flipkart Minutes & Zepto Style)
- * Shows a realistic rolling shutter scene between CLOSE_HOUR (9:00 PM)
+ * Shows a realistic rolling shutter scene between CLOSE_HOUR (8:30 PM)
  * and OPEN_HOUR (9:00 AM) IST — based on Indian Standard Time.
  */
 
-export const CLOSE_HOUR = 21; // 9:30 PM IST (21:30)
+export const CLOSE_HOUR = 20; // 8:30 PM IST (20:30)
 export const CLOSE_MINUTE = 30;
 export const OPEN_HOUR = 9;   // 9:00 AM IST (09:00)
 
@@ -286,7 +286,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             lineHeight: 1.5,
             padding: "0 8px"
           }}>
-            Operating hours are <strong>9:00 AM – 9:00 PM IST</strong>. We are resting and packing fresh stock for tomorrow!
+            Operating hours are <strong>9:00 AM – 8:30 PM IST</strong>. We are resting and packing fresh stock for tomorrow!
           </p>
 
           {/* Real-time Live Countdown Pill */}

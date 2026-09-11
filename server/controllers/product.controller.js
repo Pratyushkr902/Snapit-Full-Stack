@@ -21,18 +21,20 @@ const escapeRegex = (str) => {
     return str.trim().slice(0, 100).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 };
 
-// Compute effective stock from store_inventory or root stock
+// Compute effective stock: root stock <= 0 means item is not in mart (out of stock)
 export const computeEffectiveStock = (prod) => {
     if (!prod) return 0;
+    const rootStock = Number(prod.stock) || 0;
+    if (rootStock <= 0) return 0;
     if (Array.isArray(prod.store_inventory) && prod.store_inventory.length > 0) {
         const invStock = prod.store_inventory.reduce((sum, s) => {
             const sAvailable = s.isAvailable !== false;
             const sStock = Math.max(0, Number(s.stock) || 0);
             return sum + (sAvailable ? sStock : 0);
         }, 0);
-        if (invStock > 0) return invStock;
+        return invStock > 0 ? Math.min(rootStock, invStock) : rootStock;
     }
-    return Math.max(0, Number(prod.stock) || 0);
+    return rootStock;
 };
 
 export const formatProductOutput = (prod) => {
