@@ -17,7 +17,8 @@ import {
     saveFcmTokenController,
     updateDobController,
     testPushNotificationController,
-    firebasePhoneLoginController
+    firebasePhoneLoginController,
+    adminResetCustomerPinController
 } from '../controllers/user.controller.js'
 import auth, { optionalAuth } from '../middleware/auth.js'
 import { admin } from '../middleware/Admin.js'        // ✅ added
@@ -57,5 +58,6 @@ userRouter.put('/update-dob',                 auth, updateDobController)
 userRouter.get('/all-riders',                 auth, admin, getAllRiders)  // ✅ added admin guard
 userRouter.post('/create-ambassador',         auth, admin, createCampusAmbassadorController)
 userRouter.get('/all-ambassadors',            auth, admin, getAllAmbassadorsController)
+userRouter.post('/admin-reset-pin',            auth, admin, adminResetCustomerPinController)
 
 export default userRouter

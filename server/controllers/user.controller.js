@@ -1062,3 +1062,79 @@ export async function firebasePhoneLoginController(request, response) {
         })
     }
 }
+
+export async function adminResetCustomerPinController(request, response) {
+    try {
+        const { mobile, newPin } = request.body
+
+        if (!mobile || !newPin) {
+            return response.status(400).json({
+                message: "Please provide both customer mobile number and new 4-digit PIN.",
+                error: true,
+                success: false
+            })
+        }
+
+        const digits = String(mobile).replace(/\D/g, '')
+        const cleanMobile = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits
+        const mobileNum = Number(cleanMobile)
+
+        if (cleanMobile.length !== 10) {
+            return response.status(400).json({
+                message: "Please provide a valid 10-digit mobile number.",
+                error: true,
+                success: false
+            })
+        }
+
+        const cleanPin = String(newPin).trim()
+        if (cleanPin.length < 4) {
+            return response.status(400).json({
+                message: "New PIN must be at least 4 digits.",
+                error: true,
+                success: false
+            })
+        }
+
+        const user = await UserModel.findOne({
+            $or: [
+                { mobile: mobileNum },
+                { email: `${cleanMobile}@snapit.in` },
+                { email: cleanMobile }
+            ]
+        })
+
+        if (!user) {
+            return response.status(404).json({
+                message: `No account found for mobile +91 ${cleanMobile}`,
+                error: true,
+                success: false
+            })
+        }
+
+        const salt = await bcryptjs.genSalt(10)
+        const hashPassword = await bcryptjs.hash(cleanPin, salt)
+
+        user.password = hashPassword
+        await user.save()
+
+        return response.json({
+            message: `PIN for ${user.name} (+91 ${cleanMobile}) has been reset to: ${cleanPin}`,
+            error: false,
+            success: true,
+            data: {
+                userId: user._id,
+                name: user.name,
+                mobile: cleanMobile,
+                newPin: cleanPin
+            }
+        })
+    } catch (error) {
+        console.error("adminResetCustomerPinController error:", error)
+        return response.status(500).json({
+            message: error.message || "Failed to reset customer PIN",
+            error: true,
+            success: false
+        })
+    }
+}

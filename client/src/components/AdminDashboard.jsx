@@ -3,6 +3,7 @@ import AdminPermision from '../components/AdminPermision'
 import AdminRiderSimulator from '../components/AdminRiderSimulator'
 import AddStore from '../components/AddStore'
 import DailyReport from '../components/DailyReport'
+import AdminResetPinModal from '../components/AdminResetPinModal'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
@@ -639,6 +640,7 @@ const AdminDashboard = () => {
 
             <AddStore fetchStores={fetchAllOrders} />
             <DailyReport />
+            <AdminResetPinModal />
           </div>
 
           {/* ── MAIN CONTENT ── */}
