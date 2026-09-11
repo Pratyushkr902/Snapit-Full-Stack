@@ -107,10 +107,11 @@ const PharmacyPage = () => {
 
       let incoming = results.flat()
 
-      // Dedupe
+      // Dedupe & filter out out-of-stock
       const seen = new Set()
       incoming = incoming.filter(p => {
         if (!p?._id || seen.has(p._id)) return false
+        if ((Number(p?.stock) || 0) <= 0 || p?.publish === false) return false
         seen.add(p._id)
         return true
       })

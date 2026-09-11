@@ -76,12 +76,20 @@ const Login = () => {
 
     // Save tokens and update redux
     const handleLoginSuccess = async (token, refresh) => {
-        if (token) await secureStorage.setItem('accessToken', token)
-        if (refresh) await secureStorage.setItem('refreshToken', refresh)
+        try {
+            if (token) await secureStorage.setItem('accessToken', token)
+            if (refresh) await secureStorage.setItem('refreshToken', refresh)
+        } catch (e) {
+            console.warn('Storage setItem warning:', e)
+        }
 
-        const userDetails = await fetchUserDetails()
-        if (userDetails?.success && userDetails.data) {
-            dispatch(setUserDetails(userDetails.data))
+        try {
+            const userDetails = await fetchUserDetails()
+            if (userDetails?.success && userDetails.data) {
+                dispatch(setUserDetails(userDetails.data))
+            }
+        } catch (e) {
+            console.warn('Initial userDetails fetch warning:', e)
         }
 
         // Redirect to intended destination (e.g. /checkout) or Home

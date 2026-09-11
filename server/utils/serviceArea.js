@@ -36,6 +36,7 @@ export const DELIVERY_ZONES = [
   // stretching a neighbor. Radius kept to 0.45km (< the 0.47km gap to Chandos) to guarantee no overlap.
   { name: 'Himalaya Medical College', lat: 25.2639198, lng: 84.8545598, radiusKm: 0.45 },
   { name: 'Purani Bazar', lat: 25.3273174, lng: 84.8008332, radiusKm: 1.0 },
+  { name: 'Pali Dih',     lat: 25.2950,    lng: 84.8150,   radiusKm: 2.0 },
   { name: 'Indira Nagar', lat: 25.3334727, lng: 84.8003608, radiusKm: 1.0 },
   { name: 'Dharhara',     lat: 25.3375327, lng: 84.8117994, radiusKm: 1.0 },
   { name: 'Rakasiya',     lat: 25.357181306430718, lng: 84.83059257743433, radiusKm: 1.5 },

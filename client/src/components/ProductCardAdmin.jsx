@@ -14,9 +14,68 @@ import { optimizeImage } from '../utils/optimizeImage'
 
 const ProductCardAdmin = ({ data, fetchProductData }) => {
   const [editOpen, setEditOpen] = useState(false)
-  // ─── CHANGE 1 (continued) ─────────────────────────────────────────────────
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [quickStockLoading, setQuickStockLoading] = useState(false)
+  const [showCustomStock, setShowCustomStock] = useState(false)
+  const [customStockVal, setCustomStockVal] = useState('')
+
+  const currentStock = Number(data?.stock) || 0
+
+  const handleQuickRestock = async (qtyToAdd) => {
+    try {
+      setQuickStockLoading(true)
+      const newStock = Math.max(0, currentStock + Number(qtyToAdd))
+      const response = await Axios({
+        ...SummaryApi.updateProductDetails,
+        data: {
+          _id: data?._id,
+          stock: newStock,
+          publish: true,
+        }
+      })
+      if (response.data.success) {
+        toast.success(`⚡ Restocked ${data?.name?.slice(0, 18)}... to ${newStock} units!`, { id: `restock-${data?._id}` })
+        if (fetchProductData) fetchProductData()
+      }
+    } catch (error) {
+      AxiosToastError(error)
+    } finally {
+      setQuickStockLoading(false)
+      setShowCustomStock(false)
+      setCustomStockVal('')
+    }
+  }
+
+  const handleSetExactStock = async (e) => {
+    e?.preventDefault()
+    const parsed = parseInt(customStockVal, 10)
+    if (isNaN(parsed) || parsed < 0) {
+      toast.error('Please enter a valid stock quantity')
+      return
+    }
+    try {
+      setQuickStockLoading(true)
+      const response = await Axios({
+        ...SummaryApi.updateProductDetails,
+        data: {
+          _id: data?._id,
+          stock: parsed,
+          publish: true,
+        }
+      })
+      if (response.data.success) {
+        toast.success(`⚡ Stock updated to ${parsed} units!`, { id: `restock-${data?._id}` })
+        if (fetchProductData) fetchProductData()
+      }
+    } catch (error) {
+      AxiosToastError(error)
+    } finally {
+      setQuickStockLoading(false)
+      setShowCustomStock(false)
+      setCustomStockVal('')
+    }
+  }
 
   const handleImgError = (e) => {
     e.target.onerror = null
@@ -24,8 +83,6 @@ const ProductCardAdmin = ({ data, fetchProductData }) => {
   }
 
   // ─── CHANGE 2: Loading state during delete ────────────────────────────────
-  // Old: no feedback between click and toast — user double-clicks thinking it failed.
-  // New: button shows "Deleting…" and is disabled while the request is in flight.
   const handleDelete = async () => {
     try {
       setDeleting(true)
@@ -46,22 +103,97 @@ const ProductCardAdmin = ({ data, fetchProductData }) => {
   }
 
   return (
-    <div className='border border-slate-100 p-3 bg-white rounded-xl shadow-sm relative group hover:shadow-md transition-shadow'>
+    <div className='border border-slate-100 p-3 bg-white rounded-xl shadow-sm relative group hover:shadow-md transition-shadow flex flex-col justify-between h-full'>
+      <div>
+        {/* Product image */}
+        <div className='w-full h-32 bg-slate-50 rounded-lg p-2 mb-2'>
+          <img
+            src={optimizeImage(data?.image?.[0], 300)}
+            alt={data?.name}
+            onError={handleImgError}
+            className='w-full h-full object-scale-down'
+            loading="lazy"
+          />
+        </div>
 
-      {/* Product image */}
-      <div className='w-full h-32 bg-slate-50 rounded-lg p-2 mb-2'>
-        <img
-          src={optimizeImage(data?.image?.[0], 300)}
-          alt={data?.name}
-          onError={handleImgError}
-          className='w-full h-full object-scale-down'
-          loading="lazy"
-        />
+        {/* Product info */}
+        <p className='font-semibold text-sm text-slate-800 line-clamp-2 mb-0.5'>{data?.name}</p>
+        <p className='text-xs text-slate-400 mb-2'>{data?.unit || "Unit not specified"}</p>
+
+        {/* Stock status indicator */}
+        <div className='flex items-center justify-between gap-1 mb-2'>
+          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+            currentStock <= 0
+              ? 'bg-red-100 text-red-700 border border-red-200'
+              : currentStock < 5
+              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+          }`}>
+            {currentStock <= 0 ? '❌ Out of Stock' : `📦 Stock: ${currentStock}`}
+          </span>
+          
+          <button
+            type="button"
+            onClick={() => setShowCustomStock(prev => !prev)}
+            className="text-[10px] font-bold text-blue-600 hover:text-blue-800 underline"
+          >
+            {showCustomStock ? 'Cancel' : 'Set Stock'}
+          </button>
+        </div>
+
+        {/* Quick 1-tap restock row */}
+        {showCustomStock ? (
+          <form onSubmit={handleSetExactStock} className='flex gap-1 mb-2.5'>
+            <input
+              type='number'
+              min='0'
+              placeholder='Qty'
+              value={customStockVal}
+              onChange={e => setCustomStockVal(e.target.value)}
+              className='w-16 px-1.5 py-1 text-xs border border-slate-300 rounded outline-none focus:border-emerald-500 font-bold'
+              autoFocus
+            />
+            <button
+              type='submit'
+              disabled={quickStockLoading}
+              className='flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded py-1 disabled:opacity-50'
+            >
+              {quickStockLoading ? '...' : 'Save'}
+            </button>
+          </form>
+        ) : (
+          <div className='flex items-center gap-1 mb-2.5'>
+            <span className='text-[9px] font-bold text-slate-400'>+Add:</span>
+            <button
+              type='button'
+              onClick={() => handleQuickRestock(10)}
+              disabled={quickStockLoading}
+              className='flex-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 py-1 rounded text-[10px] font-bold transition-all disabled:opacity-50'
+              title="Quick add 10 units"
+            >
+              +10
+            </button>
+            <button
+              type='button'
+              onClick={() => handleQuickRestock(25)}
+              disabled={quickStockLoading}
+              className='flex-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 py-1 rounded text-[10px] font-bold transition-all disabled:opacity-50'
+              title="Quick add 25 units"
+            >
+              +25
+            </button>
+            <button
+              type='button'
+              onClick={() => handleQuickRestock(50)}
+              disabled={quickStockLoading}
+              className='flex-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 py-1 rounded text-[10px] font-bold transition-all disabled:opacity-50'
+              title="Quick add 50 units"
+            >
+              +50
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* Product info */}
-      <p className='font-semibold text-sm text-slate-800 line-clamp-2 mb-0.5'>{data?.name}</p>
-      <p className='text-xs text-slate-400 mb-3'>{data?.unit || "Unit not specified"}</p>
 
       {/* ─── CHANGE 1: Inline delete confirm ─────────────────────────────────
           Normal state: Edit + Delete buttons side by side.

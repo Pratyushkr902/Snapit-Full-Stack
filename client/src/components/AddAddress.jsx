@@ -61,6 +61,7 @@ const VILLAGE_COORDS = {
   'Akhtiyarpur': { lat: 25.2750, lng: 84.8280 },
   'Balipakar': { lat: 25.3010, lng: 84.7920 },
   'Purani Bazar': { lat: 25.3273, lng: 84.8008 },
+  'Pali Dih': { lat: 25.2950, lng: 84.8150 },
   'Indira Nagar': { lat: 25.3334, lng: 84.8003 },
   'Dharhara': { lat: 25.3375, lng: 84.8117 },
   'Rakasiya': { lat: 25.3571, lng: 84.8305 },

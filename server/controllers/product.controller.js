@@ -119,15 +119,19 @@ export const createProductController = async (request, response) => {
 
 export const getProductController = async (request, response) => {
     try {
-        let { page, limit, search } = request.body;
+        let { page, limit, search, inStockOnly } = request.body;
         if (!page)  page  = 1;
         if (!limit) limit = 100;
 
-        const cacheKey = `prod_${page}_${limit}_${search || 'all'}`;
+        const cacheKey = `prod_${page}_${limit}_${search || 'all'}_${inStockOnly ? '1' : '0'}`;
         const cached = productCache.get(cacheKey);
         if (cached) return response.json(cached);
 
-        const query = search ? { $text: { $search: search } } : {};
+        let query = search ? { $text: { $search: search } } : {};
+        if (inStockOnly) {
+            query.stock = { $gt: 0 };
+            query.publish = true;
+        }
         const skip  = (page - 1) * limit;
         const [data, totalCount] = await Promise.all([
             ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
@@ -154,7 +158,9 @@ export const getProductByCategory = async (request, response) => {
         if (!mongoose.Types.ObjectId.isValid(id)) return response.status(400).json({ message: "Invalid Category ID", error: true, success: false });
 
         const product = await ProductModel.find({
-            category: { $in: [id, new mongoose.Types.ObjectId(id)] }
+            category: { $in: [id, new mongoose.Types.ObjectId(id)] },
+            stock: { $gt: 0 },
+            publish: true
         }).select(LIST_FIELDS).lean();
 
         return response.json({
@@ -175,7 +181,9 @@ export const getProductsByCategories = async (request, response) => {
         if (invalidId) return response.status(400).json({ message: `Invalid category ID: ${invalidId}`, error: true, success: false });
 
         const products = await ProductModel.find({
-            category: { $in: categoryIds }
+            category: { $in: categoryIds },
+            stock: { $gt: 0 },
+            publish: true
         }).select(LIST_FIELDS).lean();
 
         const grouped = {};
@@ -210,7 +218,11 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         const skip = (page - 1) * limit;
         const hasValidSubCategory = subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId);
 
-        let query = { category: { $in: [categoryId, new mongoose.Types.ObjectId(categoryId)] } };
+        let query = {
+            category: { $in: [categoryId, new mongoose.Types.ObjectId(categoryId)] },
+            stock: { $gt: 0 },
+            publish: true
+        };
         if (hasValidSubCategory) query.subCategory = { $in: [subCategoryId, new mongoose.Types.ObjectId(subCategoryId)] };
 
         let [data, dataCount] = await Promise.all([
@@ -219,7 +231,11 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         ]);
 
         if (dataCount === 0 && hasValidSubCategory) {
-            const fallbackQuery = { category: { $in: [categoryId, new mongoose.Types.ObjectId(categoryId)] } };
+            const fallbackQuery = {
+                category: { $in: [categoryId, new mongoose.Types.ObjectId(categoryId)] },
+                stock: { $gt: 0 },
+                publish: true
+            };
             const results = await Promise.all([
                 ProductModel.find(fallbackQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory').lean(),
                 ProductModel.countDocuments(fallbackQuery)
@@ -447,12 +463,19 @@ export const searchProduct = async (request, response) => {
 
             // Match all meaningful keywords ($and), or phrase regex as fallback
             query = {
-                $or: [
-                    { name: { $regex: escapeRegex(search.trim()), $options: "i" } },
-                    { description: { $regex: escapeRegex(search.trim()), $options: "i" } },
-                    ...(tokenQueries.length > 0 ? [{ $and: tokenQueries }] : [])
+                $and: [
+                    {
+                        $or: [
+                            { name: { $regex: escapeRegex(search.trim()), $options: "i" } },
+                            { description: { $regex: escapeRegex(search.trim()), $options: "i" } },
+                            ...(tokenQueries.length > 0 ? [{ $and: tokenQueries }] : [])
+                        ]
+                    },
+                    { stock: { $gt: 0 }, publish: true }
                 ]
             };
+        } else {
+            query = { stock: { $gt: 0 }, publish: true };
         }
         const skip = (pageNum - 1) * limitNum;
         const [data, dataCount] = await Promise.all([
@@ -505,7 +528,9 @@ export async function getFrequentlyBought(req, res) {
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
         const suggestions = await ProductModel.find({
             category: { $in: product.category },
-            _id: { $ne: productId }
+            _id: { $ne: productId },
+            stock: { $gt: 0 },
+            publish: true
         }).select(LIST_FIELDS).limit(5).lean();
         return res.json({ success: true, data: suggestions.map(formatProductOutput) });
     } catch (err) {

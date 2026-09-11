@@ -46,7 +46,8 @@ const SearchPage = () => {
       })
       const { data: responseData } = response
       if (responseData.success) {
-        setData(prev => page === 1 ? responseData.data : [...prev, ...responseData.data])
+        const inStock = (responseData.data || []).filter(p => (Number(p?.stock) || 0) > 0 && p?.publish !== false)
+        setData(prev => page === 1 ? inStock : [...prev, ...inStock])
         setTotalPage(responseData.totalPage)
       }
     } catch (error) {

@@ -89,16 +89,20 @@ const RegisterOtp = () => {
                 const token   = response.data?.data?.accessToken  || response.data?.data?.accesstoken
                 const refresh = response.data?.data?.refreshToken || response.data?.data?.refreshtoken
 
-                if (token) {
-                    await secureStorage.setItem('accessToken', token)
-                }
-                if (refresh) {
-                    await secureStorage.setItem('refreshToken', refresh)
+                try {
+                    if (token) await secureStorage.setItem('accessToken', token)
+                    if (refresh) await secureStorage.setItem('refreshToken', refresh)
+                } catch (e) {
+                    console.warn('Storage setItem warning:', e)
                 }
 
-                const userDetails = await fetchUserDetails()
-                if (userDetails?.success && userDetails.data) {
-                    dispatch(setUserDetails(userDetails.data))
+                try {
+                    const userDetails = await fetchUserDetails()
+                    if (userDetails?.success && userDetails.data) {
+                        dispatch(setUserDetails(userDetails.data))
+                    }
+                } catch (e) {
+                    console.warn('Initial userDetails warning:', e)
                 }
 
                 setTimeout(() => navigate('/'), 100)

@@ -5,20 +5,20 @@ export const getAppVersionController = async (req, res) => {
       success: true,
       error: false,
       data: {
-        latestVersion: "2.6.49",
-        latestVersionCode: 89,
+        latestVersion: "2.6.50",
+        latestVersionCode: 90,
         minRequiredVersionCode: 84,
         forceUpdate: false,
         remindIntervalHours: 1,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit-ashy.vercel.app/app-release.apk",
         title: "Update Available 🚀",
-        message: "A new version of Snapit (v2.6.49) is ready with precise road-distance delivery fee, high-accuracy GPS, and instant rider order sync!",
+        message: "A new version of Snapit (v2.6.50) is ready with instant 5-second mobile login, Pali Dih & Akhtiyarpur speed fix, and zero network errors!",
         releaseNotes: [
-          "🚀 Zomato & Zepto standard precise road-distance fee calculation",
-          "🧭 Enhanced doorstep GPS address resolution",
-          "⚡ Supercharged Rider Command and order sync speed",
-          "📱 Improved scrollable account navigation & fixed logout"
+          "⚡ Instant 5-second mobile phone + PIN login & registration",
+          "📍 Enhanced support for Pali Dih & Akhtiyarpur with auto-address pinning",
+          "🌐 Ultra-resilient connection with zero network errors on mobile networks",
+          "🚀 Faster order placement & instant checkout navigation"
         ]
       }
     });

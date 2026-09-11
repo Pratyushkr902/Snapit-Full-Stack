@@ -144,14 +144,14 @@ export function useDealsData() {
       // Single optimized call - fetch only discount products
       const res = await Axios({
         ...SummaryApi.getProduct,
-        data: { page: 1, limit: 500 },
+        data: { page: 1, limit: 500, inStockOnly: true },
         withCredentials: true,
       })
       const data = res.data?.data ?? res.data ?? []
       const list = Array.isArray(data) ? data : (data.products ?? data.list ?? [])
 
-      const combos = list.filter(p => isCombo(p))
-      const bogos  = list.filter(p => isBogo(p))
+      const combos = list.filter(p => isCombo(p) && (Number(p?.stock) || 0) > 0 && p?.publish !== false)
+      const bogos  = list.filter(p => isBogo(p) && (Number(p?.stock) || 0) > 0 && p?.publish !== false)
 
       setComboProducts(combos)
       setBogoProducts(bogos)

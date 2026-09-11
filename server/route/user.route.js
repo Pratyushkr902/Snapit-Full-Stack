@@ -27,7 +27,7 @@ import { validateRegister, validateLogin, validateForgotPassword } from '../midd
 const userRouter = Router()
 
 // ── Rate-limited public auth routes ──────────────────────────
-userRouter.post('/register',                   authLimiter, validateRegister, registerUserController)
+userRouter.post('/register',                   validateRegister, registerUserController)
 userRouter.post('/login',                      authLimiter, validateLogin, loginController)
 userRouter.post('/forgot-password',            otpLimiter, validateForgotPassword, forgotPasswordController)
 userRouter.put('/forgot-password',             otpLimiter, validateForgotPassword, forgotPasswordController)

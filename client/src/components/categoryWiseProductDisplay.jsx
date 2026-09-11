@@ -69,7 +69,9 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
             const { data: responseData } = response
 
             if (responseData.success && Array.isArray(responseData.data)) {
-                const filtered = responseData.data.filter(p => p?._id !== currentProductId)
+                const filtered = responseData.data.filter(
+                    p => p?._id !== currentProductId && (Number(p?.stock) || 0) > 0 && p?.publish !== false
+                )
                 const sanitized = filtered.map(product => ({
                     ...product,
                     image: normalizeImageField(product.image),
@@ -112,6 +114,10 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     }
 
     const redirectURL = handleRedirectProductListpage()
+
+    if (visible && !loading && data.length === 0) {
+        return null;
+    }
 
     return (
         <div className='my-4 lg:my-8' ref={sectionRef}>

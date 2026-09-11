@@ -159,7 +159,7 @@ app.use(helmet({
 // ─── RATE LIMITING ────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
     windowMs:               15 * 60 * 1000,
-    max:                    300,
+    max:                    600, // Safe for Indian telecom CGNAT shared tower IPs
     standardHeaders:        true,
     legacyHeaders:          false,
     skipSuccessfulRequests: true,
@@ -169,7 +169,7 @@ const authLimiter = rateLimit({
 
 const registerLimiter = rateLimit({
     windowMs:               60 * 60 * 1000,
-    max:                    50,
+    max:                    500, // Safe for Indian telecom CGNAT shared tower IPs
     standardHeaders:        true,
     legacyHeaders:          false,
     skipSuccessfulRequests: true,

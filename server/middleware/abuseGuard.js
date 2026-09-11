@@ -30,9 +30,9 @@ export function isAdminRequest(request) {
 }
 
 const WINDOW_MS = 60 * 1000
-const AUTH_LIMIT = 100         // login/otp hits per minute per IP (safe for shared office/home Wi-Fi)
-const GENERAL_LIMIT = 600      // general WRITE hits per minute per IP
-const GENERAL_READ_LIMIT = 1200 // general READ (GET) hits per minute per IP
+const AUTH_LIMIT = 300         // login/otp hits per minute per IP (safe for Indian mobile CGNAT towers)
+const GENERAL_LIMIT = 1200      // general WRITE hits per minute per IP
+const GENERAL_READ_LIMIT = 2400 // general READ (GET) hits per minute per IP
 const FREEZE_MINUTES = 5
 
 const hitLog = new Map()

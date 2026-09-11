@@ -54,7 +54,7 @@ const GroceryPage = () => {
     try {
       setLoading(true)
 
-      const payload = { page: pageNum, limit: 20 }
+      const payload = { page: pageNum, limit: 20, inStockOnly: true }
       if (activeCategory !== 'all') payload.categoryId = activeCategory
       if (activeSubCategory !== 'all') payload.subCategoryId = activeSubCategory
       if (debouncedSearch) payload.search = debouncedSearch
@@ -75,7 +75,8 @@ const GroceryPage = () => {
 
       const { data } = response
       if (data.success) {
-        const incoming = data.data || []
+        const rawIncoming = data.data || []
+        const incoming = rawIncoming.filter(p => (Number(p?.stock) || 0) > 0 && p?.publish !== false)
         if (reset || pageNum === 1) {
           setProducts(incoming)
         } else {
@@ -85,7 +86,7 @@ const GroceryPage = () => {
           })
         }
         setTotalCount(data.totalCount || data.total || 0)
-        setHasMore(incoming.length === 20)
+        setHasMore(rawIncoming.length === 20)
       }
     } catch (error) {
       AxiosToastError(error)

@@ -35,6 +35,7 @@ const DELIVERY_ZONES = [
   // stretching a neighbor. Radius kept to 0.45km (< the 0.47km gap to Chandos) to guarantee no overlap.
   { name: 'Himalaya Medical College', lat: 25.2639198, lng: 84.8545598, radiusKm: 0.45 },
   { name: 'Purani Bazar', lat: 25.3273174, lng: 84.8008332, radiusKm: 1.0 },
+  { name: 'Pali Dih',     lat: 25.2950,    lng: 84.8150,   radiusKm: 2.0 },
   { name: 'Indira Nagar', lat: 25.3334727, lng: 84.8003608, radiusKm: 1.0 },
   { name: 'Dharhara',     lat: 25.3375327, lng: 84.8117994, radiusKm: 1.0 },
   { name: 'Rakasiya',     lat: 25.357181306430718, lng: 84.83059257743433, radiusKm: 1.5 },
@@ -206,6 +207,7 @@ export function resolveVillageFromText(text) {
   if (/kalyanpur|kalyanpuri|paipura/i.test(clean)) return { lat: 25.35483228778216, lng: 84.79708175239959, name: 'Kalyanpuri Paipura' }
   if (/lalganj|sehra/i.test(clean)) return { lat: 25.292485478533443, lng: 84.82586927749715, name: 'Lalganj Sehra' }
   if (/purani\s*bazar|purani\s*bazaar/i.test(clean)) return { lat: 25.3273174, lng: 84.8008332, name: 'Purani Bazar' }
+  if (/pali\s*dih|dih\s*pali|palidih|dihpali|purani\s*dih/i.test(clean)) return { lat: 25.2950, lng: 84.8150, name: 'Pali Dih' }
   if (/indira\s*nagar/i.test(clean)) return { lat: 25.3334727, lng: 84.8003608, name: 'Indira Nagar' }
   if (/dharhara/i.test(clean)) return { lat: 25.3375327, lng: 84.8117994, name: 'Dharhara' }
   if (/sarsi/i.test(clean)) return { lat: 25.3050, lng: 84.8320, name: 'Sarsi' }
@@ -213,7 +215,7 @@ export function resolveVillageFromText(text) {
   if (/acchua/i.test(clean)) return { lat: 25.3120, lng: 84.7980, name: 'Acchua' }
   if (/chandos/i.test(clean)) return { lat: 25.2650, lng: 84.8400, name: 'Chandos' }
   if (/milki/i.test(clean)) return { lat: 25.3200, lng: 84.8100, name: 'Milki' }
-  if (/akhtiyarpur/i.test(clean)) return { lat: 25.2750, lng: 84.8280, name: 'Akhtiyarpur' }
+  if (/akhtiyarpur|akhtiarpur|akhteyarpur|akhatiyarpur/i.test(clean)) return { lat: 25.2750, lng: 84.8280, name: 'Akhtiyarpur' }
   if (/balipakar/i.test(clean)) return { lat: 25.3010, lng: 84.7920, name: 'Balipakar' }
   if (/ular\s*more/i.test(clean)) return { lat: 25.361971450391845, lng: 84.83978080090998, name: 'Ular More' }
   if (/rampur\s*nagawa/i.test(clean)) return { lat: 25.298481843473738, lng: 84.7537306481682, name: 'Rampur Nagawa' }

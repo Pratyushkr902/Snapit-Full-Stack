@@ -45,6 +45,9 @@ export const resolveVillageFromText = (text) => {
   if (/purani\s*bazar|purani\s*bazaar/i.test(clean)) {
     return { lat: 25.3273174, lng: 84.8008332, name: 'Purani Bazar' }
   }
+  if (/pali\s*dih|dih\s*pali|palidih|dihpali|purani\s*dih/i.test(clean)) {
+    return { lat: 25.2950, lng: 84.8150, name: 'Pali Dih' }
+  }
   if (/indira\s*nagar/i.test(clean)) {
     return { lat: 25.3334727, lng: 84.8003608, name: 'Indira Nagar' }
   }
@@ -66,7 +69,7 @@ export const resolveVillageFromText = (text) => {
   if (/milki/i.test(clean)) {
     return { lat: 25.3200, lng: 84.8100, name: 'Milki' }
   }
-  if (/akhtiyarpur/i.test(clean)) {
+  if (/akhtiyarpur|akhtiarpur|akhteyarpur|akhatiyarpur/i.test(clean)) {
     return { lat: 25.2750, lng: 84.8280, name: 'Akhtiyarpur' }
   }
   if (/balipakar/i.test(clean)) {
@@ -251,20 +254,26 @@ export const addAddressController = async (request, response) => {
         }
 
         if (finalLat == null || finalLng == null) {
-            return response.status(400).json({
-                message: "Please pin your exact delivery location on the map or pick your village.",
-                error:   true,
-                success: false,
-            })
+            // Default safe fallback to Paliganj center
+            finalLat = 25.2921
+            finalLng = 84.8170
+            exactGpsFlag = false
         }
 
         const zoneCheck = isInDeliveryZone(finalLat, finalLng)
         if (!zoneCheck.serviceable) {
-            return response.status(400).json({
-                message: "Sorry, this address location is outside our 14km delivery service area.",
-                error:   true,
-                success: false,
-            })
+            const isLocal = String(pincode || '').includes('801110') || /pali|akhtiyarpur|dih|bihar/i.test(combinedText)
+            if (isLocal) {
+                finalLat = 25.2921
+                finalLng = 84.8170
+                exactGpsFlag = false
+            } else {
+                return response.status(400).json({
+                    message: "Sorry, this address location is outside our delivery service area.",
+                    error:   true,
+                    success: false,
+                })
+            }
         }
 
         const createAddress = new AddressModel({

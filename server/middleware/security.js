@@ -9,7 +9,7 @@ import mongoSanitize from 'mongo-sanitize'
 //    failed logins (e.g. wrong password twice) triggered 429s
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 150,
+    max: 600, // Safe for Indian telecom CGNAT shared tower IPs
     message: {
         success: false,
         error: true,
@@ -17,7 +17,7 @@ export const authLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skipSuccessfulRequests: true  // ✅ FIXED: don't count successful logins against the limit
+    skipSuccessfulRequests: true
 })
 
 // OTP limiter

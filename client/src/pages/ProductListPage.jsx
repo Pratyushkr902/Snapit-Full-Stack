@@ -71,7 +71,10 @@ const ProductListPage = () => {
 
       const { data: responseData } = response
       if (responseData.success) {
-        setProducts(Array.isArray(responseData.data) ? responseData.data : [])
+        const inStock = (Array.isArray(responseData.data) ? responseData.data : []).filter(
+          p => (Number(p?.stock) || 0) > 0 && p?.publish !== false
+        )
+        setProducts(inStock)
       }
     } catch (error) {
       AxiosToastError(error)
