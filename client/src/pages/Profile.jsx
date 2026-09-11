@@ -22,11 +22,12 @@ const Profile = () => {
         name:   user.name,
         email:  user.email,
         mobile: user.mobile,
+        password: '',
     })
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
-        setUserData({ name: user.name, email: user.email, mobile: user.mobile })
+        setUserData({ name: user.name, email: user.email, mobile: user.mobile, password: '' })
     }, [user])
 
     const handleOnChange = (e) => {
@@ -36,14 +37,25 @@ const Profile = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (userData.password && userData.password.trim().length < 4) {
+            toast.error("PIN must be at least 4 digits")
+            return
+        }
         try {
             setLoading(true)
-            const response = await Axios({ ...SummaryApi.updateUserDetails, data: userData })
+            const payload = {
+                name: userData.name,
+                email: userData.email,
+                mobile: userData.mobile,
+                ...(userData.password?.trim() ? { password: userData.password.trim() } : {})
+            }
+            const response = await Axios({ ...SummaryApi.updateUserDetails, data: payload })
             const { data: responseData } = response
             if (responseData.success) {
-                toast.success(responseData.message)
-                const userData = await fetchUserDetails()
-                dispatch(setUserDetails(userData.data))
+                toast.success(userData.password?.trim() ? "Profile & PIN updated successfully!" : responseData.message)
+                setUserData(prev => ({ ...prev, password: '' }))
+                const userDataRes = await fetchUserDetails()
+                dispatch(setUserDetails(userDataRes.data))
             }
         } catch (error) {
             AxiosToastError(error)
@@ -105,6 +117,22 @@ const Profile = () => {
                     <input type='text' id='mobile' placeholder='Enter your mobile'
                         className='p-2 bg-blue-50 outline-none border focus-within:border-primary-200 rounded'
                         value={userData.mobile} name='mobile' onChange={handleOnChange} required />
+                </div>
+                <div className='grid'>
+                    <label htmlFor='password'>Change 4-Digit PIN (Optional)</label>
+                    <input 
+                        type='password' 
+                        id='password' 
+                        name='password'
+                        maxLength={8}
+                        placeholder='Enter new 4-digit PIN (leave blank to keep current)'
+                        className='p-2 bg-blue-50 outline-none border focus-within:border-primary-200 rounded text-slate-900 font-semibold'
+                        value={userData.password || ''} 
+                        onChange={handleOnChange} 
+                    />
+                    <span className='text-[11px] text-neutral-400 mt-1'>
+                        Only fill this if you want to set a new login PIN.
+                    </span>
                 </div>
                 <button className='border px-4 py-2 font-semibold hover:bg-primary-100 border-primary-100 text-primary-200 hover:text-neutral-800 rounded'>
                     {loading ? "Loading..." : "Submit"}
