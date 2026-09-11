@@ -266,15 +266,15 @@ const userLastNudgeMap = new Map()
 // ─────────────────────────────────────────────────────────────────────────────
 export async function checkAbandonedCarts() {
   try {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
-    // Find all cart items added/updated in the last 24 hours
+    // Find all cart items added/updated in the last 7 days
     const activeCarts = await CartProductModel.find({
-      updatedAt: { $gte: twentyFourHoursAgo }
+      updatedAt: { $gte: sevenDaysAgo }
     }).populate('productId', 'name price').lean()
 
     if (activeCarts.length === 0) {
-      console.log('ℹ️ [Abandoned Cart] No active cart items found in last 24h.')
+      console.log('ℹ️ [Abandoned Cart] No active cart items found in last 7d.')
       return { success: true, nudgedCount: 0 }
     }
 
@@ -307,16 +307,21 @@ export async function checkAbandonedCarts() {
       const user = await UserModel.findById(uId).select('name fcmToken fcmTokens').lean()
       if (!user) continue
 
-      const targetToken = (user.fcmToken && typeof user.fcmToken === 'string' && user.fcmToken.trim().length > 10)
+      let targetToken = (user.fcmToken && typeof user.fcmToken === 'string' && user.fcmToken.trim().length > 10)
         ? user.fcmToken.trim()
         : (Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0 ? user.fcmTokens[user.fcmTokens.length - 1] : null)
+
+      if (!targetToken) {
+        const dev = await DeviceTokenModel.findOne({ userId: uId, token: { $exists: true, $ne: '' } }).sort({ lastActiveAt: -1 }).lean()
+        if (dev?.token) targetToken = dev.token.trim()
+      }
 
       if (!targetToken) continue
 
       const firstItemName = items[0]?.productId?.name || 'Aapke favorite items'
       const moreCount = items.length > 1 ? ` (+${items.length - 1} aur items)` : ''
       const cartTitle = '🛒 Aapka cart intezaar kar raha hai!'
-      const cartBody = `"${firstItemName}${moreCount}" cart mein hain. 10 min express delivery on Snapit! ⚡`
+      const cartBody = `"${firstItemName}${moreCount}" cart mein hain. FREE Delivery on orders ₹149+ (within 5 km)! ⚡ Abhi order karein.`
 
       try {
         const res = await sendPushNotification({
