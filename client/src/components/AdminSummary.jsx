@@ -4,6 +4,7 @@ import AdminPermision from '../layouts/AdminPermision'
 import AdminRiderSimulator from '../components/AdminRiderSimulator'
 import AddStore from '../components/AddStore'
 import DailyReport from '../components/DailyReport'
+import AdminResetPinModal from '../components/AdminResetPinModal'
 import Accounts from '../components/Accounts'
 import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
 import AdminLiveOrdersWidget from '../components/AdminLiveOrdersWidget'
@@ -752,6 +753,7 @@ const AdminDashboard = () => {
 
             <AddStore fetchStores={fetchAllOrders} />
             <DailyReport />
+            <AdminResetPinModal />
           </div>
 
           {/* ── MAIN CONTENT ── */}

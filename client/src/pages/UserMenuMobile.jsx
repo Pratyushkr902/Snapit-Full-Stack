@@ -110,6 +110,9 @@ const UserMenuMobile = () => {
             💰 COD Treasury & Partner Split
           </Link>
           <Link to={"/dashboard/admin-summary"} className='px-3 py-2.5 rounded-xl hover:bg-orange-50 dark:hover:bg-slate-900 font-bold text-secondary-100 dark:text-amber-400 transition-colors'>Admin Dashboard</Link>
+          <Link to={"/dashboard/reset-pin"} className='px-3 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 font-bold text-rose-700 dark:text-rose-300 border-l-4 border-rose-500 transition-colors'>
+            🔑 Reset Customer PIN
+          </Link>
           <Link to={"/dashboard/category"} className='px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Category</Link>
           <Link to={"/dashboard/subcategory"} className='px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Sub Category</Link>
           <Link to={"/dashboard/upload-product"} className='px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Upload Product</Link>
