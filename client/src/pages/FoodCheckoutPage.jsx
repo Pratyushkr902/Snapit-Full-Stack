@@ -11,6 +11,7 @@ import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
 import { useFullCart, foodCartStore } from '../utils/foodCartStore'
 import { isStoreOpen } from '../components/StoreClosedOverlay'
 import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
+import { getCampusAdjustedPrice } from './RestaurantDetailPage'
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -88,8 +89,8 @@ const FoodCheckoutPage = () => {
   const restaurantItemLists = restaurants.map(r => ({
     ...r,
     resolvedItems: r.items.map(({ item, qty }) => {
-      const price = item.discountedPrice > 0 ? item.discountedPrice : item.price
-      return { item, price, qty }
+      const basePrice = Number(item.basePrice || (item.discountedPrice > 0 ? item.discountedPrice : item.price)) || 0
+      return { item, basePrice, qty }
     }),
   }))
 
@@ -169,20 +170,23 @@ const FoodCheckoutPage = () => {
   // Per-restaurant subtotal (using the editable qty overrides) + per-restaurant
   // delivery fee/min-order, mirroring how the backend prices each group.
   const restaurantPricing = restaurantItemLists.map(r => {
-    const rawSubtotal = r.resolvedItems.reduce((s, { price, qty }) => s + price * qty, 0)
     const hasLoc = Boolean(r.restaurantLat && r.restaurantLng)
-    const info = (effectiveAddrCoords && hasLoc)
-      ? getDeliveryInfoFromOrigin(r.restaurantLat, r.restaurantLng, effectiveAddrCoords.lat, effectiveAddrCoords.lng, rawSubtotal, isSnapitPlus)
+    const initialInfo = (effectiveAddrCoords && hasLoc)
+      ? getDeliveryInfoFromOrigin(r.restaurantLat, r.restaurantLng, effectiveAddrCoords.lat, effectiveAddrCoords.lng, 0, isSnapitPlus)
       : null
 
-    const isLongDistance = Boolean(info && info.distanceKm > 7)
+    const isLongDistance = Boolean(initialInfo && initialInfo.distanceKm > 7)
 
     // When ordering to campus (>7km), extra price is baked directly into item prices
     // so students NEVER see a scary "surcharge" fee — they only see cheap Flat ₹12 / Free Delivery!
-    const subtotal = r.resolvedItems.reduce((s, { price, qty }) => {
-      const extra = isLongDistance ? (price < 50 ? 20 : price <= 150 ? 35 : 50) : 0
-      return s + (price + extra) * qty
+    const subtotal = r.resolvedItems.reduce((s, { basePrice, qty }) => {
+      const itemPrice = getCampusAdjustedPrice(basePrice, isLongDistance)
+      return s + itemPrice * qty
     }, 0)
+
+    const info = (effectiveAddrCoords && hasLoc)
+      ? getDeliveryInfoFromOrigin(r.restaurantLat, r.restaurantLng, effectiveAddrCoords.lat, effectiveAddrCoords.lng, subtotal, isSnapitPlus)
+      : null
 
     const isFlashEligible = Boolean(
       isFlashActive && subtotal > 0 && subtotal <= (flashOffer?.maxFoodValue || 149)
@@ -333,15 +337,15 @@ const FoodCheckoutPage = () => {
 
     const items = restaurantItemLists.flatMap(r => {
       const isLongDist = Boolean(restaurantPricing.find(rp => rp.restaurantId === r.restaurantId)?.isLongDistance)
-      return r.resolvedItems.map(({ item, price, qty }) => {
-        const extra = isLongDist ? (price < 50 ? 20 : price <= 150 ? 35 : 50) : 0
+      return r.resolvedItems.map(({ item, basePrice, qty }) => {
+        const itemPrice = getCampusAdjustedPrice(basePrice, isLongDist)
         return {
           menuItemId: item._id,
           restaurantId: r.restaurantId, // fallback hint only; backend re-derives from DB
           name: item.name,
           image: item.image || '',
-          price: price + extra,
-          basePrice: price,
+          price: itemPrice,
+          basePrice: basePrice,
           quantity: qty,
         }
       })
@@ -614,9 +618,8 @@ const FoodCheckoutPage = () => {
             {r.restaurantName || 'Restaurant'}
           </p>
           <div className='divide-y divide-gray-50'>
-            {r.resolvedItems.map(({ item, price, qty }) => {
-              const extra = r.isLongDistance ? (price < 50 ? 20 : price <= 150 ? 35 : 50) : 0
-              const itemPrice = price + extra
+            {r.resolvedItems.map(({ item, basePrice, qty }) => {
+              const itemPrice = getCampusAdjustedPrice(basePrice, r.isLongDistance)
               return (
                 <div key={item._id} className='flex items-center gap-3 py-3'>
                   <VegDot isVeg={item.isVeg !== false} />

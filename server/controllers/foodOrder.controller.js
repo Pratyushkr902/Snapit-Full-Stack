@@ -93,18 +93,15 @@ const buildGroupsByRestaurant = async (items) => {
     }
     const verifiedCanonicalPrice = dbBasePrice + customizationExtra
 
-    // Anti-tamper defense: price can never be lower than the server-verified database price
-    const clientPrice = Number(i.price || 0)
-    const effectivePrice = clientPrice > verifiedCanonicalPrice ? clientPrice : verifiedCanonicalPrice
-
     const margin       = Number(db.snapitMargin || 0)
     const restaurantId = String(db.restaurantId)
     const cartItem = {
       productId:         db._id,
       name:              i.name || db.name,
       image:             db.image || i.image || '',
-      price:             effectivePrice,
-      sellerPrice:       Math.max(0, effectivePrice - margin),
+      price:             verifiedCanonicalPrice,
+      basePrice:         verifiedCanonicalPrice,
+      sellerPrice:       Math.max(0, verifiedCanonicalPrice - margin),
       snapitMargin:      margin,
       quantity:          Math.max(1, Number(i.quantity) || 1),
       seller_store_name: null,
@@ -186,7 +183,6 @@ const priceGroup = async (group, fields, user) => {
   }
 
   const { lat, lng } = deliveryLocation || {}
-  let subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 
   let distanceKm = 0
   if (lat && lng) {
@@ -203,6 +199,30 @@ const priceGroup = async (group, fields, user) => {
       throw err
     }
   }
+
+  // ── Campus Long-Distance Pricing (>7km, e.g. Himalaya Medical College) ──
+  // Small (<₹50): +₹20 | Snacks (₹50–₹150): +₹35 | Meals (>₹150): +₹50
+  // Baked directly into the item price so customers never see a separate surcharge line!
+  const isLongDistance = distanceKm > 7
+  let campusSurcharge = 0
+
+  group.cartItems = group.cartItems.map(it => {
+    const baseP = Number(it.basePrice || it.price || 0)
+    const extra = (isLongDistance && !it.isFreebie)
+      ? (baseP < 50 ? 20 : baseP <= 150 ? 35 : 50)
+      : 0
+    campusSurcharge += extra * (Number(it.quantity) || 1)
+    const finalItemPrice = baseP + extra
+    return {
+      ...it,
+      price: finalItemPrice,
+      basePrice: baseP,
+      sellerPrice: Math.max(0, baseP - (it.snapitMargin || 0)),
+      snapitMargin: (it.snapitMargin || 0) + extra,
+    }
+  })
+
+  let subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 
   // ── Sunday Flash Offer validation ──
   let sundayFlashValidation = null
@@ -272,27 +292,6 @@ const priceGroup = async (group, fields, user) => {
   const riderFee = deliveryFee > 0
     ? deliveryFee
     : (distanceKm <= 3 ? 12 : (distanceKm <= 6 ? 29 : (Math.round(distanceKm * 7) || 29)))
-
-  // ── Campus Long-Distance Pricing (>7km, e.g. Himalaya Medical College) ──
-  // Small (<₹50): +₹20 | Snacks (₹50–₹150): +₹35 | Meals (>₹150): +₹50
-  // Baked directly into the item price so customers never see a separate surcharge line!
-  const isLongDistance = distanceKm > 7
-  let campusSurcharge = 0
-
-  group.cartItems = group.cartItems.map(it => {
-    const baseP = Number(it.basePrice || it.price || 0)
-    const extra = (isLongDistance && !it.isFreebie)
-      ? (baseP < 50 ? 20 : baseP <= 150 ? 35 : 50)
-      : 0
-    campusSurcharge += extra * (Number(it.quantity) || 1)
-    return {
-      ...it,
-      price: baseP + extra,
-      basePrice: baseP,
-    }
-  })
-
-  subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 
   return {
     ...group,

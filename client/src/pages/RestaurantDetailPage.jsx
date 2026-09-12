@@ -15,15 +15,25 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
 import { useRestaurantCart } from '../utils/foodCartStore'
 import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
+import { getEffectiveAddressCoords } from '../utils/serviceArea'
 
 // ── Fallbacks ─────────────────────────────────────────────────────────────────
 const FALLBACK_IMG = FALLBACK_IMAGE
 
 const BANNER_FALLBACK = null
+
+// ── Campus Price Adjustment Formula (>7km, e.g. Himalaya Medical College) ─────
+export const getCampusAdjustedPrice = (price, isLongDistance) => {
+  const p = Number(price) || 0
+  if (!isLongDistance || p <= 0) return p
+  const extra = p < 50 ? 20 : p <= 150 ? 35 : 50
+  return p + extra
+}
 
 // ── Haversine distance ────────────────────────────────────────────────────────
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -130,12 +140,23 @@ function QtyControl({ qty, onAdd, onIncrease, onDecrease }) {
 }
 
 // ── Solo Food Item Card ───────────────────────────────────────────────────────
-function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
+function FoodItemCard({ item, qty, isLongDistance, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(item.image ? optimizeImageUrl(item.image, 250, 75) : FALLBACK_IMAGE)
   useEffect(() => {
     setImgSrc(item.image ? optimizeImageUrl(item.image, 250, 75) : FALLBACK_IMAGE)
   }, [item.image])
-  const effectivePrice = item.discountedPrice > 0 ? item.discountedPrice : item.price
+
+  const basePrice = Number(item.price) || 0
+  const baseEffectivePrice = Number(item.discountedPrice > 0 ? item.discountedPrice : item.price) || 0
+  const effectivePrice = getCampusAdjustedPrice(baseEffectivePrice, isLongDistance)
+  const displayMrp = item.discountedPrice > 0 ? getCampusAdjustedPrice(basePrice, isLongDistance) : null
+
+  const cartItem = {
+    ...item,
+    price: effectivePrice,
+    basePrice: baseEffectivePrice,
+  }
+
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
       <div className="flex-1 min-w-0">
@@ -152,11 +173,11 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
         )}
         <div className="flex items-center gap-2 mt-1.5">
           <span className="font-bold text-gray-900 text-[15px]">₹{effectivePrice}</span>
-          {item.discountedPrice > 0 && (
+          {displayMrp && displayMrp > effectivePrice && (
             <>
-              <span className="text-gray-400 text-[12px] line-through">₹{item.price}</span>
+              <span className="text-gray-400 text-[12px] line-through">₹{displayMrp}</span>
               <span className="text-green-600 text-[11px] font-semibold">
-                {Math.round((1 - item.discountedPrice / item.price) * 100)}% off
+                {Math.round((1 - baseEffectivePrice / basePrice) * 100)}% off
               </span>
             </>
           )}
@@ -172,7 +193,12 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
             Sold Out
           </span>
         ) : (
-          <QtyControl qty={qty} onAdd={onAdd} onIncrease={onIncrease} onDecrease={onDecrease} />
+          <QtyControl
+            qty={qty}
+            onAdd={() => onAdd(cartItem)}
+            onIncrease={() => onIncrease(cartItem)}
+            onDecrease={() => onDecrease(cartItem)}
+          />
         )}
       </div>
     </div>
@@ -180,19 +206,29 @@ function FoodItemCard({ item, qty, onAdd, onIncrease, onDecrease }) {
 }
 
 // ── Inline Variant Card (for pizza sizes via item.variants array) ────────────
-function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
+function InlineVariantCard({ item, foodCart, isLongDistance, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(item.image ? optimizeImageUrl(item.image, 250, 75) : FALLBACK_IMAGE)
   useEffect(() => {
     setImgSrc(item.image ? optimizeImageUrl(item.image, 250, 75) : FALLBACK_IMAGE)
   }, [item.image])
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = item.variants[selectedIdx]
-  const price = selectedVariant.price ?? item.price
+  const rawPrice = Number(selectedVariant.price ?? item.price) || 0
+  const price = getCampusAdjustedPrice(rawPrice, isLongDistance)
+  const rawMrp = Number(selectedVariant.mrp) || 0
+  const mrp = rawMrp > 0 ? getCampusAdjustedPrice(rawMrp, isLongDistance) : null
+
   // Cart key = itemId + variantLabel so each size is an independent cart slot
   const cartKey = `${item._id}_${selectedVariant.label}`
   const qty = foodCart[cartKey]?.qty || 0
 
-  const cartItem = { ...item, _id: cartKey, price, name: `${item.name} (${selectedVariant.label})` }
+  const cartItem = {
+    ...item,
+    _id: cartKey,
+    price,
+    basePrice: rawPrice,
+    name: `${item.name} (${selectedVariant.label})`
+  }
 
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
@@ -224,11 +260,11 @@ function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
         </div>
         <div className="flex items-center gap-2 mt-1.5">
           <span className="font-bold text-gray-900 text-[15px]">₹{price}</span>
-          {selectedVariant.mrp > price && (
+          {mrp && mrp > price && (
             <>
-              <span className="text-gray-400 text-[12px] line-through">₹{selectedVariant.mrp}</span>
+              <span className="text-gray-400 text-[12px] line-through">₹{mrp}</span>
               <span className="text-green-600 text-[11px] font-semibold">
-                {Math.round((1 - price / selectedVariant.mrp) * 100)}% off
+                {Math.round((1 - rawPrice / rawMrp) * 100)}% off
               </span>
             </>
           )}
@@ -258,7 +294,7 @@ function InlineVariantCard({ item, foodCart, onAdd, onIncrease, onDecrease }) {
 }
 
 // ── Grouped Variant Card (Half/Full suffix style) ─────────────────────────────
-function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
+function VariantCard({ group, foodCart, isLongDistance, onAdd, onIncrease, onDecrease }) {
   const [imgSrc, setImgSrc] = useState(group.image ? group.image : FALLBACK_IMG)
   useEffect(() => {
     setImgSrc(group.image ? group.image : FALLBACK_IMG)
@@ -266,9 +302,19 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedVariant = group.variants[selectedIdx]
   const selectedItem = selectedVariant.item
-  const effectivePrice = selectedItem.discountedPrice > 0 ? selectedItem.discountedPrice : selectedItem.price
+  const basePrice = Number(selectedItem.price) || 0
+  const baseEffectivePrice = Number(selectedItem.discountedPrice > 0 ? selectedItem.discountedPrice : selectedItem.price) || 0
+  const effectivePrice = getCampusAdjustedPrice(baseEffectivePrice, isLongDistance)
+  const displayMrp = selectedItem.discountedPrice > 0 ? getCampusAdjustedPrice(basePrice, isLongDistance) : null
+
   const qty = foodCart[selectedItem._id]?.qty || 0
   const isItemSoldOut = selectedItem.isAvailable === false || group.isAvailable === false
+
+  const cartItem = {
+    ...selectedItem,
+    price: effectivePrice,
+    basePrice: baseEffectivePrice,
+  }
 
   return (
     <div className="flex gap-3 py-4 border-b border-gray-50 last:border-0">
@@ -300,11 +346,11 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
         </div>
         <div className="flex items-center gap-2 mt-1.5">
           <span className="font-bold text-gray-900 text-[15px]">₹{effectivePrice}</span>
-          {selectedItem.discountedPrice > 0 && (
+          {displayMrp && displayMrp > effectivePrice && (
             <>
-              <span className="text-gray-400 text-[12px] line-through">₹{selectedItem.price}</span>
+              <span className="text-gray-400 text-[12px] line-through">₹{displayMrp}</span>
               <span className="text-green-600 text-[11px] font-semibold">
-                {Math.round((1 - selectedItem.discountedPrice / selectedItem.price) * 100)}% off
+                {Math.round((1 - baseEffectivePrice / basePrice) * 100)}% off
               </span>
             </>
           )}
@@ -322,9 +368,9 @@ function VariantCard({ group, foodCart, onAdd, onIncrease, onDecrease }) {
         ) : (
           <QtyControl
             qty={qty}
-            onAdd={() => onAdd(selectedItem)}
-            onIncrease={() => onIncrease(selectedItem)}
-            onDecrease={() => onDecrease(selectedItem)}
+            onAdd={() => onAdd(cartItem)}
+            onIncrease={() => onIncrease(cartItem)}
+            onDecrease={() => onDecrease(cartItem)}
           />
         )}
       </div>
@@ -392,20 +438,11 @@ function CartBar({ totalItems, totalPrice, onViewCart }) {
   )
 }
 
-// ── Distance + Address Bar — reads GeoJSON coordinates[1/0] ──────────────────
-function LocationBar({ restaurant, userLocation }) {
+// ── Distance + Address Bar ────────────────────────────────────────────────────
+function LocationBar({ restaurant, distKm, isLongDistance }) {
   const address = restaurant?.address
   const addressStr = [address?.street, address?.area, address?.city]
     .filter(Boolean).join(', ')
-
-  const distKm =
-    userLocation && restaurant?.location?.coordinates
-      ? getDistanceKm(
-          userLocation.lat, userLocation.lng,
-          restaurant.location.coordinates[1],  // lat
-          restaurant.location.coordinates[0],  // lng
-        )
-      : null
 
   if (!addressStr && distKm === null) return null
 
@@ -416,12 +453,17 @@ function LocationBar({ restaurant, userLocation }) {
           d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
-      <span className="text-xs text-gray-500 flex-1 leading-relaxed">
+      <span className="text-xs text-gray-500 flex-1 leading-relaxed truncate">
         {addressStr}
       </span>
       {distKm !== null && (
-        <span className="text-xs font-bold text-gray-700 flex-shrink-0 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
-          {distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`}
+        <span className="text-xs font-bold text-gray-700 flex-shrink-0 bg-white border border-gray-200 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-xs">
+          <span>{distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`}</span>
+          {isLongDistance && (
+            <span className="text-green-700 font-bold bg-green-50 px-1.5 py-0.2 rounded text-[11px]">
+              Flat ₹12 delivery
+            </span>
+          )}
         </span>
       )}
     </div>
@@ -441,12 +483,28 @@ export default function RestaurantDetailPage() {
   const [userLocation, setUserLocation] = useState(null)
   const [conflictModal, setConflictModal] = useState(null)
 
+  // ── Read active/selected address to determine delivery coordinates ──
+  const addressList = useSelector((state) => state.addresses?.addressList || [])
+  const selectedId = typeof window !== 'undefined' ? localStorage.getItem('selected_address_id') : null
+  const activeAddress = addressList.find((a) => a._id === selectedId) || addressList.find((a) => a.status) || addressList[0]
+  const effectiveAddressCoords = activeAddress ? getEffectiveAddressCoords(activeAddress) : null
+  const effectiveCoords = effectiveAddressCoords || userLocation
+
+  const restoLat = restaurant?.location?.lat ?? restaurant?.location?.coordinates?.[1] ?? null
+  const restoLng = restaurant?.location?.lng ?? restaurant?.location?.coordinates?.[0] ?? null
+
+  const distKm = (effectiveCoords && restoLat != null && restoLng != null)
+    ? getDistanceKm(effectiveCoords.lat, effectiveCoords.lng, restoLat, restoLng)
+    : null
+
+  const isLongDistance = Boolean(distKm !== null && distKm > 7)
+
   // ── Single-restaurant food cart (see utils/foodCartStore.js) ─────────
   const restaurantMeta = {
     restaurantId: id,
     restaurantName: restaurant?.name || '',
-    restaurantLat: restaurant?.location?.lat ?? restaurant?.location?.coordinates?.[1] ?? null,
-    restaurantLng: restaurant?.location?.lng ?? restaurant?.location?.coordinates?.[0] ?? null,
+    restaurantLat: restoLat,
+    restaurantLng: restoLng,
   }
   const { foodCart, cartCount, cartTotal, handleAdd, replaceAndAdd, handleIncrease, handleDecrease } =
     useRestaurantCart(restaurantMeta)
@@ -580,7 +638,18 @@ export default function RestaurantDetailPage() {
             </div>
 
             {/* ── Distance + Address bar (Zomato-style) ── */}
-            <LocationBar restaurant={restaurant} userLocation={userLocation} />
+            <LocationBar restaurant={restaurant} distKm={distKm} isLongDistance={isLongDistance} />
+
+            {/* ── Campus Delivery Badge (if >7km) ── */}
+            {isLongDistance && (
+              <div className="mx-4 mt-2 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span>🎓</span>
+                  <span>Delivering to Campus: Flat ₹12 Delivery (FREE on ₹199+)</span>
+                </div>
+                <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">Fast Delivery</span>
+              </div>
+            )}
           </div>
 
           {/* ── Category Tabs ── */}
@@ -619,6 +688,7 @@ export default function RestaurantDetailPage() {
                           key={entry.item._id}
                           item={entry.item}
                           foodCart={foodCart}
+                          isLongDistance={isLongDistance}
                           onAdd={wrappedAdd}
                           onIncrease={handleIncrease}
                           onDecrease={handleDecrease}
@@ -632,6 +702,7 @@ export default function RestaurantDetailPage() {
                           key={item._id}
                           item={item}
                           qty={foodCart[item._id]?.qty || 0}
+                          isLongDistance={isLongDistance}
                           onAdd={() => wrappedAdd(item)}
                           onIncrease={() => handleIncrease(item)}
                           onDecrease={() => handleDecrease(item)}
@@ -643,6 +714,7 @@ export default function RestaurantDetailPage() {
                         key={entry.baseName}
                         group={entry}
                         foodCart={foodCart}
+                        isLongDistance={isLongDistance}
                         onAdd={wrappedAdd}
                         onIncrease={handleIncrease}
                         onDecrease={handleDecrease}
