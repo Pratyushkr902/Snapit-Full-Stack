@@ -273,21 +273,26 @@ const priceGroup = async (group, fields, user) => {
     ? deliveryFee
     : (distanceKm <= 3 ? 12 : (distanceKm <= 6 ? 29 : (Math.round(distanceKm * 7) || 29)))
 
-  // ── Campus Long-Distance Surcharge (>7km, e.g. Himalaya Medical College) ──
+  // ── Campus Long-Distance Pricing (>7km, e.g. Himalaya Medical College) ──
   // Small (<₹50): +₹20 | Snacks (₹50–₹150): +₹35 | Meals (>₹150): +₹50
+  // Baked directly into the item price so customers never see a separate surcharge line!
   const isLongDistance = distanceKm > 7
   let campusSurcharge = 0
-  if (isLongDistance) {
-    campusSurcharge = group.cartItems.reduce((s, it) => {
-      const p = Number(it.price || 0)
-      if (it.isFreebie || p <= 0) return s
-      let extra = 0
-      if (p < 50) extra = 20
-      else if (p <= 150) extra = 35
-      else extra = 50
-      return s + extra * (Number(it.quantity) || 1)
-    }, 0)
-  }
+
+  group.cartItems = group.cartItems.map(it => {
+    const baseP = Number(it.basePrice || it.price || 0)
+    const extra = (isLongDistance && !it.isFreebie)
+      ? (baseP < 50 ? 20 : baseP <= 150 ? 35 : 50)
+      : 0
+    campusSurcharge += extra * (Number(it.quantity) || 1)
+    return {
+      ...it,
+      price: baseP + extra,
+      basePrice: baseP,
+    }
+  })
+
+  const subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 
   return {
     ...group,
@@ -336,8 +341,7 @@ const priceAllGroups = async (groups, fields, user) => {
     g.couponCode       = idx === 0 ? validCouponCode : null
 
     // For Sunday Flash: 100% food cost is waived up to ₹149 (customer pays ₹0 for food)
-    const foodBase = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
-    const foodPayable = foodBase + (g.campusSurcharge || 0)
+    const foodPayable = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
     const payablePreWallet = foodPayable + g.deliveryFee + g.tip - g.couponDiscount
     g.totalAmt = Math.max(0, payablePreWallet - g.walletAmountUsed)
   })
