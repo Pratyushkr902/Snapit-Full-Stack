@@ -123,7 +123,7 @@ const CheckoutPage = () => {
   const handleWalletPayment = async () => {
     let loadingToast = null
     try {
-      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
+      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
       if (totalPrice < 49) {
@@ -166,7 +166,7 @@ const CheckoutPage = () => {
   const handleCashOnDelivery = async () => {
     let loadingToast = null
     try {
-      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
+      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select an address first')
       if (!checkServiceArea()) return
       if (totalPrice < 49) {
@@ -204,7 +204,7 @@ const CheckoutPage = () => {
 
   const handleOnlinePayment = async () => {
     try {
-      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 9:00 AM IST!', { duration: 4000 })
+      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!selectedAddress) return toast.error('Please select a delivery address')

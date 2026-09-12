@@ -60,7 +60,7 @@ const AddToCartButton = ({ data }) => {
             const { data: responseData } = response
             if (responseData.success) {
                 if (storeClosed) {
-                    toast.success("Added to cart! Deliveries start at 9:00 AM.", { icon: "🛒" })
+                    toast.success("Added to cart! Deliveries start at 8:30 AM.", { icon: "🛒" })
                 } else {
                     toast.success(responseData.message)
                 }
@@ -81,7 +81,7 @@ const AddToCartButton = ({ data }) => {
         const response = await updateCartItem(cartItemDetails?._id, qty + 1)
         if (response?.success) {
             if (storeClosed) {
-                toast.success("Cart updated! Deliveries start at 9:00 AM.")
+                toast.success("Cart updated! Deliveries start at 8:30 AM.")
             } else {
                 toast.success("Item added")
             }

@@ -502,7 +502,7 @@ const ProductDisplayPage = () => {
           {!isOpen ? (
             <div className='bg-indigo-50/60 border-2 border-indigo-100 border-dashed p-4 sm:p-6 rounded-3xl text-center'>
               <p className='font-black text-slate-800 text-sm sm:text-base'>🌙 Snapit is resting</p>
-              <p className='text-xs text-indigo-600 font-bold mt-1 uppercase tracking-wider'>Deliveries resume at 9:00 AM IST</p>
+              <p className='text-xs text-indigo-600 font-bold mt-1 uppercase tracking-wider'>Deliveries resume at 8:30 AM IST</p>
               <div className='mt-3'>
                 <AddToCartButton data={data} />
               </div>

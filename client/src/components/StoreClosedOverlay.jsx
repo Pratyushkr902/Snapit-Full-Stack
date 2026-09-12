@@ -10,7 +10,8 @@ import logo from "../assets/snapit.png";
 
 export const CLOSE_HOUR = 20; // 8:30 PM IST (20:30)
 export const CLOSE_MINUTE = 30;
-export const OPEN_HOUR = 9;   // 9:00 AM IST (09:00)
+export const OPEN_HOUR = 8;   // 8:30 AM IST (08:30)
+export const OPEN_MINUTE = 30;
 
 export const ADMIN_LIKE_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER'];
 
@@ -19,7 +20,7 @@ export const ADMIN_LIKE_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER
  */
 export function getStoreStatus(userRole = null) {
   if (userRole && ADMIN_LIKE_ROLES.includes(userRole)) {
-    return { isClosed: false, msUntilOpen: 0, openHour: OPEN_HOUR, closeHour: CLOSE_HOUR };
+    return { isClosed: false, msUntilOpen: 0, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
   }
 
   const now = new Date();
@@ -30,22 +31,24 @@ export function getStoreStatus(userRole = null) {
 
   const hour = istDate.getUTCHours();
   const minute = istDate.getUTCMinutes();
-  const isClosed = hour < OPEN_HOUR || hour > CLOSE_HOUR || (hour === CLOSE_HOUR && minute >= CLOSE_MINUTE);
+  const isBeforeOpen = hour < OPEN_HOUR || (hour === OPEN_HOUR && minute < OPEN_MINUTE);
+  const isAfterClose = hour > CLOSE_HOUR || (hour === CLOSE_HOUR && minute >= CLOSE_MINUTE);
+  const isClosed = isBeforeOpen || isAfterClose;
 
-  if (!isClosed) return { isClosed: false, msUntilOpen: 0, openHour: OPEN_HOUR, closeHour: CLOSE_HOUR };
+  if (!isClosed) return { isClosed: false, msUntilOpen: 0, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
 
   const year = istDate.getUTCFullYear();
   const month = istDate.getUTCMonth();
   let date = istDate.getUTCDate();
 
-  if (hour > CLOSE_HOUR || (hour === CLOSE_HOUR && minute >= CLOSE_MINUTE)) {
+  if (isAfterClose) {
     date += 1;
   }
 
-  const opensAtUtcMs = Date.UTC(year, month, date, OPEN_HOUR, 0, 0, 0) - istOffsetMs;
+  const opensAtUtcMs = Date.UTC(year, month, date, OPEN_HOUR, OPEN_MINUTE, 0, 0) - istOffsetMs;
   const msUntilOpen = Math.max(0, opensAtUtcMs - nowUtcMs);
 
-  return { isClosed: true, msUntilOpen, openHour: OPEN_HOUR, closeHour: CLOSE_HOUR };
+  return { isClosed: true, msUntilOpen, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
 }
 
 /**
@@ -286,7 +289,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             lineHeight: 1.5,
             padding: "0 8px"
           }}>
-            Operating hours are <strong>9:00 AM – 8:30 PM IST</strong>. We are resting and packing fresh stock for tomorrow!
+            Operating hours are <strong>8:30 AM – 8:30 PM IST</strong>. We are resting and packing fresh stock for tomorrow!
           </p>
 
           {/* Real-time Live Countdown Pill */}
@@ -321,7 +324,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             gap: 4
           }}>
             <span>⚡</span>
-            <span>10-Minute Deliveries Start at 9:00 AM Tomorrow</span>
+            <span>10-Minute Deliveries Start at 8:30 AM Tomorrow</span>
           </div>
 
           {/* Actions: Browse Catalog Anyway */}
