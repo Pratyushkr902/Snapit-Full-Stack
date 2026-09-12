@@ -77,8 +77,7 @@ const DEFAULT_CONFIG = {
     delivery_fee:            '12',
     // App Messages
     app_maintenance_mode: 'false',
-    maintenance_message:  'We are upgrading Snapit. Back in 10 mins!',
-    offer_strip_text:     '🚀 Free delivery on orders above ₹399',
+    offer_strip_text:     '🛵 100% FREE DELIVERY LIVE! • On ₹149+ (Paliganj) & ₹199+ (Himalaya College) ⚡',
     offer_strip_active:   'true',
 }
 

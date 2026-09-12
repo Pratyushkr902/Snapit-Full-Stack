@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 
 import Header from './components/Header'
 import Footer from './components/Footer'
+import OfferStrip from './components/OfferStrip'
 import CartMobileLink from './components/CartMobile'
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
@@ -315,6 +316,7 @@ function App() {
         <div className="App">
           <AppUpdateModal />
           <NotificationPermissionBanner />
+          {!isDashboard && !isSelectLocation && !isCartPage && !isUserPage && <OfferStrip />}
           {!isDashboard && !isFoodPage && !isSelectLocation && !isCartPage && !isUserPage && <StoreClosedOverlay />}
           {!isDashboard && !isSelectLocation && !isCartPage && !isUserPage && <Header openCart={() => setShowCart(true)} />}
           
