@@ -273,12 +273,29 @@ const priceGroup = async (group, fields, user) => {
     ? deliveryFee
     : (distanceKm <= 3 ? 12 : (distanceKm <= 6 ? 29 : (Math.round(distanceKm * 7) || 29)))
 
+  // ── Campus Long-Distance Surcharge (>7km, e.g. Himalaya Medical College) ──
+  // Small (<₹50): +₹20 | Snacks (₹50–₹150): +₹35 | Meals (>₹150): +₹50
+  const isLongDistance = distanceKm > 7
+  let campusSurcharge = 0
+  if (isLongDistance) {
+    campusSurcharge = group.cartItems.reduce((s, it) => {
+      const p = Number(it.price || 0)
+      if (it.isFreebie || p <= 0) return s
+      let extra = 0
+      if (p < 50) extra = 20
+      else if (p <= 150) extra = 35
+      else extra = 50
+      return s + extra * (Number(it.quantity) || 1)
+    }, 0)
+  }
+
   return {
     ...group,
     restaurantName: restaurant.name,
     restaurantLocation: restaurant.location,
     restaurantAddress: restaurant.address,
     subTotalAmt,
+    campusSurcharge,
     deliveryFee,
     riderFee,
     distanceKm,
@@ -319,7 +336,8 @@ const priceAllGroups = async (groups, fields, user) => {
     g.couponCode       = idx === 0 ? validCouponCode : null
 
     // For Sunday Flash: 100% food cost is waived up to ₹149 (customer pays ₹0 for food)
-    const foodPayable = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
+    const foodBase = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
+    const foodPayable = foodBase + (g.campusSurcharge || 0)
     const payablePreWallet = foodPayable + g.deliveryFee + g.tip - g.couponDiscount
     g.totalAmt = Math.max(0, payablePreWallet - g.walletAmountUsed)
   })
@@ -351,6 +369,7 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
     delivery_instructions:    fields.deliveryInstructions || addressDoc?.delivery_instructions || '',
     shareable_tracking_token: shareableToken,
     subTotalAmt:      group.subTotalAmt,
+    campus_surcharge: group.campusSurcharge || 0,
     delivery_fee:     group.deliveryFee,
     rider_fee:        group.riderFee || 29,
     totalAmt:         group.totalAmt,

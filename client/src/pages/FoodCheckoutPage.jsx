@@ -197,10 +197,25 @@ const FoodCheckoutPage = () => {
       ? 0
       : Math.max(0, Number(r.minOrderValue ?? r.minOrder ?? info?.minOrder ?? 0))
 
-    return { ...r, subtotal, fee, minOrder, info, isFlashEligible }
+    // Long distance / Campus food surcharge (>7km, e.g. Himalaya Medical College)
+    // Small (<₹50): +₹20 | Snacks (₹50–₹150): +₹35 | Meals (>₹150): +₹50
+    const isLongDistance = Boolean(info && info.distanceKm > 7)
+    let campusSurcharge = 0
+    if (isLongDistance) {
+      campusSurcharge = r.resolvedItems.reduce((s, { price, qty }) => {
+        let extra = 0
+        if (price < 50) extra = 20
+        else if (price <= 150) extra = 35
+        else extra = 50
+        return s + extra * qty
+      }, 0)
+    }
+
+    return { ...r, subtotal, fee, minOrder, info, isFlashEligible, campusSurcharge }
   })
 
   const subTotal = restaurantPricing.reduce((s, r) => s + r.subtotal, 0)
+  const campusSurchargeTotal = restaurantPricing.reduce((s, r) => s + (r.campusSurcharge || 0), 0)
   const isFlashEligible = Boolean(
     isFlashActive && subTotal > 0 && subTotal <= (flashOffer?.maxFoodValue || 149)
   )
@@ -210,7 +225,7 @@ const FoodCheckoutPage = () => {
   const walletBal = Number(user?.walletBalance || 0)
   // Customer pays ₹0 for food when eligible for Sunday Flash Offer
   const payableFood = Math.max(0, subTotal - flashDiscount - couponDiscount)
-  const preWallet = payableFood + deliveryFee + tipAmt
+  const preWallet = payableFood + campusSurchargeTotal + deliveryFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
   const grandTotal = Math.max(0, preWallet - walletDeduct)
   const totalSaved = 48 + flashDiscount + couponDiscount + walletDeduct
@@ -959,30 +974,30 @@ const FoodCheckoutPage = () => {
         )}
 
         {/* Long Distance Delivery Tier Explanation Banner for Food */}
-        {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.isLongDistance && deliveryFee > 0 && (
-          restaurantPricing[0]?.info?.longDistanceTier === 'FLAT_ABOVE_499' ? (
+        {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.isLongDistance && (
+          deliveryFee === 0 ? (
             <div className='mb-3.5 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl'>
               <div className='flex items-center justify-between text-xs font-black text-emerald-900'>
                 <span className='flex items-center gap-1.5'>
-                  <span className='text-sm'>✨</span> High-Value Order Benefit ({restaurantPricing[0].info.distanceKm} km)
+                  <span className='text-sm'>🎓</span> Campus Special ({restaurantPricing[0].info.distanceKm} km)
                 </span>
-                <span className='bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>Flat ₹60</span>
+                <span className='bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>FREE Delivery</span>
               </div>
               <p className='text-[11px] text-emerald-700 font-semibold mt-1'>
-                Subsidized <strong>Flat ₹60 delivery fee</strong> applied for orders ₹499 and above!
+                Enjoy <strong>100% FREE Delivery</strong> on your order above ₹199 to Himalaya Medical College!
               </p>
             </div>
           ) : (
-            <div className='mb-3.5 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl'>
-              <div className='flex items-center justify-between text-xs font-black text-blue-900'>
+            <div className='mb-3.5 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl'>
+              <div className='flex items-center justify-between text-xs font-black text-amber-900'>
                 <span className='flex items-center gap-1.5'>
-                  <span className='text-sm'>📍</span> Long-Distance Delivery ({restaurantPricing[0].info.distanceKm} km)
+                  <span className='text-sm'>🎓</span> Campus Delivery ({restaurantPricing[0].info.distanceKm} km)
                 </span>
-                <span className='bg-blue-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>₹7 / km</span>
+                <span className='bg-amber-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>Flat ₹12</span>
               </div>
-              {restaurantPricing[0].info.amountNeededForFlatRate > 0 && (
-                <p className='text-[11px] text-blue-700 font-semibold mt-1'>
-                  💡 Add food worth <strong>₹{restaurantPricing[0].info.amountNeededForFlatRate}</strong> more (Cart ₹499+) to get <strong>Flat ₹60 Delivery</strong>!
+              {restaurantPricing[0].info.amountNeededForFreeDelivery > 0 && (
+                <p className='text-[11px] text-amber-800 font-semibold mt-1'>
+                  💡 Add food worth <strong>₹{restaurantPricing[0].info.amountNeededForFreeDelivery}</strong> more (Cart ₹199+) to get <strong>FREE Delivery</strong>!
                 </p>
               )}
             </div>
@@ -995,6 +1010,19 @@ const FoodCheckoutPage = () => {
             <span className='text-gray-500'>Item total</span>
             <span className={`font-semibold ${isFlashEligible ? 'line-through text-gray-400' : 'text-gray-800'}`}>₹{subTotal}</span>
           </div>
+          {campusSurchargeTotal > 0 && (
+            <div className='flex justify-between text-sm bg-amber-50/70 px-2.5 py-2 rounded-xl border border-amber-200/60'>
+              <div>
+                <span className='text-amber-900 font-bold flex items-center gap-1.5'>
+                  <span>🏥</span> Campus Distance Surcharge
+                </span>
+                <p className='text-[10px] text-amber-700 font-medium'>
+                  Food handling surcharge for &gt;7 km delivery (Himalaya College)
+                </p>
+              </div>
+              <span className='font-black text-amber-900'>+₹{campusSurchargeTotal}</span>
+            </div>
+          )}
           {isFlashEligible && (
             <div className='flex justify-between text-sm bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200/60'>
               <span className='text-emerald-800 font-bold flex items-center gap-1'>
@@ -1026,11 +1054,9 @@ const FoodCheckoutPage = () => {
                         : `Sunday Flash ${restaurantPricing[0].info.distanceKm} km @ ₹9/km`)
                     : (restaurantPricing[0].info.distanceKm <= 3
                         ? '0–3 km local rate (₹12)'
-                        : restaurantPricing[0].info.distanceKm <= 6
-                        ? '3–6 km rate (₹29)'
-                        : restaurantPricing[0].info.longDistanceTier === 'FLAT_ABOVE_499'
-                        ? `Flat ₹60 for ₹499+ orders (${restaurantPricing[0].info.distanceKm} km)`
-                        : `${restaurantPricing[0].info.distanceKm} km @ ₹7/km`)}
+                        : restaurantPricing[0].info.distanceKm <= 7
+                        ? '3–7 km rate (₹29)'
+                        : `Campus Flat ₹12 (${restaurantPricing[0].info.distanceKm} km)`)}
                 </p>
               )}
             </div>

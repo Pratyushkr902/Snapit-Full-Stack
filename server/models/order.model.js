@@ -56,6 +56,7 @@ const orderSchema = new mongoose.Schema(
         // ── Delivery fee — ✅ REQUIRED for rider & seller earnings ──
         delivery_fee: { type: Number, default: 0 },
         rider_fee:    { type: Number, default: 0 },
+        campus_surcharge: { type: Number, default: 0 },
 
         // ── Delivery distance in km (store/resto to customer drop) ──
         delivery_distance_km: { type: Number, default: 0 },
