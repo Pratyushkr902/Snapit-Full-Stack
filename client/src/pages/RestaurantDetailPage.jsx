@@ -21,6 +21,7 @@ import toast from 'react-hot-toast'
 import { useRestaurantCart } from '../utils/foodCartStore'
 import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
 import { getEffectiveAddressCoords } from '../utils/serviceArea'
+import { useGlobalContext } from '../provider/GlobalProvider'
 
 // ── Fallbacks ─────────────────────────────────────────────────────────────────
 const FALLBACK_IMG = FALLBACK_IMAGE
@@ -154,6 +155,7 @@ function FoodItemCard({ item, qty, isLongDistance, onAdd, onIncrease, onDecrease
   const cartItem = {
     ...item,
     price: effectivePrice,
+    discountedPrice: 0,
     basePrice: baseEffectivePrice,
   }
 
@@ -226,6 +228,7 @@ function InlineVariantCard({ item, foodCart, isLongDistance, onAdd, onIncrease, 
     ...item,
     _id: cartKey,
     price,
+    discountedPrice: 0,
     basePrice: rawPrice,
     name: `${item.name} (${selectedVariant.label})`
   }
@@ -313,6 +316,7 @@ function VariantCard({ group, foodCart, isLongDistance, onAdd, onIncrease, onDec
   const cartItem = {
     ...selectedItem,
     price: effectivePrice,
+    discountedPrice: 0,
     basePrice: baseEffectivePrice,
   }
 
@@ -483,11 +487,29 @@ export default function RestaurantDetailPage() {
   const [userLocation, setUserLocation] = useState(null)
   const [conflictModal, setConflictModal] = useState(null)
 
+  // ── Address selection & global sync ──
+  const { fetchAddress } = useGlobalContext() || {}
+  useEffect(() => {
+    if (fetchAddress) fetchAddress()
+  }, [])
+
+  const [selectedAddressId, setSelectedAddressId] = useState(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('selected_address_id') : null
+  })
+  const [showAddressPicker, setShowAddressPicker] = useState(false)
+  const [overrideCampusLocation, setOverrideCampusLocation] = useState(false)
+
   // ── Read active/selected address to determine delivery coordinates ──
   const addressList = useSelector((state) => state.addresses?.addressList || [])
-  const selectedId = typeof window !== 'undefined' ? localStorage.getItem('selected_address_id') : null
-  const activeAddress = addressList.find((a) => a._id === selectedId) || addressList.find((a) => a.status) || addressList[0]
-  const effectiveAddressCoords = activeAddress ? getEffectiveAddressCoords(activeAddress) : null
+  const activeAddress = (selectedAddressId ? addressList.find((a) => a._id === selectedAddressId) : null)
+    || addressList.find((a) => a.status)
+    || addressList[0]
+    || null
+
+  const effectiveAddressCoords = overrideCampusLocation
+    ? { lat: 25.2639198, lng: 84.8545598, name: 'Himalaya Medical College' }
+    : (activeAddress ? getEffectiveAddressCoords(activeAddress) : null)
+
   const effectiveCoords = effectiveAddressCoords || userLocation
 
   const restoLat = restaurant?.location?.lat ?? restaurant?.location?.coordinates?.[1] ?? null
@@ -637,17 +659,53 @@ export default function RestaurantDetailPage() {
               )}
             </div>
 
-            {/* ── Distance + Address bar (Zomato-style) ── */}
-            <LocationBar restaurant={restaurant} distKm={distKm} isLongDistance={isLongDistance} />
+            {/* ── Distance + Address bar (Zomato-style) with interactive Change button ── */}
+            <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <svg className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Delivering to</p>
+                  <p className="text-xs font-bold text-gray-800 truncate">
+                    {overrideCampusLocation
+                      ? 'Himalaya Medical College Campus'
+                      : (activeAddress ? (activeAddress.floor_door ? `${activeAddress.floor_door}, ` : '') + (activeAddress.address_line || activeAddress.city) : 'Current Location')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {distKm !== null && (
+                  <span className="text-xs font-bold text-gray-700 bg-white border border-gray-200 px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+                    <span>{distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`}</span>
+                    {isLongDistance && (
+                      <span className="text-emerald-700 font-extrabold bg-emerald-50 px-1.5 py-0.2 rounded text-[10px]">
+                        Campus
+                      </span>
+                    )}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowAddressPicker(true)}
+                  className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full hover:bg-green-100 active:scale-95 transition-all shadow-2xs"
+                >
+                  Change
+                </button>
+              </div>
+            </div>
 
             {/* ── Campus Delivery Badge (if >7km) ── */}
             {isLongDistance && (
-              <div className="mx-4 mt-2 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-between">
+              <div className="mx-4 mt-2 px-3.5 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span>🎓</span>
-                  <span>Delivering to Campus: Flat ₹12 Delivery (FREE on ₹199+)</span>
+                  <span>Himalaya Campus Zone ({distKm?.toFixed(1)} km) • Flat ₹12 Delivery (FREE on ₹199+)</span>
                 </div>
-                <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">Fast Delivery</span>
+                <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">Campus Menu</span>
               </div>
             )}
           </div>
@@ -785,6 +843,141 @@ export default function RestaurantDetailPage() {
                 className="py-3 px-4 rounded-xl bg-red-600 font-bold text-white text-xs hover:bg-red-700 transition shadow-md shadow-red-200 active:scale-95"
               >
                 Discard & Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Address Picker Modal ── */}
+      {showAddressPicker && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-5 w-full max-w-md shadow-2xl border border-gray-100 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
+              <div>
+                <h3 className="text-base font-black text-gray-900">Select Delivery Location</h3>
+                <p className="text-xs text-gray-500">Menu prices and delivery fee adjust to your address</p>
+              </div>
+              <button
+                onClick={() => setShowAddressPicker(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-2 flex-1 pr-1">
+              {/* Quick Option: Himalaya Medical College Campus */}
+              <button
+                onClick={() => {
+                  const hmchAddr = addressList.find(a => /himalaya|hmch/i.test(`${a.address_line} ${a.city} ${a.floor_door}`))
+                  if (hmchAddr) {
+                    localStorage.setItem('selected_address_id', hmchAddr._id)
+                    setSelectedAddressId(hmchAddr._id)
+                    setOverrideCampusLocation(false)
+                  } else {
+                    setOverrideCampusLocation(true)
+                  }
+                  setShowAddressPicker(false)
+                  toast.success('🎓 Location set to Himalaya Medical College (>7 km)', { icon: '📍' })
+                }}
+                className="w-full text-left p-3.5 rounded-2xl border-2 border-emerald-500 bg-emerald-50/70 hover:bg-emerald-100/70 transition flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🎓</span>
+                  <div>
+                    <p className="text-xs font-black text-emerald-900">Himalaya Medical College & Hospital</p>
+                    <p className="text-[11px] text-emerald-700 font-medium">Campus Zone (~8.9 km) • Flat ₹12 Delivery</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
+                  Select
+                </span>
+              </button>
+
+              {/* Saved Addresses List */}
+              {addressList.map((addr) => {
+                const coords = getEffectiveAddressCoords(addr)
+                const km = (coords && restoLat && restoLng) ? getDistanceKm(coords.lat, coords.lng, restoLat, restoLng) : null
+                const isSelected = activeAddress?._id === addr._id && !overrideCampusLocation
+                return (
+                  <button
+                    key={addr._id}
+                    onClick={() => {
+                      localStorage.setItem('selected_address_id', addr._id)
+                      setSelectedAddressId(addr._id)
+                      setOverrideCampusLocation(false)
+                      setShowAddressPicker(false)
+                      toast.success(`📍 Delivery set to: ${addr.address_line || addr.city}`)
+                    }}
+                    className={`w-full text-left p-3 rounded-2xl border transition flex items-center justify-between ${
+                      isSelected ? 'border-green-600 bg-green-50/50' : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 pr-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-900 truncate">
+                          {addr.floor_door ? `${addr.floor_door}, ` : ''}{addr.address_line}
+                        </span>
+                        {addr.address_type && (
+                          <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.2 rounded">
+                            {addr.address_type}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 truncate mt-0.5">{addr.city}</p>
+                      {km !== null && (
+                        <p className="text-[10px] font-semibold text-gray-600 mt-1">
+                          {km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`} from restaurant
+                          {km > 7 ? ' • 🎓 Campus Zone' : ' • Local'}
+                        </p>
+                      )}
+                    </div>
+                    {isSelected ? (
+                      <span className="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">✓</span>
+                    ) : (
+                      <span className="text-xs text-gray-400 font-semibold">Use</span>
+                    )}
+                  </button>
+                )
+              })}
+
+              {/* GPS location option */}
+              {userLocation && (
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('selected_address_id')
+                    setSelectedAddressId(null)
+                    setOverrideCampusLocation(false)
+                    setShowAddressPicker(false)
+                    toast.success('📍 Switched to current GPS location')
+                  }}
+                  className="w-full text-left p-3 rounded-2xl border border-dashed border-gray-300 hover:bg-gray-50 transition flex items-center gap-3"
+                >
+                  <span className="text-xl">📍</span>
+                  <div>
+                    <p className="text-xs font-bold text-gray-800">Use Current GPS Location</p>
+                    <p className="text-[11px] text-gray-400">Determined automatically by device GPS</p>
+                  </div>
+                </button>
+              )}
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+              <button
+                onClick={() => {
+                  setShowAddressPicker(false)
+                  navigate('/address')
+                }}
+                className="text-xs font-bold text-green-700 hover:underline"
+              >
+                + Add New Address
+              </button>
+              <button
+                onClick={() => setShowAddressPicker(false)}
+                className="px-4 py-2 bg-gray-100 rounded-xl text-xs font-bold text-gray-700"
+              >
+                Close
               </button>
             </div>
           </div>

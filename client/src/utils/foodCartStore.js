@@ -235,7 +235,7 @@ function getSnapshot() {
 
 // ── Derived helpers ──────────────────────────────────────────────────────
 
-const priceOf = (item) => (item.discountedPrice > 0 ? item.discountedPrice : item.price)
+const priceOf = (item) => (item?.price != null ? Number(item.price) : (item?.discountedPrice > 0 ? Number(item.discountedPrice) : 0))
 
 function restaurantSubtotal(restaurant) {
   return Object.values(restaurant.items).reduce((s, e) => s + priceOf(e.item) * e.qty, 0)
