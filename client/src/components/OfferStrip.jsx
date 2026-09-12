@@ -6,7 +6,10 @@ const OfferStrip = () => {
   const navigate = useNavigate()
   if (loading || !config?.offerStripActive) return null
 
-  const text = config?.offerStripText || '🛵 100% FREE DELIVERY LIVE! • On ₹149+ (Paliganj) & ₹199+ (Himalaya College) ⚡'
+  let text = config?.offerStripText
+  if (!text || text.includes('399')) {
+    text = '🛵 100% FREE DELIVERY LIVE! • On ₹149+ (Paliganj) & ₹199+ (Himalaya College) ⚡'
+  }
 
   return (
     <div 
