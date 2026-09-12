@@ -186,7 +186,7 @@ const priceGroup = async (group, fields, user) => {
   }
 
   const { lat, lng } = deliveryLocation || {}
-  const subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
+  let subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 
   let distanceKm = 0
   if (lat && lng) {
@@ -292,7 +292,7 @@ const priceGroup = async (group, fields, user) => {
     }
   })
 
-  const subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
+  subTotalAmt = group.cartItems.reduce((s, it) => s + it.price * it.quantity, 0)
 
   return {
     ...group,
