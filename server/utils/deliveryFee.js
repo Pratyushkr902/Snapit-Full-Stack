@@ -72,13 +72,14 @@ export const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
   return 12
 }
 
-// 8:00 PM IST cutoff rule: After 8:00 PM (20:00 IST), delivery beyond 5 km is closed.
+// 10:30 PM IST cutoff rule: After 10:30 PM (22:30 IST), delivery beyond 5 km is closed.
 export const isAfterEveningCutoff = () => {
   const now = new Date()
   const istMs = now.getTime() + 5.5 * 3600000
   const istDate = new Date(istMs)
   const hours = istDate.getUTCHours()
-  return hours >= 20
+  const minutes = istDate.getUTCMinutes()
+  return hours > 22 || (hours === 22 && minutes >= 30)
 }
 
 // Returns the minimum cart subtotal required to place an order at this location.

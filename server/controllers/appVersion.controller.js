@@ -5,19 +5,19 @@ export const getAppVersionController = async (req, res) => {
       success: true,
       error: false,
       data: {
-        latestVersion: "2.6.49",
-        latestVersionCode: 89,
-        minRequiredVersionCode: 84,
-        forceUpdate: false,
+        latestVersion: "2.6.51",
+        latestVersionCode: 91,
+        minRequiredVersionCode: 90,
+        forceUpdate: true,
         remindIntervalHours: 1,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit-ashy.vercel.app/app-release.apk",
-        title: "Update Available 🚀",
-        message: "A new version of Snapit (v2.6.50) is ready with instant 5-second mobile login, Pali Dih & Akhtiyarpur speed fix, and zero network errors!",
+        title: "Critical Update Available 🚀",
+        message: "A new version of Snapit (v2.6.51) is ready with 100% Free Delivery, live Himalaya Medical College Campus ordering, and instant checkout fixes!",
         releaseNotes: [
+          "🛵 100% Free Delivery on ₹149+ (Paliganj) & ₹199+ (Himalaya College)",
+          "🎓 Live Himalaya Medical College location switcher with zero surcharge",
           "⚡ Instant 5-second mobile phone + PIN login & registration",
-          "📍 Enhanced support for Pali Dih & Akhtiyarpur with auto-address pinning",
-          "🌐 Ultra-resilient connection with zero network errors on mobile networks",
           "🚀 Faster order placement & instant checkout navigation"
         ]
       }

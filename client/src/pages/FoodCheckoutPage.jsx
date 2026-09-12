@@ -235,7 +235,7 @@ const FoodCheckoutPage = () => {
     for (const r of restaurantPricing) {
       if (r.info && !r.info.serviceable) {
         if (r.info.isEveningClosed) {
-          toast.error(`🌙 Delivery beyond 5 km is closed after 8:00 PM (${r.info.distanceKm} km from ${r.restaurantName}).`, { duration: 6000 })
+          toast.error(`🌙 Delivery beyond 5 km is closed after 10:30 PM (${r.info.distanceKm} km from ${r.restaurantName}).`, { duration: 6000 })
         } else {
           toast.error(`Your address is ${r.info.distanceKm} km away and outside the 16 km delivery range for ${r.restaurantName}.`, { duration: 5000 })
         }
@@ -1099,7 +1099,7 @@ const FoodCheckoutPage = () => {
         {unserviceableResto && (
           <div className='bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-xl text-xs font-bold leading-relaxed mb-2.5 text-center'>
             {unserviceableResto.info?.isEveningClosed
-              ? `🌙 Delivery beyond 5 km is closed after 8:00 PM for rider safety (${unserviceableResto.info?.distanceKm} km away).`
+              ? `🌙 Delivery beyond 5 km is closed after 10:30 PM for rider safety (${unserviceableResto.info?.distanceKm} km away).`
               : `📍 Your address is ${unserviceableResto.info?.distanceKm} km away and outside the 16 km delivery range.`}
           </div>
         )}

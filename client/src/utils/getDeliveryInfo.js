@@ -54,13 +54,14 @@ export const getDeliveryETA = (distanceKm) => {
   return null
 }
 
-// 8:00 PM IST cutoff rule: After 8:00 PM (20:00 IST), delivery beyond 5 km is closed.
+// 10:30 PM IST cutoff rule: After 10:30 PM (22:30 IST), delivery beyond 5 km is closed.
 export const isAfterEveningCutoff = () => {
   const now = new Date()
   const istMs = now.getTime() + 5.5 * 3600000
   const istDate = new Date(istMs)
   const hours = istDate.getUTCHours()
-  return hours >= 20
+  const minutes = istDate.getUTCMinutes()
+  return hours > 22 || (hours === 22 && minutes >= 30)
 }
 // Generalized version — computes delivery info from ANY origin point
 // (grocery store OR a restaurant's own location).
@@ -73,7 +74,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
     ? 0 
     : dist <= 3 ? 12 : dist <= 7 ? 29 : numCartTotal >= 199 ? 0 : 12
 
-  // After 8:00 PM, deliveries beyond 5km are closed for rider night safety
+  // After 10:30 PM, deliveries beyond 5km are closed for rider night safety
   if (dist > 5 && isEvening) {
     return {
       serviceable: false,
@@ -81,7 +82,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
       charge: daytimeCharge,
       originalCharge: daytimeCharge,
       eta: null,
-      label: 'Closed (>5km after 8:00 PM)',
+      label: 'Closed (>5km after 10:30 PM)',
       isEveningClosed: true,
       reason: 'EVENING_DISTANCE_LIMIT',
       isLongDistance: dist > 7,
