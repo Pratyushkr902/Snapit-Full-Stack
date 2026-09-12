@@ -56,28 +56,30 @@ export const getDistanceFromOrigin = (originLat, originLng, customerLat, custome
 export const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
   const amount = Number(subTotalAmt) || 0
 
-  // 1. Free delivery up to 5 km on orders of ₹149 and above!
+  // 1. Long distance (> 7 km, e.g. Himalaya Medical College Campus):
+  // Special Flat ₹12 delivery fee, and FREE delivery on orders ₹199+!
+  if (distanceKm > 7 && distanceKm <= 16) {
+    if (amount >= 199) return 0
+    return 12
+  }
+
+  // 2. Free delivery up to 5 km on orders of ₹149 and above!
   if (distanceKm <= 5 && amount >= 149) return 0
 
-  // 2. Standard distance charges for orders below ₹149 (or beyond 5 km)
+  // 3. Standard distance charges for orders below ₹149 (or within 7 km)
   if (distanceKm <= 3) return 12
   if (distanceKm <= 7) return 29
-  if (distanceKm <= 16) {
-    // Orders ₹499 & above beyond 7km get subsidized Flat ₹60
-    if (amount >= 499) return 60
-    return Math.round(distanceKm * 7)
-  }
-  return null
+  return 12
 }
 
-// 7:30 PM IST cutoff rule: After 7:30 PM (19:30 IST), delivery beyond 5 km is closed.
+// 9:30 PM IST cutoff rule: After 9:30 PM (21:30 IST), delivery beyond 5 km is closed.
 export const isAfterEveningCutoff = () => {
   const now = new Date()
   const istMs = now.getTime() + 5.5 * 3600000
   const istDate = new Date(istMs)
   const hours = istDate.getUTCHours()
   const minutes = istDate.getUTCMinutes()
-  return hours > 19 || (hours === 19 && minutes >= 30)
+  return hours > 21 || (hours === 21 && minutes >= 30)
 }
 
 // Returns the minimum cart subtotal required to place an order at this location.

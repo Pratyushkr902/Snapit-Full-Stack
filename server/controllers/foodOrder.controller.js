@@ -198,7 +198,7 @@ const priceGroup = async (group, fields, user) => {
       throw err
     }
     if (dist > 5 && isAfterEveningCutoff()) {
-      const err = new Error(`Deliveries to locations beyond 5 km are closed after 7:30 PM for rider safety (${dist.toFixed(1)} km from ${restaurant.name}). Please select an address within 5 km or order tomorrow morning!`)
+      const err = new Error(`Deliveries to locations beyond 5 km are closed after 9:30 PM for rider safety (${dist.toFixed(1)} km from ${restaurant.name}). Please select an address within 5 km or order tomorrow morning!`)
       err.statusCode = 400
       throw err
     }

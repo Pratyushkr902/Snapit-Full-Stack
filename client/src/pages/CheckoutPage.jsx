@@ -89,7 +89,7 @@ const CheckoutPage = () => {
     if (!selectedAddress) return true
     if (deliveryInfo && !deliveryInfo.serviceable) {
       if (deliveryInfo.isEveningClosed) {
-        toast.error(`🌙 Delivery beyond 5 km is closed after 7:30 PM (${deliveryInfo.distanceKm} km away). Deliveries resume tomorrow at 8:00 AM!`, { duration: 6000 })
+        toast.error(`🌙 Delivery beyond 5 km is closed after 9:30 PM (${deliveryInfo.distanceKm} km away). Deliveries resume tomorrow at 8:30 AM!`, { duration: 6000 })
       } else {
         toast.error(`Your address is ${deliveryInfo.distanceKm} km away and outside our 16 km delivery range.`, { duration: 5000 })
       }
@@ -550,8 +550,8 @@ const CheckoutPage = () => {
             {deliveryInfo && !deliveryInfo.serviceable && (
               <div className='bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-xs font-bold leading-relaxed shadow-sm'>
                 {deliveryInfo.isEveningClosed
-                  ? `🌙 Delivery beyond 5 km is closed after 7:30 PM for rider safety (${deliveryInfo.distanceKm} km away). Please select an address within 5 km or order tomorrow morning!`
-                  : `📍 Your address is ${deliveryInfo.distanceKm} km away and outside our 14 km serviceable delivery area.`}
+                  ? `🌙 Delivery beyond 5 km is closed after 9:30 PM for rider safety (${deliveryInfo.distanceKm} km away). Please select an address within 5 km or order tomorrow morning!`
+                  : `📍 Your address is ${deliveryInfo.distanceKm} km away and outside our 16 km serviceable delivery area.`}
               </div>
             )}
             <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}

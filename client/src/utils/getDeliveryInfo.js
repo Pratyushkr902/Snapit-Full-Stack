@@ -35,15 +35,16 @@ export const getDistanceFromStore = (customerLat, customerLng) =>
 // >14 km   → not serviceable
 export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
   const numTotal = Number(cartTotal) || 0
+  // Campus special (> 7 km, e.g. Himalaya Medical College): Flat ₹12 (FREE on ₹199+)
+  if (distanceKm > 7 && distanceKm <= 16) {
+    if (numTotal >= 199) return 0
+    return 12
+  }
   // Free delivery up to 5 km on orders ₹149+
   if (distanceKm <= 5 && numTotal >= 149) return 0
   if (distanceKm <= 3) return 12
   if (distanceKm <= 7) return 29
-  if (distanceKm <= 16) {
-    if (numTotal >= 499) return 60
-    return Math.round(distanceKm * 7)
-  }
-  return null
+  return 12
 }
 
 export const getDeliveryETA = (distanceKm) => {
@@ -53,14 +54,14 @@ export const getDeliveryETA = (distanceKm) => {
   return null
 }
 
-// 7:30 PM IST cutoff rule: After 7:30 PM (19:30 IST), delivery beyond 5 km is closed.
+// 9:30 PM IST cutoff rule: After 9:30 PM (21:30 IST), delivery beyond 5 km is closed.
 export const isAfterEveningCutoff = () => {
   const now = new Date()
   const istMs = now.getTime() + 5.5 * 3600000
   const istDate = new Date(istMs)
   const hours = istDate.getUTCHours()
   const minutes = istDate.getUTCMinutes()
-  return hours > 19 || (hours === 19 && minutes >= 30)
+  return hours > 21 || (hours === 21 && minutes >= 30)
 }
 // Generalized version — computes delivery info from ANY origin point
 // (grocery store OR a restaurant's own location).
@@ -71,9 +72,9 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   const numCartTotal = Number(cartTotal) || 0
   const daytimeCharge = (dist <= 5 && numCartTotal >= 149) 
     ? 0 
-    : dist <= 3 ? 12 : dist <= 7 ? 29 : numCartTotal >= 499 ? 60 : Math.round(dist * 7)
+    : dist <= 3 ? 12 : dist <= 7 ? 29 : numCartTotal >= 199 ? 0 : 12
 
-  // After 7:30 PM, deliveries beyond 5km are closed for rider night safety
+  // After 9:30 PM, deliveries beyond 5km are closed for rider night safety
   if (dist > 5 && isEvening) {
     return {
       serviceable: false,
@@ -81,7 +82,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
       charge: daytimeCharge,
       originalCharge: daytimeCharge,
       eta: null,
-      label: 'Closed (>5km after 7:30 PM)',
+      label: 'Closed (>5km after 9:30 PM)',
       isEveningClosed: true,
       reason: 'EVENING_DISTANCE_LIMIT',
       isLongDistance: dist > 7,
@@ -104,7 +105,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
 
   const isLongDistance = dist > 7
   let charge = 12
-  let longDistanceTier = null // 'PER_KM' | 'FLAT_ABOVE_499'
+  let longDistanceTier = null // 'FLAT_12' | 'FREE_CAMPUS'
   let amountNeededForFlatRate = 0
   let amountNeededForFreeDelivery = 0
 
@@ -118,21 +119,22 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
   } else if (dist <= 7) {
     charge = 29
   } else {
-    // 7.0 – 16.0 km
-    if (numCartTotal >= 499) {
-      charge = 60
-      longDistanceTier = 'FLAT_ABOVE_499'
+    // 7.0 – 16.0 km (Campus / Himalaya Medical College / Long distance)
+    // Flat ₹12, FREE on orders ₹199+
+    if (numCartTotal >= 199) {
+      charge = 0
+      longDistanceTier = 'FREE_CAMPUS'
     } else {
-      charge = Math.round(dist * 7)
-      longDistanceTier = 'PER_KM'
-      amountNeededForFlatRate = Math.max(0, 499 - numCartTotal)
+      charge = 12
+      longDistanceTier = 'FLAT_12'
+      amountNeededForFreeDelivery = Math.max(0, 199 - numCartTotal)
     }
   }
 
   let finalCharge = charge
   if (isSnapitPlus) {
     if (dist > 7) {
-      if (numCartTotal >= 399) finalCharge = 0
+      if (numCartTotal >= 149) finalCharge = 0
     } else {
       if (numCartTotal >= 149) finalCharge = 0
     }
@@ -150,7 +152,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
     isLongDistance,
     longDistanceTier,
     ratePerKm: 7,
-    flatAbove499Fee: 60,
+    flatAbove499Fee: 12,
     amountNeededForFlatRate,
     amountNeededForFreeDelivery,
     minOrder: 0,

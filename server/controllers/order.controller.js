@@ -105,7 +105,7 @@ const checkDeliveryServiceability = (lat, lng) => {
     return `Sorry, we don't deliver beyond ${MAX_DELIVERY_RADIUS_KM}km from our store yet.`
   }
   if (dist > 5 && isAfterEveningCutoff()) {
-    return `Deliveries to locations beyond 5 km are closed after 7:30 PM for rider safety (${dist.toFixed(1)} km away). Please select an address within 5 km or order tomorrow morning!`
+    return `Deliveries to locations beyond 5 km are closed after 9:30 PM for rider safety (${dist.toFixed(1)} km away). Please select an address within 5 km or order tomorrow morning!`
   }
   return null
 }
