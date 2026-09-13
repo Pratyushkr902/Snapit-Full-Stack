@@ -5,8 +5,9 @@ export const getAppVersionController = async (req, res) => {
       success: true,
       error: false,
       data: {
-        latestVersion: "2.6.54",
-        latestVersionCode: 94,
+        enabled: false, // Set to true once Google Play approves and publishes v2.6.54
+        latestVersion: "2.6.50",
+        latestVersionCode: 90,
         minRequiredVersionCode: 90,
         forceUpdate: false,
         remindIntervalHours: 1,

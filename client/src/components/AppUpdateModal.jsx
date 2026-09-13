@@ -62,6 +62,10 @@ const AppUpdateModal = () => {
       }
 
       if (data) {
+        if (data.enabled === false) {
+          setShowModal(false)
+          return
+        }
         const latestCode = Number(data.latestVersionCode || 0)
         const minCode = Number(data.minRequiredVersionCode || 0)
 
