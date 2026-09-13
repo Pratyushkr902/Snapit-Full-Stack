@@ -840,6 +840,7 @@ export async function saveFcmTokenController(request, response) {
 
             await UserModel.findByIdAndUpdate(userId, {
                 fcmToken: cleanToken,
+                $set: { fcmToken: cleanToken },
                 $addToSet: { fcmTokens: cleanToken }
             }).catch(() => {})
         }
