@@ -40,3 +40,6 @@ client/dist/
 .DS_Store
 *.aab
 *.apk
+k6_master_audit_suite.js
+*.k6.env
+k6_tokens.env
