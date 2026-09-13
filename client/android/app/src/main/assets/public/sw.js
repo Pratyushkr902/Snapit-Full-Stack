@@ -1,5 +1,5 @@
-const CACHE_NAME = 'snapit-v8'
-const IMAGE_CACHE = 'snapit-images-v4'
+const CACHE_NAME = 'snapit-v9'
+const IMAGE_CACHE = 'snapit-images-v5'
 
 self.addEventListener('install', e => {
   self.skipWaiting()
@@ -37,7 +37,9 @@ self.addEventListener('fetch', e => {
         if (cached) return cached
         try {
           const response = await fetch(e.request)
-          if (response && response.ok) cache.put(e.request, response.clone())
+          if (response && (response.ok || response.type === 'opaque')) {
+            cache.put(e.request, response.clone())
+          }
           return response
         } catch (err) {
           return cached || new Response('', { status: 408, statusText: 'Request timed out' })

@@ -25,19 +25,26 @@ const normalizeImageField = (image) => {
     return image
 }
 
+// Module-level in-memory cache so products render instantly without loading skeletons
+const categoryProductsCache = new Map()
+
 const CategoryWiseProductDisplay = ({ id, name }) => {
-    const [data, setData] = useState([])
-    const [loading, setLoading] = useState(false)
-    const [visible, setVisible] = useState(false)
+    const cachedData = categoryProductsCache.get(id)
+    const [data, setData] = useState(() => cachedData || [])
+    const [loading, setLoading] = useState(() => !cachedData)
+    const [visible, setVisible] = useState(() => Boolean(cachedData))
     const containerRef = useRef()
     const sectionRef = useRef()
     const params = useParams()
+    const navigate = useNavigate()
 
     const currentProductId = params?.product?.split("-")?.slice(-1)[0]
     const subCategoryData = useSelector(state => state.product.allSubCategory) || []
     const loadingCardNumber = new Array(6).fill(null)
 
     useEffect(() => {
+        if (visible) return
+
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
@@ -45,23 +52,24 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     observer.disconnect()
                 }
             },
-            { rootMargin: '150px', threshold: 0 }
+            // Pre-fetch 1000px (2-3 screens) ahead of user scroll for instant rendering
+            { rootMargin: '1000px', threshold: 0 }
         )
 
         if (sectionRef.current) observer.observe(sectionRef.current)
 
-        const timer = setTimeout(() => setVisible(true), 8000)
+        const timer = setTimeout(() => setVisible(true), 5000)
 
         return () => {
             observer.disconnect()
             clearTimeout(timer)
         }
-    }, [])
+    }, [visible])
 
     const fetchCategoryWiseProduct = async () => {
         if (!id) return
         try {
-            setLoading(true)
+            if (!data.length) setLoading(true)
             const response = await Axios({
                 ...SummaryApi.getProductByCategory,
                 data: { id }
@@ -77,6 +85,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     image: normalizeImageField(product.image),
                 }))
                 setData(sanitized)
+                categoryProductsCache.set(id, sanitized)
             }
         } catch (error) {
             AxiosToastError(error)
@@ -103,32 +112,28 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
         )
 
         if (subcategory) {
-            // Two-segment URL: /:category/:subCategory  ← matches the router route
-            const subSlug = `${valideURLConvert(subcategory.name || "all")}-${subcategory._id}`
-            return `/${categorySlug}/${subSlug}`
+            navigate(`/${categorySlug}/${valideURLConvert(subcategory?.name || "")}-${subcategory?._id}`)
+        } else {
+            navigate(`/${categorySlug}`)
         }
-
-        // ✅ FIX: no subcategory found → use the index route /:category
-        // The router now has { index: true, element: <ProductListPage/> } for this case
-        return `/${categorySlug}`
     }
-
-    const redirectURL = handleRedirectProductListpage()
 
     if (visible && !loading && data.length === 0) {
         return null;
     }
 
     return (
-        <div className='my-4 lg:my-8' ref={sectionRef}>
-            <div className='container mx-auto px-4 flex items-center justify-between gap-4 mb-3'>
-                <h3 className='font-black text-lg md:text-xl text-slate-800 dark:text-white'>{name}</h3>
-                <Link
-                    to={redirectURL}
-                    className='text-green-600 dark:text-emerald-400 font-bold hover:text-green-700 dark:hover:text-emerald-300 bg-green-50 dark:bg-emerald-950/40 hover:bg-green-100 dark:hover:bg-emerald-900/60 border border-transparent dark:border-emerald-800/40 px-4 py-1.5 rounded-full text-sm transition-all'
+        <div className='py-2 lg:py-4 relative' ref={sectionRef}>
+            <div className='container mx-auto px-4 flex items-center justify-between gap-4 mb-2'>
+                <h3 className='font-black text-base md:text-xl text-slate-800 dark:text-white capitalize tracking-tight'>
+                    {name}
+                </h3>
+                <button
+                    onClick={handleRedirectProductListpage}
+                    className='text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 text-xs md:text-sm font-bold flex items-center gap-1 transition-transform active:scale-95'
                 >
-                    See All →
-                </Link>
+                    See All
+                </button>
             </div>
 
             <div className='relative flex items-center'>
@@ -163,7 +168,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                                     className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]'
                                     style={{  }}
                                 >
-                                    <CardProduct data={p} />
+                                    <CardProduct data={p} priority={index < 3} />
                                 </div>
                             )
                         }

@@ -157,16 +157,24 @@ export const getProductByCategory = async (request, response) => {
         if (!id) return response.status(400).json({ message: "provide category id", error: true, success: false });
         if (!mongoose.Types.ObjectId.isValid(id)) return response.status(400).json({ message: "Invalid Category ID", error: true, success: false });
 
+        const cacheKey = `cat_${id}`;
+        const cached = productCache.get(cacheKey);
+        if (cached) {
+            return response.json(cached);
+        }
+
         const product = await ProductModel.find({
             category: { $in: [id, new mongoose.Types.ObjectId(id)] },
             stock: { $gt: 0 },
             publish: true
         }).select(LIST_FIELDS).lean();
 
-        return response.json({
+        const result = {
             message: "category product list", error: false, success: true,
             data: product.map(formatProductOutput)
-        });
+        };
+        productCache.set(cacheKey, result, 120);
+        return response.json(result);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
     }
@@ -179,6 +187,12 @@ export const getProductsByCategories = async (request, response) => {
             return response.status(400).json({ message: "Provide an array of categoryIds", error: true, success: false });
         const invalidId = categoryIds.find(id => !mongoose.Types.ObjectId.isValid(id));
         if (invalidId) return response.status(400).json({ message: `Invalid category ID: ${invalidId}`, error: true, success: false });
+
+        const cacheKey = `batch_cats_${categoryIds.slice().sort().join('_')}_lim${perCategoryLimit}`;
+        const cached = productCache.get(cacheKey);
+        if (cached) {
+            return response.json(cached);
+        }
 
         const products = await ProductModel.find({
             category: { $in: categoryIds },
@@ -201,7 +215,9 @@ export const getProductsByCategories = async (request, response) => {
             }
         }
 
-        return response.json({ message: "Products grouped by category", data: grouped, error: false, success: true });
+        const result = { message: "Products grouped by category", data: grouped, error: false, success: true };
+        productCache.set(cacheKey, result, 120);
+        return response.json(result);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
     }
@@ -214,6 +230,12 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         if (!mongoose.Types.ObjectId.isValid(categoryId)) return response.status(400).json({ message: "Invalid Category ID format", error: true, success: false });
         if (!page)  page  = 1;
         if (!limit) limit = 100;
+
+        const cacheKey = `cat_sub_${categoryId}_${subCategoryId || 'all'}_p${page}_l${limit}`;
+        const cached = productCache.get(cacheKey);
+        if (cached) {
+            return response.json(cached);
+        }
 
         const skip = (page - 1) * limit;
         const hasValidSubCategory = subCategoryId && subCategoryId !== "all" && mongoose.Types.ObjectId.isValid(subCategoryId);
@@ -244,11 +266,13 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
             dataCount = results[1];
         }
 
-        return response.json({
+        const result = {
             message: "Product list", success: true, error: false,
             data: data.map(formatProductOutput),
             totalCount: dataCount, page, limit
-        });
+        };
+        productCache.set(cacheKey, result, 120);
+        return response.json(result);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
     }

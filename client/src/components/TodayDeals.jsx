@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
+import { FALLBACK_IMAGE, getPrimaryImage } from "../utils/optimizeImageUrl"
 
 // Matches: "Pack of 2", "pack of 2", "Pack of 3" etc
 const COMBO_KEYWORDS = ["pack of 2", "pack of 3", "pack of 4", "pack of 5", "combo", "bundle", "duo", "trio", "multipack", "value pack", "set of 2", "set of 3"]
@@ -52,14 +53,14 @@ function DealCard({ product, isComboCard }) {
     >
       <div className="w-full h-28 bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center p-2">
         <img
-          src={product.imageThumbnail?.[0] || product.image?.[0]}
+          src={getPrimaryImage(product.image, product.imageThumbnail, 200)}
           alt={product.name}
           width={100}
           height={100}
           className="w-full h-full object-contain"
           loading="lazy"
           decoding="async"
-          onError={e => { e.target.onerror = null; e.target.src = "/placeholder.png" }}
+          onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE }}
         />
       </div>
 

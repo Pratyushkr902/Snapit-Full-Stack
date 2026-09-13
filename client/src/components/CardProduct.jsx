@@ -26,7 +26,7 @@ const getProductLabel = (data) => {
     return null
 }
 
-const CardProduct = ({ data }) => {
+const CardProduct = ({ data, priority = false }) => {
     // FIX 3: no useState for imgSrc or imgLoaded.
     // Deriving imgSrc at render time is fine — it's a pure function of props.
     // imgLoaded state was causing a setState → re-render on EVERY image load
@@ -64,16 +64,19 @@ const CardProduct = ({ data }) => {
                 it shows through until the img paints, with zero JS.
                 explicit width + height on <img> tells the browser the space
                 to reserve before the image loads, preventing layout shift. */}
-            <div className='w-full aspect-square rounded-lg overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-[#1A1A1A] relative'>
+            <div 
+                className='w-full aspect-square rounded-lg overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-[#1A1A1A] relative'
+                style={{ transform: 'translateZ(0)' }}
+            >
                 <img
                     src={imgSrc}
                     alt={data?.name || "Product"}
                     width={300}
                     height={300}
                     onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
-                    loading="lazy"
+                    loading={priority ? "eager" : "lazy"}
                     decoding="async"
-                    fetchPriority="auto"
+                    fetchPriority={priority ? "high" : "auto"}
                     className='w-full h-full object-contain'
                 />
 
