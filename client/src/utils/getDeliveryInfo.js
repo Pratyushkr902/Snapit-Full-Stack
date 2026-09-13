@@ -10,13 +10,16 @@ export const ROAD_FACTOR = 1.25
 
 // Haversine formula with road circuity — returns real road distance in km
 export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
+  const nLat1 = Number(lat1), nLng1 = Number(lng1)
+  const nLat2 = Number(lat2), nLng2 = Number(lng2)
+  if (isNaN(nLat1) || isNaN(nLng1) || isNaN(nLat2) || isNaN(nLng2)) return 0
   const R    = 6371
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const dLat = ((nLat2 - nLat1) * Math.PI) / 180
+  const dLng = ((nLng2 - nLng1) * Math.PI) / 180
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
+    Math.cos((nLat1 * Math.PI) / 180) *
+      Math.cos((nLat2 * Math.PI) / 180) *
       Math.sin(dLng / 2) *
       Math.sin(dLng / 2)
   const aerialKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
@@ -33,11 +36,13 @@ export const getDistanceFromStore = (customerLat, customerLng) =>
 //   - below ₹499  → ₹7/km (Math.round(distance * 7))
 //   - ₹499 & above → Flat ₹60
 // >14 km   → not serviceable
-export const getDeliveryCharge = (distanceKm, cartTotal = 0) => {
+export const getDeliveryCharge = (distanceKm, cartTotal = 0, isGrocery = false) => {
   const numTotal = Number(cartTotal) || 0
-  // Campus special (> 7 km, e.g. Himalaya Medical College): Flat ₹12 (FREE on ₹199+)
+  // Campus special (> 7 km, e.g. Himalaya Medical College):
+  // Grocery: Always Flat ₹12 (no free delivery waiver)
+  // Food: Flat ₹12 (FREE on ₹199+)
   if (distanceKm > 7 && distanceKm <= 16) {
-    if (numTotal >= 199) return 0
+    if (!isGrocery && numTotal >= 199) return 0
     return 12
   }
   // Free delivery up to 5 km on orders ₹149+

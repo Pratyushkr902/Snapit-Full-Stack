@@ -466,7 +466,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
         if (actualSubTotal < minOrderRequired) {
             return response.status(400).json({
-                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
+                message: `Minimum order of ₹${minOrderRequired} required${minOrderRequired > 49 ? ' for campus delivery' : ''}. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
                 error: true,
                 success: false
             })
@@ -669,7 +669,7 @@ export async function WalletPaymentOrderController(request, response) {
         const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
         if (actualSubTotal < minOrderRequired) {
             return response.status(400).json({
-                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
+                message: `Minimum order of ₹${minOrderRequired} required${minOrderRequired > 49 ? ' for campus delivery' : ''}. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
                 error: true,
                 success: false
             })
@@ -1045,7 +1045,7 @@ export async function verifyPaymentController(request, response) {
         const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
         if (actualSubTotal < minOrderRequired) {
             return response.status(400).json({
-                message: `Minimum order of ₹${minOrderRequired} required. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
+                message: `Minimum order of ₹${minOrderRequired} required${minOrderRequired > 49 ? ' for campus delivery' : ''}. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
                 error: true,
                 success: false
             })

@@ -181,7 +181,7 @@ Axios.interceptors.response.use(
         }
 
         const requestUrl = originalRequest?.url
-            ? originalRequest.url.replace(API_URL, '').split('?')[0]
+            ? originalRequest.url.replace(FALLBACK_API_URL, '').replace(API_URL, '').split('?')[0]
             : ''
         const isPublicRoute = publicRoutes.some(route => requestUrl.includes(route))
 

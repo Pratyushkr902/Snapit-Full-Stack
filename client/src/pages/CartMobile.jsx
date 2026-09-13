@@ -169,7 +169,14 @@ const CartMobilePage = () => {
                                         </p>
                                     </div>
                                 )}
-                                {deliveryFee > 0 && !isEstimate && !isSnapitPlus && !deliveryInfo?.amountNeededForFreeDelivery && (
+                                {deliveryInfo?.isLongDistance && (
+                                    <div className='bg-blue-50 dark:bg-blue-950/40 p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60'>
+                                        <p className='text-[11px] text-blue-800 dark:text-blue-300 font-bold text-center'>
+                                            🎓 Campus Delivery ({deliveryInfo.distanceKm} km): Flat ₹12 (Min. order ₹199)
+                                        </p>
+                                    </div>
+                                )}
+                                {deliveryFee > 0 && !isEstimate && !isSnapitPlus && !deliveryInfo?.amountNeededForFreeDelivery && !deliveryInfo?.isLongDistance && (
                                     <div className='bg-purple-50 dark:bg-purple-950/40 p-2 rounded-xl border border-purple-100 dark:border-purple-800/60'>
                                         <p className='text-[10px] text-purple-600 dark:text-purple-300 text-center font-bold uppercase tracking-tight'>
                                             Join Snapit Plus for FREE DELIVERY on every order

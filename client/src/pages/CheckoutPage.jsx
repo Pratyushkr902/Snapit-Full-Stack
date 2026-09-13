@@ -471,13 +471,11 @@ const CheckoutPage = () => {
                   <span className='text-sm'>🎓</span> Campus Delivery ({deliveryInfo.distanceKm} km)
                 </span>
                 <span className='bg-blue-600 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black'>
-                  {deliveryFee === 0 ? 'FREE' : 'Flat ₹12'}
+                  Flat ₹12
                 </span>
               </div>
               <p className='text-[11px] text-blue-700 font-semibold mt-1'>
-                {deliveryFee === 0
-                  ? '🎉 100% FREE Delivery applied on campus orders ₹199+!'
-                  : 'Min. order ₹199 for campus delivery. Flat ₹12 delivery fee (FREE on orders ₹199+)!'}
+                Min. order ₹199 for campus delivery. Flat ₹12 delivery charge applied.
               </p>
             </div>
           )}
@@ -499,8 +497,6 @@ const CheckoutPage = () => {
                       ? '3–5 km rate (₹29)'
                       : deliveryInfo.distanceKm <= 7
                       ? '5–7 km rate (₹29)'
-                      : deliveryFee === 0
-                      ? `Campus FREE Delivery (${deliveryInfo.distanceKm} km)`
                       : `Campus Flat Rate ₹12 (${deliveryInfo.distanceKm} km)`}
                   </p>
                 )}

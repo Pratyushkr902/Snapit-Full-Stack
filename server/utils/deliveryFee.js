@@ -26,13 +26,16 @@ export const ROAD_FACTOR = 1.25
 
 // Haversine formula with road circuity — returns real road distance in km
 export const getDistanceKm = (lat1, lng1, lat2, lng2) => {
+  const nLat1 = Number(lat1), nLng1 = Number(lng1)
+  const nLat2 = Number(lat2), nLng2 = Number(lng2)
+  if (isNaN(nLat1) || isNaN(nLng1) || isNaN(nLat2) || isNaN(nLng2)) return 0
   const R = 6371
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const dLat = ((nLat2 - nLat1) * Math.PI) / 180
+  const dLng = ((nLng2 - nLng1) * Math.PI) / 180
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
+    Math.cos((nLat1 * Math.PI) / 180) *
+      Math.cos((nLat2 * Math.PI) / 180) *
       Math.sin(dLng / 2) *
       Math.sin(dLng / 2)
   const aerialKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
@@ -86,8 +89,11 @@ export const isAfterEveningCutoff = () => {
 // Within 7 km: ₹49 minimum order.
 // Beyond 7 km (Campus / Himalaya Medical College): ₹199 minimum order.
 export const getMinOrderAmount = (lat, lng, isSnapitPlus = false) => {
-  if (!lat || !lng) return 49
-  const dist = getDistanceFromStore(lat, lng)
+  if (lat == null || lng == null || lat === '' || lng === '') return 49
+  const nLat = Number(lat)
+  const nLng = Number(lng)
+  if (isNaN(nLat) || isNaN(nLng)) return 49
+  const dist = getDistanceFromStore(nLat, nLng)
   if (dist > 7) {
     return 199
   }
@@ -97,7 +103,10 @@ export const getMinOrderAmount = (lat, lng, isSnapitPlus = false) => {
 // Returns true if the coordinates fall outside the serviceable delivery radius.
 // Deliveries >5km are also unserviceable after 7:30 PM IST.
 export const isOutOfDeliveryRange = (lat, lng) => {
-  const dist = getDistanceFromStore(lat, lng)
+  if (lat == null || lng == null || lat === '' || lng === '') return false
+  const nLat = Number(lat), nLng = Number(lng)
+  if (isNaN(nLat) || isNaN(nLng)) return false
+  const dist = getDistanceFromStore(nLat, nLng)
   if (dist > MAX_DELIVERY_RADIUS_KM) return true
   if (dist > 5 && isAfterEveningCutoff()) return true
   return false
@@ -105,7 +114,10 @@ export const isOutOfDeliveryRange = (lat, lng) => {
 
 // Returns the delivery fee (number) for an order.
 export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
-  const dist = getDistanceFromStore(lat, lng)
+  if (lat == null || lng == null || lat === '' || lng === '') return 12
+  const nLat = Number(lat), nLng = Number(lng)
+  if (isNaN(nLat) || isNaN(nLng)) return 12
+  const dist = getDistanceFromStore(nLat, nLng)
   const isPlus = Boolean(
     user?.isSnapitPlusMember && user?.snapitPlusExpiresAt &&
     new Date() < new Date(user.snapitPlusExpiresAt)
