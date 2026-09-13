@@ -57,9 +57,8 @@ export const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
   const amount = Number(subTotalAmt) || 0
 
   // 1. Long distance (> 7 km, e.g. Himalaya Medical College Campus):
-  // Special Flat ₹12 delivery fee, and FREE delivery on orders ₹199+!
+  // Always Flat ₹12 delivery fee (no free delivery beyond 7 km):
   if (distanceKm > 7 && distanceKm <= 16) {
-    if (amount >= 199) return 0
     return 12
   }
 
@@ -111,12 +110,11 @@ export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
   )
 
   if (isPlus) {
-    if (dist > 7 && Number(subTotalAmt) >= 399) return 0
     if (dist <= 7 && Number(subTotalAmt) >= 149) return 0
   }
 
   const charge = getDeliveryChargeByDistance(dist, subTotalAmt)
-  return charge === null ? 60 : charge
+  return charge === null ? 12 : charge
 }
 
 // Restaurant/food orders — same tier logic, measured from restaurant's location.
@@ -128,7 +126,6 @@ export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, cus
   )
 
   if (isPlus) {
-    if (dist > 7 && Number(subTotalAmt) >= 399) return 0
     if (dist <= 7 && Number(subTotalAmt) >= 149) return 0
   }
 

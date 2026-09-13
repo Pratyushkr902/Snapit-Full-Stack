@@ -119,23 +119,16 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
     charge = 29
   } else {
     // 7.0 – 16.0 km (Campus / Himalaya Medical College / Long distance)
-    // Flat ₹12, FREE on orders ₹199+
-    if (numCartTotal >= 199) {
-      charge = 0
-      longDistanceTier = 'FREE_CAMPUS'
-    } else {
-      charge = 12
-      longDistanceTier = 'FLAT_12'
-      amountNeededForFreeDelivery = Math.max(0, 199 - numCartTotal)
-    }
+    // Always Flat ₹12 delivery fee (no free delivery beyond 7 km)
+    charge = 12
+    longDistanceTier = 'FLAT_12'
+    amountNeededForFreeDelivery = 0
   }
 
   let finalCharge = charge
   if (isSnapitPlus) {
-    if (dist > 7) {
-      if (numCartTotal >= 149) finalCharge = 0
-    } else {
-      if (numCartTotal >= 149) finalCharge = 0
+    if (dist <= 7 && numCartTotal >= 149) {
+      finalCharge = 0
     }
   }
 

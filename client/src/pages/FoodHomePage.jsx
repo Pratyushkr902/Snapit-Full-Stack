@@ -218,7 +218,7 @@ const FoodHomePage = () => {
                 <span className='bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase'>Special</span>
               </div>
               <p className='text-[11px] text-white/95 font-medium leading-tight mt-0.5'>
-                FREE on ₹149+ in Paliganj & ₹199+ at Himalaya Medical College! (Flat ₹12 otherwise)
+                FREE on ₹149+ in Paliganj! (Flat ₹12 at Himalaya Medical College Campus)
               </p>
             </div>
           </div>
