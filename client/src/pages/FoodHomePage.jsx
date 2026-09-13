@@ -32,19 +32,31 @@ const FoodHomePage = () => {
   const navigate = useNavigate()
   const [restaurants, setRestaurants] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [search, setSearch] = useState('')
   const [activeFilters, setActiveFilters] = useState([])
   const [userLocation, setUserLocation] = useState(null) // { lat, lng }
   const [locationLoading, setLocationLoading] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await Axios({ method: 'GET', url: '/api/restaurant/all' })
-        if (res.data?.success) setRestaurants(res.data.data)
-      } catch(e) { console.error(e) }
-      finally { setLoading(false) }
+  const load = async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const res = await Axios({ method: 'GET', url: '/api/restaurant/all' })
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setRestaurants(res.data.data)
+      } else {
+        setRestaurants([])
+      }
+    } catch(e) {
+      console.error('Failed to load restaurants:', e)
+      setLoadError('Unable to load restaurants. Please check your connection and tap retry.')
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     load()
     // Auto-fetch location silently on mount
     if (navigator.geolocation) {
@@ -209,17 +221,28 @@ const FoodHomePage = () => {
             </div>
           ))
         ) : filtered.length === 0 ? (
-          <div className='flex flex-col items-center justify-center mt-20 gap-3 text-center'>
+          <div className='flex flex-col items-center justify-center mt-16 gap-3 text-center px-4'>
             <span className='text-5xl'>🍽️</span>
-            <p className='font-bold text-gray-600'>No restaurants found</p>
+            <p className='font-bold text-gray-800 text-base'>
+              {loadError ? 'Could not load restaurants' : 'No restaurants found'}
+            </p>
+            <p className='text-xs text-gray-400 max-w-xs'>
+              {loadError || (activeFilters.length > 0 ? 'Try clearing your active filters to see all available restaurants.' : 'Please check your internet connection and refresh.')}
+            </p>
             {activeFilters.length > 0 && (
               <button
                 onClick={() => setActiveFilters([])}
-                className='text-sm text-orange-500 font-semibold underline'
+                className='mt-1 px-4 py-2 bg-orange-50 text-orange-600 text-xs font-bold rounded-xl border border-orange-200 active:scale-95'
               >
                 Clear filters
               </button>
             )}
+            <button
+              onClick={load}
+              className='mt-2 flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-md active:scale-95 hover:bg-emerald-700 transition-all'
+            >
+              <span>🔄</span> Refresh Restaurants
+            </button>
           </div>
         ) : filtered.map(r => (
           <div

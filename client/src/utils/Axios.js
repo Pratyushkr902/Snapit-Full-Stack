@@ -51,6 +51,7 @@ const publicRoutes = [
     '/api/otp/verify',
     '/api/app-version',
     '/api/public-tracking',
+    '/api/restaurant/all',
 ]
 
 // ─── REQUEST INTERCEPTOR ─────────────────────────────────────────────────────
@@ -105,7 +106,8 @@ const isSafeToAutoRetry = (config) => {
         '/get-product-by-category-and-subcategory',
         '/get-variants',
         '/check-serviceability',
-        '/app-version'
+        '/app-version',
+        '/api/restaurant/all',
     ]
     return safeReadEndpoints.some(ep => url.includes(ep))
 }
