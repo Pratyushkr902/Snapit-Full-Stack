@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import AxiosToastError from '../utils/AxiosToastError'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
