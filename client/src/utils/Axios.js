@@ -80,6 +80,8 @@ Axios.interceptors.request.use(
     (error) => Promise.reject(error)
 )
 
+const FALLBACK_API_URL = "https://snapit.00pratyush20.workers.dev"
+
 // ─── RETRY CONFIGURATION ─────────────────────────────────────────────────────
 const MAX_AUTO_RETRIES = 2
 const BASE_RETRY_DELAY_MS = 600
@@ -108,6 +110,8 @@ const isSafeToAutoRetry = (config) => {
         '/check-serviceability',
         '/app-version',
         '/api/restaurant/all',
+        '/api/otp/send',
+        '/api/user/login',
     ]
     return safeReadEndpoints.some(ep => url.includes(ep))
 }
@@ -119,11 +123,20 @@ Axios.interceptors.response.use(
         const { config, response } = error
         const originalRequest = config
 
-        // Auto-retry transient network glitches on idempotent requests
+        // Auto-retry transient network glitches on idempotent requests with Cloudflare Worker failover
         if (originalRequest && isRetryableNetworkError(error) && isSafeToAutoRetry(originalRequest)) {
             originalRequest._retryCount = originalRequest._retryCount || 0
             if (originalRequest._retryCount < MAX_AUTO_RETRIES) {
                 originalRequest._retryCount += 1
+
+                // If DNS/cellular connection to Railway failed, failover transparently to Cloudflare Worker
+                if (!response) {
+                    originalRequest.baseURL = FALLBACK_API_URL
+                    if (originalRequest.url && originalRequest.url.startsWith(API_URL)) {
+                        originalRequest.url = originalRequest.url.replace(API_URL, FALLBACK_API_URL)
+                    }
+                }
+
                 const delay = BASE_RETRY_DELAY_MS * Math.pow(2, originalRequest._retryCount - 1)
                 await new Promise(res => setTimeout(res, delay))
                 return Axios(originalRequest)
