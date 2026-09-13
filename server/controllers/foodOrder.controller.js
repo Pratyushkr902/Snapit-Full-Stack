@@ -140,7 +140,7 @@ const extractBody = (body) => {
     items,
     addressId,
     deliveryLocation,
-    tip:                  Math.max(0, Number(tip || 0)),
+    tip:                  Math.max(0, Math.min(1000, Number(tip || 0))),
     offerKey:             offerKey || null,
     couponCode:           couponCode || null,
     couponDiscount:       Math.max(0, Number(couponDiscount || 0)),
@@ -490,23 +490,33 @@ const notifyFoodOrderPlaced = (order, user) => {
   sendFoodOrderInvoiceEmail(order, user).catch(() => {})
 }
 
-// ── Deduct wallet helper (reused across routes) ─────────────────────────────
+// ── Deduct wallet helper (reused across routes — ATOMIC to prevent race conditions) ──
 const deductWallet = async (userId, amount, restaurantName) => {
-  if (!amount || amount <= 0) return
-  await UserModel.findByIdAndUpdate(userId, {
-    $inc:  { walletBalance: -amount },
-    $push: {
-      walletTransactions: {
-        $each: [{
-          type:        'debit',
-          amount,
-          description: `Food order at ${restaurantName || 'Restaurant'}`,
-          date:        new Date(),
-        }],
-        $position: 0,
+  if (!amount || amount <= 0) return true
+  const updatedUser = await UserModel.findOneAndUpdate(
+    { _id: userId, walletBalance: { $gte: amount } },
+    {
+      $inc:  { walletBalance: -amount },
+      $push: {
+        walletTransactions: {
+          $each: [{
+            type:        'debit',
+            amount,
+            description: `Food order at ${restaurantName || 'Restaurant'}`,
+            date:        new Date(),
+          }],
+          $position: 0,
+        },
       },
     },
-  })
+    { new: true }
+  )
+  if (!updatedUser) {
+    const err = new Error('Insufficient wallet balance or concurrent transaction in progress.')
+    err.statusCode = 400
+    throw err
+  }
+  return true
 }
 
 // ── Shared setup used by every route: validate, group by restaurant, run the
@@ -609,6 +619,12 @@ export async function foodOrderCOD(req, res) {
       flashClaimed = true
     }
 
+    let walletDeducted = false
+    if (fields.walletAmountUsed > 0) {
+      await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
+      walletDeducted = true
+    }
+
     const assignedRider = await assignAvailableRider()
 
     const orders = []
@@ -638,6 +654,22 @@ export async function foodOrderCOD(req, res) {
         userMobile: user?.mobile,
         mobiles: fields?.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
       })
+    }
+    if (walletDeducted && fields?.walletAmountUsed > 0) {
+      await UserModel.findByIdAndUpdate(req.userId, {
+        $inc: { walletBalance: fields.walletAmountUsed },
+        $push: {
+          walletTransactions: {
+            $each: [{
+              type: 'credit',
+              amount: fields.walletAmountUsed,
+              description: 'Refund for failed food order',
+              date: new Date(),
+            }],
+            $position: 0,
+          },
+        },
+      }).catch(() => {})
     }
     console.error('[foodOrderCOD] ❌', err.message)
     return res.status(err.statusCode || 500).json({ success: false, message: err.message })

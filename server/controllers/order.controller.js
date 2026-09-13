@@ -722,18 +722,30 @@ export async function WalletPaymentOrderController(request, response) {
 
         const assignedRider = await assignAvailableRider()
 
-        await UserModel.findByIdAndUpdate(userId, {
-            $inc:  { walletBalance: -exactRequiredTotal },
-            $push: {
-                walletTransactions: {
-                    type:        'DEBIT',
-                    amount:      exactRequiredTotal,
-                    description: `Grocery Order #${transactionId.slice(-8).toUpperCase()}`,
-                    date:        new Date()
-                }
+        const updatedUser = await UserModel.findOneAndUpdate(
+            { _id: userId, walletBalance: { $gte: exactRequiredTotal } },
+            {
+                $inc:  { walletBalance: -exactRequiredTotal },
+                $push: {
+                    walletTransactions: {
+                        type:        'DEBIT',
+                        amount:      exactRequiredTotal,
+                        description: `Grocery Order #${transactionId.slice(-8).toUpperCase()}`,
+                        date:        new Date()
+                    }
+                },
+                shopping_cart: [],
             },
-            shopping_cart: [],
-        })
+            { new: true }
+        )
+
+        if (!updatedUser) {
+            return response.status(400).json({
+                message: 'Insufficient wallet balance or concurrent transaction in progress.',
+                error: true,
+                success: false
+            })
+        }
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
