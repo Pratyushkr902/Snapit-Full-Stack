@@ -5,8 +5,8 @@ export const getAppVersionController = async (req, res) => {
       success: true,
       error: false,
       data: {
-        latestVersion: "2.6.51",
-        latestVersionCode: 91,
+        latestVersion: "2.6.50",
+        latestVersionCode: 90,
         minRequiredVersionCode: 90,
         forceUpdate: true,
         remindIntervalHours: 1,
