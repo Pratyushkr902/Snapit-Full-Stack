@@ -581,6 +581,7 @@ export async function foodOrderCOD(req, res) {
   let flashGroup = null
   let flashClaimed = false
   let fields, user, addressDoc, priced, grandTotal, groupOrderId
+  let walletDeducted = false
 
   try {
     // COD never touches wallet balance — strip any client-supplied
@@ -619,7 +620,6 @@ export async function foodOrderCOD(req, res) {
       flashClaimed = true
     }
 
-    let walletDeducted = false
     if (fields.walletAmountUsed > 0) {
       await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
       walletDeducted = true
