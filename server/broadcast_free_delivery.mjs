@@ -20,24 +20,22 @@ async function runBroadcast() {
     UserModel.find({}).select('_id name mobile fcmToken fcmTokens').lean(),
     DeviceTokenModel.find({
       token: { $exists: true, $ne: null, $ne: '' },
-      lastActiveAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+      lastActiveAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
     }).sort({ lastActiveAt: -1 }).select('token userId platform lastActiveAt').lean()
   ])
 
   console.log(`📊 Found ${users.length} total users in database and ${deviceDocs.length} recent active device tokens.`)
 
-  // 2. Build unique token map
+  // 2. Build unique token map (strictly 1 token per user per platform)
   const tokenMap = new Map()
-  const seenUsers = new Set()
+  const userPlatformSeen = new Set()
 
-  // Prioritize newest active device token per user per platform
   deviceDocs.forEach(d => {
     const cleanToken = d.token?.trim()
     if (!cleanToken || cleanToken.length <= 10) return
-    if (d.userId) {
-      seenUsers.add(String(d.userId))
-    }
-    if (!tokenMap.has(cleanToken)) {
+    const key = d.userId ? `${d.userId}__${d.platform || 'android'}` : cleanToken
+    if (!userPlatformSeen.has(key) && !tokenMap.has(cleanToken)) {
+      userPlatformSeen.add(key)
       tokenMap.set(cleanToken, { userId: d.userId, platform: d.platform })
     }
   })
@@ -45,19 +43,12 @@ async function runBroadcast() {
   // Add FCM tokens from UserModel for users not yet covered
   users.forEach(u => {
     const uid = String(u._id)
-    let candidateTokens = []
-    if (u.fcmToken && typeof u.fcmToken === 'string' && u.fcmToken.trim().length > 10) {
-      candidateTokens.push(u.fcmToken.trim())
+    if (userPlatformSeen.has(`${uid}__android`)) return
+    const bestToken = u.fcmToken?.trim() || (Array.isArray(u.fcmTokens) ? u.fcmTokens[0]?.trim() : null)
+    if (bestToken && bestToken.length > 10 && !tokenMap.has(bestToken)) {
+      tokenMap.set(bestToken, { userId: uid, platform: 'android' })
+      userPlatformSeen.add(`${uid}__android`)
     }
-    if (Array.isArray(u.fcmTokens)) {
-      candidateTokens.push(...u.fcmTokens.filter(t => typeof t === 'string' && t.trim().length > 10))
-    }
-
-    candidateTokens.forEach(t => {
-      if (!tokenMap.has(t)) {
-        tokenMap.set(t, { userId: uid, platform: 'android' })
-      }
-    })
   })
 
   const allTokens = Array.from(tokenMap.keys())
