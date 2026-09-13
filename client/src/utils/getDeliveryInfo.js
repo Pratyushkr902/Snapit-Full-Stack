@@ -64,14 +64,14 @@ export const isAfterEveningCutoff = () => {
 }
 // Generalized version — computes delivery info from ANY origin point
 // (grocery store OR a restaurant's own location).
-export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, customerLng, cartTotal = 0, isSnapitPlus = false) => {
+export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, customerLng, cartTotal = 0, isSnapitPlus = false, isGrocery = false) => {
   const dist = getDistanceKm(originLat, originLng, customerLat, customerLng)
   const isEvening = isAfterEveningCutoff()
 
   const numCartTotal = Number(cartTotal) || 0
   const daytimeCharge = (dist <= 5 && numCartTotal >= 149) 
     ? 0 
-    : dist <= 3 ? 12 : dist <= 7 ? 29 : numCartTotal >= 199 ? 0 : 12
+    : dist <= 3 ? 12 : dist <= 7 ? 29 : (!isGrocery && numCartTotal >= 199) ? 0 : 12
 
   // After 8:00 PM, deliveries beyond 5km are closed for rider night safety
   if (dist > 5 && isEvening) {
@@ -119,15 +119,29 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
     charge = 29
   } else {
     // 7.0 – 16.0 km (Campus / Himalaya Medical College / Long distance)
-    // Always Flat ₹12 delivery fee (no free delivery beyond 7 km)
-    charge = 12
-    longDistanceTier = 'FLAT_12'
-    amountNeededForFreeDelivery = 0
+    if (isGrocery) {
+      // ONLY in grocery it applies delivery charge (Always Flat ₹12, no free delivery beyond 7 km)
+      charge = 12
+      longDistanceTier = 'FLAT_12'
+      amountNeededForFreeDelivery = 0
+    } else {
+      // Food orders: FREE on orders ₹199+
+      if (numCartTotal >= 199) {
+        charge = 0
+        longDistanceTier = 'FREE_CAMPUS'
+      } else {
+        charge = 12
+        longDistanceTier = 'FLAT_12'
+        amountNeededForFreeDelivery = Math.max(0, 199 - numCartTotal)
+      }
+    }
   }
 
   let finalCharge = charge
   if (isSnapitPlus) {
     if (dist <= 7 && numCartTotal >= 149) {
+      finalCharge = 0
+    } else if (!isGrocery && dist > 7 && numCartTotal >= 149) {
       finalCharge = 0
     }
   }
@@ -147,11 +161,11 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
     flatAbove499Fee: 12,
     amountNeededForFlatRate,
     amountNeededForFreeDelivery,
-    minOrder: isLongDistance ? 199 : 49,
+    minOrder: isGrocery ? (isLongDistance ? 199 : 49) : 0,
   }
 }
 
 // Grocery entry point — always measures from the fixed Snapit store location.
 export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapitPlus = false) =>
-  getDeliveryInfoFromOrigin(STORE_LAT, STORE_LNG, customerLat, customerLng, cartTotal, isSnapitPlus)
+  getDeliveryInfoFromOrigin(STORE_LAT, STORE_LNG, customerLat, customerLng, cartTotal, isSnapitPlus, true)
 

@@ -976,17 +976,33 @@ const FoodCheckoutPage = () => {
 
         {/* Long Distance Delivery Tier Explanation Banner for Food */}
         {restaurantPricing[0]?.info?.serviceable && restaurantPricing[0]?.info?.isLongDistance && (
-          <div className='mb-3.5 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl'>
-            <div className='flex items-center justify-between text-xs font-black text-blue-900'>
-              <span className='flex items-center gap-1.5'>
-                <span className='text-sm'>🎓</span> Campus Delivery ({restaurantPricing[0].info.distanceKm} km)
-              </span>
-              <span className='bg-blue-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>Flat ₹12</span>
+          deliveryFee === 0 ? (
+            <div className='mb-3.5 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl'>
+              <div className='flex items-center justify-between text-xs font-black text-emerald-900'>
+                <span className='flex items-center gap-1.5'>
+                  <span className='text-sm'>🎓</span> Campus Special ({restaurantPricing[0].info.distanceKm} km)
+                </span>
+                <span className='bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>FREE Delivery</span>
+              </div>
+              <p className='text-[11px] text-emerald-700 font-semibold mt-1'>
+                Enjoy <strong>100% FREE Delivery</strong> on your order above ₹199 to Himalaya Medical College!
+              </p>
             </div>
-            <p className='text-[11px] text-blue-700 font-semibold mt-1'>
-              Campus delivery fee: Flat ₹12 to Himalaya Medical College.
-            </p>
-          </div>
+          ) : (
+            <div className='mb-3.5 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl'>
+              <div className='flex items-center justify-between text-xs font-black text-amber-900'>
+                <span className='flex items-center gap-1.5'>
+                  <span className='text-sm'>🎓</span> Campus Delivery ({restaurantPricing[0].info.distanceKm} km)
+                </span>
+                <span className='bg-amber-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black'>Flat ₹12</span>
+              </div>
+              {restaurantPricing[0].info.amountNeededForFreeDelivery > 0 && (
+                <p className='text-[11px] text-amber-800 font-semibold mt-1'>
+                  💡 Add food worth <strong>₹{restaurantPricing[0].info.amountNeededForFreeDelivery}</strong> more (Cart ₹199+) to get <strong>FREE Delivery</strong>!
+                </p>
+              )}
+            </div>
+          )
         )}
 
         <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2'>Bill details</p>

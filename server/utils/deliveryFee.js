@@ -53,12 +53,14 @@ export const getDistanceFromOrigin = (originLat, originLng, customerLat, custome
 //   - below ₹499  → ₹7/km (Math.round(distance * 7))
 //   - ₹499 & above → Flat ₹60
 // >16 km   → not serviceable
-export const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0) => {
+export const getDeliveryChargeByDistance = (distanceKm, subTotalAmt = 0, isGrocery = false) => {
   const amount = Number(subTotalAmt) || 0
 
   // 1. Long distance (> 7 km, e.g. Himalaya Medical College Campus):
-  // Always Flat ₹12 delivery fee (no free delivery beyond 7 km):
+  // Grocery: Always Flat ₹12 delivery fee (NO free delivery waiver)
+  // Food: FREE delivery on orders ₹199+ (food has distance markup)
   if (distanceKm > 7 && distanceKm <= 16) {
+    if (!isGrocery && amount >= 199) return 0
     return 12
   }
 
@@ -113,7 +115,7 @@ export const calcDeliveryFee = (subTotalAmt, lat, lng, user) => {
     if (dist <= 7 && Number(subTotalAmt) >= 149) return 0
   }
 
-  const charge = getDeliveryChargeByDistance(dist, subTotalAmt)
+  const charge = getDeliveryChargeByDistance(dist, subTotalAmt, true)
   return charge === null ? 12 : charge
 }
 
@@ -126,11 +128,12 @@ export const calcDeliveryFeeFromOrigin = (originLat, originLng, customerLat, cus
   )
 
   if (isPlus) {
+    if (dist > 7 && Number(subTotalAmt) >= 149) return 0
     if (dist <= 7 && Number(subTotalAmt) >= 149) return 0
   }
 
-  const charge = getDeliveryChargeByDistance(dist, subTotalAmt)
-  return charge === null ? 60 : charge
+  const charge = getDeliveryChargeByDistance(dist, subTotalAmt, false)
+  return charge === null ? 12 : charge
 }
 
 // Restaurant/food orders — minimum order amount.
