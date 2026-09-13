@@ -59,13 +59,13 @@ const CheckoutPage = () => {
     if (!couponCode.trim()) return toast.error('Please enter a coupon code!')
     const upper = couponCode.trim().toUpperCase()
     if (upper !== 'FIRSTUSER') return toast.error("Invalid code. Try 'FIRSTUSER' for your first order!")
-    if (totalPrice + deliveryFee < 149) return toast.error('Minimum order ₹149 required.')
+    if (totalPrice < 149) return toast.error('Minimum order of ₹149 required.')
     try {
       setIsVerifyingCoupon(true)
       const loadingToast = toast.loading('Checking eligibility...')
       const response = await Axios({
         ...SummaryApi.applyFirstTimeCoupon,
-        data: { couponCode: upper, totalAmt: totalPrice + deliveryFee }
+        data: { couponCode: upper, totalAmt: totalPrice }
       })
       toast.dismiss(loadingToast)
       if (response.data.success) {
@@ -421,7 +421,7 @@ const CheckoutPage = () => {
           <div className='mx-4 mt-4 mb-5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl'>
             <p className='text-xs font-black uppercase text-slate-500 tracking-wider mb-1'>Promo Code</p>
             <p className='text-[10px] text-slate-400 mb-2'>
-              First order? Use <span className='font-black text-slate-600'>FIRSTUSER</span> for an instant surprise discount!
+              First order? Use <span className='font-black text-slate-600'>FIRSTUSER</span> on orders ₹149+ for an instant surprise discount!
             </p>
             <div className='flex flex-col sm:flex-row gap-2'>
               <input type='text' value={couponCode} onChange={e => setCouponCode(e.target.value)}
