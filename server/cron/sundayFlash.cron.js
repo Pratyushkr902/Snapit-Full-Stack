@@ -13,6 +13,10 @@ const runSundayFlashTrigger = async (hour, minute) => {
   console.log(`[SundayFlashCron] 🔔 Auto-triggering Sunday Flash Offer at ${hour}:${String(minute).padStart(2, '0')} IST...`);
   try {
     const offerDoc = await SundayFlashOfferModel.findOne().sort({ updatedAt: -1 });
+    if (offerDoc?.isDeactivated) {
+      console.log(`[SundayFlashCron] 🛑 Sunday Flash Offer is DEACTIVATED. Skipping trigger.`);
+      return;
+    }
     const durationMinutes = offerDoc?.durationMinutes || 5;
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);

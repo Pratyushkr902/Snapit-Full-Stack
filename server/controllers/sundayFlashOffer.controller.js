@@ -43,6 +43,7 @@ export const getSundayFlashStatus = async (req, res) => {
 
     const now = new Date();
     const isLive = Boolean(
+      !offer.isDeactivated &&
       offer.isActive &&
       offer.startTime &&
       offer.endTime &&
@@ -69,6 +70,7 @@ export const getSundayFlashStatus = async (req, res) => {
       data: {
         isLive,
         isActive: isLive,
+        isDeactivated: Boolean(offer.isDeactivated),
         remainingSeconds,
         startTime: offer.startTime,
         endTime: offer.endTime,
@@ -101,6 +103,13 @@ export const triggerSundayFlashOffer = async (req, res) => {
     let offer = await SundayFlashOfferModel.findOne().sort({ updatedAt: -1 });
     if (!offer) {
       offer = new SundayFlashOfferModel();
+    }
+
+    if (offer.isDeactivated) {
+      return res.status(400).json({
+        success: false,
+        message: "Sunday Flash Offer is currently deactivated. Please activate it first in settings.",
+      });
     }
 
     const durationMinutes = Number(req.body?.durationMinutes) || offer.durationMinutes || 5;
@@ -205,6 +214,7 @@ export const validateSundayFlashOrder = async ({ userId, userMobile, mobiles, su
 
   if (
     !offer ||
+    offer.isDeactivated ||
     !offer.isActive ||
     !offer.startTime ||
     !offer.endTime ||
@@ -213,7 +223,9 @@ export const validateSundayFlashOrder = async ({ userId, userMobile, mobiles, su
   ) {
     return {
       valid: false,
-      reason: "Sunday Flash Offer is not currently active or the 5-minute window has expired.",
+      reason: offer?.isDeactivated
+        ? "Sunday Flash Offer is currently deactivated."
+        : "Sunday Flash Offer is not currently active or the 5-minute window has expired.",
     };
   }
 
@@ -283,6 +295,7 @@ export const claimSundayFlashAtomic = async ({ offerId, userId, userMobile, mobi
 
     const query = {
       _id: offerId,
+      isDeactivated: { $ne: true },
       isActive: true,
       startTime: { $lte: now },
       endTime: { $gte: now },
@@ -391,6 +404,7 @@ export const updateSundayFlashSchedule = async (req, res) => {
     offer.scheduledMinuteIST = minute;
     if (durationMinutes) offer.durationMinutes = Number(durationMinutes);
     if (maxFoodValue) offer.maxFoodValue = Number(maxFoodValue);
+    if (req.body.isDeactivated !== undefined) offer.isDeactivated = Boolean(req.body.isDeactivated);
 
     await offer.save();
 

@@ -46,7 +46,7 @@ const SundayFlashBanner = ({ onStatusChange }) => {
     return () => clearInterval(ticker);
   }, [secondsLeft]);
 
-  if (!flashData?.isLive || secondsLeft <= 0) {
+  if (!flashData?.isLive || secondsLeft <= 0 || flashData?.isDeactivated) {
     return null;
   }
 

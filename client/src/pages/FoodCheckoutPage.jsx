@@ -154,7 +154,7 @@ const FoodCheckoutPage = () => {
   }, [flashSecondsLeft])
 
   const isFlashActive = Boolean(
-    flashOffer?.isLive && flashSecondsLeft > 0 && !flashOffer?.alreadyClaimed
+    flashOffer?.isLive && flashSecondsLeft > 0 && !flashOffer?.alreadyClaimed && !flashOffer?.isDeactivated
   )
 
   // ── Calculations ────────────────────────────────────────────────────────────

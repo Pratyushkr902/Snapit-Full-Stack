@@ -14,6 +14,10 @@ const sundayFlashOfferSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isDeactivated: {
+      type: Boolean,
+      default: true,
+    },
     // When the current 5-minute flash window started
     startTime: {
       type: Date,

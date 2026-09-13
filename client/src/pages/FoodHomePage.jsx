@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
-import SundayFlashBanner from '../components/SundayFlashBanner'
 
 // ── Haversine distance (km) ───────────────────────────────────────────────────
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -170,8 +169,7 @@ const FoodHomePage = () => {
         </div>
       )}
 
-      {/* ── Sunday Flash Offer Live 5-Min Countdown Banner (renders only when live) ── */}
-      <SundayFlashBanner />
+
 
       {/* ── Attractive Free Delivery Live Announcement Banner ── */}
       <div className='px-4 pt-2 pb-1'>
