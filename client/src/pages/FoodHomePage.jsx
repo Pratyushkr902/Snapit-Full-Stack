@@ -28,29 +28,51 @@ const FILTERS = [
   { id: 'rating', label: '⭐ Rating 4.0+',       test: (r) => (r.rating || 0) >= 4.0 },
 ]
 
+const RESTAURANTS_CACHE_KEY = 'snapit_cached_restaurants_v1'
+
 const FoodHomePage = () => {
   const navigate = useNavigate()
-  const [restaurants, setRestaurants] = useState([])
-  const [loading, setLoading] = useState(true)
+  // SWR: Initialize immediately from persistent cache so user NEVER sees an empty screen
+  const [restaurants, setRestaurants] = useState(() => {
+    try {
+      const cached = localStorage.getItem(RESTAURANTS_CACHE_KEY)
+      return cached ? JSON.parse(cached) : []
+    } catch {
+      return []
+    }
+  })
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !localStorage.getItem(RESTAURANTS_CACHE_KEY)
+    } catch {
+      return true
+    }
+  })
   const [loadError, setLoadError] = useState(null)
   const [search, setSearch] = useState('')
   const [activeFilters, setActiveFilters] = useState([])
   const [userLocation, setUserLocation] = useState(null) // { lat, lng }
   const [locationLoading, setLocationLoading] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (isManual = false) => {
+    if (isManual) setLoading(true)
     setLoadError(null)
     try {
       const res = await Axios({ method: 'GET', url: '/api/restaurant/all' })
-      if (res.data?.success && Array.isArray(res.data.data)) {
+      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
         setRestaurants(res.data.data)
-      } else {
+        try {
+          localStorage.setItem(RESTAURANTS_CACHE_KEY, JSON.stringify(res.data.data))
+        } catch {}
+      } else if (isManual && (!res.data?.data || res.data.data.length === 0)) {
         setRestaurants([])
       }
     } catch(e) {
       console.error('Failed to load restaurants:', e)
-      setLoadError('Unable to load restaurants. Please check your connection and tap retry.')
+      // If we don't already have cached restaurants, flag the error
+      if (restaurants.length === 0) {
+        setLoadError('Unable to connect. Please check your connection and tap retry.')
+      }
     } finally {
       setLoading(false)
     }
@@ -238,7 +260,7 @@ const FoodHomePage = () => {
               </button>
             )}
             <button
-              onClick={load}
+              onClick={() => load(true)}
               className='mt-2 flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-md active:scale-95 hover:bg-emerald-700 transition-all'
             >
               <span>🔄</span> Refresh Restaurants
