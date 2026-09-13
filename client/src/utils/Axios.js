@@ -57,8 +57,16 @@ const publicRoutes = [
 // ─── REQUEST INTERCEPTOR ─────────────────────────────────────────────────────
 Axios.interceptors.request.use(
     async (config) => {
+        const activeHost = getActiveBaseURL()
+        if (config.baseURL !== activeHost) {
+            config.baseURL = activeHost
+        }
+        if (config.url && config.url.startsWith(API_URL) && activeHost !== API_URL) {
+            config.url = config.url.replace(API_URL, activeHost)
+        }
+
         const requestUrl = config?.url
-            ? config.url.replace(API_URL, '').split('?')[0]
+            ? config.url.replace(activeHost, '').replace(API_URL, '').split('?')[0]
             : ''
         const isPublic = publicRoutes.some(route => requestUrl.includes(route))
 
@@ -82,21 +90,40 @@ Axios.interceptors.request.use(
 
 const FALLBACK_API_URL = "https://snapit.00pratyush20.workers.dev"
 
+// Dynamic API host manager with session persistence for instant 0ms requests
+export const getActiveBaseURL = () => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+        const saved = sessionStorage.getItem('snapit_api_host')
+        if (saved) return saved
+    }
+    return API_URL
+}
+
+export const setActiveBaseURL = (url) => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+        try { sessionStorage.setItem('snapit_api_host', url) } catch (_) {}
+    }
+    Axios.defaults.baseURL = url
+}
+
 // ─── RETRY CONFIGURATION ─────────────────────────────────────────────────────
 const MAX_AUTO_RETRIES = 2
-const BASE_RETRY_DELAY_MS = 600
+const BASE_RETRY_DELAY_MS = 400
 
 const isRetryableNetworkError = (error) => {
     if (axios.isCancel(error) || error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
         return false
     }
-    if (!error.response) return true
+    if (!error.response) return true // Network error, DNS lookup failure, or timeout
     const status = error.response.status
     return status === 502 || status === 503 || status === 504 || status === 408
 }
 
-const isSafeToAutoRetry = (config) => {
+const isSafeToAutoRetry = (config, isPureNetworkFail) => {
     if (!config) return false
+    // If the request never reached any server (pure network / DNS drop), failover is 100% safe for all methods
+    if (isPureNetworkFail) return true
+
     const method = (config.method || 'get').toLowerCase()
     if (method === 'get' || method === 'head' || method === 'options') return true
     const url = config.url || ''
@@ -122,15 +149,17 @@ Axios.interceptors.response.use(
     async (error) => {
         const { config, response } = error
         const originalRequest = config
+        const isPureNetworkFail = !response
 
-        // Auto-retry transient network glitches on idempotent requests with Cloudflare Worker failover
-        if (originalRequest && isRetryableNetworkError(error) && isSafeToAutoRetry(originalRequest)) {
+        // Auto-retry transient network glitches with Cloudflare Worker failover
+        if (originalRequest && isRetryableNetworkError(error) && isSafeToAutoRetry(originalRequest, isPureNetworkFail)) {
             originalRequest._retryCount = originalRequest._retryCount || 0
             if (originalRequest._retryCount < MAX_AUTO_RETRIES) {
                 originalRequest._retryCount += 1
 
                 // If DNS/cellular connection to Railway failed, failover transparently to Cloudflare Worker
-                if (!response) {
+                if (isPureNetworkFail) {
+                    setActiveBaseURL(FALLBACK_API_URL)
                     originalRequest.baseURL = FALLBACK_API_URL
                     if (originalRequest.url && originalRequest.url.startsWith(API_URL)) {
                         originalRequest.url = originalRequest.url.replace(API_URL, FALLBACK_API_URL)
