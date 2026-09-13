@@ -19,8 +19,7 @@ async function runBroadcast() {
   const [users, deviceDocs] = await Promise.all([
     UserModel.find({}).select('_id name mobile fcmToken fcmTokens').lean(),
     DeviceTokenModel.find({
-      token: { $exists: true, $ne: null, $ne: '' },
-      lastActiveAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      token: { $exists: true, $ne: null, $ne: '' }
     }).sort({ lastActiveAt: -1 }).select('token userId platform lastActiveAt').lean()
   ])
 
