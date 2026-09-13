@@ -82,9 +82,15 @@ export const isAfterEveningCutoff = () => {
 }
 
 // Returns the minimum cart subtotal required to place an order at this location.
-// (With ₹7/km pricing, customers can place orders below ₹499 by paying distance fee).
+// Within 7 km: ₹49 minimum order.
+// Beyond 7 km (Campus / Himalaya Medical College): ₹199 minimum order.
 export const getMinOrderAmount = (lat, lng, isSnapitPlus = false) => {
-  return 0
+  if (!lat || !lng) return 49
+  const dist = getDistanceFromStore(lat, lng)
+  if (dist > 7) {
+    return 199
+  }
+  return 49
 }
 
 // Returns true if the coordinates fall outside the serviceable delivery radius.

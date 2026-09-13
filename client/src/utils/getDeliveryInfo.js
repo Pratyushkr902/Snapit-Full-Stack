@@ -154,7 +154,7 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
     flatAbove499Fee: 12,
     amountNeededForFlatRate,
     amountNeededForFreeDelivery,
-    minOrder: 0,
+    minOrder: isLongDistance ? 199 : 49,
   }
 }
 

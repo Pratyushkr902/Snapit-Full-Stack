@@ -892,6 +892,15 @@ export async function paymentController(request, response) {
             const assignedStore = await resolveStore(verifiedLat, verifiedLng)
             const taggedCartItems = await buildTaggedCartItems(list_items, assignedStore.name)
             const actualSubTotal = taggedCartItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
+            const isPlusForMinOrder = Boolean(currentUser?.isSnapitPlusMember && currentUser?.snapitPlusExpiresAt && new Date() < new Date(currentUser.snapitPlusExpiresAt))
+            const minOrderRequired = Math.max(49, getMinOrderAmount(verifiedLat, verifiedLng, isPlusForMinOrder) || 49)
+            if (actualSubTotal < minOrderRequired) {
+                return response.status(400).json({
+                    message: `Minimum order of ₹${minOrderRequired} required${minOrderRequired > 49 ? ' for campus delivery' : ''}. Please add items worth ₹${minOrderRequired - actualSubTotal} more to checkout.`,
+                    error: true,
+                    success: false
+                })
+            }
             const delivery_fee = calcDeliveryFee(actualSubTotal, verifiedLat, verifiedLng, currentUser) + (isExpress ? EXPRESS_DELIVERY_FEE : 0)
 
             let validDiscountAmt = 0
