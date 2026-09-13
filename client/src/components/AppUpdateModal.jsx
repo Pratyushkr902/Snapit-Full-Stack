@@ -76,10 +76,11 @@ const AppUpdateModal = () => {
             return
           }
 
-          // Check if user dismissed recently (within 1 hour)
+          // Check if user dismissed THIS version recently (within 1 hour)
           const remindIntervalHours = Number(data?.remindIntervalHours ?? 1)
           const lastDismissed = localStorage.getItem(DISMISS_KEY)
-          if (lastDismissed) {
+          const lastDismissedVersion = localStorage.getItem('snapit_update_dismissed_version')
+          if (lastDismissed && lastDismissedVersion === String(latestCode)) {
             const diffHours = (Date.now() - Number(lastDismissed)) / (1000 * 60 * 60)
             if (diffHours < remindIntervalHours) return
           }
@@ -118,6 +119,7 @@ const AppUpdateModal = () => {
   const handleDismiss = () => {
     if (isForced) return
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    localStorage.setItem('snapit_update_dismissed_version', String(updateInfo?.latestVersionCode || ''))
     setShowModal(false)
   }
 
