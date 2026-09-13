@@ -722,6 +722,7 @@ export async function WalletPaymentOrderController(request, response) {
 
         const assignedRider = await assignAvailableRider()
 
+        let walletDeducted = false
         const updatedUser = await UserModel.findOneAndUpdate(
             { _id: userId, walletBalance: { $gte: exactRequiredTotal } },
             {
@@ -746,6 +747,7 @@ export async function WalletPaymentOrderController(request, response) {
                 success: false
             })
         }
+        walletDeducted = true
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
@@ -817,6 +819,22 @@ export async function WalletPaymentOrderController(request, response) {
             scratch_cards: generateScratchCards()
         })
     } catch (error) {
+        if (walletDeducted) {
+            await UserModel.findByIdAndUpdate(userId, {
+                $inc: { walletBalance: exactRequiredTotal },
+                $push: {
+                    walletTransactions: {
+                        $each: [{
+                            type: 'CREDIT',
+                            amount: exactRequiredTotal,
+                            description: 'Refund for failed wallet order',
+                            date: new Date()
+                        }],
+                        $position: 0
+                    }
+                }
+            }).catch(() => {})
+        }
         console.error('WalletPaymentOrderController:', error.message)
         return response.status(500).json({ message: 'Order placement failed.', error: true, success: false })
     }

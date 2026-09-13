@@ -681,6 +681,8 @@ export async function foodOrderWallet(req, res) {
   let flashGroup = null
   let flashClaimed = false
   let fields, user, addressDoc, priced, grandTotal, groupOrderId
+  let walletDeducted = false
+  let deductAmt = 0
 
   try {
     const prep = await prepareMultiRestaurantOrder(req)
@@ -692,7 +694,7 @@ export async function foodOrderWallet(req, res) {
     groupOrderId = prep.groupOrderId
 
     const walletBal = Number(user.walletBalance || 0)
-    const deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : grandTotal
+    deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : grandTotal
     if (walletBal < deductAmt)
       return res.status(400).json({
         success: false,
@@ -715,6 +717,7 @@ export async function foodOrderWallet(req, res) {
     }
 
     await deductWallet(req.userId, deductAmt, priced[0]?.restaurantName)
+    walletDeducted = true
     const assignedRider = await assignAvailableRider()
 
     const orders = []
@@ -745,6 +748,22 @@ export async function foodOrderWallet(req, res) {
         userMobile: user?.mobile,
         mobiles: fields?.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
       })
+    }
+    if (walletDeducted && deductAmt > 0) {
+      await UserModel.findByIdAndUpdate(req.userId, {
+        $inc: { walletBalance: deductAmt },
+        $push: {
+          walletTransactions: {
+            $each: [{
+              type: 'credit',
+              amount: deductAmt,
+              description: 'Refund for failed wallet food order',
+              date: new Date(),
+            }],
+            $position: 0,
+          },
+        },
+      }).catch(() => {})
     }
     console.error('[foodOrderWallet] ❌', err.message)
     return res.status(err.statusCode || 500).json({ success: false, message: err.message })
@@ -777,6 +796,7 @@ export async function foodOrderVerifyPayment(req, res) {
   let flashGroup = null
   let flashClaimed = false
   let fields, user, addressDoc, priced, grandTotal, groupOrderId
+  let walletDeducted = false
 
   try {
     const {
@@ -818,7 +838,10 @@ export async function foodOrderVerifyPayment(req, res) {
       flashClaimed = true
     }
 
-    await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
+    if (fields.walletAmountUsed > 0) {
+      await deductWallet(req.userId, fields.walletAmountUsed, priced[0]?.restaurantName)
+      walletDeducted = true
+    }
     const assignedRider = await assignAvailableRider()
 
     const orders = []
@@ -848,6 +871,22 @@ export async function foodOrderVerifyPayment(req, res) {
         userMobile: user?.mobile,
         mobiles: fields?.mobiles || [addressDoc?.mobile, addressDoc?.recipient_mobile],
       })
+    }
+    if (walletDeducted && fields?.walletAmountUsed > 0) {
+      await UserModel.findByIdAndUpdate(req.userId, {
+        $inc: { walletBalance: fields.walletAmountUsed },
+        $push: {
+          walletTransactions: {
+            $each: [{
+              type: 'credit',
+              amount: fields.walletAmountUsed,
+              description: 'Refund for failed food order',
+              date: new Date(),
+            }],
+            $position: 0,
+          },
+        },
+      }).catch(() => {})
     }
     console.error('[foodOrderVerifyPayment] ❌', err.message)
     return res.status(err.statusCode || 500).json({ success: false, message: err.message })

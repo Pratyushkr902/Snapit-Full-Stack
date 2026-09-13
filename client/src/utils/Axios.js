@@ -6,6 +6,23 @@ import CommonSummaryApi from "../common/SummaryApi"
 // The backend URL must always come from the environment.
 // A missing env var in production will now throw immediately (fail-loud),
 const API_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
+const FALLBACK_API_URL = "https://snapit.00pratyush20.workers.dev"
+
+// Dynamic API host manager with session persistence for instant 0ms requests
+export const getActiveBaseURL = () => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+        const saved = sessionStorage.getItem('snapit_api_host')
+        if (saved) return saved
+    }
+    return API_URL
+}
+
+export const setActiveBaseURL = (url) => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+        try { sessionStorage.setItem('snapit_api_host', url) } catch (_) {}
+    }
+    Axios.defaults.baseURL = url
+}
 
 export const baseURL = API_URL
 export const SummaryApi = CommonSummaryApi
@@ -13,7 +30,7 @@ export const SummaryApi = CommonSummaryApi
 // ─── AXIOS INSTANCE ──────────────────────────────────────────────────────────
 // SECURITY FIX: Added 15s request timeout to prevent slowloris / hung requests
 const Axios = axios.create({
-    baseURL:         API_URL,
+    baseURL:         getActiveBaseURL(),
     withCredentials: true,
     timeout:         25000, // 25 seconds — resilient on mobile cellular networks
     headers: {
@@ -87,24 +104,6 @@ Axios.interceptors.request.use(
     },
     (error) => Promise.reject(error)
 )
-
-const FALLBACK_API_URL = "https://snapit.00pratyush20.workers.dev"
-
-// Dynamic API host manager with session persistence for instant 0ms requests
-export const getActiveBaseURL = () => {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-        const saved = sessionStorage.getItem('snapit_api_host')
-        if (saved) return saved
-    }
-    return API_URL
-}
-
-export const setActiveBaseURL = (url) => {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-        try { sessionStorage.setItem('snapit_api_host', url) } catch (_) {}
-    }
-    Axios.defaults.baseURL = url
-}
 
 // ─── RETRY CONFIGURATION ─────────────────────────────────────────────────────
 const MAX_AUTO_RETRIES = 2
@@ -213,9 +212,10 @@ Axios.interceptors.response.use(
             isRefreshing = true
 
             try {
+                const currentHost = getActiveBaseURL()
                 const refreshUrl = SummaryApi.refreshToken.url.startsWith('http')
                     ? SummaryApi.refreshToken.url
-                    : `${API_URL}${SummaryApi.refreshToken.url.startsWith('/') ? '' : '/'}${SummaryApi.refreshToken.url}`
+                    : `${currentHost}${SummaryApi.refreshToken.url.startsWith('/') ? '' : '/'}${SummaryApi.refreshToken.url}`
 
                 const refreshResponse = await axios({
                     method:          'post',
