@@ -1,11 +1,11 @@
 import dotenv from 'dotenv'
-dotenv.config({ path: './server/.env' })
+dotenv.config({ path: new URL('./.env', import.meta.url).pathname })
 import mongoose from 'mongoose'
-import connectDB from '../server/config/connectDB.js'
-import UserModel from '../server/models/user.model.js'
-import DeviceTokenModel from '../server/models/deviceToken.model.js'
-import NotificationModel from '../server/models/notification.model.js'
-import { sendPushNotification } from '../server/utils/firebaseNotify.js'
+import connectDB from './config/connectDB.js'
+import UserModel from './models/user.model.js'
+import DeviceTokenModel from './models/deviceToken.model.js'
+import NotificationModel from './models/notification.model.js'
+import { sendPushNotification } from './utils/firebaseNotify.js'
 
 async function runBroadcast() {
   console.log('🚀 Starting Snapit Free Delivery Notification Broadcast...')
@@ -13,7 +13,7 @@ async function runBroadcast() {
 
   const title = '🎉 100% FREE Delivery is LIVE! 🛵💨'
   const shayari = 'चाहे गरमा-गरम समोसा हो या स्पेशल बिरयानी,\nSnapit लाया है FREE Delivery की मनमानी! 🚀✨'
-  const body = '🔥 100% FREE Delivery on orders ₹149+ in Paliganj & ₹199+ at Himalaya Medical College Campus! Samosa, Chowmein, Biryani, Sweets & Groceries delivered fast. Tap to order!'
+  const body = '🔥 100% FREE Delivery on Food & Grocery orders ₹149+ in Paliganj & ₹199+ for Food at Himalaya Medical College! Samosa, Chowmein, Biryani, Sweets & Essentials delivered fast. Tap to order!'
 
   // 1. Fetch all users and active device tokens
   const [users, deviceDocs] = await Promise.all([
