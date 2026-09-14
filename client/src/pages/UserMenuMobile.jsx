@@ -177,6 +177,18 @@ const UserMenuMobile = () => {
         <span>📦</span> My Subscriptions
       </Link>
       <Link to={"/dashboard/address"} className='px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Save Address</Link>
+      <button
+        type='button'
+        onClick={() => window.dispatchEvent(new CustomEvent('open-smart-rating'))}
+        className='w-full text-left px-3 py-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-bold text-sm flex items-center justify-between transition-colors my-0.5'
+      >
+        <span className='flex items-center gap-2'>
+          <span>⭐</span> Rate Us on Play Store
+        </span>
+        <span className='text-xs bg-amber-200 dark:bg-amber-800 text-amber-950 dark:text-amber-100 px-2 py-0.5 rounded-full font-black'>
+          5★ Review
+        </span>
+      </button>
       <Link to={"/privacy-policy"} className='px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-medium transition-colors flex items-center gap-1.5'>
         <span>🔒</span> Privacy Policy
       </Link>

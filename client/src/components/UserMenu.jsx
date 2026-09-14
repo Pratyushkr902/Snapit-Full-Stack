@@ -163,6 +163,22 @@ const UserMenu = ({close}) => {
             </Link>
             <Link onClick={handleClose} to={"/dashboard/address"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Save Address</Link>
 
+            <button
+              type='button'
+              onClick={() => {
+                handleClose?.()
+                window.dispatchEvent(new CustomEvent('open-smart-rating'))
+              }}
+              className='w-full text-left px-2.5 py-1.5 rounded-lg bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-bold text-xs flex items-center justify-between transition-colors my-0.5'
+            >
+              <span className='flex items-center gap-1.5'>
+                <span>⭐</span> Rate Us on Play Store
+              </span>
+              <span className='text-[10px] bg-amber-200 dark:bg-amber-800 text-amber-950 dark:text-amber-100 px-1.5 py-0.5 rounded-full font-black'>
+                5★
+              </span>
+            </button>
+
             <Divider/>
 
             <Link onClick={handleClose} to={"/snapit-plus"} className='px-2.5 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-slate-800 flex items-center gap-2 font-semibold text-emerald-800 dark:text-emerald-300 transition-colors'>

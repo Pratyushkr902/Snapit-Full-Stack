@@ -296,13 +296,39 @@ const Success = () => {
       )}
 
       {/* Feedback submitted */}
-      {submitted && (
-        <div className='w-full max-w-sm bg-green-50 border border-green-100 rounded-3xl p-6 mb-6 text-center'>
-          <p className='text-3xl mb-2'>🙏</p>
-          <p className='font-black text-green-700'>Thank you for your feedback!</p>
-          <p className='text-xs text-green-600 mt-1'>It helps us serve you better</p>
+      {submitted && (selectedRating >= 4 ? (
+        <div className='w-full max-w-sm bg-gradient-to-br from-amber-50 to-green-50 border border-green-200 rounded-3xl p-6 mb-6 text-center shadow-md'>
+          <p className='text-3xl mb-2 animate-bounce'>🥰</p>
+          <p className='font-black text-slate-800 text-base'>Thank you for loving Snapit!</p>
+          <p className='text-xs text-slate-600 mt-1 mb-4 leading-relaxed'>
+            Would you mind sharing your 5-star love on Google Play Store? It helps our local Paliganj riders immensely! 🙏
+          </p>
+          <button
+            type='button'
+            onClick={() => window.dispatchEvent(new CustomEvent('open-smart-rating'))}
+            className='w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white rounded-2xl font-black text-xs shadow-md shadow-green-600/20 flex items-center justify-center gap-1.5 active:scale-95 transition-all'
+          >
+            <span>⭐</span>
+            <span>Rate 5 Stars on Play Store</span>
+          </button>
         </div>
-      )}
+      ) : (
+        <div className='w-full max-w-sm bg-rose-50 border border-rose-200 rounded-3xl p-6 mb-6 text-center shadow-md'>
+          <p className='text-3xl mb-2'>😔</p>
+          <p className='font-black text-rose-800 text-base'>We're sorry for the inconvenience!</p>
+          <p className='text-xs text-slate-600 mt-1 mb-4'>
+            We want to make this right. Our manager is available to assist you directly on WhatsApp.
+          </p>
+          <a
+            href={`https://wa.me/919631497787?text=${encodeURIComponent('Hi Snapit Support, I gave a rating of ' + selectedRating + ' stars. Need assistance.')}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            className='w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all inline-block'
+          >
+            <span>💬 Chat with Support on WhatsApp</span>
+          </a>
+        </div>
+      ))}
 
       {/* Recipient WhatsApp Tracking Share Card */}
       {location.state?.orderData?.recipient_name && (

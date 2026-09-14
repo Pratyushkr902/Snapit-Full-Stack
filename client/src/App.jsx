@@ -12,6 +12,7 @@ import ChatBox from './components/ChatBox'
 import StoreClosedOverlay from './components/StoreClosedOverlay'
 import AppUpdateModal from './components/AppUpdateModal'
 import NotificationPermissionBanner from './components/NotificationPermissionBanner'
+import SmartRatingModal from './components/SmartRatingModal'
 
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails, logout } from './store/userSlice';
@@ -314,6 +315,7 @@ function App() {
       <GlobalProvider>
         <div className="App">
           <AppUpdateModal />
+          <SmartRatingModal />
           <NotificationPermissionBanner />
           {!isDashboard && !isFoodPage && !isSelectLocation && !isCartPage && !isUserPage && <StoreClosedOverlay />}
           {!isDashboard && !isSelectLocation && !isCartPage && !isUserPage && <Header openCart={() => setShowCart(true)} />}
