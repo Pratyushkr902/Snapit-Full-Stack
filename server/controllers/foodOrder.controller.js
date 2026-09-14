@@ -409,7 +409,7 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
 // ── SEND FOOD ORDER INVOICE EMAIL ──────────────────────────────────────────
 async function sendFoodOrderInvoiceEmail(order, user) {
   try {
-    if (!user?.email) return
+    if (!user?.email || user.email.toLowerCase().endsWith('@snapit.in')) return
     const items = (order.cartItems || []).map(item => `
       <tr>
         <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;">

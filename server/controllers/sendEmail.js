@@ -1,5 +1,15 @@
 const sendEmail = async ({ sendTo, subject, html }) => {
     try {
+        if (!sendTo || typeof sendTo !== 'string') return null;
+        const cleanTo = sendTo.trim().toLowerCase();
+
+        // Skip synthetic / placeholder mobile-login emails (e.g. 8102298726@snapit.in)
+        // because snapit.in has no mail server and causes Brevo connection timeout / deferred logs.
+        if (cleanTo.endsWith('@snapit.in') || cleanTo.endsWith('@example.com') || cleanTo.endsWith('@localhost')) {
+            console.log(`ℹ️ [sendEmail] Skipping synthetic email recipient: ${cleanTo}`);
+            return null;
+        }
+
         const response = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {

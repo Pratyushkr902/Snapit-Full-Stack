@@ -14,6 +14,15 @@ function getResendClient() {
 
 const sendEmailResend = async ({ sendTo, subject, html }) => {
     try {
+        if (!sendTo || typeof sendTo !== 'string') return null;
+        const cleanTo = sendTo.trim().toLowerCase();
+
+        // Skip synthetic / placeholder mobile-login emails
+        if (cleanTo.endsWith('@snapit.in') || cleanTo.endsWith('@example.com') || cleanTo.endsWith('@localhost')) {
+            console.log(`ℹ️ [sendEmailResend] Skipping synthetic email recipient: ${cleanTo}`);
+            return null;
+        }
+
         const client = getResendClient()
         const { data, error } = await client.emails.send({
             from: 'Snapit <otp@jovialflames.com>',

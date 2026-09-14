@@ -9,7 +9,7 @@ export async function sendOrderDeliveredEmail(order, userObj = null) {
       user = await UserModel.findById(order.userId).select('name email').lean()
     }
 
-    if (!user?.email) return null
+    if (!user?.email || user.email.toLowerCase().endsWith('@snapit.in')) return null
 
     const userName = user.name || 'Valued Customer'
     const orderId = order.orderId || 'ORDER'

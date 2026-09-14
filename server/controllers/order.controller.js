@@ -300,7 +300,7 @@ const isObjectId = (id) => /^[a-fA-F0-9]{24}$/.test(String(id))
 // ─── SEND ORDER INVOICE EMAIL ─────────────────────────────────────────────────
 async function sendOrderInvoiceEmail(order, user) {
     try {
-        if (!user?.email) return
+        if (!user?.email || user.email.toLowerCase().endsWith('@snapit.in')) return
         const items = (order.cartItems || []).map(item => `
             <tr>
                 <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;">${item.productId?.name || item.name || 'Product'}</td>
