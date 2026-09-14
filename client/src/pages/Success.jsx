@@ -296,7 +296,7 @@ const Success = () => {
       )}
 
       {/* Feedback submitted */}
-      {submitted && (selectedRating >= 4 ? (
+      {submitted && selectedRating && (selectedRating >= 4 ? (
         <div className='w-full max-w-sm bg-gradient-to-br from-amber-50 to-green-50 border border-green-200 rounded-3xl p-6 mb-6 text-center shadow-md'>
           <p className='text-3xl mb-2 animate-bounce'>🥰</p>
           <p className='font-black text-slate-800 text-base'>Thank you for loving Snapit!</p>

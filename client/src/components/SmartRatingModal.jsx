@@ -71,8 +71,9 @@ export default function SmartRatingModal() {
     if (Date.now() < dismissedUntil) return
 
     // Check if customer has at least one delivered order
-    const hasDeliveredOrder = orders.some(o => {
-      const s = (o.order_status || o.delivery_status || o.status || '').toLowerCase()
+    const orderList = Array.isArray(orders) ? orders : []
+    const hasDeliveredOrder = orderList.some(o => {
+      const s = (o?.order_status || o?.delivery_status || o?.status || '').toLowerCase()
       return s === 'delivered'
     })
 
@@ -131,16 +132,16 @@ export default function SmartRatingModal() {
   const handleSubmitPrivateFeedback = async () => {
     try {
       setIsSubmitting(true)
-      // Optional background logging / user feedback capture
+      // Save feedback directly to SupportMessage collection via backend support API
       try {
         await Axios({
           method: 'POST',
-          url: '/api/user/feedback',
+          url: '/api/support/message',
           data: {
-            rating,
-            issues: selectedIssues,
-            comment: comment.trim(),
-            userId: user?._id
+            name: user?.name || 'Customer',
+            phone: user?.mobile ? String(user.mobile) : '',
+            orderId: '',
+            message: `[Smart Rating Feedback - ${rating}/5 Stars]\nIssues: ${selectedIssues.join(', ') || 'None'}\nNote: ${comment.trim() || 'No additional note'}`
           }
         }).catch(() => {})
       } catch {}
