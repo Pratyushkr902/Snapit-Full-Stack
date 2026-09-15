@@ -8,6 +8,7 @@ import AdminResetPinModal from '../components/AdminResetPinModal'
 import Accounts from '../components/Accounts'
 import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
 import AdminLiveOrdersWidget from '../components/AdminLiveOrdersWidget'
+import AdminStoreControlWidget from '../components/AdminStoreControlWidget'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
@@ -476,6 +477,9 @@ const AdminDashboard = () => {
   return (
     <AdminPermision>
       <div className="p-3 lg:p-8 pt-safe-header min-h-screen" style={{ background: '#0a0f1a' }}>
+
+        {/* 🏪 STORE OPERATING STATUS (1-Click Emergency / Day Closure Control) */}
+        <AdminStoreControlWidget />
 
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 lg:gap-4 mb-6">

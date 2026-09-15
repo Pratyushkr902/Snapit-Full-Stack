@@ -1,5 +1,6 @@
 import UserModel from '../models/user.model.js'
 import WithdrawalModel from '../models/withdrawal.model.js'
+import WalletModel from '../models/wallet.model.js'
 
 // --- 1. Get Wallet Balance and Transactions ---
 export async function getWallet(req, res) {
@@ -199,6 +200,25 @@ export async function requestWithdrawal(req, res) {
             })
         }
 
+        // Only merchants, delivery riders, and admins may withdraw funds to UPI.
+        // Customer store credit cannot be cashed out.
+        const currentUser = await UserModel.findById(req.userId).select('role walletBalance')
+        if (!currentUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            })
+        }
+
+        const userRole = (currentUser.role || '').replace(/['"]/g, '').trim().toUpperCase()
+        const allowedWithdrawRoles = ['RIDER', 'SELLER', 'RESTO_SELLER', 'ADMIN', 'SUPER_ADMIN']
+        if (!allowedWithdrawRoles.includes(userRole)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Wallet balance is store credit and can only be used to purchase food and groceries on Snapit.'
+            })
+        }
+
         // Atomic conditional deduct: only succeeds if walletBalance >= amount,
         // preventing race conditions where two withdrawal requests fire together.
         const transaction = {
@@ -222,6 +242,19 @@ export async function requestWithdrawal(req, res) {
                 success: false,
                 message: 'Insufficient wallet balance'
             })
+        }
+
+        // Dual-write to WalletModel mirror collection
+        try {
+            await WalletModel.findOneAndUpdate(
+                { userId: req.userId },
+                {
+                    $inc: { balance: -amount },
+                    $push: { transactions: { $each: [transaction], $position: 0 } }
+                }
+            )
+        } catch (syncErr) {
+            console.error('[requestWithdrawal] WalletModel mirror sync failed:', syncErr.message)
         }
 
         const withdrawal = await WithdrawalModel.create({
@@ -253,9 +286,15 @@ export async function listWithdrawals(req, res) {
         const filter = {}
         if (req.query.status) filter.status = req.query.status
 
-        const withdrawals = await WithdrawalModel.find(filter)
+        const rawWithdrawals = await WithdrawalModel.find(filter)
             .populate('userId', 'name email mobile')
             .sort({ createdAt: -1 })
+            .lean()
+
+        const withdrawals = rawWithdrawals.map(w => ({
+            ...w,
+            user: w.userId // Backwards-compatible alias for frontend templates
+        }))
 
         return res.json({
             success: true,
@@ -319,6 +358,19 @@ export async function rejectWithdrawal(req, res) {
                 $push: { walletTransactions: { $each: [refundTransaction], $position: 0 } }
             }
         )
+
+        // Dual-write to WalletModel mirror collection
+        try {
+            await WalletModel.findOneAndUpdate(
+                { userId: withdrawal.userId },
+                {
+                    $inc: { balance: withdrawal.amount },
+                    $push: { transactions: { $each: [refundTransaction], $position: 0 } }
+                }
+            )
+        } catch (syncErr) {
+            console.error('[rejectWithdrawal] WalletModel mirror sync failed:', syncErr.message)
+        }
 
         withdrawal.status = 'REJECTED'
         withdrawal.adminNote = reason || ''

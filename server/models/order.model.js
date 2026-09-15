@@ -70,6 +70,7 @@ const orderSchema = new mongoose.Schema(
         recipient_mobile:         { type: String, default: "" },
         order_for:                { type: String, enum: ["SELF", "SOMEONE_ELSE"], default: "SELF" },
         delivery_instructions:    { type: String, default: "" },
+        cooking_instructions:     { type: String, default: "" },
         shareable_tracking_token: { type: String, unique: true, sparse: true },
 
         invoice_receipt: { type: String, default: "" },

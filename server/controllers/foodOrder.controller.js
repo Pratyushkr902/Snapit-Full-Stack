@@ -132,6 +132,7 @@ const extractBody = (body) => {
     couponDiscount       = 0,
     walletAmountUsed     = 0,
     deliveryInstructions = null,
+    cookingInstructions  = null,
     scheduledDelivery    = null,
     isSundayFlash        = false,
   } = body
@@ -145,7 +146,8 @@ const extractBody = (body) => {
     couponCode:           couponCode || null,
     couponDiscount:       Math.max(0, Number(couponDiscount || 0)),
     walletAmountUsed:     Math.max(0, Number(walletAmountUsed || 0)),
-    deliveryInstructions: deliveryInstructions || null,
+    deliveryInstructions: deliveryInstructions ? String(deliveryInstructions).trim().slice(0, 300) : null,
+    cookingInstructions:  cookingInstructions  ? String(cookingInstructions).trim().slice(0, 300)  : null,
     scheduledDelivery:    scheduledDelivery    || null,
     isSundayFlash:        Boolean(isSundayFlash || offerKey === 'SUNDAY_FLASH_FREE_FOOD'),
   }
@@ -370,6 +372,7 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
     recipient_mobile:         recipientMobile,
     order_for:                orderFor,
     delivery_instructions:    fields.deliveryInstructions || addressDoc?.delivery_instructions || '',
+    cooking_instructions:     fields.cookingInstructions || '',
     shareable_tracking_token: shareableToken,
     subTotalAmt:      group.subTotalAmt,
     campus_surcharge: group.campusSurcharge || 0,

@@ -1,17 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import logo from "../assets/snapit.png";
+import Axios from "../utils/Axios";
 
 /**
  * StoreClosedOverlay (Flipkart Minutes & Zepto Style)
  * Shows a realistic rolling shutter scene between CLOSE_HOUR (8:30 PM)
- * and OPEN_HOUR (9:00 AM) IST — based on Indian Standard Time.
+ * and OPEN_HOUR (8:30 AM) IST — based on Indian Standard Time.
  */
 
 export const CLOSE_HOUR = 20; // 8:30 PM IST (20:30)
 export const CLOSE_MINUTE = 30;
 export const OPEN_HOUR = 8;   // 8:30 AM IST (08:30)
 export const OPEN_MINUTE = 30;
+
+// ✅ DYNAMIC STORE CLOSURE TOGGLE CONTROLLED VIA SUPER ADMIN PANEL
+export let IS_CLOSED_FOR_TODAY = true;
+export let DYNAMIC_CLOSED_REASON = 'Snapit is closed for today. We are resting and packing fresh stock. Deliveries will resume tomorrow at 8:30 AM IST!';
+
+export function setDynamicStoreClosed(isClosed, reason = '') {
+  IS_CLOSED_FOR_TODAY = Boolean(isClosed);
+  if (reason) DYNAMIC_CLOSED_REASON = reason;
+}
 
 export const ADMIN_LIKE_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER'];
 
@@ -20,7 +30,7 @@ export const ADMIN_LIKE_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SELLER', 'RESTO_SELLER
  */
 export function getStoreStatus(userRole = null) {
   if (userRole && ADMIN_LIKE_ROLES.includes(userRole)) {
-    return { isClosed: false, msUntilOpen: 0, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
+    return { isClosed: false, isClosedForToday: false, msUntilOpen: 0, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
   }
 
   const now = new Date();
@@ -29,17 +39,25 @@ export function getStoreStatus(userRole = null) {
   const istMs = nowUtcMs + istOffsetMs;
   const istDate = new Date(istMs);
 
+  const year = istDate.getUTCFullYear();
+  const month = istDate.getUTCMonth();
+  let date = istDate.getUTCDate();
+
+  if (IS_CLOSED_FOR_TODAY) {
+    // Store is closed for today; reopens tomorrow at 8:30 AM IST
+    date += 1;
+    const opensAtUtcMs = Date.UTC(year, month, date, OPEN_HOUR, OPEN_MINUTE, 0, 0) - istOffsetMs;
+    const msUntilOpen = Math.max(0, opensAtUtcMs - nowUtcMs);
+    return { isClosed: true, isClosedForToday: true, msUntilOpen, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
+  }
+
   const hour = istDate.getUTCHours();
   const minute = istDate.getUTCMinutes();
   const isBeforeOpen = hour < OPEN_HOUR || (hour === OPEN_HOUR && minute < OPEN_MINUTE);
   const isAfterClose = hour > CLOSE_HOUR || (hour === CLOSE_HOUR && minute >= CLOSE_MINUTE);
   const isClosed = isBeforeOpen || isAfterClose;
 
-  if (!isClosed) return { isClosed: false, msUntilOpen: 0, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
-
-  const year = istDate.getUTCFullYear();
-  const month = istDate.getUTCMonth();
-  let date = istDate.getUTCDate();
+  if (!isClosed) return { isClosed: false, isClosedForToday: false, msUntilOpen: 0, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
 
   if (isAfterClose) {
     date += 1;
@@ -48,7 +66,7 @@ export function getStoreStatus(userRole = null) {
   const opensAtUtcMs = Date.UTC(year, month, date, OPEN_HOUR, OPEN_MINUTE, 0, 0) - istOffsetMs;
   const msUntilOpen = Math.max(0, opensAtUtcMs - nowUtcMs);
 
-  return { isClosed: true, msUntilOpen, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
+  return { isClosed: true, isClosedForToday: false, msUntilOpen, openHour: OPEN_HOUR, openMinute: OPEN_MINUTE, closeHour: CLOSE_HOUR, closeMinute: CLOSE_MINUTE };
 }
 
 /**
@@ -73,12 +91,35 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
   const [status, setStatus] = useState(() => getStoreStatus(user?.role));
   const [dismissed, setDismissed] = useState(false);
 
-  // Update countdown smoothly every second
+  // Update countdown smoothly every second and sync live status
   useEffect(() => {
+    const fetchLiveStatus = async () => {
+      try {
+        const res = await Axios({ url: '/api/admin/store-status', method: 'get' })
+        if (res.data?.success && res.data?.data) {
+          setDynamicStoreClosed(res.data.data.isClosedForToday, res.data.data.closedReason)
+          setStatus(getStoreStatus(user?.role))
+        }
+      } catch {}
+    }
+    fetchLiveStatus()
+
+    const handleEvent = (e) => {
+      if (e.detail) {
+        setDynamicStoreClosed(e.detail.isClosedForToday, e.detail.closedReason)
+        setStatus(getStoreStatus(user?.role))
+      }
+    }
+    window.addEventListener('snapit_store_status_changed', handleEvent)
+
     const interval = setInterval(() => {
       setStatus(getStoreStatus(user?.role));
     }, 1000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('snapit_store_status_changed', handleEvent)
+    };
   }, [user?.role]);
 
   // Only bypass store closed overlay when actively inside admin dashboard panels (/dashboard)
@@ -97,9 +138,9 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
     onDismiss?.();
   };
 
-  // If dismissed or in browse mode, return null so no top bar obstructs the header/user menu
+  // If dismissed or in browse mode, render the sleek top banner so the customer always knows store is closed
   if (allowBrowse || dismissed) {
-    return null;
+    return <ClosedBanner status={status} onReopenShutter={() => setDismissed(false)} />;
   }
 
   return (
@@ -265,9 +306,9 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             borderRadius: 999,
             marginBottom: 10
           }}>
-            <span style={{ fontSize: 13 }}>🌙</span>
+            <span style={{ fontSize: 13 }}>{status.isClosedForToday ? "⛔" : "🌙"}</span>
             <span style={{ fontSize: 12, fontWeight: 800, color: "#F5A623", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-              Night Restocking Break
+              {status.isClosedForToday ? "Closed for Today" : "Night Restocking Break"}
             </span>
           </div>
 
@@ -279,7 +320,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             margin: "0 0 6px",
             letterSpacing: "-0.02em"
           }}>
-            Store Closed for the Night
+            {status.isClosedForToday ? "Store Closed for Today" : "Store Closed for the Night"}
           </h2>
 
           <p style={{
@@ -289,7 +330,11 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             lineHeight: 1.5,
             padding: "0 8px"
           }}>
-            Operating hours are <strong>8:30 AM – 8:30 PM IST</strong>. We are resting and packing fresh stock for tomorrow!
+            {status.isClosedForToday ? (
+              <>Snapit is <strong>closed for today</strong>. We are resting and packing fresh stock. Deliveries will resume tomorrow at 8:30 AM IST!</>
+            ) : (
+              <>Operating hours are <strong>8:30 AM – 8:30 PM IST</strong>. We are resting and packing fresh stock for tomorrow!</>
+            )}
           </p>
 
           {/* Real-time Live Countdown Pill */}
@@ -324,7 +369,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             gap: 4
           }}>
             <span>⚡</span>
-            <span>10-Minute Deliveries Start at 8:30 AM Tomorrow</span>
+            <span>10-Minute Deliveries Resume at 8:30 AM Tomorrow</span>
           </div>
 
           {/* Actions: Browse Catalog Anyway */}
@@ -353,7 +398,7 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
               <span>Browse Catalog & Build Cart</span>
             </button>
             <p style={{ fontSize: 11, color: "#6B7280", margin: 0 }}>
-              You can add items now and check out when orders open at 9:00 AM!
+              You can add items now and check out when orders open tomorrow at 8:30 AM!
             </p>
           </div>
         </div>
@@ -371,9 +416,8 @@ function ClosedBanner({ status, onReopenShutter }) {
     <div
       role="status"
       style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 45,
+        position: "relative",
+        zIndex: 50,
         width: "100%",
         background: "linear-gradient(135deg, #161A34 0%, #0F1226 100%)",
         borderBottom: "2px solid #F5A623",
@@ -408,7 +452,7 @@ function ClosedBanner({ status, onReopenShutter }) {
             overflow: "hidden",
             textOverflow: "ellipsis"
           }}>
-            Store Closed · Opens at 9:00 AM
+            {status.isClosedForToday ? "Store Closed for Today · Opens Tomorrow 8:30 AM" : "Store Closed · Opens at 8:30 AM"}
           </p>
           <p style={{ fontSize: 11, fontWeight: 700, color: "#F5A623", margin: "2px 0 0" }}>
             Deliveries resume in {formatCountdown(status.msUntilOpen)}

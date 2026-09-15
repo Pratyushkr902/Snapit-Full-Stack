@@ -306,6 +306,7 @@ const router = createHashRouter([
           { path: "treasury", element: <S><AdminPermision><AdminTreasury /></AdminPermision></S> },
           { path: "rider-fleet", element: <S><AdminPermision><AdminRiderFleet /></AdminPermision></S> },
           { path: "super-admin/withdrawals", element: <S><AdminWithdrawals /></S> },
+          { path: "withdrawals", element: <S><AdminWithdrawals /></S> },
           { path: "super-admin/referrals", element: <S><AdminReferrals /></S> },
           { path: "super-admin/manage-admins", element: <S><AdminManageAdmins /></S> },
           { path: "super-admin/frozen-ips", element: <S><AdminFrozenIps /></S> },

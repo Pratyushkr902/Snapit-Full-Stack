@@ -9,7 +9,7 @@ import CartMobileLink from './components/CartMobile'
 import DisplayCartItem from './components/DisplayCartItem'; 
 import WhatsAppButton from './components/WhatsAppButton'
 import ChatBox from './components/ChatBox'
-import StoreClosedOverlay from './components/StoreClosedOverlay'
+import StoreClosedOverlay, { IS_CLOSED_FOR_TODAY } from './components/StoreClosedOverlay'
 import AppUpdateModal from './components/AppUpdateModal'
 import NotificationPermissionBanner from './components/NotificationPermissionBanner'
 import SmartRatingModal from './components/SmartRatingModal'
@@ -317,7 +317,7 @@ function App() {
           <AppUpdateModal />
           <SmartRatingModal />
           <NotificationPermissionBanner />
-          {!isDashboard && !isFoodPage && !isSelectLocation && !isCartPage && !isUserPage && <StoreClosedOverlay />}
+          {!isDashboard && (!isFoodPage || IS_CLOSED_FOR_TODAY) && !isSelectLocation && !isCartPage && !isUserPage && <StoreClosedOverlay />}
           {!isDashboard && !isSelectLocation && !isCartPage && !isUserPage && <Header openCart={() => setShowCart(true)} />}
           
           <main className={isDashboard || isSelectLocation || isCartPage || isUserPage ? '' : 'min-h-[78vh]'}>

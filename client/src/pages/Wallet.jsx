@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { IoArrowBack } from 'react-icons/io5'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
@@ -114,7 +115,9 @@ const Wallet = () => {
   const [plusLoading,  setPlusLoading]  = useState(false)
   const [selectedPlan, setSelectedPlan] = useState('monthly')
   const [isPlusMember, setIsPlusMember] = useState(false)
-  const [plusExpiry,   setPlusExpiry]   = useState(null)
+  const user = useSelector(state => state.user)
+  const userRole = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
+  const canWithdraw = ['RIDER', 'SELLER', 'RESTO_SELLER', 'ADMIN', 'SUPER_ADMIN'].includes(userRole)
 
   const { } = useGlobalContext() || {}
 
@@ -248,6 +251,9 @@ const Wallet = () => {
 
   // ── Withdraw ─────────────────────────────────────────────────────────────────
   const handleWithdraw = async () => {
+    if (!canWithdraw) {
+      return toast.error('Wallet balance is store credit for orders and cannot be withdrawn to UPI.')
+    }
     if (!upiId.trim())       return toast.error('Enter your UPI ID')
     if (numAmount <= 0)      return toast.error('Enter a valid amount')
     if (numAmount > balance) return toast.error('Insufficient wallet balance')
@@ -262,7 +268,6 @@ const Wallet = () => {
       if (res.data.success) {
         toast.success(res.data.message || `₹${numAmount} withdrawal initiated!`)
         setAmount(''); setUpiId('')
-        if (fetchUser) fetchUser()
         fetchWallet()
       } else {
         toast.error(res.data.message || 'Withdrawal failed')
@@ -486,38 +491,54 @@ const Wallet = () => {
                   ))}
                 </div>
 
-                {/* Withdraw section below add */}
-                <div style={{ marginTop:'18px', paddingTop:'18px', borderTop:'1px solid #f1f5f9' }}>
-                  <p style={{ fontSize:'12px', fontWeight:'700', color:'#64748b', margin:'0 0 10px', textTransform:'uppercase', letterSpacing:'.8px' }}>🏦 Withdraw to UPI</p>
+                {/* Withdraw section: only available to Riders / Sellers / Admins. Customers use store credit for orders */}
+                {canWithdraw ? (
+                  <div style={{ marginTop:'18px', paddingTop:'18px', borderTop:'1px solid #f1f5f9' }}>
+                    <p style={{ fontSize:'12px', fontWeight:'700', color:'#64748b', margin:'0 0 10px', textTransform:'uppercase', letterSpacing:'.8px' }}>🏦 Withdraw to UPI</p>
 
-                  <div style={{ background:'#eff6ff', borderRadius:'12px', padding:'10px 12px', marginBottom:'12px', display:'flex', gap:'8px' }}>
-                    <span style={{ fontSize:'14px' }}>ℹ️</span>
-                    <p style={{ color:'#1d4ed8', fontSize:'12px', fontWeight:'600', margin:0 }}>Processed in 2–4 business days. Min ₹50.</p>
-                  </div>
+                    <div style={{ background:'#eff6ff', borderRadius:'12px', padding:'10px 12px', marginBottom:'12px', display:'flex', gap:'8px' }}>
+                      <span style={{ fontSize:'14px' }}>ℹ️</span>
+                      <p style={{ color:'#1d4ed8', fontSize:'12px', fontWeight:'600', margin:0 }}>Processed in 2–4 business days. Min ₹50.</p>
+                    </div>
 
-                  <div style={{ position:'relative', marginBottom:'10px' }}>
-                    <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#94a3b8', fontWeight:'800', fontSize:'20px' }}>₹</span>
-                    <input type="number" placeholder="Amount to withdraw" value={amount}
-                      onChange={e => setAmount(e.target.value)}
-                      className="w-input blue"
-                      style={{ paddingLeft:'40px' }}
+                    <div style={{ position:'relative', marginBottom:'10px' }}>
+                      <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#94a3b8', fontWeight:'800', fontSize:'20px' }}>₹</span>
+                      <input type="number" placeholder="Amount to withdraw" value={amount}
+                        onChange={e => setAmount(e.target.value)}
+                        className="w-input blue"
+                        style={{ paddingLeft:'40px' }}
+                      />
+                    </div>
+
+                    <input type="text" placeholder="UPI ID (e.g. name@upi)" value={upiId}
+                      onChange={e => setUpiId(e.target.value)}
+                      className="w-input-plain"
+                      style={{ marginBottom:'10px' }}
                     />
+
+                    {numAmount > balance && numAmount > 0 && (
+                      <p style={{ color:'#ef4444', fontSize:'12px', fontWeight:'700', marginBottom:'10px' }}>⚠️ Exceeds wallet balance</p>
+                    )}
+
+                    <button className="w-btn-blue" onClick={handleWithdraw} disabled={withdrawing || !upiId || numAmount <= 0 || numAmount > balance}>
+                      {withdrawing ? <><Spinner dark />Processing...</> : `🏦 Withdraw ₹${numAmount || '—'}`}
+                    </button>
                   </div>
-
-                  <input type="text" placeholder="UPI ID (e.g. name@upi)" value={upiId}
-                    onChange={e => setUpiId(e.target.value)}
-                    className="w-input-plain"
-                    style={{ marginBottom:'10px' }}
-                  />
-
-                  {numAmount > balance && numAmount > 0 && (
-                    <p style={{ color:'#ef4444', fontSize:'12px', fontWeight:'700', marginBottom:'10px' }}>⚠️ Exceeds wallet balance</p>
-                  )}
-
-                  <button className="w-btn-blue" onClick={handleWithdraw} disabled={withdrawing || !upiId || numAmount <= 0 || numAmount > balance}>
-                    {withdrawing ? <><Spinner dark />Processing...</> : `🏦 Withdraw ₹${numAmount || '—'}`}
-                  </button>
-                </div>
+                ) : (
+                  <div style={{ marginTop:'18px', paddingTop:'16px', borderTop:'1px solid #f1f5f9' }}>
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>🛍️</span>
+                      <div>
+                        <p style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+                          100% Usable on All Orders
+                        </p>
+                        <p style={{ fontSize: '11px', color: '#64748b', margin: '3px 0 0', lineHeight: 1.4, fontWeight: '500' }}>
+                          Your wallet balance and bonus credits are applied automatically at checkout for food and grocery delivery with 0 transaction fees!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

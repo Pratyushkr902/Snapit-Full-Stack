@@ -546,16 +546,25 @@ export const searchProduct = async (request, response) => {
 export async function getFrequentlyBought(req, res) {
     try {
         const { productId } = req.query;
-        if (!productId || !mongoose.Types.ObjectId.isValid(productId))
-            return res.status(400).json({ success: false, message: 'Valid Product ID required' });
-        const product = await ProductModel.findById(productId);
-        if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-        const suggestions = await ProductModel.find({
-            category: { $in: product.category },
-            _id: { $ne: productId },
-            stock: { $gt: 0 },
-            publish: true
-        }).select(LIST_FIELDS).limit(5).lean();
+        let query = { stock: { $gt: 0 }, publish: true };
+
+        if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+            const product = await ProductModel.findById(productId);
+            if (product) {
+                query = {
+                    category: { $in: product.category },
+                    _id: { $ne: productId },
+                    stock: { $gt: 0 },
+                    publish: true
+                };
+            }
+        }
+
+        const suggestions = await ProductModel.find(query)
+            .select(LIST_FIELDS)
+            .limit(8)
+            .lean();
+
         return res.json({ success: true, data: suggestions.map(formatProductOutput) });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });

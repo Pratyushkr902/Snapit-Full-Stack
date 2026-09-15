@@ -69,7 +69,37 @@ export const verifyPayment = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid payment signature' })
         }
 
-        const numAmount = parseFloat(amount)
+        // 1. Replay protection: check if this payment was already processed
+        const existingTx = await UserModel.findOne({
+            _id: userId,
+            'walletTransactions.referenceId': razorpay_payment_id
+        }).select('walletBalance')
+
+        if (existingTx) {
+            console.log(`[verifyPayment] Payment ${razorpay_payment_id} already processed for user ${userId}`)
+            return res.json({
+                success: true,
+                message: 'Payment already credited to wallet! 🎉',
+                data: { balance: existingTx.walletBalance, bonus: 0 }
+            })
+        }
+
+        // 2. Fetch authentic payment amount from Razorpay to prevent client-side amount tampering
+        let verifiedPaise = null
+        try {
+            const razorpay = getRazorpayInstance()
+            const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id)
+            if (paymentDetails && paymentDetails.status !== 'captured' && paymentDetails.status !== 'authorized') {
+                return res.status(400).json({ success: false, message: 'Payment is not captured or authorized' })
+            }
+            if (paymentDetails && paymentDetails.amount) {
+                verifiedPaise = paymentDetails.amount
+            }
+        } catch (rzpFetchErr) {
+            console.warn('[verifyPayment] Could not fetch payment from Razorpay, falling back to signature-verified amount:', rzpFetchErr.message)
+        }
+
+        const numAmount = verifiedPaise !== null ? (verifiedPaise / 100) : parseFloat(amount)
         if (isNaN(numAmount) || numAmount <= 0) {
             return res.status(400).json({ success: false, message: 'Invalid amount' })
         }

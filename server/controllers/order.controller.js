@@ -36,6 +36,7 @@ import CartProductModel from '../models/cartproduct.model.js'
 import UserModel        from '../models/user.model.js'
 import ProductModel     from '../models/product.model.js'
 import AddressModel    from '../models/address.model.js'
+import WalletModel     from '../models/wallet.model.js'
 import RiderDutyModel  from '../models/riderDuty.model.js'
 import { getTodayDateIST } from './riderDuty.controller.js'
 import { assertStoreOpenForOrder } from '../utils/storeStatus.js'
@@ -76,7 +77,7 @@ const generateScratchCards = () => {
 const populateOrder = (query) =>
     query
         .populate('delivery_address')
-        .populate({ path: 'cartItems.productId', select: 'name unit image' })
+        .populate({ path: 'cartItems.productId', select: 'name unit image price discount stock store_inventory' })
         .populate('userId', 'name mobile')
         .lean()
 
@@ -365,7 +366,7 @@ async function sendOrderInvoiceEmail(order, user) {
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress } = request.body
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip } = request.body
 
         const parsedSubTotal = Number(subTotalAmt)
         const parsedTotal = Number(totalAmt)
@@ -492,7 +493,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             }
         }
 
-        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt)
+        const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
+        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
@@ -525,6 +527,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             subTotalAmt:      actualSubTotal,
             totalAmt:         finalTotalAmt,
             delivery_fee,
+            tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,
             delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
@@ -577,7 +580,7 @@ export async function CashOnDeliveryOrderController(request, response) {
 export async function WalletPaymentOrderController(request, response) {
     try {
         const userId = request.userId
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress } = request.body
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip } = request.body
 
         if (!list_items?.length || !addressId || !subTotalAmt || !totalAmt) {
             return response.status(400).json({ message: 'Missing required order fields.', error: true, success: false })
@@ -695,7 +698,8 @@ export async function WalletPaymentOrderController(request, response) {
             }
         }
 
-        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt)
+        const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
+        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt + sanitizedTip)
         if ((user.walletBalance || 0) < exactRequiredTotal) {
             return response.status(400).json({
                 message: `Insufficient wallet balance. Need ₹${(exactRequiredTotal - (user.walletBalance || 0)).toFixed(2)} more.`,
@@ -749,6 +753,29 @@ export async function WalletPaymentOrderController(request, response) {
         }
         walletDeducted = true
 
+        try {
+            await WalletModel.findOneAndUpdate(
+                { userId },
+                {
+                    $inc: { balance: -exactRequiredTotal },
+                    $push: {
+                        transactions: {
+                            $each: [{
+                                amount: exactRequiredTotal,
+                                type: 'debit',
+                                description: `Grocery Order #${transactionId.slice(-8).toUpperCase()}`,
+                                referenceId: transactionId,
+                                date: new Date()
+                            }],
+                            $position: 0
+                        }
+                    }
+                }
+            )
+        } catch (mirrorErr) {
+            console.error('[WalletPaymentOrderController] WalletModel mirror sync failed:', mirrorErr.message)
+        }
+
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
         const recipientMobile = String((isGift ? address.recipient_mobile : null) || address?.mobile || address?.recipient_mobile || user?.mobile || '').trim()
@@ -778,6 +805,7 @@ export async function WalletPaymentOrderController(request, response) {
             subTotalAmt:      actualSubTotal,
             totalAmt:         exactRequiredTotal,
             delivery_fee,
+            tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,
             delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
@@ -834,6 +862,24 @@ export async function WalletPaymentOrderController(request, response) {
                     }
                 }
             }).catch(() => {})
+            await WalletModel.findOneAndUpdate(
+                { userId },
+                {
+                    $inc: { balance: exactRequiredTotal },
+                    $push: {
+                        transactions: {
+                            $each: [{
+                                amount: exactRequiredTotal,
+                                type: 'credit',
+                                description: 'Refund for failed wallet order',
+                                referenceId: transactionId,
+                                date: new Date()
+                            }],
+                            $position: 0
+                        }
+                    }
+                }
+            ).catch(() => {})
         }
         console.error('WalletPaymentOrderController:', error.message)
         return response.status(500).json({ message: 'Order placement failed.', error: true, success: false })
@@ -845,7 +891,7 @@ export async function WalletPaymentOrderController(request, response) {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function paymentController(request, response) {
     try {
-        const { totalAmt, addressId, list_items, couponCode, isExpress } = request.body
+        const { totalAmt, addressId, list_items, couponCode, isExpress, tip } = request.body
         const userId = request.userId
 
         let payableAmount = Number(totalAmt)
@@ -916,7 +962,8 @@ export async function paymentController(request, response) {
                 }
             }
 
-            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt)
+            const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
+            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt + sanitizedTip)
             if (calculatedTotal > 0) {
                 payableAmount = calculatedTotal
             }
@@ -953,7 +1000,7 @@ export async function verifyPaymentController(request, response) {
         const userId = request.userId
         const {
             razorpay_order_id, razorpay_payment_id, razorpay_signature,
-            list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress
+            list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress, tip
         } = request.body
 
         if (!verifyRazorpaySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
@@ -1071,7 +1118,8 @@ export async function verifyPaymentController(request, response) {
             }
         }
 
-        const serverTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt)
+        const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
+        const serverTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
@@ -1104,6 +1152,7 @@ export async function verifyPaymentController(request, response) {
             subTotalAmt:      actualSubTotal,
             totalAmt:         serverTotal,
             delivery_fee,
+            tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,
             delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',

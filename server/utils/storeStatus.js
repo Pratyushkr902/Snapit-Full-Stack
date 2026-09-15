@@ -6,8 +6,57 @@ import mongoose from 'mongoose'
 import ProductModel from '../models/product.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import RestaurantModel from '../models/restaurant.model.js'
+import SystemConfigModel from '../models/systemConfig.model.js'
 
 const ADMIN_LIKE_ROLES = ['ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER', 'SUPER_ADMIN']
+
+// Dynamic in-memory store config synced with MongoDB
+let cachedStoreConfig = {
+  isClosedForToday: true,
+  closedReason: 'Snapit is closed for today. Deliveries will resume tomorrow at 8:30 AM IST!',
+  reopenTime: '8:30 AM Tomorrow',
+  updatedAt: new Date(),
+  updatedByName: 'Super Admin'
+}
+
+let isInitialized = false
+
+/**
+ * Initializes store closure configuration from database on startup.
+ */
+export async function initStoreStatus() {
+  try {
+    const doc = await SystemConfigModel.findOne({ key: 'store_closure_status' }).lean()
+    if (doc && doc.value) {
+      cachedStoreConfig = {
+        isClosedForToday: Boolean(doc.value.isClosedForToday),
+        closedReason: doc.value.closedReason || 'Snapit is closed for today. Deliveries will resume tomorrow at 8:30 AM IST!',
+        reopenTime: doc.value.reopenTime || '8:30 AM Tomorrow',
+        updatedAt: doc.updatedAt || new Date(),
+        updatedByName: doc.updatedByName || 'Super Admin'
+      }
+    } else {
+      await SystemConfigModel.create({
+        key: 'store_closure_status',
+        value: cachedStoreConfig,
+        updatedByName: 'Super Admin'
+      })
+    }
+    isInitialized = true
+  } catch (err) {
+    console.warn('[storeStatus] Warning loading status from DB:', err.message)
+  }
+}
+
+export function getCachedStoreConfig() {
+  return cachedStoreConfig
+}
+
+export function setCachedStoreConfig(newConfig) {
+  cachedStoreConfig = { ...cachedStoreConfig, ...newConfig }
+}
+
+export const IS_STORE_CLOSED_FOR_TODAY = cachedStoreConfig.isClosedForToday
 
 function getISTTime() {
   const now = new Date()
@@ -20,11 +69,11 @@ function getISTTime() {
 }
 
 function isWithinGlobalHours() {
+  if (cachedStoreConfig.isClosedForToday) return false
   const { hours, minutes } = getISTTime()
-  // 9:00 AM – 8:30 PM IST
-  if (hours < 9) return false
-  if (hours > 20) return false
-  if (hours === 20 && minutes >= 30) return false
+  // 8:30 AM – 8:30 PM IST (08:30 - 20:30)
+  if (hours < 8 || (hours === 8 && minutes < 30)) return false
+  if (hours > 20 || (hours === 20 && minutes >= 30)) return false
   return true
 }
 
@@ -105,10 +154,19 @@ async function assertRestaurantItemsAvailable(list_items) {
  * @param {String} [opts.userRole] - role of the placing user (bypasses global-hours check)
  */
 export async function assertStoreOpenForOrder({ list_items = [], userRole, orderType = 'grocery' } = {}) {
-  // Global 9:00 AM – 8:30 PM IST operating gate applies to all customer orders
+  // Ensure DB sync if not already done
+  if (!isInitialized) {
+    await initStoreStatus()
+  }
+
+  // Global operating gate applies to all customer orders
   const isAdmin = ADMIN_LIKE_ROLES.includes(userRole)
-  if (!isAdmin && !isWithinGlobalHours()) {
-    const err = new Error('Snapit is closed for the night (8:30 PM – 9:00 AM IST). Orders open at 9:00 AM tomorrow!')
+  if (!isAdmin && (cachedStoreConfig.isClosedForToday || !isWithinGlobalHours())) {
+    const err = new Error(
+      cachedStoreConfig.isClosedForToday
+        ? (cachedStoreConfig.closedReason || 'Snapit is closed for today. Deliveries will resume tomorrow at 8:30 AM IST!')
+        : 'Snapit is closed for the night (8:30 PM – 8:30 AM IST). Orders resume at 8:30 AM tomorrow!'
+    )
     err.statusCode = 400
     throw err
   }

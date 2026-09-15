@@ -514,6 +514,14 @@ const SummaryApi = {
         url: '/api/rider-remittance/admin/reject',
         method: 'post'
     },
+    getStoreOperatingStatus: {
+        url: '/api/admin/store-status',
+        method: 'get'
+    },
+    toggleStoreOperatingStatus: {
+        url: '/api/admin/toggle-store-status',
+        method: 'post'
+    },
 }
 
 export default SummaryApi

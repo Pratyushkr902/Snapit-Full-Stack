@@ -1,135 +1,145 @@
-// components/LastOrders.jsx
-// ✅ GROCERY REORDER - Shows last 3 grocery orders with one-tap reorder
-import { useState } from "react";
+import React, { useMemo } from 'react'
+import { useSelector } from 'react-redux'
+import { Link } from 'react-router-dom'
+import AddToCartButton from './AddToCartButton'
+import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
+import { pricewithDiscount } from '../utils/PriceWithDiscount'
+import { FALLBACK_IMAGE, getPrimaryImage } from '../utils/optimizeImageUrl'
+import { valideURLConvert } from '../utils/valideURLConvert'
 
-const mockLastOrders = [
-  {
-    id: "ORD001",
-    items: "Amul Milk 1L, Bread, Eggs (12), Onion 1kg",
-    total: 185,
-    time: "Today 9:00 AM",
-    itemCount: 4,
-  },
-  {
-    id: "ORD002",
-    items: "Tata Salt, Maggi 4-pack, Tomato 500g, Dahi 400g",
-    total: 210,
-    time: "Yesterday 6:30 PM",
-    itemCount: 4,
-  },
-  {
-    id: "ORD003",
-    items: "Atta 5kg, Sugar 1kg, Refined Oil 1L",
-    total: 375,
-    time: "3 days ago",
-    itemCount: 3,
-  },
-];
+export default function LastOrders() {
+  const orders = useSelector((state) => state.orders?.order) || []
+  const user = useSelector((state) => state.user)
 
-export default function LastOrders({ onReorder }) {
-  const [reordering, setReordering] = useState(null);
-  const [done, setDone] = useState([]);
+  // Extract unique products from user's completed/past orders
+  const recentProducts = useMemo(() => {
+    if (!orders || orders.length === 0) return []
 
-  const handleReorder = async (order) => {
-    setReordering(order.id);
-    await new Promise((r) => setTimeout(r, 1400));
-    setReordering(null);
-    setDone((prev) => [...prev, order.id]);
-    onReorder?.(order);
-  };
+    const seenIds = new Set()
+    const products = []
+
+    for (const order of orders) {
+      if (!order) continue
+      // Only include non-cancelled orders
+      if (order.delivery_status === 'Cancelled') continue
+
+      // Check cartItems
+      if (Array.isArray(order.cartItems) && order.cartItems.length > 0) {
+        for (const ci of order.cartItems) {
+          const p = ci?.productId
+          if (!p || typeof p !== 'object' || !p._id) continue
+          const pid = String(p._id)
+          if (seenIds.has(pid)) continue
+          seenIds.add(pid)
+
+          products.push({
+            _id: pid,
+            name: p.name || 'Product',
+            unit: p.unit || '',
+            image: Array.isArray(p.image) ? p.image : (p.image ? [p.image] : []),
+            price: Number(p.price ?? ci.price ?? 0),
+            discount: Number(p.discount ?? 0),
+            stock: p.stock !== undefined ? p.stock : 50,
+            store_inventory: p.store_inventory || [],
+            orderedDate: order.createdAt,
+          })
+          if (products.length >= 10) break
+        }
+      }
+
+      if (products.length >= 10) break
+    }
+
+    return products
+  }, [orders])
+
+  if (!user?._id || recentProducts.length === 0) {
+    return null
+  }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.headerRow}>
-        <h3 style={styles.heading}>🔄 Order Again</h3>
-        <span style={styles.seeAll}>See All</span>
+    <section className="container mx-auto px-4 mb-5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-base">🔄</span>
+            <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Order Again
+            </h2>
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            Your frequently ordered staples in 1-tap
+          </p>
+        </div>
+        <Link
+          to="/dashboard/myorders"
+          className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 flex items-center gap-1"
+        >
+          <span>Past Orders</span>
+          <span>→</span>
+        </Link>
       </div>
 
-      {mockLastOrders.map((order) => {
-        const isDone = done.includes(order.id);
-        const isLoading = reordering === order.id;
-        return (
-          <div key={order.id} style={styles.card}>
-            <div style={styles.iconBox}>🛒</div>
-            <div style={styles.info}>
-              <p style={styles.items}>{order.items}</p>
-              <p style={styles.meta}>
-                {order.itemCount} items • ₹{order.total} • {order.time}
-              </p>
-            </div>
-            <button
-              style={{
-                ...styles.button,
-                background: isDone ? "#4CAF50" : "#2E7D32",
-                opacity: isLoading ? 0.75 : 1,
-              }}
-              onClick={() => handleReorder(order)}
-              disabled={isLoading || isDone}
-            >
-              {isDone ? "✅ Added" : isLoading ? "..." : "REORDER"}
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+      {/* Horizontal Carousel */}
+      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1.5 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {recentProducts.map((prod) => {
+          const imgSrc = getPrimaryImage(prod.image, null, 240)
+          const finalPrice = prod.discount > 0 ? pricewithDiscount(prod.price, prod.discount) : prod.price
+          const url = `/product/${valideURLConvert(prod.name)}-${prod._id}`
 
-const styles = {
-  container: {
-    background: "#fff",
-    borderRadius: 16,
-    padding: "16px",
-    margin: "12px 0",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-  },
-  headerRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  heading: { fontSize: 16, fontWeight: 700, color: "#1a1a1a", margin: 0 },
-  seeAll: { fontSize: 13, color: "#2E7D32", fontWeight: 600, cursor: "pointer" },
-  card: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "12px 0",
-    borderBottom: "1px solid #f5f5f5",
-  },
-  iconBox: {
-    fontSize: 24,
-    background: "#f1f8e9",
-    borderRadius: 10,
-    width: 44,
-    height: 44,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  info: { flex: 1 },
-  items: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#222",
-    margin: 0,
-    display: "-webkit-box",
-    WebkitLineClamp: 1,
-    WebkitBoxOrient: "vertical",
-    overflow: "hidden",
-  },
-  meta: { fontSize: 11, color: "#888", margin: "4px 0 0" },
-  button: {
-    color: "#fff",
-    border: "none",
-    borderRadius: 8,
-    padding: "8px 14px",
-    fontWeight: 700,
-    fontSize: 12,
-    cursor: "pointer",
-    transition: "all 0.2s",
-    whiteSpace: "nowrap",
-  },
-};
+          return (
+            <div
+              key={prod._id}
+              className="flex-shrink-0 w-[140px] sm:w-[155px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between shadow-2xs hover:border-emerald-200 dark:hover:border-emerald-800 transition-all"
+            >
+              <Link to={url} className="block group">
+                <div className="w-full aspect-square rounded-xl bg-slate-50 dark:bg-slate-800/60 overflow-hidden flex items-center justify-center relative mb-2">
+                  <img
+                    src={imgSrc}
+                    alt={prod.name}
+                    className="w-full h-full object-scale-down p-1 group-hover:scale-105 transition-transform"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null
+                      e.target.src = FALLBACK_IMAGE
+                    }}
+                  />
+                  <div className="absolute top-1 left-1 bg-slate-900/80 backdrop-blur-xs text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                    <span>⚡</span>
+                    <span>10m</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 line-clamp-2 leading-tight min-h-[26px]">
+                  {prod.name}
+                </p>
+                {prod.unit && (
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                    {prod.unit}
+                  </p>
+                )}
+              </Link>
+
+              <div className="mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/80 flex items-center justify-between gap-1">
+                <div>
+                  <span className="text-xs font-black text-slate-900 dark:text-white">
+                    {DisplayPriceInRupees(finalPrice)}
+                  </span>
+                  {prod.discount > 0 && (
+                    <span className="text-[10px] text-slate-400 line-through block -mt-1">
+                      {DisplayPriceInRupees(prod.price)}
+                    </span>
+                  )}
+                </div>
+                <div className="scale-90 origin-right">
+                  <AddToCartButton data={prod} />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}

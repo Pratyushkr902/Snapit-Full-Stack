@@ -8,7 +8,7 @@ import Loading from './Loading'
 import { useSelector } from 'react-redux'
 import { FaMinus, FaPlus } from "react-icons/fa6"
 import { useState } from 'react'
-import { isStoreOpen } from './StoreClosedOverlay'
+import { isStoreOpen, getStoreStatus } from './StoreClosedOverlay'
 
 export const getEffectiveStock = (item) => {
     if (!item) return 0
@@ -60,7 +60,11 @@ const AddToCartButton = ({ data }) => {
             const { data: responseData } = response
             if (responseData.success) {
                 if (storeClosed) {
-                    toast.success("Added to cart! Deliveries start at 8:30 AM.", { icon: "🛒" })
+                    const status = getStoreStatus(user?.role)
+                    const msg = status.isClosedForToday
+                        ? "Added to cart! Deliveries resume tomorrow at 8:30 AM."
+                        : "Added to cart! Deliveries start at 8:30 AM."
+                    toast.success(msg, { icon: "🛒" })
                 } else {
                     toast.success(responseData.message)
                 }
@@ -81,7 +85,11 @@ const AddToCartButton = ({ data }) => {
         const response = await updateCartItem(cartItemDetails?._id, qty + 1)
         if (response?.success) {
             if (storeClosed) {
-                toast.success("Cart updated! Deliveries start at 8:30 AM.")
+                const status = getStoreStatus(user?.role)
+                const msg = status.isClosedForToday
+                    ? "Cart updated! Deliveries resume tomorrow at 8:30 AM."
+                    : "Cart updated! Deliveries start at 8:30 AM."
+                toast.success(msg)
             } else {
                 toast.success("Item added")
             }

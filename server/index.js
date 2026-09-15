@@ -80,6 +80,7 @@ import RiderDutyModel from './models/riderDuty.model.js'
 import { getTodayDateIST } from './controllers/riderDuty.controller.js'
 
 import adminManagementRouter from './route/adminManagement.route.js'
+import { initStoreStatus } from './utils/storeStatus.js'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -531,8 +532,9 @@ cron.schedule('0 0 * * *', async () => {
 
 // ─── ENGINE BOOT ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 8080
-connectDB().then(() => {
+connectDB().then(async () => {
     console.log("✅ Database Connected")
+    await initStoreStatus()
     initSubscriptionCron()
     initMarketingCron()
     startAutoConfirmCron()

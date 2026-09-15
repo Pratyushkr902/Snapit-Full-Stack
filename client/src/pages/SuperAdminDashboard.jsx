@@ -4,6 +4,8 @@ import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
 import AdminSundayFlashWidget from '../components/AdminSundayFlashWidget'
 import AdminMarketingHub from '../components/AdminMarketingHub'
 import AdminResetPinModal from '../components/AdminResetPinModal'
+import AdminPendingWithdrawalsWidget from '../components/AdminPendingWithdrawalsWidget'
+import AdminStoreControlWidget from '../components/AdminStoreControlWidget'
 
 const CARDS = [
   {
@@ -131,6 +133,12 @@ const SuperAdminDashboard = () => {
             </p>
           </div>
         </div>
+
+        {/* 🏪 STORE OPERATING STATUS (1-Click Emergency / Day Closure Control) */}
+        <AdminStoreControlWidget />
+
+        {/* 🏦 PENDING WALLET WITHDRAWALS ALERT */}
+        <AdminPendingWithdrawalsWidget />
 
         {/* 🛵 LIVE RIDER FLEET OVERVIEW */}
         <AdminLiveFleetWidget />

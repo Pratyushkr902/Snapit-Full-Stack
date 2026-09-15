@@ -7,6 +7,7 @@ import CategoryWiseProductDisplay from '../components/categoryWiseProductDisplay
 import TodayDeals from '../components/TodayDeals'
 import FoodCategoryCard from '../components/FoodCategoryCard'
 import StoreClosedOverlay from '../components/StoreClosedOverlay'
+import LastOrders from '../components/LastOrders'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { setAllCategory, setAllSubCategory, setLoadingCategory } from '../store/productSlice'
@@ -141,6 +142,9 @@ const Home = () => {
           ))}
         </div>
       </div>
+
+      {/* 2.5 ORDER AGAIN / REORDER CAROUSEL (Blinkit / Zepto / Flipkart Minutes style) */}
+      <LastOrders />
 
       {/* 3. GROCERY CATEGORY GRID */}
       <div className='container mx-auto px-4 mt-1 mb-6'>

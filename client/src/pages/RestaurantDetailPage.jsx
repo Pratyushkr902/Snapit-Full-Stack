@@ -486,6 +486,7 @@ export default function RestaurantDetailPage() {
   const [bannerSrc, setBannerSrc] = useState(BANNER_FALLBACK)
   const [userLocation, setUserLocation] = useState(null)
   const [conflictModal, setConflictModal] = useState(null)
+  const [vegOnly, setVegOnly] = useState(false)
 
   // ── Address selection & global sync ──
   const { fetchAddress } = useGlobalContext() || {}
@@ -572,7 +573,10 @@ export default function RestaurantDetailPage() {
   }
 
   const activeSection = menu.find(m => m.category === activeCategory)
-  const groupedItems = activeSection ? groupItems(activeSection.items) : []
+  const displayedActiveItems = activeSection?.items
+    ? activeSection.items.filter(item => !vegOnly || item.isVeg)
+    : []
+  const groupedItems = groupItems(displayedActiveItems)
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -710,9 +714,29 @@ export default function RestaurantDetailPage() {
             )}
           </div>
 
-          {/* ── Category Tabs ── */}
+          {/* ── Category Tabs & Veg Only Filter (Zomato / Swiggy Style) ── */}
           {menu.length > 0 && (
-            <div className="sticky top-0 z-10">
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-100 shadow-2xs">
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50/90 border-b border-gray-100">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">Categories</span>
+                <button
+                  type="button"
+                  onClick={() => setVegOnly(prev => !prev)}
+                  className={`flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold transition-all shadow-2xs active:scale-95 ${
+                    vegOnly
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-1 ring-emerald-400/30'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <div className={`w-3.5 h-3.5 border-2 rounded-xs flex items-center justify-center ${vegOnly ? 'border-emerald-600' : 'border-gray-400'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${vegOnly ? 'bg-emerald-600' : 'bg-transparent'}`} />
+                  </div>
+                  <span>Veg Only</span>
+                  <div className={`w-7 h-4 rounded-full p-0.5 transition-colors ${vegOnly ? 'bg-emerald-600' : 'bg-gray-200'}`}>
+                    <div className={`w-3 h-3 rounded-full bg-white transition-transform ${vegOnly ? 'translate-x-3' : 'translate-x-0'}`} />
+                  </div>
+                </button>
+              </div>
               <CategoryTabs
                 categories={menu.map(m => m.category)}
                 active={activeCategory}
@@ -731,20 +755,56 @@ export default function RestaurantDetailPage() {
               </div>
             ) : (
               <>
-                <div className="px-4 pt-4 pb-0">
+                <div className="px-4 pt-4 pb-0 flex items-center justify-between">
                   <h2 className="font-extrabold text-gray-900 text-base">
                     {activeCategory}
                     <span className="text-gray-400 font-normal text-sm ml-2">({groupedItems.length})</span>
                   </h2>
+                  {vegOnly && (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      🟢 Veg Only Applied
+                    </span>
+                  )}
                 </div>
 
-                <div className="px-4">
-                  {groupedItems.map((entry) => {
-                    if (entry.type === 'inline') {
+                {groupedItems.length === 0 ? (
+                  <div className="py-12 text-center text-gray-400 text-sm px-4">
+                    {vegOnly ? 'No vegetarian items found in this section.' : 'No items found.'}
+                  </div>
+                ) : (
+                  <div className="px-4">
+                    {groupedItems.map((entry) => {
+                      if (entry.type === 'inline') {
+                        return (
+                          <InlineVariantCard
+                            key={entry.item._id}
+                            item={entry.item}
+                            foodCart={foodCart}
+                            isLongDistance={isLongDistance}
+                            onAdd={wrappedAdd}
+                            onIncrease={handleIncrease}
+                            onDecrease={handleDecrease}
+                          />
+                        )
+                      }
+                      if (entry.type === 'solo') {
+                        const item = entry.item
+                        return (
+                          <FoodItemCard
+                            key={item._id}
+                            item={item}
+                            qty={foodCart[item._id]?.qty || 0}
+                            isLongDistance={isLongDistance}
+                            onAdd={() => wrappedAdd(item)}
+                            onIncrease={() => handleIncrease(item)}
+                            onDecrease={() => handleDecrease(item)}
+                          />
+                        )
+                      }
                       return (
-                        <InlineVariantCard
-                          key={entry.item._id}
-                          item={entry.item}
+                        <VariantCard
+                          key={entry.baseName}
+                          group={entry}
                           foodCart={foodCart}
                           isLongDistance={isLongDistance}
                           onAdd={wrappedAdd}
@@ -752,37 +812,14 @@ export default function RestaurantDetailPage() {
                           onDecrease={handleDecrease}
                         />
                       )
-                    }
-                    if (entry.type === 'solo') {
-                      const item = entry.item
-                      return (
-                        <FoodItemCard
-                          key={item._id}
-                          item={item}
-                          qty={foodCart[item._id]?.qty || 0}
-                          isLongDistance={isLongDistance}
-                          onAdd={() => wrappedAdd(item)}
-                          onIncrease={() => handleIncrease(item)}
-                          onDecrease={() => handleDecrease(item)}
-                        />
-                      )
-                    }
-                    return (
-                      <VariantCard
-                        key={entry.baseName}
-                        group={entry}
-                        foodCart={foodCart}
-                        isLongDistance={isLongDistance}
-                        onAdd={wrappedAdd}
-                        onIncrease={handleIncrease}
-                        onDecrease={handleDecrease}
-                      />
-                    )
-                  })}
-                </div>
+                    })}
+                  </div>
+                )}
 
                 {menu.filter(m => m.category !== activeCategory).map((section) => {
-                  const sectionGrouped = groupItems(section.items)
+                  const sectionFiltered = (section.items || []).filter(item => !vegOnly || item.isVeg)
+                  const sectionGrouped = groupItems(sectionFiltered)
+                  if (vegOnly && sectionGrouped.length === 0) return null
                   return (
                     <button
                       key={section.category}

@@ -9,9 +9,18 @@ import { loadRazorpay } from '../utils/loadRazorpay'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
 import { useFullCart, foodCartStore } from '../utils/foodCartStore'
-import { isStoreOpen } from '../components/StoreClosedOverlay'
+import { isStoreOpen, getStoreStatus } from '../components/StoreClosedOverlay'
 import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
 import { getCampusAdjustedPrice } from './RestaurantDetailPage'
+import FreeDeliveryProgressBar from '../components/FreeDeliveryProgressBar'
+
+const COOKING_PRESETS = [
+  '🌶️ Less spicy',
+  '🚫 No onion & garlic',
+  '🥣 Extra gravy / chutney',
+  '🍴 Send cutlery & napkins',
+  '🥗 Less oily',
+]
 
 const TIP_PRESETS = [
   { amt: 0,  label: 'No tip' },
@@ -60,6 +69,8 @@ const FoodCheckoutPage = () => {
   const user      = useSelector(s => s.user)
   const addressList = useSelector(s => s.addresses.addressList)
   const { fetchAddress } = useGlobalContext() || {}
+  const isStoreClosed = !isStoreOpen(user?.role)
+  const storeStatus = getStoreStatus(user?.role)
 
   useEffect(() => { fetchAddress() }, [])
 
@@ -116,6 +127,8 @@ const FoodCheckoutPage = () => {
 
   const [activeTags,    setActiveTags]      = useState([])
   const [instructions,  setInstructions]    = useState('')
+  const [cookingNotes,  setCookingNotes]    = useState('')
+  const [activeCookingChips, setActiveCookingChips] = useState([])
 
   // ── Sunday Flash Offer 5-Minute Window ──────────────────────────────────────
   const [flashOffer, setFlashOffer] = useState(null)
@@ -335,6 +348,11 @@ const FoodCheckoutPage = () => {
       instructions.trim(),
     ].filter(Boolean).join('. ')
 
+    const fullCookingInstructions = [
+      ...activeCookingChips,
+      cookingNotes.trim(),
+    ].filter(Boolean).join('. ')
+
     const items = restaurantItemLists.flatMap(r => {
       const isLongDist = Boolean(restaurantPricing.find(rp => rp.restaurantId === r.restaurantId)?.isLongDistance)
       return r.resolvedItems.map(({ item, basePrice, qty }) => {
@@ -355,6 +373,7 @@ const FoodCheckoutPage = () => {
       addressId: addressList[selectAddress]?._id,
       scheduledDelivery: scheduleNow ? null : scheduleSlot,
       deliveryInstructions: fullInstructions || undefined,
+      cookingInstructions: fullCookingInstructions || undefined,
       tip: tipAmt,
       couponCode: appliedCouponCode || undefined,
       couponDiscount: couponDiscount || undefined,
@@ -366,14 +385,21 @@ const FoodCheckoutPage = () => {
       ...extra,
     }
   }, [
-    activeTags, instructions, addressList, selectAddress, scheduleNow, scheduleSlot,
+    activeTags, instructions, activeCookingChips, cookingNotes, addressList, selectAddress, scheduleNow, scheduleSlot,
     tipAmt, appliedCouponCode, couponDiscount, walletDeduct,
     restaurantItemLists, isFlashEligible,
   ])
 
   // ── Payment handlers ─────────────────────────────────────────────────────────
+  const getClosedMessage = () => {
+    const status = getStoreStatus(user?.role)
+    return status.isClosedForToday
+      ? 'Snapit is closed for today. Deliveries resume tomorrow at 8:30 AM IST!'
+      : 'Restaurants are currently closed for the night. Deliveries start at 8:30 AM IST!'
+  }
+
   const handleCOD = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
+    if (!isStoreOpen(user?.role)) return toast.error(getClosedMessage(), { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
     if (!checkServiceArea()) return
     setPlacing(true)
@@ -399,7 +425,7 @@ const FoodCheckoutPage = () => {
   }
 
   const handleWalletPay = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
+    if (!isStoreOpen(user?.role)) return toast.error(getClosedMessage(), { duration: 4000 })
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
     if (!checkServiceArea()) return
     if (walletBal < grandTotal) return toast.error(`Insufficient wallet balance. Need ₹${grandTotal}, have ₹${walletBal.toFixed(0)}`)
@@ -426,7 +452,7 @@ const FoodCheckoutPage = () => {
   }
 
   const handleOnlinePayment = async () => {
-    if (!isStoreOpen(user?.role)) return toast.error('Restaurants are currently closed for the night. Deliveries start at 10:00 AM IST!', { duration: 4000 })
+    if (!isStoreOpen(user?.role)) return toast.error(getClosedMessage(), { duration: 4000 })
     const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
     if (!RAZORPAY_KEY) return toast.error('Razorpay key missing')
     if (!addressList[selectAddress]) return toast.error('Select a delivery address')
@@ -610,6 +636,17 @@ const FoodCheckoutPage = () => {
           </div>
         </div>
       )}
+
+      {/* ── Free Delivery Progress Bar (Zepto / Blinkit / Zomato style) ── */}
+      <div className='px-4 pt-3 bg-white border-b border-gray-100'>
+        <FreeDeliveryProgressBar
+          currentAmount={payableFood}
+          threshold={restaurantPricing[0]?.isLongDistance ? 199 : 149}
+          isSnapitPlus={isSnapitPlus}
+          isLongDistance={restaurantPricing[0]?.isLongDistance}
+          customMessage={restaurantPricing[0]?.isLongDistance ? 'Flat ₹12 delivery fee (FREE on orders ₹199+)' : ''}
+        />
+      </div>
 
       {/* ── Items, grouped by restaurant ────────────────────────────────── */}
       {restaurantPricing.map((r) => (
@@ -827,6 +864,45 @@ const FoodCheckoutPage = () => {
             <span className='text-lg'>+</span> Add new address
           </button>
         </div>
+      </div>
+
+      {/* ── Cooking instructions (Zomato-style) ─────────────────────────── */}
+      <div className='bg-white mt-2 px-4 py-4'>
+        <div className='flex items-center gap-1.5 mb-1'>
+          <span className='text-sm'>👨‍🍳</span>
+          <p className='text-xs font-semibold text-gray-400 uppercase tracking-wide'>Cooking instructions</p>
+        </div>
+        <p className='text-[11px] text-gray-400 mb-3'>Instructions will be printed on the restaurant's kitchen slip</p>
+        <div className='flex flex-wrap gap-2 mb-3'>
+          {COOKING_PRESETS.map((label) => {
+            const isSelected = activeCookingChips.includes(label)
+            return (
+              <button
+                key={label}
+                type='button'
+                onClick={() => {
+                  setActiveCookingChips(prev =>
+                    prev.includes(label) ? prev.filter(c => c !== label) : [...prev, label]
+                  )
+                }}
+                className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+                  isSelected
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-2xs'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        <textarea
+          value={cookingNotes}
+          onChange={e => setCookingNotes(e.target.value)}
+          rows={2}
+          placeholder='e.g. less oil, extra crispy, less spicy...'
+          className='w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 resize-none outline-none focus:border-emerald-400 transition-colors'
+        />
       </div>
 
       {/* ── Delivery instructions ─────────────────────────────────────── */}
@@ -1096,6 +1172,12 @@ const FoodCheckoutPage = () => {
             </p>
           </div>
         </div>
+        {isStoreClosed && (
+          <div className='bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-xl text-xs font-bold leading-relaxed mb-2.5 text-center flex items-center justify-center gap-2'>
+            <span>⛔</span>
+            <span>Snapit is closed for today. Deliveries resume tomorrow at 8:30 AM IST!</span>
+          </div>
+        )}
         {unserviceableResto && (
           <div className='bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-xl text-xs font-bold leading-relaxed mb-2.5 text-center'>
             {unserviceableResto.info?.isEveningClosed
@@ -1106,24 +1188,24 @@ const FoodCheckoutPage = () => {
         <div className='grid grid-cols-2 gap-2'>
           <button
             onClick={handleCOD}
-            disabled={placing || !!unserviceableResto}
+            disabled={isStoreClosed || placing || !!unserviceableResto}
             className='h-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition'
           >
             💵 Cash
           </button>
           <button
             onClick={handleWalletPay}
-            disabled={placing || !!unserviceableResto}
+            disabled={isStoreClosed || placing || !!unserviceableResto}
             className='h-12 rounded-xl border border-green-200 bg-green-50 text-green-800 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition'
           >
             💸 Wallet
           </button>
           <button
             onClick={handleOnlinePayment}
-            disabled={placing || !!unserviceableResto}
+            disabled={isStoreClosed || placing || !!unserviceableResto}
             className='col-span-2 h-12 rounded-xl bg-red-500 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition shadow-md shadow-red-200'
           >
-            💳 Pay online — ₹{grandTotal}
+            {isStoreClosed ? '⛔ Store Closed for Today' : `💳 Pay online — ₹${grandTotal}`}
           </button>
         </div>
       </div>

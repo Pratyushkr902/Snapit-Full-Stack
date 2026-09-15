@@ -9,10 +9,18 @@ import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
-import { isStoreOpen } from '../components/StoreClosedOverlay'
+import { isStoreOpen, getStoreStatus } from '../components/StoreClosedOverlay'
 import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
+import FreeDeliveryProgressBar from '../components/FreeDeliveryProgressBar'
 
 const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
+
+const TIP_PRESETS = [
+  { amt: 0,  label: 'No tip' },
+  { amt: 10, label: 'Fair' },
+  { amt: 20, label: 'Most tipped' },
+  { amt: 30, label: 'Generous' },
+]
 
 // NOTE: Serviceability is determined by real distance from store via
 // getDeliveryInfo() / deliveryInfo.serviceable (see checkServiceArea below).
@@ -33,8 +41,12 @@ const CheckoutPage = () => {
   const [discountLabel, setDiscountLabel]         = useState('')
   const [couponApplied, setCouponApplied]         = useState(false)
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false)
+  const [tipAmt, setTipAmt]                       = useState(0)
+  const [activeTipIdx, setActiveTipIdx]           = useState(0)
 
   const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
+  const isStoreClosed = !isStoreOpen(user?.role)
+  const storeStatus = getStoreStatus(user?.role)
 
 
   // Read coords directly from selected address, falling back to Paliganj center if no pin
@@ -46,7 +58,7 @@ const CheckoutPage = () => {
     : null
 
   const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
-  const grandTotal  = Math.max(0, (totalPrice + deliveryFee) - discountAmount)
+  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + tipAmt) - discountAmount)
 
   // Coords for backend — from effective address or store fallback
   const getCoords = () => ({
@@ -123,7 +135,8 @@ const CheckoutPage = () => {
   const handleWalletPayment = async () => {
     let loadingToast = null
     try {
-      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
+      const storeStatus = getStoreStatus(user?.role)
+      if (storeStatus.isClosed) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
       if (!checkMinOrder()) return
@@ -139,6 +152,7 @@ const CheckoutPage = () => {
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           totalAmt:         grandTotal,
+          tip:              tipAmt,
           lat:              c.lat,
           lng:              c.lng,
           amount:           grandTotal,
@@ -164,7 +178,8 @@ const CheckoutPage = () => {
   const handleCashOnDelivery = async () => {
     let loadingToast = null
     try {
-      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
+      const storeStatus = getStoreStatus(user?.role)
+      if (storeStatus.isClosed) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select an address first')
       if (!checkServiceArea()) return
       if (!checkMinOrder()) return
@@ -178,6 +193,7 @@ const CheckoutPage = () => {
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           totalAmt:         grandTotal,
+          tip:              tipAmt,
           lat:              c.lat,
           lng:              c.lng,
           deliveryLocation: { lat: c.lat, lng: c.lng },
@@ -200,7 +216,8 @@ const CheckoutPage = () => {
 
   const handleOnlinePayment = async () => {
     try {
-      if (!isStoreOpen(user?.role)) return toast.error('Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
+      const storeStatus = getStoreStatus(user?.role)
+      if (storeStatus.isClosed) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!selectedAddress) return toast.error('Please select a delivery address')
@@ -225,6 +242,7 @@ const CheckoutPage = () => {
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           totalAmt:         grandTotal,
+          tip:              tipAmt,
           deliveryLocation: { lat: c.lat, lng: c.lng }
         }
       })
@@ -276,6 +294,7 @@ const CheckoutPage = () => {
                   subTotalAmt:         totalPrice,
                   delivery_fee:        deliveryFee,
                   totalAmt:            grandTotal,
+                  tip:                 tipAmt,
                   deliveryLocation:    { lat: c.lat, lng: c.lng },
                   couponCode:          couponApplied ? couponCode.trim().toUpperCase() : null,
                   discountAmt:         discountAmount
@@ -445,40 +464,48 @@ const CheckoutPage = () => {
             )}
           </div>
 
-          {/* Free Delivery Banner (Within 5 km) */}
-          {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.distanceKm <= 5 && (
-            deliveryFee === 0 ? (
-              <div className='mx-4 mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-2xs flex items-center gap-2'>
-                <span className='text-base'>🎉</span>
-                <p className='text-xs font-bold text-emerald-800'>
-                  You unlocked <span className='font-black text-emerald-700'>FREE Delivery</span> on this order!
-                </p>
-              </div>
-            ) : deliveryInfo.amountNeededForFreeDelivery > 0 ? (
-              <div className='mx-4 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-2xs flex items-center justify-between'>
-                <p className='text-xs font-bold text-amber-900'>
-                  🛵 Add items worth <span className='font-black text-amber-800'>₹{deliveryInfo.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-700'>FREE Delivery</span> (Within 5 km)!
-                </p>
-              </div>
-            ) : null
-          )}
+          {/* Free Delivery Progress Bar (Zepto / Blinkit) */}
+          <div className='mx-4 mb-3'>
+            <FreeDeliveryProgressBar
+              currentAmount={totalPrice}
+              threshold={149}
+              isSnapitPlus={isSnapitPlus}
+              isLongDistance={deliveryInfo?.isLongDistance}
+            />
+          </div>
 
-          {/* Long Distance Delivery Tier Explanation Banner */}
-          {deliveryInfo && deliveryInfo.serviceable && deliveryInfo.isLongDistance && (
-            <div className='mx-4 mb-4 p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl shadow-sm'>
-              <div className='flex items-center justify-between text-xs font-black text-blue-900'>
-                <span className='flex items-center gap-1.5'>
-                  <span className='text-sm'>🎓</span> Campus Delivery ({deliveryInfo.distanceKm} km)
-                </span>
-                <span className='bg-blue-600 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black'>
-                  Flat ₹12
-                </span>
+          {/* ── Tip Delivery Partner (Blinkit / Zepto) ── */}
+          <div className='mx-4 mb-4 bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs'>
+            <div className='flex items-center justify-between mb-1.5'>
+              <div className='flex items-center gap-1.5'>
+                <span className='text-base'>🛵</span>
+                <p className='text-xs font-black text-slate-800'>Tip your delivery partner</p>
               </div>
-              <p className='text-[11px] text-blue-700 font-semibold mt-1'>
-                Min. order ₹199 for campus delivery. Flat ₹12 delivery charge applied.
-              </p>
+              <span className='text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full'>
+                100% goes to rider
+              </span>
             </div>
-          )}
+            <p className='text-[11px] text-slate-500 font-medium mb-3'>
+              Thank your delivery hero for bringing your heavy bags safely to your door.
+            </p>
+            <div className='grid grid-cols-4 gap-2'>
+              {TIP_PRESETS.map((t, idx) => (
+                <button
+                  key={t.amt}
+                  type='button'
+                  onClick={() => { setActiveTipIdx(idx); setTipAmt(t.amt) }}
+                  className={`py-2 px-1 rounded-xl text-xs font-black transition-all flex flex-col items-center ${
+                    activeTipIdx === idx
+                      ? 'bg-slate-900 text-white shadow-xs scale-[1.02]'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  <span>{t.amt === 0 ? 'No tip' : `₹${t.amt}`}</span>
+                  {t.label && <span className='text-[9px] font-medium opacity-80'>{t.label}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <h3 className='text-lg font-black px-4 uppercase text-slate-800'>Bill Summary</h3>
           <div className='p-4 space-y-3'>
@@ -523,6 +550,12 @@ const CheckoutPage = () => {
                 <p>- {DisplayPriceInRupees(discountAmount)}</p>
               </div>
             )}
+            {tipAmt > 0 && (
+              <div className='flex justify-between text-slate-700 font-bold'>
+                <p>Delivery Partner Tip ❤️</p>
+                <p>+ {DisplayPriceInRupees(tipAmt)}</p>
+              </div>
+            )}
             <div className='font-black flex justify-between border-t border-dashed pt-4 text-xl'>
               <p>Grand Total</p>
               <p>{DisplayPriceInRupees(grandTotal)}</p>
@@ -530,6 +563,19 @@ const CheckoutPage = () => {
           </div>
 
           <div className='w-full flex flex-col gap-3 p-4'>
+            {isStoreClosed && (
+              <div className='bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-xs font-bold leading-relaxed shadow-sm flex items-center gap-2.5'>
+                <span className='text-xl'>⛔</span>
+                <div>
+                  <p className='font-black'>{storeStatus.isClosedForToday ? "Store Closed for Today" : "Store Closed for the Night"}</p>
+                  <p className='font-medium text-[11px] text-red-600 mt-0.5'>
+                    {storeStatus.isClosedForToday
+                      ? "Snapit is closed for today. Deliveries resume tomorrow at 8:30 AM IST."
+                      : "Operating hours are 8:30 AM – 8:30 PM IST. Orders resume tomorrow morning!"}
+                  </p>
+                </div>
+              </div>
+            )}
             {deliveryInfo && !deliveryInfo.serviceable && (
               <div className='bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-xs font-bold leading-relaxed shadow-sm'>
                 {deliveryInfo.isEveningClosed
@@ -537,15 +583,15 @@ const CheckoutPage = () => {
                   : `📍 Your address is ${deliveryInfo.distanceKm} km away and outside our 16 km serviceable delivery area.`}
               </div>
             )}
-            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
+            <button disabled={isStoreClosed || cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
               className='py-4 bg-green-700 text-white rounded-2xl font-black uppercase disabled:opacity-40'
-              onClick={handleWalletPayment}>Pay via Wallet</button>
-            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
+              onClick={handleWalletPayment}>{isStoreClosed ? 'Store Closed for Today' : 'Pay via Wallet'}</button>
+            <button disabled={isStoreClosed || cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
               className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase disabled:opacity-40'
-              onClick={handleOnlinePayment}>Online Payment</button>
-            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
+              onClick={handleOnlinePayment}>{isStoreClosed ? 'Store Closed for Today' : 'Online Payment'}</button>
+            <button disabled={isStoreClosed || cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
               className='py-4 border-2 border-slate-900 text-slate-950 rounded-2xl font-black uppercase disabled:opacity-40'
-              onClick={handleCashOnDelivery}>Cash on Delivery</button>
+              onClick={handleCashOnDelivery}>{isStoreClosed ? 'Store Closed for Today' : 'Cash on Delivery'}</button>
           </div>
         </div>
       </div>
