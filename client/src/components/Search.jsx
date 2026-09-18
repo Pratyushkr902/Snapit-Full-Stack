@@ -49,7 +49,7 @@ const Search = () => {
     setInputValue(q)
   }, [params.search])
 
-  // Close suggestions on outside click
+  // Close suggestions on outside click (mouse + touch)
   useEffect(() => {
     const handleClick = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
@@ -57,7 +57,11 @@ const Search = () => {
       }
     }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('touchstart', handleClick, { passive: true })
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('touchstart', handleClick)
+    }
   }, [])
 
   // ✅ FIX: clear any pending debounced fetch when component unmounts

@@ -702,7 +702,6 @@ export async function getSmartCombosController(req, res) {
                 combos.push({
                     id: 'essentials_combo',
                     title: 'Daily Essentials Saver Combo',
-                    emoji: '🛍️',
                     badge: 'Popular Saver',
                     tagline: 'Best everyday staples bundled together',
                     originalPrice: originalPrice1,
@@ -717,7 +716,6 @@ export async function getSmartCombosController(req, res) {
                 combos.push({
                     id: 'snack_pack',
                     title: 'Quick Bites & Snack Pack',
-                    emoji: '🥨',
                     badge: 'Snack Hit',
                     tagline: 'Delicious snacks & munchies for anytime cravings',
                     originalPrice: originalPrice2,

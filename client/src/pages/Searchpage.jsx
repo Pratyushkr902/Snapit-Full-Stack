@@ -205,9 +205,10 @@ const SearchPage = () => {
     data.forEach((p) => {
       const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean)
       cats.forEach((cat) => {
-        const id = typeof cat === 'object' ? cat?._id : cat
+        const rawId = typeof cat === 'object' ? cat?._id : cat
         const name = typeof cat === 'object' ? cat?.name : cat
-        if (id && name) {
+        if (rawId && name) {
+          const id = String(rawId)
           map.set(id, { id, name, count: (map.get(id)?.count || 0) + 1 })
         }
       })
@@ -221,7 +222,7 @@ const SearchPage = () => {
     if (activeCategory !== 'all') {
       list = list.filter((p) => {
         const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean)
-        return cats.some((cat) => (typeof cat === 'object' ? cat?._id : cat) === activeCategory)
+        return cats.some((cat) => String(typeof cat === 'object' ? cat?._id : cat) === String(activeCategory))
       })
     }
 

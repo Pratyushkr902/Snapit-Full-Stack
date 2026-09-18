@@ -43,6 +43,17 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     const subCategoryData = useSelector(state => state.product.allSubCategory) || []
     const loadingCardNumber = new Array(6).fill(null)
 
+    // Sync state immediately if id prop changes
+    useEffect(() => {
+        const cached = categoryProductsCache.get(id)
+        if (cached) {
+            setData(cached)
+            setLoading(false)
+            setVisible(true)
+            preloadImages(cached, 220)
+        }
+    }, [id])
+
     useEffect(() => {
         if (visible) return
 

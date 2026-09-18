@@ -78,6 +78,10 @@ export const preloadImages = (items = [], width = 220) => {
       const optimized = optimizeImageUrl(rawUrl, width);
       if (!optimized || optimized === FALLBACK_IMAGE || preloadedUrls.has(optimized)) return;
 
+      if (preloadedUrls.size > 300) {
+        const oldest = preloadedUrls.values().next().value;
+        if (oldest) preloadedUrls.delete(oldest);
+      }
       preloadedUrls.add(optimized);
       const img = new Image();
       img.decoding = 'async';
