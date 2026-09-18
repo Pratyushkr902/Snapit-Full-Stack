@@ -6,7 +6,6 @@ import {
   IoClose,
   IoFlameSharp,
   IoSparkles,
-  IoFlash,
   IoChevronDown,
   IoBagHandleOutline,
   IoTrendingUp
@@ -293,9 +292,6 @@ const SearchPage = () => {
                 <IoFlameSharp size={14} />
               </span>
               <span>Trending in Paliganj</span>
-              <span className='ml-auto text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center gap-1'>
-                <IoFlash size={11} /> 10 Mins
-              </span>
             </div>
             <div className='flex items-center gap-2 overflow-x-auto scrollbar-none snap-x pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-wrap'>
               {TRENDING_SEARCHES.map((item, idx) => (
@@ -383,9 +379,6 @@ const SearchPage = () => {
               <h1 className='text-sm sm:text-base font-bold text-slate-900 dark:text-white'>
                 Results for <span className='text-emerald-600 dark:text-emerald-400'>"{searchText}"</span>
               </h1>
-              <span className='inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'>
-                <IoFlash size={12} /> 10 Mins Paliganj
-              </span>
             </div>
             <p className='text-xs text-slate-400 mt-0.5'>
               {loading && data.length === 0
