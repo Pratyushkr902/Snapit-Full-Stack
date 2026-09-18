@@ -12,6 +12,7 @@ import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 import { isStoreOpen, getStoreStatus } from '../components/StoreClosedOverlay'
 import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
 import FreeDeliveryProgressBar from '../components/FreeDeliveryProgressBar'
+import CartQuickAddSuggestions from '../components/CartQuickAddSuggestions'
 
 const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
@@ -464,13 +465,16 @@ const CheckoutPage = () => {
             )}
           </div>
 
-          {/* Free Delivery Progress Bar (Zepto / Blinkit) */}
+          {/* Free Delivery Progress Bar & Quick Adds (Zepto / Blinkit) */}
           <div className='mx-4 mb-3'>
             <FreeDeliveryProgressBar
               currentAmount={totalPrice}
               threshold={149}
               isSnapitPlus={isSnapitPlus}
               isLongDistance={deliveryInfo?.isLongDistance}
+            />
+            <CartQuickAddSuggestions
+              remainingForFreeDelivery={deliveryInfo?.amountNeededForFreeDelivery || Math.max(0, 149 - totalPrice)}
             />
           </div>
 

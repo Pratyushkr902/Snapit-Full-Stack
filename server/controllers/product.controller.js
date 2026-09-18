@@ -545,7 +545,7 @@ export const searchProduct = async (request, response) => {
 
 export async function getFrequentlyBought(req, res) {
     try {
-        const { productId } = req.query;
+        const { productId, impulse } = req.query;
         let query = { stock: { $gt: 0 }, publish: true };
 
         if (productId && mongoose.Types.ObjectId.isValid(productId)) {
@@ -558,12 +558,28 @@ export async function getFrequentlyBought(req, res) {
                     publish: true
                 };
             }
+        } else if (impulse === 'true' || !productId) {
+            // High-converting impulse items under ₹80 (biscuits, namkeen, chocolates, dairy, staples)
+            query = {
+                stock: { $gt: 0 },
+                publish: true,
+                price: { $gte: 5, $lte: 80 }
+            };
         }
 
-        const suggestions = await ProductModel.find(query)
+        let suggestions = await ProductModel.find(query)
             .select(LIST_FIELDS)
-            .limit(8)
+            .sort(impulse === 'true' || !productId ? { price: 1 } : { createdAt: -1 })
+            .limit(12)
             .lean();
+
+        // Fallback to general products if fewer than 4 impulse items found
+        if (suggestions.length < 4) {
+            suggestions = await ProductModel.find({ stock: { $gt: 0 }, publish: true })
+                .select(LIST_FIELDS)
+                .limit(12)
+                .lean();
+        }
 
         return res.json({ success: true, data: suggestions.map(formatProductOutput) });
     } catch (err) {

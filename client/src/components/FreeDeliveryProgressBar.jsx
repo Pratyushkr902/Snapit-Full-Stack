@@ -101,7 +101,7 @@ const FreeDeliveryProgressBar = ({
       {!isUnlocked && (
         <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-1.5 flex items-center justify-between">
           <span>Free delivery on orders ₹{numThreshold}+</span>
-          <span className="text-slate-500 font-bold">Standard charge ₹29</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-bold">Save ₹12–₹29 on delivery</span>
         </p>
       )}
     </div>

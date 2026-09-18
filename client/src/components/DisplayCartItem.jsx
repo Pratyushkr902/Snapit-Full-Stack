@@ -12,6 +12,8 @@ import { optimizeImage } from '../utils/optimizeImage'
 import { getDeliveryInfo } from '../utils/getDeliveryInfo'
 import { getEffectiveAddressCoords } from '../utils/serviceArea'
 import { useFullCart } from '../utils/foodCartStore'
+import FreeDeliveryProgressBar from './FreeDeliveryProgressBar'
+import CartQuickAddSuggestions from './CartQuickAddSuggestions'
 
 const PricewithDiscount = (price, discount) => {
     const finalPrice = (Number(price) || 0) - (Number(discount) || 0);
@@ -119,6 +121,13 @@ const DisplayCartItem = ({close}) => {
                                     </div>
                                 )}
 
+                                <FreeDeliveryProgressBar
+                                    currentAmount={totalPrice}
+                                    threshold={149}
+                                    isSnapitPlus={isSnapitPlus}
+                                    isLongDistance={deliveryInfo?.isLongDistance}
+                                />
+
                                 <div className='flex items-center justify-between px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-xs font-bold shadow-sm flex-shrink-0'>
                                     <p className='flex items-center gap-1.5'><span>🎉</span> Your total savings</p>
                                     <p className='text-emerald-700 dark:text-emerald-400 font-extrabold text-sm'>{DisplayPriceInRupees(notDiscountTotalPrice - totalPrice)}</p>
@@ -158,6 +167,10 @@ const DisplayCartItem = ({close}) => {
                                         })
                                     }
                                 </div>
+
+                                <CartQuickAddSuggestions
+                                    remainingForFreeDelivery={deliveryInfo?.amountNeededForFreeDelivery || Math.max(0, 149 - totalPrice)}
+                                />
 
                                 <div className='bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm space-y-3 mb-2 border border-slate-100 dark:border-slate-800 transition-colors'>
                                     <h3 className='font-black text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2 text-sm'>Bill details</h3>
