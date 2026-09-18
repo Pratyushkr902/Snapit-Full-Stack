@@ -68,9 +68,8 @@ const Search = () => {
   }, [])
 
   const fetchSuggestions = async (query) => {
-    if (!query || query.length < 2) {
+    if (!query || query.trim().length < 2) {
       setSuggestions([])
-      setShowSuggestions(true)
       return
     }
     try {
@@ -78,7 +77,7 @@ const Search = () => {
       const response = await Axios({
         url: SummaryApi.searchProduct.url,
         method: SummaryApi.searchProduct.method,
-        data: { search: query, page: 1, limit: 6 }
+        data: { search: query.trim(), page: 1, limit: 6 }
       })
       if (response.data.success) {
         const names = (response.data.data || [])
@@ -207,6 +206,9 @@ const Search = () => {
                   setShowSuggestions(false)
                   saveRecentSearch(inputValue)
                   navigate(`/search?q=${encodeURIComponent(inputValue)}`)
+                } else if (e.key === 'Escape') {
+                  setShowSuggestions(false)
+                  e.target.blur()
                 }
               }}
               onFocus={() => {
@@ -259,8 +261,8 @@ const Search = () => {
         }}
       />
 
-      {/* Real-time product typeahead suggestions dropdown (only when typing) */}
-      {isSearchPage && showSuggestions && inputValue.trim().length > 0 && (
+      {/* Real-time product typeahead suggestions dropdown (only when typing and has content) */}
+      {isSearchPage && showSuggestions && inputValue.trim().length >= 2 && (loading || suggestions.length > 0) && (
         <div className='absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden'>
 
           {loading && (
