@@ -645,7 +645,7 @@ export async function getSmartCombosController(req, res) {
             combos.push({
                 id: 'chai_combo',
                 title: 'Chai & Snacks Saver',
-                badge: 'Save ₹15',
+                badge: 'Tea-Time Special',
                 tagline: 'Chai patti, crunchy biscuits & namkeen pair',
                 originalPrice,
                 comboPrice: Math.max(20, originalPrice - comboDiscount),

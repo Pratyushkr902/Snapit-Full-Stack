@@ -122,7 +122,16 @@ const SmartCombosSection = () => {
                   Save ₹{combo.discount}
                 </span>
                 <span className='text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide'>
-                  {combo.badge && !combo.badge.toLowerCase().includes('save') ? combo.badge : 'Value Pack'}
+                  {(() => {
+                    const b = (combo.badge || '').trim();
+                    if (!b || /save/i.test(b) || /₹|\d+/.test(b)) {
+                      if (combo.id === 'chai_combo') return 'Tea-Time Special';
+                      if (combo.id === 'breakfast_combo') return 'Breakfast';
+                      if (combo.id === 'movie_combo') return 'Snacks & Sips';
+                      return 'Curated Pack';
+                    }
+                    return b;
+                  })()}
                 </span>
               </div>
 
