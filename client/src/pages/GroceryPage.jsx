@@ -7,7 +7,7 @@ import CardProduct from '../components/CardProduct'
 import CardLoading from '../components/CardLoading'
 import AxiosToastError from '../utils/AxiosToastError'
 import SmartCombosSection from '../components/SmartCombosSection'
-import { preloadImages } from '../utils/optimizeImageUrl'
+import { preloadImages, optimizeImageUrl } from '../utils/optimizeImageUrl'
 
 const SORT_OPTIONS = [
   { label: 'Relevance', value: 'relevance' },
@@ -229,8 +229,13 @@ const GroceryPage = () => {
                     : 'bg-gray-100 text-gray-600'
                 }`}
               >
-                {cat.image && (
-                  <img src={cat.image} alt="" className="w-4 h-4 object-cover rounded-full" />
+                {cat?.image && (
+                  <img
+                    src={optimizeImageUrl(Array.isArray(cat.image) ? cat.image[0] : cat.image, 40, 70)}
+                    alt=""
+                    className="w-4 h-4 object-cover rounded-full"
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  />
                 )}
                 {cat.name}
               </button>
