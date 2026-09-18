@@ -10,6 +10,7 @@ import {
     deleteProductDetails,
     searchProduct,
     getFrequentlyBought,
+    getSmartCombosController,
     updateProductEmails,
     recalculateMRP,
     getPricingBreakdown,
@@ -30,6 +31,7 @@ productRouter.post('/get-product-by-category-and-subcategory',    getProductByCa
 productRouter.post('/get-product-details',                        getProductDetails);
 productRouter.post('/search-product',                             searchProduct);
 productRouter.get('/frequently-bought',                           getFrequentlyBought);
+productRouter.get('/smart-combos',                                getSmartCombosController);
 productRouter.post('/get-variants',                               getVariantsByGroup);
 
 // ── Seller routes (seller OR admin) ──────────────────────────

@@ -587,6 +587,81 @@ export async function getFrequentlyBought(req, res) {
     }
 }
 
+export async function getSmartCombosController(req, res) {
+    try {
+        const [teaItems, biscuitItems, namkeenItems, breadItems, dairyItems, eggItems, chipsItems, beverageItems] = await Promise.all([
+            ProductModel.find({ name: { $regex: /tea|chai|taj|tata tea|red label/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /biscuit|cookie|marie|parle|good day/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /namkeen|bhujia|sev|kurkure/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /bread|pav|bun/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /milk|doodh|butter|cheese|amul/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /egg|anda/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /chips|lays|bingo|doritos|popcorn/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /coke|pepsi|thums up|sprite|frooti|juice|maaza/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean()
+        ]);
+
+        const combos = [];
+
+        // 1. Chai-Time & Snacks Combo
+        const chaiComboItems = [teaItems[0], biscuitItems[0], namkeenItems[0]].filter(Boolean);
+        if (chaiComboItems.length >= 2) {
+            const originalPrice = chaiComboItems.reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const comboDiscount = 15;
+            combos.push({
+                id: 'chai_combo',
+                title: 'Chai-Time & Snacks Combo',
+                emoji: '☕',
+                badge: 'Save ₹15',
+                tagline: 'Chai patti, crunchy biscuits & namkeen combo',
+                originalPrice,
+                comboPrice: Math.max(20, originalPrice - comboDiscount),
+                discount: comboDiscount,
+                items: chaiComboItems.map(formatProductOutput)
+            });
+        }
+
+        // 2. Morning Breakfast Combo
+        const breakfastComboItems = [breadItems[0], (dairyItems[0] || eggItems[0]), biscuitItems[1] || dairyItems[1]].filter(Boolean);
+        if (breakfastComboItems.length >= 2) {
+            const originalPrice = breakfastComboItems.reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const comboDiscount = 20;
+            combos.push({
+                id: 'breakfast_combo',
+                title: 'Morning Breakfast Feast',
+                emoji: '🍳',
+                badge: 'Breakfast Special',
+                tagline: 'Fresh bread, rich dairy & morning essentials',
+                originalPrice,
+                comboPrice: Math.max(20, originalPrice - comboDiscount),
+                discount: comboDiscount,
+                items: breakfastComboItems.map(formatProductOutput)
+            });
+        }
+
+        // 3. Movie Munchies Combo
+        const movieComboItems = [chipsItems[0], beverageItems[0], namkeenItems[1] || chipsItems[1]].filter(Boolean);
+        if (movieComboItems.length >= 2) {
+            const originalPrice = movieComboItems.reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const comboDiscount = 25;
+            combos.push({
+                id: 'movie_combo',
+                title: 'Movie Night & Munchies',
+                emoji: '🍿',
+                badge: 'Weekend Hit',
+                tagline: 'Crunchy chips, cold drinks & quick bites',
+                originalPrice,
+                comboPrice: Math.max(20, originalPrice - comboDiscount),
+                discount: comboDiscount,
+                items: movieComboItems.map(formatProductOutput)
+            });
+        }
+
+        return res.json({ success: true, data: combos });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+}
+
 export const updateProductEmails = async (req, res) => {
     try {
         const result = await ProductModel.updateMany(

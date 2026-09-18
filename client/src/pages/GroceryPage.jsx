@@ -6,6 +6,7 @@ import SummaryApi from '../common/SummaryApi'
 import CardProduct from '../components/CardProduct'
 import CardLoading from '../components/CardLoading'
 import AxiosToastError from '../utils/AxiosToastError'
+import SmartCombosSection from '../components/SmartCombosSection'
 
 const SORT_OPTIONS = [
   { label: 'Relevance', value: 'relevance' },
@@ -264,6 +265,9 @@ const GroceryPage = () => {
           </div>
         )}
       </div>
+
+      {/* ── Smart Combos & Bundles ── */}
+      <SmartCombosSection />
 
       {/* ── Product Grid ── */}
       <div className="px-4 pt-4">

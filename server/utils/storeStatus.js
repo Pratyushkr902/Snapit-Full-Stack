@@ -153,15 +153,15 @@ async function assertRestaurantItemsAvailable(list_items) {
  * @param {Array}  opts.list_items - cart items being ordered
  * @param {String} [opts.userRole] - role of the placing user (bypasses global-hours check)
  */
-export async function assertStoreOpenForOrder({ list_items = [], userRole, orderType = 'grocery' } = {}) {
+export async function assertStoreOpenForOrder({ list_items = [], userRole, orderType = 'grocery', isPreOrder = false } = {}) {
   // Ensure DB sync if not already done
   if (!isInitialized) {
     await initStoreStatus()
   }
 
-  // Global operating gate applies to all customer orders
+  // Global operating gate applies to all customer orders (bypassed if customer chose next-morning pre-order)
   const isAdmin = ADMIN_LIKE_ROLES.includes(userRole)
-  if (!isAdmin && (cachedStoreConfig.isClosedForToday || !isWithinGlobalHours())) {
+  if (!isAdmin && !isPreOrder && (cachedStoreConfig.isClosedForToday || !isWithinGlobalHours())) {
     const err = new Error(
       cachedStoreConfig.isClosedForToday
         ? (cachedStoreConfig.closedReason || 'Snapit is closed for today. Deliveries will resume tomorrow at 8:30 AM IST!')

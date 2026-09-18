@@ -45,7 +45,8 @@ const DisplayCartItem = ({close}) => {
         ? deliveryInfo.charge
         : (isSnapitPlus ? 0 : 12)
     const isEstimate = !deliveryInfo
-    const grandTotal = totalPrice + deliveryFee;
+    const PLATFORM_FEE = 3;
+    const grandTotal = totalPrice + deliveryFee + PLATFORM_FEE;
 
     const redirectToCheckoutPage = (e) => {
         if (e) {
@@ -192,6 +193,10 @@ const DisplayCartItem = ({close}) => {
                                         <p className={deliveryFee === 0 ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'font-bold text-slate-800 dark:text-slate-200'}>
                                             {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
                                         </p>
+                                    </div>
+                                    <div className='flex justify-between text-xs sm:text-sm'>
+                                        <p className='text-slate-500 dark:text-slate-400'>Platform / Handling Fee</p>
+                                        <p className='font-bold text-slate-800 dark:text-slate-200'>₹{PLATFORM_FEE}</p>
                                     </div>
                                     {deliveryInfo?.isLongDistance && (
                                         <div className='bg-blue-50 dark:bg-blue-950/40 p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60'>

@@ -372,8 +372,37 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
             <span>10-Minute Deliveries Resume at 8:30 AM Tomorrow</span>
           </div>
 
-          {/* Actions: Browse Catalog Anyway */}
-          <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* Actions: Pre-Order or Browse Catalog */}
+          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('snapit_preorder_mode', 'true');
+                }
+                handleDismiss();
+              }}
+              aria-label="Pre-order for tomorrow morning"
+              style={{
+                background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+                border: "none",
+                borderRadius: 14,
+                color: "#FFFFFF",
+                fontSize: 14,
+                fontWeight: 800,
+                padding: "13px 20px",
+                cursor: "pointer",
+                boxShadow: "0 8px 24px rgba(37, 99, 235, 0.4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                transition: "transform 0.15s ease"
+              }}
+            >
+              <span>🌙</span>
+              <span>Pre-Order for Tomorrow (7:00 AM – 8:30 AM)</span>
+            </button>
+
             <button
               onClick={handleDismiss}
               aria-label="Browse store and build cart"
@@ -382,11 +411,11 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
                 border: "none",
                 borderRadius: 14,
                 color: "#FFFFFF",
-                fontSize: 14,
-                fontWeight: 800,
-                padding: "12px 24px",
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "11px 20px",
                 cursor: "pointer",
-                boxShadow: "0 8px 24px rgba(22, 163, 74, 0.35)",
+                boxShadow: "0 6px 18px rgba(22, 163, 74, 0.25)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -395,10 +424,10 @@ export default function StoreClosedOverlay({ allowBrowse = false, onDismiss }) {
               }}
             >
               <span>🛒</span>
-              <span>Browse Catalog & Build Cart</span>
+              <span>Browse Catalog & Add Items</span>
             </button>
-            <p style={{ fontSize: 11, color: "#6B7280", margin: 0 }}>
-              You can add items now and check out when orders open tomorrow at 8:30 AM!
+            <p style={{ fontSize: 11, color: "#6B7280", margin: "2px 0 0" }}>
+              ⚡ Pre-order tonight to get fresh morning milk, eggs, bread & groceries first!
             </p>
           </div>
         </div>
@@ -454,8 +483,8 @@ function ClosedBanner({ status, onReopenShutter }) {
           }}>
             {status.isClosedForToday ? "Store Closed for Today · Opens Tomorrow 8:30 AM" : "Store Closed · Opens at 8:30 AM"}
           </p>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "#F5A623", margin: "2px 0 0" }}>
-            Deliveries resume in {formatCountdown(status.msUntilOpen)}
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#38BDF8", margin: "2px 0 0" }}>
+            🌙 Next Morning Pre-Orders Open (7:00 AM – 8:30 AM) · Opens in {formatCountdown(status.msUntilOpen)}
           </p>
         </div>
       </div>

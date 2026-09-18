@@ -58,8 +58,11 @@ const CheckoutPage = () => {
     ? getDeliveryInfo(effectiveCoords.lat, effectiveCoords.lng, totalPrice, isSnapitPlus)
     : null
 
+  const PLATFORM_FEE = 3
+  const isPreOrder = Boolean(isStoreClosed || (typeof window !== 'undefined' && sessionStorage.getItem('snapit_preorder_mode') === 'true'))
+  const deliverySlot = isPreOrder ? "Tomorrow Morning (7:00 AM – 8:30 AM)" : ""
   const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
-  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + tipAmt) - discountAmount)
+  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + PLATFORM_FEE + tipAmt) - discountAmount)
 
   // Coords for backend — from effective address or store fallback
   const getCoords = () => ({
@@ -137,7 +140,7 @@ const CheckoutPage = () => {
     let loadingToast = null
     try {
       const storeStatus = getStoreStatus(user?.role)
-      if (storeStatus.isClosed) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
+      if (storeStatus.isClosed && !isPreOrder) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
       if (!checkMinOrder()) return
@@ -152,6 +155,7 @@ const CheckoutPage = () => {
           addressId:        selectedAddress?._id,
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
+          platform_fee:     PLATFORM_FEE,
           totalAmt:         grandTotal,
           tip:              tipAmt,
           lat:              c.lat,
@@ -160,7 +164,9 @@ const CheckoutPage = () => {
           orderId:          'SNAP-WLT-' + Date.now(),
           deliveryLocation: { lat: c.lat, lng: c.lng },
           couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
-          discountAmt:      discountAmount
+          discountAmt:      discountAmount,
+          isPreOrder:       isPreOrder,
+          deliverySlot:     deliverySlot
         }
       })
       if (response.data.success) {
@@ -180,7 +186,7 @@ const CheckoutPage = () => {
     let loadingToast = null
     try {
       const storeStatus = getStoreStatus(user?.role)
-      if (storeStatus.isClosed) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
+      if (storeStatus.isClosed && !isPreOrder) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select an address first')
       if (!checkServiceArea()) return
       if (!checkMinOrder()) return
@@ -193,13 +199,16 @@ const CheckoutPage = () => {
           addressId:        selectedAddress?._id,
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
+          platform_fee:     PLATFORM_FEE,
           totalAmt:         grandTotal,
           tip:              tipAmt,
           lat:              c.lat,
           lng:              c.lng,
           deliveryLocation: { lat: c.lat, lng: c.lng },
           couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
-          discountAmt:      discountAmount
+          discountAmt:      discountAmount,
+          isPreOrder:       isPreOrder,
+          deliverySlot:     deliverySlot
         }
       })
       if (response.data.success) {
@@ -218,7 +227,7 @@ const CheckoutPage = () => {
   const handleOnlinePayment = async () => {
     try {
       const storeStatus = getStoreStatus(user?.role)
-      if (storeStatus.isClosed) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
+      if (storeStatus.isClosed && !isPreOrder) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!selectedAddress) return toast.error('Please select a delivery address')
@@ -242,9 +251,12 @@ const CheckoutPage = () => {
           addressId:        selectedAddress?._id,
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
+          platform_fee:     PLATFORM_FEE,
           totalAmt:         grandTotal,
           tip:              tipAmt,
-          deliveryLocation: { lat: c.lat, lng: c.lng }
+          deliveryLocation: { lat: c.lat, lng: c.lng },
+          isPreOrder:       isPreOrder,
+          deliverySlot:     deliverySlot
         }
       })
       const { data: responseData } = response
@@ -294,11 +306,14 @@ const CheckoutPage = () => {
                   addressId:           selectedAddress?._id,
                   subTotalAmt:         totalPrice,
                   delivery_fee:        deliveryFee,
+                  platform_fee:        PLATFORM_FEE,
                   totalAmt:            grandTotal,
                   tip:                 tipAmt,
                   deliveryLocation:    { lat: c.lat, lng: c.lng },
                   couponCode:          couponApplied ? couponCode.trim().toUpperCase() : null,
-                  discountAmt:         discountAmount
+                  discountAmt:         discountAmount,
+                  isPreOrder:          isPreOrder,
+                  deliverySlot:        deliverySlot
                 }
               })
               toast.dismiss(verificationToast)
@@ -548,6 +563,10 @@ const CheckoutPage = () => {
                 }
               </p>
             </div>
+            <div className='flex justify-between text-slate-600 font-semibold text-sm'>
+              <p>Platform / Handling Fee</p>
+              <p className='font-bold text-slate-900'>₹{PLATFORM_FEE}</p>
+            </div>
             {couponApplied && (
               <div className='flex justify-between text-green-600 font-bold bg-green-50 p-2 rounded-lg border border-green-200 border-dashed'>
                 <p>🎟️ {discountLabel || 'Promo Discount'} ({couponCode.trim().toUpperCase()})</p>
@@ -568,14 +587,12 @@ const CheckoutPage = () => {
 
           <div className='w-full flex flex-col gap-3 p-4'>
             {isStoreClosed && (
-              <div className='bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-xs font-bold leading-relaxed shadow-sm flex items-center gap-2.5'>
-                <span className='text-xl'>⛔</span>
+              <div className='bg-blue-50 border border-blue-200 text-blue-900 p-3.5 rounded-2xl text-xs font-bold leading-relaxed shadow-sm flex items-start gap-2.5'>
+                <span className='text-xl flex-shrink-0'>🌙</span>
                 <div>
-                  <p className='font-black'>{storeStatus.isClosedForToday ? "Store Closed for Today" : "Store Closed for the Night"}</p>
-                  <p className='font-medium text-[11px] text-red-600 mt-0.5'>
-                    {storeStatus.isClosedForToday
-                      ? "Snapit is closed for today. Deliveries resume tomorrow at 8:30 AM IST."
-                      : "Operating hours are 8:30 AM – 8:30 PM IST. Orders resume tomorrow morning!"}
+                  <p className='font-black text-sm text-blue-950'>Pre-Order for Tomorrow Morning (7:00 AM – 8:30 AM)</p>
+                  <p className='font-medium text-[11px] text-blue-700 mt-0.5'>
+                    Store is closed for the night. Your order is confirmed for tomorrow morning's priority delivery slot!
                   </p>
                 </div>
               </div>
@@ -587,15 +604,15 @@ const CheckoutPage = () => {
                   : `📍 Your address is ${deliveryInfo.distanceKm} km away and outside our 16 km serviceable delivery area.`}
               </div>
             )}
-            <button disabled={isStoreClosed || cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
-              className='py-4 bg-green-700 text-white rounded-2xl font-black uppercase disabled:opacity-40'
-              onClick={handleWalletPayment}>{isStoreClosed ? 'Store Closed for Today' : 'Pay via Wallet'}</button>
-            <button disabled={isStoreClosed || cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
-              className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase disabled:opacity-40'
-              onClick={handleOnlinePayment}>{isStoreClosed ? 'Store Closed for Today' : 'Online Payment'}</button>
-            <button disabled={isStoreClosed || cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
-              className='py-4 border-2 border-slate-900 text-slate-950 rounded-2xl font-black uppercase disabled:opacity-40'
-              onClick={handleCashOnDelivery}>{isStoreClosed ? 'Store Closed for Today' : 'Cash on Delivery'}</button>
+            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
+              className='py-4 bg-green-700 text-white rounded-2xl font-black uppercase disabled:opacity-40 hover:bg-green-800 active:scale-98 transition'
+              onClick={handleWalletPayment}>{isPreOrder ? 'Pay via Wallet (Pre-Order)' : 'Pay via Wallet'}</button>
+            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
+              className='py-4 bg-slate-900 text-white rounded-2xl font-black uppercase disabled:opacity-40 hover:bg-slate-800 active:scale-98 transition'
+              onClick={handleOnlinePayment}>{isPreOrder ? 'Online Payment (Pre-Order)' : 'Online Payment'}</button>
+            <button disabled={cartItemsList.length === 0 || (deliveryInfo && !deliveryInfo.serviceable)}
+              className='py-4 border-2 border-slate-900 text-slate-950 rounded-2xl font-black uppercase disabled:opacity-40 hover:bg-slate-50 active:scale-98 transition'
+              onClick={handleCashOnDelivery}>{isPreOrder ? 'Cash on Delivery (Pre-Order)' : 'Cash on Delivery'}</button>
           </div>
         </div>
       </div>

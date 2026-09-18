@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
-import { IoMegaphoneOutline, IoSparklesOutline, IoSendOutline, IoTrophyOutline } from 'react-icons/io5'
+import { IoMegaphoneOutline, IoSparklesOutline, IoSendOutline, IoTrophyOutline, IoReloadOutline, IoCartOutline } from 'react-icons/io5'
+import { FaWhatsapp } from 'react-icons/fa6'
 
 const AdminMarketingHub = () => {
   const [templates, setTemplates] = useState([])
   const [loadingTemplates, setLoadingTemplates] = useState(true)
   const [sending, setSending] = useState(false)
   const [lastResult, setLastResult] = useState(null)
+  const [abandonedCarts, setAbandonedCarts] = useState([])
+  const [loadingAbandoned, setLoadingAbandoned] = useState(false)
+  const [nudgingUser, setNudgingUser] = useState(null)
 
   const DEFAULT_BACK_TEMPLATE = {
     category: '🚀 Snapit is Back! (Grand Launch)',
@@ -25,6 +29,7 @@ const AdminMarketingHub = () => {
 
   useEffect(() => {
     fetchTemplates()
+    fetchAbandonedCarts()
   }, [])
 
   const fetchTemplates = async () => {
@@ -44,6 +49,55 @@ const AdminMarketingHub = () => {
     } finally {
       setLoadingTemplates(false)
     }
+  }
+
+  const fetchAbandonedCarts = async () => {
+    try {
+      setLoadingAbandoned(true)
+      const res = await Axios({
+        url: SummaryApi.getAbandonedCarts?.url || '/api/marketing/abandoned-carts',
+        method: SummaryApi.getAbandonedCarts?.method || 'get'
+      })
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setAbandonedCarts(res.data.data)
+      }
+    } catch (err) {
+      console.warn('Failed to fetch abandoned carts:', err.message)
+    } finally {
+      setLoadingAbandoned(false)
+    }
+  }
+
+  const handleSinglePushNudge = async (userId) => {
+    try {
+      setNudgingUser(userId)
+      toast.loading('Sending push notification...', { id: 'single-nudge' })
+      const res = await Axios({
+        url: SummaryApi.nudgeCart?.url || '/api/marketing/nudge-cart',
+        method: SummaryApi.nudgeCart?.method || 'post',
+        data: { userId }
+      })
+      if (res.data?.success) {
+        toast.success('Push notification sent to customer! 🛒', { id: 'single-nudge' })
+      } else {
+        toast.error(res.data?.message || 'Failed to send push', { id: 'single-nudge' })
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err.message, { id: 'single-nudge' })
+    } finally {
+      setNudgingUser(null)
+    }
+  }
+
+  const getWhatsAppLink = (cart) => {
+    const cleanMobile = String(cart.userMobile || '').replace(/\D/g, '').slice(-10)
+    if (!cleanMobile || cleanMobile.length < 10) return null
+    const firstName = (cart.userName || '').split(' ')[0] || 'Customer'
+    const itemsPreview = Array.isArray(cart.itemsSummary) && cart.itemsSummary.length > 0
+      ? cart.itemsSummary.slice(0, 3).join(', ')
+      : 'aapke grocery items'
+    const msg = `Namaste ${firstName}! 👋\n\nAapka Snapit cart ready hai with *${itemsPreview}* (Total: ₹${cart.cartTotal}).\n\n⚡ Abhi order complete karein aur paayein *FREE 10-Minute Delivery*:\n👉 https://snapit.net.in/cart\n\nNeed help? Hum yahan hain! ❤️`
+    return `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(msg)}`
   }
 
   const handleSelectTemplate = (tpl) => {
@@ -348,6 +402,116 @@ const AdminMarketingHub = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* 🛒 Automated Abandoned Cart Recovery Command Center */}
+      <div className='mt-8 pt-6 border-t border-slate-200'>
+        <div className='flex flex-wrap items-center justify-between gap-3 mb-4'>
+          <div>
+            <div className='flex items-center gap-2'>
+              <span className='p-2 bg-blue-500 text-white rounded-xl shadow-sm'>
+                <IoCartOutline size={20} />
+              </span>
+              <h4 className='font-black text-slate-900 text-base'>
+                Abandoned Carts Recovery Center (Live)
+              </h4>
+              <span className='px-2.5 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-bold rounded-full'>
+                {abandonedCarts.length} Recoverable
+              </span>
+            </div>
+            <p className='text-xs text-slate-500 mt-1'>
+              Customers with items left in their cart (older than 15 mins). Send 1-click WhatsApp recovery messages or direct push notifications to close the sale!
+            </p>
+          </div>
+          <button
+            type='button'
+            disabled={loadingAbandoned}
+            onClick={fetchAbandonedCarts}
+            className='flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition active:scale-95 disabled:opacity-50'
+          >
+            <IoReloadOutline className={loadingAbandoned ? 'animate-spin' : ''} />
+            Refresh Carts
+          </button>
+        </div>
+
+        {loadingAbandoned ? (
+          <div className='py-8 text-center text-xs text-slate-400 font-semibold'>
+            Loading abandoned cart sessions...
+          </div>
+        ) : abandonedCarts.length === 0 ? (
+          <div className='py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200'>
+            <span className='text-2xl'>🎉</span>
+            <p className='text-xs font-bold text-slate-700 mt-1'>No abandoned carts in the last 7 days!</p>
+            <p className='text-[11px] text-slate-400'>All active customers have completed their orders or checked out.</p>
+          </div>
+        ) : (
+          <div className='overflow-x-auto border border-slate-200 rounded-2xl'>
+            <table className='w-full text-left text-xs border-collapse'>
+              <thead>
+                <tr className='bg-slate-50 text-slate-600 font-bold border-b border-slate-200'>
+                  <th className='py-3 px-4'>Customer</th>
+                  <th className='py-3 px-4'>Cart Items</th>
+                  <th className='py-3 px-4'>Total Value</th>
+                  <th className='py-3 px-4'>Abandoned</th>
+                  <th className='py-3 px-4 text-right'>Quick Actions</th>
+                </tr>
+              </thead>
+              <tbody className='divide-y divide-slate-100'>
+                {abandonedCarts.map((cart, idx) => {
+                  const waLink = getWhatsAppLink(cart)
+                  return (
+                    <tr key={cart.userId || idx} className='hover:bg-slate-50/80 transition'>
+                      <td className='py-3 px-4'>
+                        <p className='font-bold text-slate-900'>{cart.userName}</p>
+                        <p className='text-[11px] text-slate-500 font-mono'>{cart.userMobile || 'No phone'}</p>
+                      </td>
+                      <td className='py-3 px-4 max-w-xs'>
+                        <p className='font-medium text-slate-800 truncate'>
+                          {cart.itemsSummary.join(', ') || `${cart.itemCount} items`}
+                        </p>
+                        <p className='text-[10px] text-slate-400'>{cart.itemCount} item{cart.itemCount > 1 ? 's' : ''}</p>
+                      </td>
+                      <td className='py-3 px-4'>
+                        <span className='font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200'>
+                          ₹{cart.cartTotal}
+                        </span>
+                      </td>
+                      <td className='py-3 px-4 text-slate-500'>
+                        <span className='font-medium'>{cart.minutesAgo > 60 ? `${Math.floor(cart.minutesAgo / 60)}h ${cart.minutesAgo % 60}m ago` : `${cart.minutesAgo}m ago`}</span>
+                      </td>
+                      <td className='py-3 px-4 text-right'>
+                        <div className='flex items-center justify-end gap-2'>
+                          {waLink ? (
+                            <a
+                              href={waLink}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                              className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95'
+                            >
+                              <FaWhatsapp size={14} />
+                              <span>WhatsApp Link</span>
+                            </a>
+                          ) : (
+                            <span className='text-[10px] text-slate-400 italic'>No WhatsApp</span>
+                          )}
+                          <button
+                            type='button'
+                            disabled={nudgingUser === cart.userId}
+                            onClick={() => handleSinglePushNudge(cart.userId)}
+                            className='inline-flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition active:scale-95 disabled:opacity-50'
+                          >
+                            <IoSendOutline size={12} />
+                            <span>{nudgingUser === cart.userId ? 'Sending...' : 'Push'}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -53,10 +53,15 @@ const orderSchema = new mongoose.Schema(
         subTotalAmt: { type: Number, default: 0 },
         totalAmt:    { type: Number, default: 0 },
 
-        // ── Delivery fee — ✅ REQUIRED for rider & seller earnings ──
+        // ── Delivery fee & platform fee ──
         delivery_fee: { type: Number, default: 0 },
+        platform_fee: { type: Number, default: 0 },
         rider_fee:    { type: Number, default: 0 },
         campus_surcharge: { type: Number, default: 0 },
+
+        // ── Next Morning Pre-Orders ──
+        isPreOrder:   { type: Boolean, default: false },
+        deliverySlot: { type: String, default: "" },
 
         // ── Delivery distance in km (store/resto to customer drop) ──
         delivery_distance_km: { type: Number, default: 0 },

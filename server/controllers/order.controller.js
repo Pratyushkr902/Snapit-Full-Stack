@@ -100,6 +100,8 @@ import {
 } from '../utils/deliveryFee.js'
 import { validateCoupon } from '../utils/couponValidation.js'
 
+export const PLATFORM_FEE = 3 // Nominal ₹3 platform fee to support super-fast delivery infrastructure
+
 const checkDeliveryServiceability = (lat, lng) => {
   const dist = getDistanceFromStore(lat, lng)
   if (dist > MAX_DELIVERY_RADIUS_KM) {
@@ -366,7 +368,7 @@ async function sendOrderInvoiceEmail(order, user) {
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip } = request.body
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot } = request.body
 
         const parsedSubTotal = Number(subTotalAmt)
         const parsedTotal = Number(totalAmt)
@@ -430,7 +432,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         }
 
         try {
-            await assertStoreOpenForOrder({ list_items, userRole: currentUser?.role })
+            await assertStoreOpenForOrder({ list_items, userRole: currentUser?.role, isPreOrder: Boolean(isPreOrder) })
         } catch (guardErr) {
             return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
         }
@@ -494,7 +496,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         }
 
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
-        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt + sanitizedTip)
+        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE - validDiscountAmt + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
@@ -527,9 +529,12 @@ export async function CashOnDeliveryOrderController(request, response) {
             subTotalAmt:      actualSubTotal,
             totalAmt:         finalTotalAmt,
             delivery_fee,
+            platform_fee:     PLATFORM_FEE,
             tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,
+            isPreOrder:       Boolean(isPreOrder),
+            deliverySlot:     isPreOrder ? (deliverySlot || "Tomorrow Morning (7:00 AM – 8:30 AM)") : "",
             delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
             seller_status:    'Pending',
             store_details:    {
@@ -580,7 +585,7 @@ export async function CashOnDeliveryOrderController(request, response) {
 export async function WalletPaymentOrderController(request, response) {
     try {
         const userId = request.userId
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip } = request.body
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot } = request.body
 
         if (!list_items?.length || !addressId || !subTotalAmt || !totalAmt) {
             return response.status(400).json({ message: 'Missing required order fields.', error: true, success: false })
@@ -635,7 +640,7 @@ export async function WalletPaymentOrderController(request, response) {
         if (!user) return response.status(404).json({ message: 'User not found.', error: true, success: false })
 
         try {
-            await assertStoreOpenForOrder({ list_items, userRole: user?.role })
+            await assertStoreOpenForOrder({ list_items, userRole: user?.role, isPreOrder: Boolean(isPreOrder) })
         } catch (guardErr) {
             return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
         }
@@ -699,7 +704,7 @@ export async function WalletPaymentOrderController(request, response) {
         }
 
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
-        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt + sanitizedTip)
+        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE - validDiscountAmt + sanitizedTip)
         if ((user.walletBalance || 0) < exactRequiredTotal) {
             return response.status(400).json({
                 message: `Insufficient wallet balance. Need ₹${(exactRequiredTotal - (user.walletBalance || 0)).toFixed(2)} more.`,
@@ -805,9 +810,12 @@ export async function WalletPaymentOrderController(request, response) {
             subTotalAmt:      actualSubTotal,
             totalAmt:         exactRequiredTotal,
             delivery_fee,
+            platform_fee:     PLATFORM_FEE,
             tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,
+            isPreOrder:       Boolean(isPreOrder),
+            deliverySlot:     isPreOrder ? (deliverySlot || "Tomorrow Morning (7:00 AM – 8:30 AM)") : "",
             delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
             seller_status:    'Pending',
             store_details:    {
@@ -891,7 +899,7 @@ export async function WalletPaymentOrderController(request, response) {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function paymentController(request, response) {
     try {
-        const { totalAmt, addressId, list_items, couponCode, isExpress, tip } = request.body
+        const { totalAmt, addressId, list_items, couponCode, isExpress, tip, isPreOrder, deliverySlot } = request.body
         const userId = request.userId
 
         let payableAmount = Number(totalAmt)
@@ -963,7 +971,7 @@ export async function paymentController(request, response) {
             }
 
             const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
-            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt + sanitizedTip)
+            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE - validDiscountAmt + sanitizedTip)
             if (calculatedTotal > 0) {
                 payableAmount = calculatedTotal
             }
@@ -1000,7 +1008,7 @@ export async function verifyPaymentController(request, response) {
         const userId = request.userId
         const {
             razorpay_order_id, razorpay_payment_id, razorpay_signature,
-            list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress, tip
+            list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress, tip, isPreOrder, deliverySlot
         } = request.body
 
         if (!verifyRazorpaySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
@@ -1055,7 +1063,7 @@ export async function verifyPaymentController(request, response) {
         const user = await UserModel.findById(userId)
 
         try {
-            await assertStoreOpenForOrder({ list_items, userRole: user?.role })
+            await assertStoreOpenForOrder({ list_items, userRole: user?.role, isPreOrder: Boolean(isPreOrder) })
         } catch (guardErr) {
             return response.status(guardErr.statusCode || 400).json({ message: guardErr.message, error: true, success: false })
         }
@@ -1119,7 +1127,7 @@ export async function verifyPaymentController(request, response) {
         }
 
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
-        const serverTotal = Math.max(0, actualSubTotal + delivery_fee - validDiscountAmt + sanitizedTip)
+        const serverTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE - validDiscountAmt + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
@@ -1152,9 +1160,12 @@ export async function verifyPaymentController(request, response) {
             subTotalAmt:      actualSubTotal,
             totalAmt:         serverTotal,
             delivery_fee,
+            platform_fee:     PLATFORM_FEE,
             tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,
+            isPreOrder:       Boolean(isPreOrder),
+            deliverySlot:     isPreOrder ? (deliverySlot || "Tomorrow Morning (7:00 AM – 8:30 AM)") : "",
             delivery_status:  shouldQueueOrder(userId) ? 'Queued' : 'Pending',
             seller_status:    'Pending',
             store_details:    {

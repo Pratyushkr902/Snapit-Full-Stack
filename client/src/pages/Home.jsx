@@ -8,6 +8,7 @@ import TodayDeals from '../components/TodayDeals'
 import FoodCategoryCard from '../components/FoodCategoryCard'
 import StoreClosedOverlay from '../components/StoreClosedOverlay'
 import LastOrders from '../components/LastOrders'
+import SmartCombosSection from '../components/SmartCombosSection'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { setAllCategory, setAllSubCategory, setLoadingCategory } from '../store/productSlice'
@@ -223,6 +224,9 @@ const Home = () => {
 
       {/* 4. TODAY'S DEALS */}
       <TodayDeals />
+
+      {/* 4.5. SMART VALUE COMBOS & BUNDLES */}
+      <SmartCombosSection />
 
       {/* 5. PRODUCT SECTIONS */}
       <div className='flex flex-col gap-1 lg:gap-8 pb-24'>

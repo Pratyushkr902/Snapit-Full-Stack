@@ -93,6 +93,14 @@ const SummaryApi = {
         url: '/api/marketing/trigger-schedule',
         method: 'post'
     },
+    getAbandonedCarts: {
+        url: '/api/marketing/abandoned-carts',
+        method: 'get'
+    },
+    nudgeCart: {
+        url: '/api/marketing/nudge-cart',
+        method: 'post'
+    },
     addCategory : {
         url : '/api/category/add-category',
         method : 'post'
@@ -291,6 +299,10 @@ const SummaryApi = {
     },
     getFrequentlyBought: {
         url: '/api/product/frequently-bought',
+        method: 'get'
+    },
+    getSmartCombos: {
+        url: '/api/product/smart-combos',
         method: 'get'
     },
     getWallet: {
