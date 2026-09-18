@@ -445,6 +445,11 @@ const StoreOrders = () => {
                                                             <span className='text-xs font-black bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-full uppercase tracking-wider font-mono'>
                                                                 #{order.orderId}
                                                             </span>
+                                                            {order.isPreOrder && (
+                                                                <span className='text-[10px] font-black bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800'>
+                                                                    🌙 {order.deliverySlot || 'Morning Pre-Order'}
+                                                                </span>
+                                                            )}
                                                             <span className='text-[10px] text-slate-400 font-bold'>
                                                                 {formatTimeAgo(order.createdAt)}
                                                             </span>

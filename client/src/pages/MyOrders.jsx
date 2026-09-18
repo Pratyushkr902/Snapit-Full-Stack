@@ -165,14 +165,21 @@ const MyOrders = () => {
                       </div>
                       <p className='text-neutral-700 font-mono font-semibold'>{order?.orderId}</p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      order.delivery_status === 'Delivered'        ? 'bg-emerald-100 text-emerald-700' :
-                      order.delivery_status === 'Out for Delivery' ? 'bg-orange-100 text-orange-700 animate-pulse' :
-                      order.delivery_status === 'Cancelled'        ? 'bg-rose-100 text-rose-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
-                      {order.delivery_status || 'Processing'}
-                    </span>
+                    <div className='flex items-center gap-2'>
+                      {order.isPreOrder && (
+                        <span className='bg-blue-50 text-blue-800 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-blue-200'>
+                          🌙 {order.deliverySlot || 'Pre-Order'}
+                        </span>
+                      )}
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        order.delivery_status === 'Delivered'        ? 'bg-emerald-100 text-emerald-700' :
+                        order.delivery_status === 'Out for Delivery' ? 'bg-orange-100 text-orange-700 animate-pulse' :
+                        order.delivery_status === 'Cancelled'        ? 'bg-rose-100 text-rose-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {order.delivery_status || 'Processing'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className='flex gap-4 items-start'>

@@ -128,7 +128,10 @@ export const getAbandonedCartsController = async (request, response) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
     const activeCarts = await CartProductModel.find({
-      updatedAt: { $gte: sevenDaysAgo, $lte: fifteenMinsAgo }
+      $or: [
+        { updatedAt: { $gte: sevenDaysAgo, $lte: fifteenMinsAgo } },
+        { createdAt: { $gte: sevenDaysAgo, $lte: fifteenMinsAgo } }
+      ]
     }).populate('productId', 'name price image unit').lean()
 
     if (!activeCarts || activeCarts.length === 0) {
@@ -153,10 +156,11 @@ export const getAbandonedCartsController = async (request, response) => {
     for (const [uId, items] of userCartMap.entries()) {
       const latestCartTime = new Date(Math.max(...items.map(i => new Date(i.updatedAt || i.createdAt).getTime())))
 
-      // Check if user placed an order since the most recent cart update
+      // Check if user successfully placed an order since the most recent cart update
       const recentOrder = await OrderModel.findOne({
         userId: uId,
-        createdAt: { $gte: latestCartTime }
+        createdAt: { $gte: latestCartTime },
+        delivery_status: { $ne: 'Cancelled' }
       }).lean()
 
       if (recentOrder) continue

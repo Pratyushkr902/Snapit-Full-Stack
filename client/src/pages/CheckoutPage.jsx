@@ -143,7 +143,6 @@ const CheckoutPage = () => {
       if (storeStatus.isClosed && !isPreOrder) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
-      if (!checkMinOrder()) return
       const currentBalance = Number(user?.walletBalance || 0)
       if (currentBalance < grandTotal) return toast.error('Insufficient Balance!')
       loadingToast = toast.loading('Processing Wallet Payment...')
@@ -189,7 +188,6 @@ const CheckoutPage = () => {
       if (storeStatus.isClosed && !isPreOrder) return toast.error(storeStatus.isClosedForToday ? 'Snapit is closed for today. We reopen tomorrow at 8:30 AM IST!' : 'Store is closed for the night. We open at 8:30 AM IST!', { duration: 4000 })
       if (!selectedAddress) return toast.error('Please select an address first')
       if (!checkServiceArea()) return
-      if (!checkMinOrder()) return
       loadingToast = toast.loading('Placing order...')
       const c = getCoords()
       const response = await Axios({
@@ -232,7 +230,6 @@ const CheckoutPage = () => {
       if (!RAZORPAY_KEY) return toast.error('Razorpay Key ID is missing.')
       if (!selectedAddress) return toast.error('Please select a delivery address')
       if (!checkServiceArea()) return
-      if (!checkMinOrder()) return
       const gatewayToast = toast.loading('Loading payment gateway...')
       let RazorpayClass
       try { RazorpayClass = await loadRazorpay() }

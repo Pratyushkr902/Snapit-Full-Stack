@@ -43,30 +43,49 @@ const SmartCombosSection = () => {
 
   const handleAddComboToCart = async (combo) => {
     if (!combo.items || combo.items.length === 0) return
+    const token = localStorage.getItem('accesstoken') || localStorage.getItem('accessToken') || localStorage.getItem('token')
+    if (!token && !user?._id) {
+      toast('Please login to add combo to cart', { icon: '🔐' })
+      return
+    }
+
+    let loadingToast = null
     try {
       setAddingComboId(combo.id)
-      const loadingToast = toast.loading(`Adding ${combo.title}...`)
+      loadingToast = toast.loading(`Adding ${combo.title}...`)
 
-      // Add each item in sequence
+      let addedCount = 0
       for (const item of combo.items) {
         if (item._id) {
-          await Axios({
-            ...SummaryApi.addTocart,
-            data: { productId: item._id }
-          }).catch(() => {})
+          try {
+            const res = await Axios({
+              ...SummaryApi.addTocart,
+              data: { productId: item._id }
+            })
+            if (res.data?.success) {
+              addedCount++
+            }
+          } catch (itemErr) {
+            console.warn('Combo item add warning:', itemErr.message)
+          }
         }
       }
 
-      toast.dismiss(loadingToast)
+      if (loadingToast) toast.dismiss(loadingToast)
       if (fetchCartItem) fetchCartItem()
 
-      const storeStatus = getStoreStatus(user?.role)
-      if (storeStatus.isClosed) {
-        toast.success(`🎉 ${combo.title} added! Pre-ordered for Tomorrow Morning (7:00 AM)!`, { duration: 4000 })
+      if (addedCount > 0) {
+        const storeStatus = getStoreStatus(user?.role)
+        if (storeStatus.isClosed) {
+          toast.success(`🎉 ${combo.title} added! Next morning pre-order slot (7:00 AM) active!`, { duration: 4500 })
+        } else {
+          toast.success(`🎉 ${combo.title} added! Saved ₹${combo.discount}!`, { duration: 3500 })
+        }
       } else {
-        toast.success(`🎉 ${combo.title} added! Saved ₹${combo.discount}!`, { duration: 3500 })
+        toast.error('Could not add combo items. Please try again.')
       }
     } catch (err) {
+      if (loadingToast) toast.dismiss(loadingToast)
       AxiosToastError(err)
     } finally {
       setAddingComboId(null)
@@ -183,3 +202,4 @@ const SmartCombosSection = () => {
 }
 
 export default SmartCombosSection
+

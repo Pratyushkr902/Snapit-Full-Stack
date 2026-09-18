@@ -377,6 +377,16 @@ const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50, 
                     </span>
 
                     {/* Payment Badge */}
+                    {order.isPreOrder && (
+                      <span
+                        style={{
+                          fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 6,
+                          background: '#1e3a8a', color: '#93c5fd', border: '1px solid #3b82f6'
+                        }}
+                      >
+                        🌙 {order.deliverySlot || 'PRE-ORDER'}
+                      </span>
+                    )}
                     <span
                       style={{
                         fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 6,

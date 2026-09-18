@@ -656,6 +656,46 @@ export async function getSmartCombosController(req, res) {
             });
         }
 
+        // Fallback: If no specific combos matched regex, create smart combos from popular in-stock items
+        if (combos.length === 0) {
+            const generalItems = await ProductModel.find({ stock: { $gt: 0 }, publish: true })
+                .select(LIST_FIELDS)
+                .sort({ price: 1 })
+                .limit(6)
+                .lean();
+
+            if (generalItems.length >= 2) {
+                const bundle1 = generalItems.slice(0, 3);
+                const originalPrice1 = bundle1.reduce((s, i) => s + (Number(i.price) || 0), 0);
+                combos.push({
+                    id: 'essentials_combo',
+                    title: 'Daily Essentials Saver Combo',
+                    emoji: '🛍️',
+                    badge: 'Popular Saver',
+                    tagline: 'Best everyday staples bundled together',
+                    originalPrice: originalPrice1,
+                    comboPrice: Math.max(20, originalPrice1 - 15),
+                    discount: 15,
+                    items: bundle1.map(formatProductOutput)
+                });
+            }
+            if (generalItems.length >= 4) {
+                const bundle2 = generalItems.slice(3, 6);
+                const originalPrice2 = bundle2.reduce((s, i) => s + (Number(i.price) || 0), 0);
+                combos.push({
+                    id: 'snack_pack',
+                    title: 'Quick Bites & Snack Pack',
+                    emoji: '🥨',
+                    badge: 'Snack Hit',
+                    tagline: 'Delicious snacks & munchies for anytime cravings',
+                    originalPrice: originalPrice2,
+                    comboPrice: Math.max(20, originalPrice2 - 20),
+                    discount: 20,
+                    items: bundle2.map(formatProductOutput)
+                });
+            }
+        }
+
         return res.json({ success: true, data: combos });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
