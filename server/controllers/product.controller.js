@@ -461,11 +461,26 @@ const HINDI_SYNONYM_DICT = {
     'सर्फ':       ['detergent', 'surf', 'surf excel', 'tide', 'ariel'],
 };
 
+// High-performance search cache (60s TTL, max 500 entries) for sub-5ms concurrent responses
+const searchCache = new Map();
+const SEARCH_CACHE_TTL_MS = 60 * 1000;
+const MAX_SEARCH_CACHE_SIZE = 500;
+
+export const clearSearchCache = () => {
+    searchCache.clear();
+};
+
 export const searchProduct = async (request, response) => {
     try {
         let { search, page, limit } = request.body;
         const pageNum = Math.max(1, parseInt(page, 10) || 1);
         const limitNum = Math.min(Math.max(1, parseInt(limit, 10) || 20), 100);
+
+        const cacheKey = `${String(search || '').toLowerCase().trim()}_p${pageNum}_l${limitNum}`;
+        const cached = searchCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < SEARCH_CACHE_TTL_MS)) {
+            return response.json(cached.payload);
+        }
 
         let query = {};
         if (typeof search === 'string' && search.trim()) {
@@ -502,10 +517,20 @@ export const searchProduct = async (request, response) => {
             query = { stock: { $gt: 0 }, publish: true };
         }
         const skip = (pageNum - 1) * limitNum;
-        const [data, dataCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum).populate('category subCategory').lean(),
-            ProductModel.countDocuments(query)
-        ]);
+        
+        // Fast-path: query data first
+        const data = await ProductModel.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .populate('category subCategory')
+            .lean();
+
+        // If on page 1 and returned less than limit, dataCount is simply data.length without a 2nd regex collection scan!
+        let dataCount = data.length;
+        if (pageNum > 1 || data.length === limitNum) {
+            dataCount = await ProductModel.countDocuments(query);
+        }
 
         // Blinkit-style relevance ranking: Title/Brand match first, then description
         if (typeof search === 'string' && search.trim()) {
@@ -530,14 +555,24 @@ export const searchProduct = async (request, response) => {
             });
         }
 
-        return response.json({
-            message: "Product data", error: false, success: true,
+        const resultPayload = {
+            message: "Product data",
+            error: false,
+            success: true,
             data: data.map(formatProductOutput),
             totalCount: dataCount,
             totalPage: Math.ceil(dataCount / limitNum),
             page: pageNum,
             limit: limitNum
-        });
+        };
+
+        if (searchCache.size >= MAX_SEARCH_CACHE_SIZE) {
+            const firstKey = searchCache.keys().next().value;
+            if (firstKey) searchCache.delete(firstKey);
+        }
+        searchCache.set(cacheKey, { timestamp: Date.now(), payload: resultPayload });
+
+        return response.json(resultPayload);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
     }

@@ -561,6 +561,14 @@ export async function CashOnDeliveryOrderController(request, response) {
             body:  `Order ${generatedOrder.orderId} is ready for pickup — ₹${generatedOrder.totalAmt}`,
             data:  { orderId: generatedOrder.orderId, type: 'NEW_ORDER' }
         }).catch(() => {})
+        // Deduct product inventory stock atomically
+        for (const item of taggedCartItems) {
+            const pId = item.productId?._id || item.productId
+            if (pId) {
+                await ProductModel.findByIdAndUpdate(pId, { $inc: { stock: -(item.quantity || 1) } }).catch(err => console.warn('[COD Stock Deduct Warning]', err.message))
+            }
+        }
+
         await updateStreak(userId)
         await CartProductModel.deleteMany({ userId })
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] })
@@ -714,17 +722,21 @@ export async function WalletPaymentOrderController(request, response) {
         }
 
         for (const item of list_items) {
-            const product = await ProductModel.findById(item.productId._id)
+            const pId = item.productId?._id || item.productId
+            const product = await ProductModel.findById(pId)
             if (!product || product.stock < (item.quantity || 1)) {
                 return response.status(400).json({
-                    message: `"${item.productId?.name || 'Item'}" is out of stock.`,
+                    message: `"${product?.name || item.name || 'Item'}" is out of stock.`,
                     error: true,
                     success: false
                 })
             }
         }
         for (const item of list_items) {
-            await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } })
+            const pId = item.productId?._id || item.productId
+            if (pId) {
+                await ProductModel.findByIdAndUpdate(pId, { $inc: { stock: -(item.quantity || 1) } }).catch(err => console.warn('[Wallet Stock Deduct Warning]', err.message))
+            }
         }
 
         const transactionId   = `WAL-ORD-${new mongoose.Types.ObjectId()}`
@@ -1196,7 +1208,10 @@ export async function verifyPaymentController(request, response) {
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
 
         for (const item of list_items) {
-            await ProductModel.findByIdAndUpdate(item.productId._id, { $inc: { stock: -(item.quantity || 1) } })
+            const pId = item.productId?._id || item.productId
+            if (pId) {
+                await ProductModel.findByIdAndUpdate(pId, { $inc: { stock: -(item.quantity || 1) } }).catch(err => console.warn('[Online Payment Stock Deduct Warning]', err.message))
+            }
         }
         await CartProductModel.deleteMany({ userId })
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] })

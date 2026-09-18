@@ -1066,23 +1066,12 @@ export async function firebasePhoneLoginController(request, response) {
 
 export async function adminResetCustomerPinController(request, response) {
     try {
-        const { mobile, newPin } = request.body
+        const { mobile, email, identifier, newPin, updateMobile } = request.body
+        const queryIdentifier = String(identifier || mobile || email || '').trim()
 
-        if (!mobile || !newPin) {
+        if (!queryIdentifier || !newPin) {
             return response.status(400).json({
-                message: "Please provide both customer mobile number and new 4-digit PIN.",
-                error: true,
-                success: false
-            })
-        }
-
-        const digits = String(mobile).replace(/\D/g, '')
-        const cleanMobile = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits
-        const mobileNum = Number(cleanMobile)
-
-        if (cleanMobile.length !== 10) {
-            return response.status(400).json({
-                message: "Please provide a valid 10-digit mobile number.",
+                message: "Please provide customer Mobile number or Email address, and new 4-digit PIN.",
                 error: true,
                 success: false
             })
@@ -1097,20 +1086,47 @@ export async function adminResetCustomerPinController(request, response) {
             })
         }
 
-        const user = await UserModel.findOne({
-            $or: [
-                { mobile: mobileNum },
-                { email: `${cleanMobile}@snapit.in` },
-                { email: cleanMobile }
-            ]
-        })
+        let user = null
+        const digits = queryIdentifier.replace(/\D/g, '')
+        const isEmail = queryIdentifier.includes('@')
+
+        if (isEmail) {
+            const cleanEmail = queryIdentifier.toLowerCase().trim()
+            user = await UserModel.findOne({
+                $or: [
+                    { email: cleanEmail },
+                    { email: cleanEmail.toLowerCase() }
+                ]
+            })
+        } else if (digits.length === 10 || (digits.length === 12 && digits.startsWith('91'))) {
+            const cleanMobile = digits.length === 12 ? digits.slice(2) : digits
+            const mobileNum = Number(cleanMobile)
+            user = await UserModel.findOne({
+                $or: [
+                    { mobile: mobileNum },
+                    { email: `${cleanMobile}@snapit.in` },
+                    { email: `${cleanMobile}@snapit.express` },
+                    { email: cleanMobile }
+                ]
+            })
+        } else if (mongoose.isValidObjectId(queryIdentifier)) {
+            user = await UserModel.findById(queryIdentifier)
+        }
 
         if (!user) {
             return response.status(404).json({
-                message: `No account found for mobile +91 ${cleanMobile}`,
+                message: `No account found for "${queryIdentifier}". Please verify the mobile number or email address.`,
                 error: true,
                 success: false
             })
+        }
+
+        // If admin provided a phone number to link to an email-only account:
+        if (updateMobile) {
+            const cleanNewMobile = String(updateMobile).replace(/\D/g, '').slice(-10)
+            if (cleanNewMobile.length === 10) {
+                user.mobile = Number(cleanNewMobile)
+            }
         }
 
         const salt = await bcryptjs.genSalt(10)
@@ -1119,14 +1135,17 @@ export async function adminResetCustomerPinController(request, response) {
         user.password = hashPassword
         await user.save()
 
+        const userPhone = user.mobile ? String(user.mobile) : ''
+
         return response.json({
-            message: `PIN for ${user.name} (+91 ${cleanMobile}) has been reset to: ${cleanPin}`,
+            message: `PIN for ${user.name || 'Customer'} (${user.email || userPhone}) has been reset to: ${cleanPin}`,
             error: false,
             success: true,
             data: {
                 userId: user._id,
-                name: user.name,
-                mobile: cleanMobile,
+                name: user.name || 'Customer',
+                email: user.email,
+                mobile: userPhone,
                 newPin: cleanPin
             }
         })
