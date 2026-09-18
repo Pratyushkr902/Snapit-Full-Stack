@@ -8,8 +8,6 @@ import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import VoiceSearchModal from './VoiceSearchModal'
 
-const POPULAR = ['Milk', 'Bread', 'Rice', 'Dal', 'Sugar', 'Paneer', 'Eggs', 'Atta', 'Oil', 'Maggi', 'Chips', 'Curd']
-
 export const saveRecentSearch = (term) => {
   if (!term || typeof term !== 'string') return
   const clean = term.trim()
@@ -105,8 +103,16 @@ const Search = () => {
   const handleOnChange = (e) => {
     const value = e.target.value
     setInputValue(value)
-    setShowSuggestions(true)
 
+    if (!value.trim()) {
+      clearTimeout(debounceRef.current)
+      setSuggestions([])
+      setShowSuggestions(false)
+      navigate('/search?q=')
+      return
+    }
+
+    setShowSuggestions(true)
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       fetchSuggestions(value)
@@ -204,10 +210,11 @@ const Search = () => {
                 }
               }}
               onFocus={() => {
-                if (inputValue.length >= 2) {
+                if (inputValue.trim().length >= 1) {
                   fetchSuggestions(inputValue)
-                } else {
                   setShowSuggestions(true)
+                } else {
+                  setShowSuggestions(false)
                 }
               }}
             />
@@ -252,14 +259,14 @@ const Search = () => {
         }}
       />
 
-      {/* Suggestions dropdown */}
-      {isSearchPage && showSuggestions && (
+      {/* Real-time product typeahead suggestions dropdown (only when typing) */}
+      {isSearchPage && showSuggestions && inputValue.trim().length > 0 && (
         <div className='absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden'>
 
           {loading && (
             <div className='px-4 py-3 text-xs text-slate-400 dark:text-slate-400 font-medium flex items-center gap-2'>
               <div className='w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full animate-spin'></div>
-              Searching...
+              Searching products...
             </div>
           )}
 
@@ -271,7 +278,7 @@ const Search = () => {
                   key={item._id || i}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSuggestionClick(item.name)}
-                  className='w-full flex items-center gap-3 px-4 py-2.5 hover:bg-green-50 dark:hover:bg-slate-800 transition-all text-left'
+                  className='w-full flex items-center gap-3 px-4 py-2.5 hover:bg-green-50 dark:hover:bg-slate-800 transition-all text-left cursor-pointer'
                 >
                   {item.image && (
                     <img
@@ -285,24 +292,6 @@ const Search = () => {
                   <IoSearch size={12} className='ml-auto text-slate-300 dark:text-slate-600 flex-shrink-0' />
                 </button>
               ))}
-            </div>
-          )}
-
-          {!loading && suggestions.length === 0 && (
-            <div className='p-4'>
-              <p className='text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest mb-3'>Popular Searches</p>
-              <div className='flex flex-wrap gap-2'>
-                {POPULAR.map(item => (
-                  <button
-                    key={item}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleSuggestionClick(item)}
-                    className='text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-green-100 dark:hover:bg-emerald-950/40 hover:text-green-700 dark:hover:text-emerald-300 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full transition-all'
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
 

@@ -23,18 +23,12 @@ import { preloadImages } from '../utils/optimizeImageUrl'
 const LOADING_CARDS = new Array(8).fill(null)
 
 const TRENDING_SEARCHES = [
-  { label: 'Amul Milk', query: 'milk' },
-  { label: 'Kurkure & Chips', query: 'chips' },
-  { label: 'Coca Cola', query: 'coca cola' },
-  { label: 'Aashirvaad Atta', query: 'atta' },
-  { label: 'Fortune Mustard Oil', query: 'oil' },
-  { label: 'Cadbury Chocolate', query: 'chocolate' },
-  { label: 'Maggi Noodles', query: 'maggi' },
-  { label: 'Farm Fresh Eggs', query: 'eggs' },
-  { label: 'Fresh Paneer', query: 'paneer' },
-  { label: 'Tata Salt', query: 'salt' },
-  { label: 'Basmati Rice', query: 'rice' },
-  { label: 'Dahi / Curd', query: 'curd' },
+  { rank: '1', label: 'Amul Milk', query: 'milk' },
+  { rank: '2', label: 'Aashirvaad Atta', query: 'atta' },
+  { rank: '3', label: 'Kurkure & Chips', query: 'chips' },
+  { rank: '4', label: 'Coca Cola', query: 'coca cola' },
+  { rank: '5', label: 'Maggi Noodles', query: 'maggi' },
+  { rank: '6', label: 'Fresh Paneer', query: 'paneer' },
 ]
 
 const QUICK_CATEGORIES = [
@@ -292,25 +286,28 @@ const SearchPage = () => {
             </div>
           )}
 
-          {/* 2. TRENDING IN PALIGANJ */}
-          <div className='bg-white dark:bg-slate-900/90 rounded-2xl p-4 shadow-xs border border-slate-100 dark:border-slate-800/80'>
-            <div className='flex items-center gap-2 text-slate-800 dark:text-slate-100 font-bold text-sm mb-3'>
+          {/* 2. TRENDING IN PALIGANJ (Zepto & Blinkit Ultra-Fast Horizontal Rail) */}
+          <div className='bg-white dark:bg-slate-900/90 rounded-2xl p-3 sm:p-4 shadow-xs border border-slate-100 dark:border-slate-800/80'>
+            <div className='flex items-center gap-2 text-slate-800 dark:text-slate-100 font-bold text-sm mb-2.5'>
               <span className='flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400'>
-                <IoFlameSharp size={15} />
+                <IoFlameSharp size={14} />
               </span>
               <span>Trending in Paliganj</span>
               <span className='ml-auto text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center gap-1'>
                 <IoFlash size={11} /> 10 Mins
               </span>
             </div>
-            <div className='flex flex-wrap gap-2'>
+            <div className='flex items-center gap-2 overflow-x-auto scrollbar-none snap-x pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-wrap'>
               {TRENDING_SEARCHES.map((item, idx) => (
                 <button
                   key={idx}
                   type='button'
                   onClick={() => handleQueryClick(item.query)}
-                  className='inline-flex items-center bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl transition-all border border-slate-200/70 dark:border-slate-700/60 hover:shadow-xs active:scale-95'
+                  className='shrink-0 snap-start inline-flex items-center gap-1.5 bg-slate-100/90 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-800 dark:text-slate-200 text-xs font-bold px-3 py-1.5 rounded-full transition-all border border-slate-200/60 dark:border-slate-700/60 active:scale-95 cursor-pointer shadow-2xs'
                 >
+                  <span className='text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950 px-1.5 py-0.5 rounded-full'>
+                    #{item.rank || idx + 1}
+                  </span>
                   <span>{item.label}</span>
                 </button>
               ))}
