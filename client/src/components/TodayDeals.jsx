@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import Axios from "../utils/Axios"
 import SummaryApi from "../common/SummaryApi"
 import AddToCartButton from "./AddToCartButton"
-import { FALLBACK_IMAGE, getPrimaryImage } from "../utils/optimizeImageUrl"
+import { FALLBACK_IMAGE, getPrimaryImage, preloadImages } from "../utils/optimizeImageUrl"
 
 // Matches: "Pack of 2", "pack of 2", "Pack of 3" etc
 const COMBO_KEYWORDS = ["pack of 2", "pack of 3", "pack of 4", "pack of 5", "combo", "bundle", "duo", "trio", "multipack", "value pack", "set of 2", "set of 3"]
@@ -41,7 +41,7 @@ function SkeletonCard() {
   )
 }
 
-function DealCard({ product, isComboCard }) {
+function DealCard({ product, isComboCard, index = 0 }) {
   const navigate = useNavigate()
   const discount     = getDiscount(product)
   const sellingPrice = getSellingPrice(product)
@@ -58,7 +58,8 @@ function DealCard({ product, isComboCard }) {
           width={100}
           height={100}
           className="w-full h-full object-contain"
-          loading="lazy"
+          loading={index < 4 ? "eager" : "lazy"}
+          fetchPriority={index < 4 ? "high" : "auto"}
           decoding="async"
           onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE }}
         />
@@ -156,6 +157,9 @@ export function useDealsData() {
 
       setComboProducts(combos)
       setBogoProducts(bogos)
+
+      // Blinkit-style instant pre-cache for upcoming deal items
+      preloadImages([...combos.slice(0, 10), ...bogos.slice(0, 10)], 200)
     } catch (err) {
       console.error("TodayDeals fetch error:", err)
     } finally {
@@ -174,9 +178,10 @@ export default function TodayDeals() {
   if (!loading && comboProducts.length === 0 && bogoProducts.length === 0) return null
 
   return (
-    <div className="container mx-auto px-4 my-4">
-      <div className="bg-green-50 dark:bg-slate-900/90 border border-green-100 dark:border-slate-800 rounded-2xl py-4 overflow-hidden shadow-sm transition-colors">
+    <div className="bg-gradient-to-b from-amber-50/70 via-orange-50/40 to-white dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-950 py-4 border-y border-amber-100/60 dark:border-slate-800">
+      <div className="container mx-auto">
 
+        {/* Section Header */}
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Today's Deals </h2>
           <button
@@ -199,7 +204,7 @@ export default function TodayDeals() {
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
               {loading
                 ? [1,2,3].map(i => <SkeletonCard key={i} />)
-                : comboProducts.map(p => <DealCard key={p._id} product={p} isComboCard={true} />)
+                : comboProducts.map((p, index) => <DealCard key={p._id} product={p} isComboCard={true} index={index} />)
               }
             </div>
           </>
@@ -219,7 +224,7 @@ export default function TodayDeals() {
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
               {loading
                 ? [1,2,3].map(i => <SkeletonCard key={i} />)
-                : bogoProducts.map(p => <DealCard key={p._id} product={p} isComboCard={false} />)
+                : bogoProducts.map((p, index) => <DealCard key={p._id} product={p} isComboCard={false} index={index} />)
               }
             </div>
           </>

@@ -18,6 +18,7 @@ import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import noDataImage from '../assets/empty_cart.webp'
 import { saveRecentSearch } from '../components/Search'
+import { preloadImages } from '../utils/optimizeImageUrl'
 
 const LOADING_CARDS = new Array(8).fill(null)
 
@@ -125,6 +126,7 @@ const SearchPage = () => {
         )
         setData((prev) => (page === 1 ? inStock : [...prev, ...inStock]))
         setTotalPage(responseData.totalPage || 1)
+        preloadImages(inStock, 220)
       }
     } catch (error) {
       if (error.name !== 'CanceledError') AxiosToastError(error)
@@ -150,7 +152,9 @@ const SearchPage = () => {
           params: { impulse: 'true', limit: 10 },
         })
         if (isMounted && response.data?.success) {
-          setFallbackProducts(response.data.data || [])
+          const prods = response.data.data || []
+          setFallbackProducts(prods)
+          preloadImages(prods, 220)
         }
       } catch (err) {
         console.error('Failed to load fallback essentials', err)

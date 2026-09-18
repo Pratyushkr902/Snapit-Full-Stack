@@ -7,6 +7,7 @@ import CardProduct from '../components/CardProduct'
 import CardLoading from '../components/CardLoading'
 import AxiosToastError from '../utils/AxiosToastError'
 import SmartCombosSection from '../components/SmartCombosSection'
+import { preloadImages } from '../utils/optimizeImageUrl'
 
 const SORT_OPTIONS = [
   { label: 'Relevance', value: 'relevance' },
@@ -88,6 +89,7 @@ const GroceryPage = () => {
         }
         setTotalCount(data.totalCount || data.total || 0)
         setHasMore(rawIncoming.length === 20)
+        preloadImages(incoming, 220)
       }
     } catch (error) {
       AxiosToastError(error)
@@ -308,7 +310,7 @@ const GroceryPage = () => {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {sortedProducts.map(p => p?._id && <CardProduct key={p._id} data={p} />)}
+              {sortedProducts.map((p, index) => p?._id && <CardProduct key={p._id} data={p} priority={index < 4} />)}
 
               {/* Loading skeletons while fetching next page */}
               {loading && new Array(4).fill(null).map((_, i) => <CardLoading key={`sk-${i}`} />)}

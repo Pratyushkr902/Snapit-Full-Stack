@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
-import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
+import { optimizeImageUrl, FALLBACK_IMAGE, preloadImages } from '../utils/optimizeImageUrl'
 
 // ── Haversine distance (km) ───────────────────────────────────────────────────
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -61,6 +61,7 @@ const FoodHomePage = () => {
       const res = await Axios({ method: 'GET', url: '/api/restaurant/all' })
       if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
         setRestaurants(res.data.data)
+        preloadImages(res.data.data.map(r => r.image), 500)
         try {
           localStorage.setItem(RESTAURANTS_CACHE_KEY, JSON.stringify(res.data.data))
         } catch {}
@@ -243,7 +244,7 @@ const FoodHomePage = () => {
               <span>🔄</span> Refresh Restaurants
             </button>
           </div>
-        ) : filtered.map(r => (
+        ) : filtered.map((r, index) => (
           <div
             key={r._id}
             onClick={() => r.isOpen && navigate(`/restaurant/${r._id}`)}
@@ -256,7 +257,8 @@ const FoodHomePage = () => {
                     src={optimizeImageUrl(r.image, 500, 75)}
                     alt={r.name}
                     className='w-full h-full object-cover'
-                    loading='lazy'
+                    loading={index < 2 ? 'eager' : 'lazy'}
+                    fetchPriority={index < 2 ? 'high' : 'auto'}
                     decoding='async'
                     onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
                   />

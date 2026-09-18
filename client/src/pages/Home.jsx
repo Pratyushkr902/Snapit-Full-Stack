@@ -12,7 +12,7 @@ import SmartCombosSection from '../components/SmartCombosSection'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { setAllCategory, setAllSubCategory, setLoadingCategory } from '../store/productSlice'
-import { FALLBACK_IMAGE, optimizeImageUrl } from '../utils/optimizeImageUrl'
+import { FALLBACK_IMAGE, optimizeImageUrl, preloadImages } from '../utils/optimizeImageUrl'
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
@@ -102,6 +102,13 @@ const Home = () => {
     if (!Array.isArray(categoryData)) return []
     return categoryData.filter(cat => !['grocery', 'pharmacy'].includes((cat?.name || '').toLowerCase()))
   }, [categoryData])
+
+  // Blinkit-style instant pre-cache for category icons
+  useEffect(() => {
+    if (filteredCategories && filteredCategories.length > 0) {
+      preloadImages(filteredCategories.map(c => c.image || c.icon || c.imageThumbnail), 160)
+    }
+  }, [filteredCategories])
 
   const prioritizedCategorySections = useMemo(() => {
     if (!Array.isArray(categoryData) || categoryData.length === 0) return []

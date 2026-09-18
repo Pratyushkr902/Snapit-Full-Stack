@@ -5,6 +5,7 @@ import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { FaChevronLeft } from "react-icons/fa6"
 import CardProduct from '../components/CardProduct'
+import { preloadImages } from '../utils/optimizeImageUrl'
 
 const ProductListPage = () => {
   const params = useParams()
@@ -75,6 +76,7 @@ const ProductListPage = () => {
           p => (Number(p?.stock) || 0) > 0 && p?.publish !== false
         )
         setProducts(inStock)
+        preloadImages(inStock, 220)
       }
     } catch (error) {
       AxiosToastError(error)
@@ -139,8 +141,8 @@ const ProductListPage = () => {
           </div>
         ) : (
           <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4'>
-            {products.map((item) => (
-              <CardProduct key={item._id || item.id} data={item} />
+            {products.map((item, index) => (
+              <CardProduct key={item._id || item.id} data={item} priority={index < 4} />
             ))}
           </div>
         )}

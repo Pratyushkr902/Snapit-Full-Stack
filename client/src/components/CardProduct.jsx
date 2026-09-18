@@ -74,12 +74,8 @@ const CardProduct = ({ data, priority = false }) => {
                     width={200}
                     height={200}
                     onError={(e) => {
-                        const rawImage = Array.isArray(data?.image) ? data.image[0] : data?.image
-                        if (e.currentTarget.src.includes('/thumb_') && rawImage && e.currentTarget.src !== rawImage) {
-                            e.currentTarget.src = rawImage
-                        } else {
-                            e.currentTarget.src = FALLBACK_IMAGE
-                        }
+                        e.currentTarget.onerror = null
+                        e.currentTarget.src = FALLBACK_IMAGE
                     }}
                     loading={priority ? "eager" : "lazy"}
                     decoding="async"

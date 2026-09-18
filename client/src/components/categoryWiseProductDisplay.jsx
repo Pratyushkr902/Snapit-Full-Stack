@@ -8,6 +8,7 @@ import CardProduct from './CardProduct'
 import { FaAngleLeft, FaAngleRight } from "react-icons/fa6"
 import { useSelector } from 'react-redux'
 import { valideURLConvert } from '../utils/valideURLConvert'
+import { preloadImages } from '../utils/optimizeImageUrl'
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "https://snapit-full-stack-production.up.railway.app"
 
@@ -86,6 +87,8 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                 }))
                 setData(sanitized)
                 categoryProductsCache.set(id, sanitized)
+                // Blinkit-style instant pre-cache for upcoming cards in this carousel
+                preloadImages(sanitized, 220)
             }
         } catch (error) {
             AxiosToastError(error)

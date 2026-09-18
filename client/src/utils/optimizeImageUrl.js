@@ -10,33 +10,28 @@ export const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
  */
 export const optimizeImageUrl = (url, width = 220, quality = 75) => {
   if (!url || typeof url !== 'string') return FALLBACK_IMAGE;
+  const trimmed = url.trim();
+  if (!trimmed) return FALLBACK_IMAGE;
 
   // 1. Cloudinary: Injects auto-format (AVIF/WebP), auto-quality, responsive max-width
-  if (url.includes('res.cloudinary.com')) {
+  if (trimmed.includes('res.cloudinary.com')) {
     const transform = `f_auto,q_auto:good,w_${width},c_limit`;
-    if (url.includes('/upload/')) {
-      return url.replace('/upload/', `/upload/${transform}/`);
+    if (trimmed.includes('/upload/')) {
+      return trimmed.replace('/upload/', `/upload/${transform}/`);
     }
-    return url;
+    return trimmed;
   }
 
-  // 2. Cloudflare R2: Automatically route thumbnail requests (< 350px) to pre-generated lightweight WebP thumbnails
-  if ((url.includes('r2.dev') || url.includes('/snapit/')) && width <= 350) {
-    if (!url.includes('/thumb_')) {
-      // Replaces /snapit/{uuid}.{ext} with /snapit/thumb_{uuid}.webp
-      const thumbUrl = url.replace(/\/snapit\/([^/?#]+)\.(jpe?g|png|webp)/i, '/snapit/thumb_$1.webp');
-      return thumbUrl;
-    }
-    return url;
-  }
-
-  // 3. Unsplash: Injects responsive width, WebP format, quality compression
-  if (url.includes('images.unsplash.com')) {
-    const baseUrl = url.split('?')[0];
+  // 2. Unsplash: Injects responsive width, WebP format, quality compression
+  if (trimmed.includes('images.unsplash.com')) {
+    const baseUrl = trimmed.split('?')[0];
     return `${baseUrl}?w=${width}&q=${quality}&auto=format&fit=crop`;
   }
 
-  return url;
+  // 3. Cloudflare R2 / Custom Storage: Already WebP compressed at source (30-60KB).
+  // Directly serve the R2 URL to hit Cloudflare's global edge cache (Cache-Control: public, max-age=31536000, immutable)
+  // in a single round-trip without 404s.
+  return trimmed;
 };
 
 /**
@@ -49,11 +44,44 @@ export const getPrimaryImage = (image, imageThumbnail, width = 220) => {
   if (typeof imageThumbnail === 'string' && imageThumbnail.startsWith('http')) {
     return optimizeImageUrl(imageThumbnail, width);
   }
-  if (Array.isArray(image) && image.length > 0 && typeof image[0] === 'string' && image[0].startsWith('http')) {
+  if (Array.isArray(image) && image.length > 0 && typeof image[0] === 'string' && image[0].length > 0) {
     return optimizeImageUrl(image[0], width);
   }
-  if (typeof image === 'string' && image.startsWith('http')) {
+  if (typeof image === 'string' && image.length > 0) {
     return optimizeImageUrl(image, width);
   }
   return FALLBACK_IMAGE;
+};
+
+/**
+ * In-memory prefetch queue for Blinkit/Zomato style instant image display.
+ * Preloads image bytes into the browser's memory/HTTP cache ahead of user interaction.
+ */
+const preloadedUrls = new Set();
+
+export const preloadImages = (items = [], width = 220) => {
+  if (typeof window === 'undefined' || !Array.isArray(items) || items.length === 0) return;
+
+  const runner = window.requestIdleCallback || ((cb) => setTimeout(cb, 100));
+
+  runner(() => {
+    items.slice(0, 16).forEach((item) => {
+      let rawUrl = null;
+      if (typeof item === 'string') {
+        rawUrl = item;
+      } else if (item && typeof item === 'object') {
+        rawUrl = (Array.isArray(item.image) ? item.image[0] : item.image) ||
+                 (Array.isArray(item.imageThumbnail) ? item.imageThumbnail[0] : item.imageThumbnail);
+      }
+
+      if (!rawUrl || typeof rawUrl !== 'string') return;
+      const optimized = optimizeImageUrl(rawUrl, width);
+      if (!optimized || optimized === FALLBACK_IMAGE || preloadedUrls.has(optimized)) return;
+
+      preloadedUrls.add(optimized);
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = optimized;
+    });
+  });
 };
