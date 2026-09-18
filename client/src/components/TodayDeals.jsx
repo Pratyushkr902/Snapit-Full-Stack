@@ -63,7 +63,8 @@ function DealCard({ product, isComboCard, index = 0 }) {
           decoding="async"
           onError={e => {
             const raw = Array.isArray(product.image) ? product.image[0] : (typeof product.image === 'string' ? product.image : null);
-            if (raw && e.currentTarget.src !== raw) {
+            if (raw && !e.currentTarget.dataset.fallbackAttempted) {
+              e.currentTarget.dataset.fallbackAttempted = 'true';
               e.currentTarget.src = raw;
             } else {
               e.currentTarget.onerror = null;

@@ -74,8 +74,14 @@ const CardProduct = ({ data, priority = false }) => {
                     width={200}
                     height={200}
                     onError={(e) => {
-                        e.currentTarget.onerror = null
-                        e.currentTarget.src = FALLBACK_IMAGE
+                        const raw = Array.isArray(data?.image) ? data.image[0] : (typeof data?.image === 'string' ? data.image : null);
+                        if (raw && !e.currentTarget.dataset.fallbackAttempted) {
+                            e.currentTarget.dataset.fallbackAttempted = 'true';
+                            e.currentTarget.src = raw;
+                        } else {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = FALLBACK_IMAGE;
+                        }
                     }}
                     loading={priority ? "eager" : "lazy"}
                     decoding="async"

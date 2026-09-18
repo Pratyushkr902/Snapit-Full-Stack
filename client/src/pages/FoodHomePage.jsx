@@ -259,8 +259,10 @@ const FoodHomePage = () => {
                     className='w-full h-full object-cover'
                     loading={index < 2 ? 'eager' : 'lazy'}
                     fetchPriority={index < 2 ? 'high' : 'auto'}
-                    decoding='async'
-                    onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = FALLBACK_IMAGE;
+                    }}
                   />
                 : <div className='w-full h-full flex items-center justify-center text-5xl'>🍽️</div>}
               {!r.isOpen && (

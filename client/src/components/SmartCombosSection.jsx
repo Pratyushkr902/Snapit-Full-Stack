@@ -157,7 +157,8 @@ const SmartCombosSection = () => {
                           decoding='async'
                           onError={(e) => {
                             const raw = Array.isArray(item.image) ? item.image[0] : item.image;
-                            if (raw && e.target.src !== raw) {
+                            if (raw && !e.target.dataset.fallbackAttempted) {
+                              e.target.dataset.fallbackAttempted = 'true';
                               e.target.src = raw;
                             } else {
                               e.target.onerror = null;

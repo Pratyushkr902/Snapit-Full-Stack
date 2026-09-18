@@ -38,17 +38,19 @@ export const optimizeImageUrl = (url, width = 220, quality = 75) => {
  * Helper to safely extract the primary thumbnail or image from a product/category object
  */
 export const getPrimaryImage = (image, imageThumbnail, width = 220) => {
-  if (Array.isArray(imageThumbnail) && imageThumbnail.length > 0 && typeof imageThumbnail[0] === 'string' && imageThumbnail[0].startsWith('http')) {
-    return optimizeImageUrl(imageThumbnail[0], width);
-  }
-  if (typeof imageThumbnail === 'string' && imageThumbnail.startsWith('http')) {
-    return optimizeImageUrl(imageThumbnail, width);
-  }
-  if (Array.isArray(image) && image.length > 0 && typeof image[0] === 'string' && image[0].length > 0) {
+  // 1. Prioritize primary product/category image (optimized to display width via CDN)
+  if (Array.isArray(image) && image.length > 0 && typeof image[0] === 'string' && image[0].trim().length > 0) {
     return optimizeImageUrl(image[0], width);
   }
-  if (typeof image === 'string' && image.length > 0) {
+  if (typeof image === 'string' && image.trim().length > 0) {
     return optimizeImageUrl(image, width);
+  }
+  // 2. Secondary fallback: thumbnail field
+  if (Array.isArray(imageThumbnail) && imageThumbnail.length > 0 && typeof imageThumbnail[0] === 'string' && imageThumbnail[0].trim().length > 0) {
+    return optimizeImageUrl(imageThumbnail[0], width);
+  }
+  if (typeof imageThumbnail === 'string' && imageThumbnail.trim().length > 0) {
+    return optimizeImageUrl(imageThumbnail, width);
   }
   return FALLBACK_IMAGE;
 };

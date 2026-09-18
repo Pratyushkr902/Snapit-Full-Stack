@@ -9,6 +9,9 @@ const LIST_FIELDS = 'name image imageThumbnail category subCategory unit stock p
 
 // Secure images helper — ensures all image URLs use https
 const secureImages = (images) => {
+    if (typeof images === 'string') {
+        return images.replace(/^http:\/\//i, 'https://');
+    }
     if (!Array.isArray(images)) return images;
     return images.map(img =>
         typeof img === 'string' ? img.replace(/^http:\/\//i, 'https://') : img

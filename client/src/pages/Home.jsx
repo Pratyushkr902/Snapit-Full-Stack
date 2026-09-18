@@ -214,7 +214,8 @@ const Home = () => {
                         fetchPriority={catIndex < 4 ? "high" : "auto"}
                         decoding="async"
                         onError={(e) => {
-                          if (finalSrc && e.target.src !== finalSrc && finalSrc !== FALLBACK_IMAGE) {
+                          if (finalSrc && finalSrc !== FALLBACK_IMAGE && !e.target.dataset.fallbackAttempted) {
+                            e.target.dataset.fallbackAttempted = 'true';
                             e.target.src = finalSrc;
                           } else {
                             e.target.onerror = null;
