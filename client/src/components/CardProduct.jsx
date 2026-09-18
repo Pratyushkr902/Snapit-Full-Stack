@@ -8,7 +8,7 @@ import AddToCartButton, { getEffectiveStock } from './AddToCartButton'
 import { FALLBACK_IMAGE, getPrimaryImage } from '../utils/optimizeImageUrl'
 
 const getImageSrc = (image, imageThumbnail) => {
-    return getPrimaryImage(image, imageThumbnail, 360)
+    return getPrimaryImage(image, imageThumbnail, 220)
 }
 
 // Derived once at render time — no state, no re-render
@@ -71,9 +71,16 @@ const CardProduct = ({ data, priority = false }) => {
                 <img
                     src={imgSrc}
                     alt={data?.name || "Product"}
-                    width={300}
-                    height={300}
-                    onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
+                    width={200}
+                    height={200}
+                    onError={(e) => {
+                        const rawImage = Array.isArray(data?.image) ? data.image[0] : data?.image
+                        if (e.currentTarget.src.includes('/thumb_') && rawImage && e.currentTarget.src !== rawImage) {
+                            e.currentTarget.src = rawImage
+                        } else {
+                            e.currentTarget.src = FALLBACK_IMAGE
+                        }
+                    }}
                     loading={priority ? "eager" : "lazy"}
                     decoding="async"
                     fetchPriority={priority ? "high" : "auto"}

@@ -19,8 +19,8 @@ const HomeBanner = () => {
 
   return (
     <div className='container mx-auto px-3 sm:px-4 mt-1 sm:mt-2.5'>
-      {/* 100% VISIBLE RESPONSIVE BANNER CONTAINER (2:1 RATIO) */}
-      <div className='relative w-full aspect-[1024/514] rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs border border-amber-100/80 dark:border-slate-800 bg-[#fdfbf7] dark:bg-slate-900'>
+      {/* 100% VISIBLE RESPONSIVE BANNER CONTAINER (1768:890 EXACT NATIVE RATIO) */}
+      <div className='relative w-full aspect-[1768/890] sm:aspect-[21/9] lg:aspect-[24/9] rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-amber-100/80 dark:border-slate-800 bg-[#fdfbf7] dark:bg-slate-900'>
 
         {/* INSTANT PAINT LAYER (LCP) */}
         {!swiperReady && (
@@ -28,7 +28,7 @@ const HomeBanner = () => {
             <img
               src={banner1}
               alt='Snapit Groceries Delivered in 10 Minutes'
-              className='absolute inset-0 w-full h-full object-contain object-center'
+              className='absolute inset-0 w-full h-full object-cover object-center'
               fetchPriority='high'
               loading='eager'
               decoding='async'
@@ -55,7 +55,7 @@ const HomeBanner = () => {
               <img
                 src={item.image}
                 alt={item.alt}
-                className='w-full h-full object-contain object-center select-none pointer-events-none'
+                className='w-full h-full object-cover object-center select-none pointer-events-none'
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding='async'

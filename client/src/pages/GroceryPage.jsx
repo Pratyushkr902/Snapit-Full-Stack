@@ -266,8 +266,10 @@ const GroceryPage = () => {
         )}
       </div>
 
-      {/* ── Smart Combos & Bundles ── */}
-      <SmartCombosSection />
+      {/* ── Blockbuster Deals (Shown on top-level browsing) ── */}
+      {activeCategory === 'all' && activeSubCategory === 'all' && (
+        <SmartCombosSection />
+      )}
 
       {/* ── Product Grid ── */}
       <div className="px-4 pt-4">

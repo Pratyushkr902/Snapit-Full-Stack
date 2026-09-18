@@ -625,14 +625,14 @@ export async function getFrequentlyBought(req, res) {
 export async function getSmartCombosController(req, res) {
     try {
         const [teaItems, biscuitItems, namkeenItems, breadItems, dairyItems, eggItems, chipsItems, beverageItems] = await Promise.all([
-            ProductModel.find({ name: { $regex: /tea|chai|taj|tata tea|red label/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
-            ProductModel.find({ name: { $regex: /biscuit|cookie|marie|parle|good day/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
-            ProductModel.find({ name: { $regex: /namkeen|bhujia|sev|kurkure/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
-            ProductModel.find({ name: { $regex: /bread|pav|bun/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
-            ProductModel.find({ name: { $regex: /milk|doodh|butter|cheese|amul/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
-            ProductModel.find({ name: { $regex: /egg|anda/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
-            ProductModel.find({ name: { $regex: /chips|lays|bingo|doritos|popcorn/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
-            ProductModel.find({ name: { $regex: /coke|pepsi|thums up|sprite|frooti|juice|maaza/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean()
+            ProductModel.find({ name: { $regex: /\b(tea|chai|taj|tata tea|red label)\b/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /\b(biscuit|cookie|marie|parle|good day)\b/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /\b(namkeen|bhujia|sev|kurkure)\b/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /\b(bread|pav|burger bun|sliced bread)\b/i, $not: /coriander|dhaniya|bunch|leaves|herb/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /\b(milk|doodh|butter|cheese|amul|paneer)\b/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /\b(egg|eggs|anda|ande)\b/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /\b(chips|lays|bingo|doritos|popcorn)\b/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean(),
+            ProductModel.find({ name: { $regex: /\b(coke|pepsi|thums up|sprite|frooti|juice|maaza)\b/i }, stock: { $gt: 0 }, publish: true }).select(LIST_FIELDS).limit(2).lean()
         ]);
 
         const combos = [];
@@ -644,10 +644,9 @@ export async function getSmartCombosController(req, res) {
             const comboDiscount = 15;
             combos.push({
                 id: 'chai_combo',
-                title: 'Chai-Time & Snacks Combo',
-                emoji: '☕',
+                title: 'Chai & Snacks Saver',
                 badge: 'Save ₹15',
-                tagline: 'Chai patti, crunchy biscuits & namkeen combo',
+                tagline: 'Chai patti, crunchy biscuits & namkeen pair',
                 originalPrice,
                 comboPrice: Math.max(20, originalPrice - comboDiscount),
                 discount: comboDiscount,
@@ -662,10 +661,9 @@ export async function getSmartCombosController(req, res) {
             const comboDiscount = 20;
             combos.push({
                 id: 'breakfast_combo',
-                title: 'Morning Breakfast Feast',
-                emoji: '🍳',
-                badge: 'Breakfast Special',
-                tagline: 'Fresh bread, rich dairy & morning essentials',
+                title: 'Morning Breakfast Essentials',
+                badge: 'Breakfast Saver',
+                tagline: 'Fresh bread, dairy & morning essentials',
                 originalPrice,
                 comboPrice: Math.max(20, originalPrice - comboDiscount),
                 discount: comboDiscount,
@@ -680,10 +678,9 @@ export async function getSmartCombosController(req, res) {
             const comboDiscount = 25;
             combos.push({
                 id: 'movie_combo',
-                title: 'Movie Night & Munchies',
-                emoji: '🍿',
-                badge: 'Weekend Hit',
-                tagline: 'Crunchy chips, cold drinks & quick bites',
+                title: 'Snacks & Cold Drink Combo',
+                badge: 'Value Pair',
+                tagline: 'Crisp snacks & chilled drinks pair',
                 originalPrice,
                 comboPrice: Math.max(20, originalPrice - comboDiscount),
                 discount: comboDiscount,

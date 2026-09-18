@@ -150,7 +150,7 @@ const FoodHomePage = () => {
             </svg>
           </button>
           <div>
-            <h1 className='text-lg font-black text-gray-900'>Food Delivery</h1>
+            <h1 className='text-lg font-black text-gray-900'>Food</h1>
             <p className='text-xs text-gray-400'>Paliganj · 20–40 min</p>
           </div>
         </div>
@@ -205,30 +205,7 @@ const FoodHomePage = () => {
 
 
 
-      {/* ── Attractive Free Delivery Live Announcement Banner ── */}
-      <div className='px-4 pt-2 pb-1'>
-        <div className='p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 rounded-2xl text-white shadow-md flex items-center justify-between gap-3'>
-          <div className='flex items-center gap-3'>
-            <div className='w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-xl flex-shrink-0 animate-bounce'>
-              🛵
-            </div>
-            <div>
-              <div className='flex items-center gap-1.5'>
-                <h3 className='text-xs font-black tracking-wide uppercase text-yellow-300'>100% Free Delivery Live!</h3>
-                <span className='bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase'>Special</span>
-              </div>
-              <p className='text-[11px] text-white/95 font-medium leading-tight mt-0.5'>
-                FREE on ₹149+ in Paliganj & ₹199+ at Himalaya Medical College! (Flat ₹12 otherwise)
-              </p>
-            </div>
-          </div>
-          <div className='text-right flex-shrink-0'>
-            <span className='px-2.5 py-1 bg-white text-emerald-800 text-xs font-black rounded-lg shadow-xs'>
-              Free ⚡
-            </span>
-          </div>
-        </div>
-      </div>
+
 
       {/* ── Restaurant Cards ── */}
       <div className='px-4 pt-2'>

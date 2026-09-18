@@ -10,6 +10,20 @@ import VoiceSearchModal from './VoiceSearchModal'
 
 const POPULAR = ['Milk', 'Bread', 'Rice', 'Dal', 'Sugar', 'Paneer', 'Eggs', 'Atta', 'Oil', 'Maggi', 'Chips', 'Curd']
 
+export const saveRecentSearch = (term) => {
+  if (!term || typeof term !== 'string') return
+  const clean = term.trim()
+  if (!clean || clean.length < 2) return
+  try {
+    const raw = localStorage.getItem('snapit_recent_searches')
+    const existing = raw ? JSON.parse(raw) : []
+    const updated = [clean, ...existing.filter(item => item.toLowerCase() !== clean.toLowerCase())].slice(0, 8)
+    localStorage.setItem('snapit_recent_searches', JSON.stringify(updated))
+  } catch (err) {
+    // ignore quota error
+  }
+}
+
 const Search = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -99,6 +113,7 @@ const Search = () => {
 
   const handleSuggestionClick = (name) => {
     clearTimeout(debounceRef.current) // ✅ FIX: cancel any pending suggestion fetch
+    saveRecentSearch(name)
     setInputValue(name)
     setShowSuggestions(false)
     navigate(`/search?q=${encodeURIComponent(name)}`)
@@ -180,6 +195,7 @@ const Search = () => {
                   clearTimeout(debounceRef.current) // ✅ FIX: cancel any pending suggestion fetch
                   e.target.blur()
                   setShowSuggestions(false)
+                  saveRecentSearch(inputValue)
                   navigate(`/search?q=${encodeURIComponent(inputValue)}`)
                 }
               }}
@@ -225,6 +241,7 @@ const Search = () => {
         isOpen={openVoiceModal}
         onClose={() => setOpenVoiceModal(false)}
         onSearch={(query) => {
+          saveRecentSearch(query)
           setInputValue(query)
           setShowSuggestions(false)
           navigate(`/search?q=${encodeURIComponent(query)}`)

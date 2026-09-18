@@ -125,12 +125,12 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
     return (
         <div className='py-2 lg:py-4 relative' ref={sectionRef}>
             <div className='container mx-auto px-4 flex items-center justify-between gap-4 mb-2'>
-                <h3 className='font-black text-base md:text-xl text-slate-800 dark:text-white capitalize tracking-tight'>
+                <h3 className='font-extrabold text-sm sm:text-base md:text-lg text-slate-800 dark:text-white capitalize tracking-tight'>
                     {name}
                 </h3>
                 <button
                     onClick={handleRedirectProductListpage}
-                    className='text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 text-xs md:text-sm font-bold flex items-center gap-1 transition-transform active:scale-95'
+                    className='text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 text-xs sm:text-sm font-bold flex items-center gap-1 transition-transform active:scale-95'
                 >
                     See All
                 </button>
@@ -138,15 +138,14 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
 
             <div className='relative flex items-center'>
                 <div
-                    className='flex gap-3 container mx-auto px-4 overflow-x-auto scrollbar-none scroll-smooth'
+                    className='flex gap-2.5 sm:gap-3 container mx-auto px-4 overflow-x-auto scrollbar-none scroll-smooth'
                     ref={containerRef}
                     style={{ scrollSnapType: 'none' }}
                 >
                     {loading && loadingCardNumber.map((_, index) => (
                         <div
                             key={"ld" + index}
-                            className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]'
-                            style={{  }}
+                            className='w-[130px] sm:w-[150px] md:w-[175px] lg:w-[195px] max-w-[140px] sm:max-w-[160px] md:max-w-[185px] lg:max-w-[205px] flex-shrink-0'
                         >
                             <CardLoading />
                         </div>
@@ -155,8 +154,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                     {!visible && !loading && loadingCardNumber.map((_, index) => (
                         <div
                             key={"ph" + index}
-                            className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px] h-64 bg-slate-100 dark:bg-zinc-800 rounded-2xl animate-pulse flex-shrink-0'
-                            style={{  }}
+                            className='w-[130px] sm:w-[150px] md:w-[175px] lg:w-[195px] max-w-[140px] sm:max-w-[160px] md:max-w-[185px] lg:max-w-[205px] h-56 bg-slate-100 dark:bg-zinc-800 rounded-2xl animate-pulse flex-shrink-0'
                         />
                     ))}
 
@@ -165,8 +163,7 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                             return (
                                 <div
                                     key={p._id + "cat" + index}
-                                    className='min-w-[150px] md:min-w-[190px] lg:min-w-[220px]'
-                                    style={{  }}
+                                    className='w-[130px] sm:w-[150px] md:w-[175px] lg:w-[195px] max-w-[140px] sm:max-w-[160px] md:max-w-[185px] lg:max-w-[205px] flex-shrink-0'
                                 >
                                     <CardProduct data={p} priority={index < 3} />
                                 </div>
