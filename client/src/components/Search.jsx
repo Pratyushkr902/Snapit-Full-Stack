@@ -24,11 +24,10 @@ const Search = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [isMobile] = useMobile()
-  const params = useLocation()
 
   // Derive isSearchPage directly from location
   const isSearchPage = location.pathname === "/search"
-  const searchText = new URLSearchParams(params.search).get('q') || ''
+  const searchText = new URLSearchParams(location.search).get('q') || ''
 
   const [inputValue, setInputValue] = useState(searchText || '')
   const [openVoiceModal, setOpenVoiceModal] = useState(false)
@@ -36,9 +35,9 @@ const Search = () => {
 
   // Sync input with URL param when navigating
   useEffect(() => {
-    const q = new URLSearchParams(params.search).get('q') || ''
+    const q = new URLSearchParams(location.search).get('q') || ''
     setInputValue(q)
-  }, [params.search])
+  }, [location.search])
 
   useEffect(() => {
     return () => clearTimeout(debounceRef.current)
@@ -50,22 +49,21 @@ const Search = () => {
 
     clearTimeout(debounceRef.current)
     if (!value.trim()) {
-      navigate('/search?q=')
+      navigate('/search?q=', { replace: true })
       return
     }
 
-    // Debounce query URL update & recent search saving
+    // Debounce query URL update to prevent flooding history and network
     debounceRef.current = setTimeout(() => {
       saveRecentSearch(value)
-    }, 800)
-
-    navigate(`/search?q=${encodeURIComponent(value)}`)
+      navigate(`/search?q=${encodeURIComponent(value)}`, { replace: true })
+    }, 250)
   }
 
   const handleClear = () => {
     clearTimeout(debounceRef.current)
     setInputValue('')
-    navigate('/search?q=')
+    navigate('/search?q=', { replace: true })
   }
 
   const handlePlaceholderClick = () => {
@@ -135,7 +133,7 @@ const Search = () => {
                   clearTimeout(debounceRef.current)
                   e.target.blur()
                   saveRecentSearch(inputValue)
-                  navigate(`/search?q=${encodeURIComponent(inputValue)}`)
+                  navigate(`/search?q=${encodeURIComponent(inputValue)}`, { replace: true })
                 }
               }}
             />
@@ -173,9 +171,10 @@ const Search = () => {
         isOpen={openVoiceModal}
         onClose={() => setOpenVoiceModal(false)}
         onSearch={(query) => {
+          clearTimeout(debounceRef.current)
           saveRecentSearch(query)
           setInputValue(query)
-          navigate(`/search?q=${encodeURIComponent(query)}`)
+          navigate(`/search?q=${encodeURIComponent(query)}`, { replace: true })
         }}
       />
     </div>

@@ -59,8 +59,6 @@ const SearchPage = () => {
     new URLSearchParams(params.search).get('search') ||
     ''
 
-  const prevSearchText = useRef(searchText)
-
   // Load and refresh recent searches from localStorage
   const refreshRecentSearches = useCallback(() => {
     try {
@@ -87,20 +85,9 @@ const SearchPage = () => {
     }
   }, [searchText, refreshRecentSearches])
 
-  // Reset pagination & category on query change
-  useEffect(() => {
-    if (prevSearchText.current !== searchText) {
-      setPage(1)
-      setData([])
-      setActiveCategory('all')
-      setSortBy('relevance')
-      prevSearchText.current = searchText
-    }
-  }, [searchText])
-
-  // Fetch search products
-  const fetchData = useCallback(async (signal) => {
-    if (!searchText.trim()) {
+  // Fetch search products with explicit query and target page
+  const fetchData = useCallback(async (queryText, targetPage = 1, signal) => {
+    if (!queryText.trim()) {
       setData([])
       setLoading(false)
       return
@@ -110,29 +97,39 @@ const SearchPage = () => {
       const response = await Axios({
         ...SummaryApi.searchProduct,
         signal,
-        data: { search: searchText, page, limit: 16 },
+        data: { search: queryText, page: targetPage, limit: 16 },
       })
       const { data: responseData } = response
       if (responseData.success) {
         const inStock = (responseData.data || []).filter(
           (p) => (Number(p?.stock) || 0) > 0 && p?.publish !== false
         )
-        setData((prev) => (page === 1 ? inStock : [...prev, ...inStock]))
+        setData((prev) => (targetPage === 1 ? inStock : [...prev, ...inStock]))
         setTotalPage(responseData.totalPage || 1)
         preloadImages(inStock, 220)
       }
     } catch (error) {
-      if (error.name !== 'CanceledError') AxiosToastError(error)
+      if (error?.name !== 'CanceledError') AxiosToastError(error)
     } finally {
       setLoading(false)
     }
-  }, [page, searchText])
+  }, [])
 
+  // Query change: immediately reset categories/sort and fetch page 1
   useEffect(() => {
+    setPage(1)
+    setActiveCategory('all')
+    setSortBy('relevance')
+
+    if (!searchText.trim()) {
+      setData([])
+      return
+    }
+
     const controller = new AbortController()
-    fetchData(controller.signal)
+    fetchData(searchText, 1, controller.signal)
     return () => controller.abort()
-  }, [fetchData])
+  }, [searchText, fetchData])
 
   // Fetch popular fallback essentials when no search results or on landing screen
   useEffect(() => {
@@ -162,8 +159,10 @@ const SearchPage = () => {
   }, [])
 
   const handleFetchMore = () => {
-    if (totalPage > page && !loading) {
-      setPage((prev) => prev + 1)
+    if (totalPage > page && !loading && searchText.trim()) {
+      const nextPage = page + 1
+      setPage(nextPage)
+      fetchData(searchText, nextPage)
     }
   }
 

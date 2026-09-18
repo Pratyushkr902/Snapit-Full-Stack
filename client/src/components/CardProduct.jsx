@@ -75,7 +75,8 @@ const CardProduct = ({ data, priority = false }) => {
                     height={200}
                     onError={(e) => {
                         const raw = Array.isArray(data?.image) ? data.image[0] : (typeof data?.image === 'string' ? data.image : null);
-                        if (raw && !e.currentTarget.dataset.fallbackAttempted) {
+                        const currentSrc = e.currentTarget.src || '';
+                        if (raw && raw !== FALLBACK_IMAGE && !currentSrc.endsWith(raw) && !e.currentTarget.dataset.fallbackAttempted) {
                             e.currentTarget.dataset.fallbackAttempted = 'true';
                             e.currentTarget.src = raw;
                         } else {
