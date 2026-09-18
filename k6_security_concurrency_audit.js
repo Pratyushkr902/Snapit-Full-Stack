@@ -44,22 +44,44 @@ const jsonHeaders = { 'Content-Type': 'application/json' };
 export function setup() {
     console.log(`\n🛡️  Starting k6 Concurrency & Security Loophole Audit on: ${BASE_URL}`);
 
-    const res = http.post(`${BASE_URL}/api/user/login`, JSON.stringify({
-        email: 'test_customer@snapit.com',
-        password: 'Test@12345',
+    const testEmail = 'audit_tester@snapit.in';
+    const testPass = 'Test@12345';
+
+    // Attempt login first
+    let res = http.post(`${BASE_URL}/api/user/login`, JSON.stringify({
+        email: testEmail,
+        password: testPass,
     }), { headers: jsonHeaders });
+
+    // If account doesn't exist, auto-register
+    if (res.status !== 200) {
+        http.post(`${BASE_URL}/api/user/register`, JSON.stringify({
+            name: 'Audit Shopper',
+            email: testEmail,
+            password: testPass,
+        }), { headers: jsonHeaders });
+
+        // Retry login
+        res = http.post(`${BASE_URL}/api/user/login`, JSON.stringify({
+            email: testEmail,
+            password: testPass,
+        }), { headers: jsonHeaders });
+    }
 
     let token = null;
     let userId = null;
     if (res.status === 200) {
-        const body = JSON.parse(res.body);
-        token = body.data?.accesstoken;
-        userId = body.data?._id;
-        console.log(`  ✅ Auth OK for test customer (${userId})`);
+        try {
+            const body = JSON.parse(res.body);
+            token = body.data?.accesstoken;
+            userId = body.data?._id;
+            console.log(`  ✅ Auth OK for test customer (${userId})`);
+        } catch {
+            console.warn('  ⚠️ Failed to parse auth response');
+        }
     } else {
-        console.warn(`  ⚠️ Auth failed (${res.status}), proceeding with public endpoints`);
+        console.warn(`  ⚠️ Auth returned status ${res.status}: ${res.body}`);
     }
-
     return { token, userId };
 }
 
