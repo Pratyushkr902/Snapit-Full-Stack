@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { pricewithDiscount } from "../utils/PriceWithDiscount";
 import { handleAddAddress } from "../store/addressSlice";
 import { setOrder } from "../store/orderSlice";
+import { setDynamicStoreClosed } from "../components/StoreClosedOverlay";
 
 export const GlobalContext = createContext(null)
 export const useGlobalContext = () => useContext(GlobalContext)
@@ -131,6 +132,22 @@ const GlobalProvider = ({ children }) => {
             fetchOrder()
         }
     }, [user?._id])
+
+    // Sync live store closure status from DB on app load
+    useEffect(() => {
+        const syncStoreStatus = async () => {
+            try {
+                const res = await Axios({ url: '/api/admin/store-status', method: 'get' })
+                if (res.data?.success && res.data?.data) {
+                    setDynamicStoreClosed(res.data.data.isClosedForToday, res.data.data.closedReason)
+                    window.dispatchEvent(new CustomEvent('snapit_store_status_changed', { detail: res.data.data }))
+                }
+            } catch {
+                // Non-blocking
+            }
+        }
+        syncStoreStatus()
+    }, [])
 
     return (
         <GlobalContext.Provider value={{

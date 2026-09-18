@@ -193,13 +193,6 @@ const DisplayCartItem = ({close}) => {
                                             {deliveryFee === 0 ? 'FREE' : DisplayPriceInRupees(deliveryFee)}
                                         </p>
                                     </div>
-                                    {deliveryInfo?.amountNeededForFreeDelivery > 0 && (
-                                        <div className='bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60'>
-                                            <p className='text-[11px] text-emerald-800 dark:text-emerald-300 font-bold text-center'>
-                                                ⚡ Add items worth <span className='font-black'>₹{deliveryInfo.amountNeededForFreeDelivery}</span> more for <span className='font-black text-emerald-600 dark:text-emerald-400'>FREE Delivery</span> (Within 5 km)!
-                                            </p>
-                                        </div>
-                                    )}
                                     {deliveryInfo?.isLongDistance && (
                                         <div className='bg-blue-50 dark:bg-blue-950/40 p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60'>
                                             <p className='text-[11px] text-blue-800 dark:text-blue-300 font-bold text-center'>

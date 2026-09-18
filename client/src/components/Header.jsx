@@ -11,6 +11,7 @@ import UserMenu from './UserMenu';
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { useFullCart } from '../utils/foodCartStore';
+import { getStoreStatus } from './StoreClosedOverlay';
 
 const Header = ({ openCart }) => {
     const [isMobile] = useMobile()
@@ -27,6 +28,22 @@ const Header = ({ openCart }) => {
     const selectedId = typeof window !== 'undefined' ? localStorage.getItem('selected_address_id') : null
     const activeAddress = addressList?.find(a => a._id === selectedId) || addressList?.[0]
     const primaryAddress = activeAddress?.address_line || "Select Address"
+    const [storeStatus, setStoreStatus] = useState(() => getStoreStatus(user?.role))
+
+    useEffect(() => {
+        const updateStatus = (e) => {
+            if (e?.detail) {
+                setStoreStatus({
+                    isClosed: Boolean(e.detail.isClosedForToday),
+                    isClosedForToday: Boolean(e.detail.isClosedForToday)
+                })
+            } else {
+                setStoreStatus(getStoreStatus(user?.role))
+            }
+        }
+        window.addEventListener('snapit_store_status_changed', updateStatus)
+        return () => window.removeEventListener('snapit_store_status_changed', updateStatus)
+    }, [user?.role])
 
     // Persistent, cross-restaurant food cart — separate from the grocery
     // cart above (useGlobalContext). Lives in localStorage via foodCartStore
@@ -83,11 +100,23 @@ const Header = ({ openCart }) => {
                         <img src={logo} alt='logo' className='w-36 h-auto object-contain drop-shadow-sm hover:scale-105 transition-transform' />
                     </Link>
                     <div className='flex flex-col justify-center border-l-2 pl-3 border-slate-100 dark:border-slate-800 h-10'>
-                        <div className='flex items-center gap-1'>
-                            <h2 className='font-black text-slate-900 dark:text-white text-[15px] uppercase tracking-tighter'>
-                                Delivery in <span className='text-yellow-500 animate-pulse'>10 MINS</span>
-                            </h2>
-                            <span className='text-lg'>⚡</span>
+                        <div className='flex items-center gap-2'>
+                            <div className='flex items-center gap-1'>
+                                <h2 className='font-black text-slate-900 dark:text-white text-[15px] uppercase tracking-tighter'>
+                                    Delivery in <span className='text-yellow-500 animate-pulse'>10 MINS</span>
+                                </h2>
+                                <span className='text-lg'>⚡</span>
+                            </div>
+                            {storeStatus?.isClosedForToday ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 tracking-tight shadow-2xs">
+                                    ⛔ CLOSED FOR TODAY
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 tracking-tight shadow-2xs">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    🟢 ACTIVE & OPEN
+                                </span>
+                            )}
                         </div>
                         <Link to='/select-location' className='flex items-center gap-0.5 text-xs text-slate-500 dark:text-slate-400 font-semibold cursor-pointer active:opacity-60'>
                             <span className='truncate max-w-[150px]'>📍 {primaryAddress}</span>
@@ -174,10 +203,20 @@ const Header = ({ openCart }) => {
                             <img src={logo} alt='logo' className='w-20 h-auto object-contain' />
                         </Link>
                         <div className='flex flex-col justify-center border-l-2 pl-2 border-slate-100 dark:border-slate-800 min-w-0'>
-                            <div className='flex items-center gap-0.5'>
+                            <div className='flex items-center gap-1.5'>
                                 <span className='font-black text-slate-900 dark:text-white text-[11px] uppercase tracking-tighter whitespace-nowrap'>
                                     in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
                                 </span>
+                                {storeStatus?.isClosedForToday ? (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[8.5px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 whitespace-nowrap">
+                                        ⛔ CLOSED
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 whitespace-nowrap">
+                                        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                        🟢 OPEN
+                                    </span>
+                                )}
                             </div>
                             <Link to='/select-location' className='flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-semibold min-w-0 active:opacity-60'>
                                 <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
