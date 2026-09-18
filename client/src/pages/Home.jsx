@@ -170,7 +170,7 @@ const Home = () => {
             : filteredCategories.map((cat, catIndex) => {
                 if (!cat) return null;
 
-                const rawImg = cat?.imageThumbnail || cat?.icon || cat?.image || cat?.imageUrl || '';
+                const rawImg = cat?.image || cat?.icon || cat?.imageThumbnail || cat?.imageUrl || '';
                 let finalSrc = FALLBACK_IMAGE;
 
                 if (typeof rawImg === 'string' && rawImg.trim().length > 0) {
@@ -214,8 +214,12 @@ const Home = () => {
                         fetchPriority={catIndex < 4 ? "high" : "auto"}
                         decoding="async"
                         onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = FALLBACK_IMAGE;
+                          if (finalSrc && e.target.src !== finalSrc && finalSrc !== FALLBACK_IMAGE) {
+                            e.target.src = finalSrc;
+                          } else {
+                            e.target.onerror = null;
+                            e.target.src = FALLBACK_IMAGE;
+                          }
                         }}
                       />
                     </div>

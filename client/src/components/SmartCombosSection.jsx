@@ -94,87 +94,94 @@ const SmartCombosSection = () => {
   return (
     <section className='my-2 sm:my-3 px-3 sm:px-4 max-w-7xl mx-auto'>
       {/* Sleek Quick-Commerce Header without Emojis / Vibe-coded Icons */}
-      <div className='flex items-center justify-between mb-2 px-0.5'>
+      <div className='flex items-center justify-between mb-2.5 px-0.5'>
         <div className='flex items-center gap-2'>
-          <h2 className='font-black text-slate-900 dark:text-white text-xs sm:text-sm tracking-wide uppercase'>
+          <h2 className='font-black text-slate-900 dark:text-white text-sm sm:text-base tracking-wide uppercase'>
             Blockbuster Deals
           </h2>
-          <span className='text-[9px] font-black uppercase px-2 py-0.5 rounded bg-emerald-600 text-white tracking-wider'>
+          <span className='text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-600 text-white tracking-wider shadow-2xs'>
             Save Up to 30%
           </span>
         </div>
-        <span className='text-[11px] font-semibold text-slate-400'>
+        <span className='text-xs font-semibold text-slate-400'>
           Curated Combos
         </span>
       </div>
 
-      {/* Ultra-compact Horizontal Carousel (Zero Screen Hijack) */}
-      <div className='flex gap-3 overflow-x-auto scrollbar-none snap-x pb-1 -mx-3 px-3 sm:mx-0 sm:px-0'>
+      {/* Zepto/Blinkit-Grade Value Combos Carousel */}
+      <div className='flex gap-3.5 overflow-x-auto scrollbar-none snap-x pb-2 -mx-3 px-3 sm:mx-0 sm:px-0'>
         {combos.map((combo) => (
           <div
             key={combo.id}
-            className='w-[270px] sm:w-[300px] shrink-0 snap-start bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 shadow-xs hover:border-emerald-500/40 transition-all flex flex-col justify-between'
+            className='w-[290px] sm:w-[330px] shrink-0 snap-start bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-3.5 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all flex flex-col justify-between'
           >
             <div>
               {/* Badges Row */}
-              <div className='flex items-center justify-between gap-1.5 mb-1.5'>
-                <span className='px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wider rounded'>
-                  {combo.badge || 'Blockbuster'}
-                </span>
-                <span className='text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded'>
+              <div className='flex items-center justify-between gap-2 mb-2'>
+                <span className='px-2.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/50 text-[10px] font-black uppercase tracking-wider rounded-full'>
                   Save ₹{combo.discount}
+                </span>
+                <span className='text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide'>
+                  {combo.badge && !combo.badge.toLowerCase().includes('save') ? combo.badge : 'Value Pack'}
                 </span>
               </div>
 
-              {/* Title without emojis */}
-              <h3 className='font-bold text-slate-900 dark:text-white text-xs sm:text-sm line-clamp-1'>
+              {/* Title & Tagline */}
+              <h3 className='font-extrabold text-slate-900 dark:text-white text-sm sm:text-base line-clamp-1'>
                 {combo.title}
               </h3>
-              <p className='text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 line-clamp-1'>
+              <p className='text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1 font-medium'>
                 {combo.tagline}
               </p>
 
-              {/* Compact Item Thumbnails Rail */}
-              <div className='flex items-center gap-1.5 my-2.5 p-1.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800/80'>
+              {/* Generous Product Visuals Rail (Zepto / Blinkit Showcase) */}
+              <div className='flex items-center justify-center gap-2 my-3 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/80'>
                 {combo.items.map((item, idx) => (
                   <React.Fragment key={item._id || idx}>
-                    <div className='flex-1 flex flex-col items-center text-center min-w-0'>
-                      <div className='w-10 h-10 bg-white dark:bg-slate-900 rounded-lg p-0.5 flex items-center justify-center border border-slate-100 dark:border-slate-800'>
+                    <div className='flex-1 flex flex-col items-center text-center min-w-0 max-w-[85px]'>
+                      <div className='w-16 h-16 sm:w-[70px] sm:h-[70px] bg-white dark:bg-slate-900 rounded-xl p-1.5 flex items-center justify-center border border-slate-100 dark:border-slate-800 shadow-2xs transition-transform hover:scale-105'>
                         <img
-                          src={optimizeImage(item.image?.[0], 100)}
+                          src={optimizeImage(item.image?.[0], 180)}
                           alt={item.name}
                           className='w-full h-full object-contain'
+                          loading='lazy'
+                          decoding='async'
                           onError={(e) => {
-                            e.target.onerror = null
-                            e.target.src = '/empty_cart.webp'
+                            const raw = Array.isArray(item.image) ? item.image[0] : item.image;
+                            if (raw && e.target.src !== raw) {
+                              e.target.src = raw;
+                            } else {
+                              e.target.onerror = null;
+                              e.target.src = FALLBACK_IMAGE;
+                            }
                           }}
                         />
                       </div>
-                      <p className='text-[8.5px] font-medium text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-1 w-full'>
+                      <p className='text-[10px] sm:text-[11px] font-bold text-slate-700 dark:text-slate-300 mt-1 line-clamp-1 w-full'>
                         {item.name}
                       </p>
                     </div>
                     {idx < combo.items.length - 1 && (
-                      <span className='text-slate-300 dark:text-slate-600 font-bold text-[10px] shrink-0'>+</span>
+                      <span className='text-slate-400 dark:text-slate-500 font-black text-xs shrink-0 self-center'>+</span>
                     )}
                   </React.Fragment>
                 ))}
               </div>
             </div>
 
-            {/* Bottom pricing & Compact Add button */}
-            <div className='pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 mt-0.5'>
+            {/* Bottom pricing & Blinkit-style Add button */}
+            <div className='pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 mt-1'>
               <div>
-                <div className='flex items-baseline gap-1'>
-                  <span className='text-sm sm:text-base font-black text-slate-900 dark:text-white'>
+                <div className='flex items-baseline gap-1.5'>
+                  <span className='text-base sm:text-lg font-black text-slate-900 dark:text-white'>
                     {DisplayPriceInRupees(combo.comboPrice)}
                   </span>
-                  <span className='text-[10px] text-slate-400 line-through'>
+                  <span className='text-xs text-slate-400 line-through font-medium'>
                     {DisplayPriceInRupees(combo.originalPrice)}
                   </span>
                 </div>
-                <p className='text-[9px] text-slate-400'>
-                  {combo.items.length} items combo
+                <p className='text-[10px] text-slate-400 font-semibold'>
+                  {combo.items.length} items bundle
                 </p>
               </div>
 
@@ -182,9 +189,9 @@ const SmartCombosSection = () => {
                 type='button'
                 disabled={addingComboId === combo.id}
                 onClick={() => handleAddComboToCart(combo)}
-                className='px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer'
+                className='px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer uppercase tracking-wider'
               >
-                {addingComboId === combo.id ? 'Adding...' : '+ Add Combo'}
+                {addingComboId === combo.id ? 'Adding...' : '+ ADD'}
               </button>
             </div>
           </div>
