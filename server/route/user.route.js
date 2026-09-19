@@ -14,6 +14,8 @@ import {
     verifyEmailController,
     verifyForgotPasswordOtp,
     getAllRiders,
+    createRiderController,
+    updateRiderStatusController,
     saveFcmTokenController,
     updateDobController,
     testPushNotificationController,
@@ -56,6 +58,8 @@ userRouter.put('/update-dob',                 auth, updateDobController)
 
 // ── Admin only ───────────────────────────────────────────────
 userRouter.get('/all-riders',                 auth, admin, getAllRiders)  // ✅ added admin guard
+userRouter.post('/create-rider',              auth, admin, createRiderController)
+userRouter.put('/update-rider-status',        auth, admin, updateRiderStatusController)
 userRouter.post('/create-ambassador',         auth, admin, createCampusAmbassadorController)
 userRouter.get('/all-ambassadors',            auth, admin, getAllAmbassadorsController)
 userRouter.post('/admin-reset-pin',            auth, admin, adminResetCustomerPinController)

@@ -794,6 +794,135 @@ export async function getAllRiders(request, response) {
     }
 }
 
+export async function createRiderController(request, response) {
+    try {
+        const { name, mobile, email, password } = request.body
+
+        if (!name || !mobile) {
+            return response.status(400).json({
+                message: "Name and mobile number are required",
+                error: true,
+                success: false
+            })
+        }
+
+        const numMobile = Number(mobile)
+        const cleanEmail = (email || `rider_${numMobile}@snapit.in`).trim().toLowerCase()
+
+        const existing = await UserModel.findOne({
+            $or: [
+                { mobile: numMobile },
+                { email: cleanEmail }
+            ]
+        })
+
+        if (existing) {
+            existing.role = 'RIDER'
+            existing.status = 'Active'
+            existing.name = name.trim()
+            if (password) {
+                const salt = await bcryptjs.genSalt(10)
+                existing.password = await bcryptjs.hash(password, salt)
+            }
+            await existing.save()
+            return response.status(200).json({
+                message: `User ${existing.name} promoted to Active Rider!`,
+                error: false,
+                success: true,
+                data: {
+                    _id: existing._id,
+                    name: existing.name,
+                    mobile: existing.mobile,
+                    email: existing.email,
+                    role: existing.role,
+                    status: existing.status
+                }
+            })
+        }
+
+        const defaultPass = password || 'Snapit@Rider123'
+        const salt = await bcryptjs.genSalt(10)
+        const hashedPassword = await bcryptjs.hash(defaultPass, salt)
+
+        const newRider = await UserModel.create({
+            name: name.trim(),
+            mobile: numMobile,
+            email: cleanEmail,
+            password: hashedPassword,
+            role: 'RIDER',
+            status: 'Active',
+            verify_email: true
+        })
+
+        return response.status(201).json({
+            message: `Rider ${newRider.name} created successfully!`,
+            error: false,
+            success: true,
+            data: {
+                _id: newRider._id,
+                name: newRider.name,
+                mobile: newRider.mobile,
+                email: newRider.email,
+                role: newRider.role,
+                status: newRider.status
+            }
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "Failed to create rider",
+            error: true,
+            success: false
+        })
+    }
+}
+
+export async function updateRiderStatusController(request, response) {
+    try {
+        const { riderId, status } = request.body
+
+        if (!riderId || !status) {
+            return response.status(400).json({
+                message: "riderId and status ('Active' | 'Inactive') are required",
+                error: true,
+                success: false
+            })
+        }
+
+        const rider = await UserModel.findById(riderId)
+        if (!rider) {
+            return response.status(404).json({
+                message: "Rider not found",
+                error: true,
+                success: false
+            })
+        }
+
+        rider.status = status
+        await rider.save()
+
+        if (status === 'Inactive') {
+            await RiderDutyModel.updateMany({ riderId }, { isDutyOn: false })
+        }
+
+        return response.json({
+            message: `Rider status updated to ${status}`,
+            error: false,
+            success: true,
+            data: {
+                _id: rider._id,
+                name: rider.name,
+                status: rider.status
+            }
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "Failed to update rider status",
+            error: true,
+            success: false
+        })
+    }
+}
+
 export async function saveFcmTokenController(request, response) {
     try {
         const userId = request.userId || null

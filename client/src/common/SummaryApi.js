@@ -65,6 +65,14 @@ const SummaryApi = {
         url : '/api/user/all-riders',
         method : 'get'
     },
+    createRider : {
+        url : '/api/user/create-rider',
+        method : 'post'
+    },
+    updateRiderStatus : {
+        url : '/api/user/update-rider-status',
+        method : 'put'
+    },
     getAllAmbassadors : {
         url : '/api/user/all-ambassadors',
         method : 'get'
