@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import crypto from 'crypto'
 import sendEmail from './sendEmail.js'
 import sendEmailResend from './sendEmailResend.js'
 import UserModel from '../models/user.model.js'
@@ -840,7 +841,7 @@ export async function createRiderController(request, response) {
             })
         }
 
-        const defaultPass = password || 'Snapit@Rider123'
+        const defaultPass = password || crypto.randomBytes(6).toString('hex')
         const salt = await bcryptjs.genSalt(10)
         const hashedPassword = await bcryptjs.hash(defaultPass, salt)
 

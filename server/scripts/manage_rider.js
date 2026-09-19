@@ -11,13 +11,14 @@
  *   node server/scripts/manage_rider.js list
  *   node server/scripts/manage_rider.js deactivate <mobile_or_email>
  *   node server/scripts/manage_rider.js promote <mobile_or_email>
- *   node server/scripts/manage_rider.js add --name "Rider Name" --mobile "9876543210" --email "rider@gmail.com" --password "Secret123"
+ *   node server/scripts/manage_rider.js add --name "Rider Name" --mobile "9876543210" --email "rider@gmail.com"
  */
 
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import crypto from 'crypto'
 import bcryptjs from 'bcryptjs'
 import connectDB from '../config/connectDB.js'
 import UserModel from '../models/user.model.js'
@@ -105,7 +106,7 @@ async function run() {
     const name = nameIdx !== -1 ? args[nameIdx + 1] : null
     const mobile = mobileIdx !== -1 ? Number(args[mobileIdx + 1]) : null
     const email = emailIdx !== -1 ? args[emailIdx + 1] : null
-    const password = passwordIdx !== -1 ? args[passwordIdx + 1] : 'Snapit@Rider123'
+    const password = passwordIdx !== -1 ? args[passwordIdx + 1] : crypto.randomBytes(6).toString('hex')
 
     if (!name || !mobile) {
       console.error('❌ Required: --name "..." --mobile "..." (optional: --email "...", --password "...")')
