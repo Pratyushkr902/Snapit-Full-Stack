@@ -10,7 +10,7 @@
 
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
-import RestaurantModel from './models/Restaurant.model.js'
+import RestaurantModel from './models/restaurant.model.js'
 import MenuItemModel from './models/MenuItem.model.js'
 
 dotenv.config()

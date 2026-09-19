@@ -113,7 +113,9 @@ export const submitRefund = async (req, res) => {
         }
 
         // ── 9. PARTIAL REFUND ONLY — cap at affected items value or order total, positive amount required
-        const parsedRefundAmount = Number(refundAmount);
+        const parsedRefundAmount = (refundAmount !== undefined && refundAmount !== null && refundAmount !== '')
+            ? Number(refundAmount)
+            : Number(order.totalAmt || 0);
         if (isNaN(parsedRefundAmount) || parsedRefundAmount <= 0) {
             return res.status(400).json({ success: false, message: "A valid positive refund amount is required." });
         }
@@ -227,8 +229,17 @@ export const resolveRefund = async (req, res) => {
 
         if ((status === "Approved" || status === "Refunded") && refundMethod === "wallet") {
             refund.refundMethod = "wallet";
+            const orderDoc = await OrderModel.findById(refund.orderId).select('orderId').lean();
+            const orderCode = orderDoc?.orderId || String(refund.orderId).slice(-6);
+            const transaction = {
+                type: 'credit',
+                amount: refund.refundAmount,
+                description: `Refund for Order #${orderCode}`,
+                date: new Date()
+            };
             await UserModel.findByIdAndUpdate(refund.userId, {
                 $inc: { walletBalance: refund.refundAmount },
+                $push: { walletTransactions: { $each: [transaction], $position: 0 } }
             });
         } else if (refundMethod) {
             refund.refundMethod = refundMethod;
