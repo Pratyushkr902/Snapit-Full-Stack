@@ -65,11 +65,21 @@ export const getDeliveryProof = async (req, res) => {
         const { orderId } = req.params;
 
         const order = await OrderModel.findById(orderId)
-            .select("orderId delivery_status deliveredAt deliveryProof riderId")
+            .select("orderId userId delivery_status deliveredAt deliveryProof riderId")
             .populate("deliveryProof.riderId", "name mobile");
 
         if (!order)
             return res.status(404).json({ success: false, message: "Order not found" });
+
+        // RBAC & IDOR guard: Only admin, super admin, assigned rider, or the order customer can view proof
+        const isAuthorized = 
+            ['ADMIN', 'SUPER_ADMIN'].includes(req.userRole) ||
+            order.userId?.toString() === req.userId ||
+            order.riderId?.toString() === req.userId;
+
+        if (!isAuthorized) {
+            return res.status(403).json({ success: false, message: "Unauthorized access to delivery proof." });
+        }
 
         if (!order.deliveryProof?.isUploaded) {
             return res.status(404).json({

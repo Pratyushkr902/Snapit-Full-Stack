@@ -43,3 +43,4 @@ client/dist/
 k6_master_audit_suite.js
 *.k6.env
 k6_tokens.env
+tests/tokens.json

@@ -436,7 +436,9 @@ app.use('/api/scheduled-order', scheduledOrderRouter)
 app.use('/api/refund',          refundRouter)
 app.use('/api/delivery',        deliveryRouter)          // ✅ NEW
 app.use('/api/admin/accounts',  dailyAccountRouter)       // ✅ NEW
+app.use('/api/daily-account',   dailyAccountRouter)       // ✅ Alias for direct access
 app.use('/api/admin-management', adminManagementRouter)
+app.use('/api/adminManagement',  adminManagementRouter)   // ✅ Alias for camelCase
 app.use('/api/festive-offer',    festiveOfferRouter)       // ✅ Festive Offers
 app.use('/api/sunday-flash',     sundayFlashRouter)        // 🔥 Sunday Flash Offer
 app.use('/api/treasury',         treasuryRouter)           // ✅ COD Cash Treasury & Partner Split
@@ -486,6 +488,16 @@ app.get("/debug-brevo-test", async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: error.message })
     }
+})
+
+// ─── API 404 HANDLER ────────────────────────────────────────────────────────
+// Ensure unmatched /api routes return JSON 404 instead of SPA HTML index
+app.all('/api/{*splat}', (req, res) => {
+    return res.status(404).json({
+        success: false,
+        error: true,
+        message: `API endpoint '${req.method} ${req.originalUrl}' not found.`
+    })
 })
 
 // ─── SERVE FRONTEND ───────────────────────────────────────────────────────────

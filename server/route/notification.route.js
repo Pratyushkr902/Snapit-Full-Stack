@@ -22,7 +22,7 @@ function resolveRecipient(req, requestedType) {
     return { recipientId: req.userId, recipientType: type, allowed: true };
   }
   if (type === 'admin') {
-    return { recipientId: req.userId, recipientType: type, allowed: req.userRole === 'ADMIN' };
+    return { recipientId: req.userId, recipientType: type, allowed: req.userRole === 'ADMIN' || req.userRole === 'SUPER_ADMIN' };
   }
   // store/seller: no ownership model wired yet — block until that exists.
   return { recipientId: null, recipientType: type, allowed: false };

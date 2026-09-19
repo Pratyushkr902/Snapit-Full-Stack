@@ -1912,23 +1912,35 @@ export async function getSellerEarningsController(request, response) {
         const userId   = request.userId
         const userRole = request.userRole
 
+        const isSuperOrAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
+        let sellerStoreName = null
         let filter = {}
-        if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+        if (!isSuperOrAdmin) {
             const sellerUser = await UserModel.findById(userId).select('store_name').lean()
             if (!sellerUser?.store_name) {
                 return response.status(403).json({ message: 'No store associated with your account.', error: true, success: false })
             }
+            sellerStoreName = sellerUser.store_name
             filter = { involved_stores: sellerUser.store_name }
         }
 
         const orders     = await populateOrder(OrderModel.find(filter).sort({ createdAt: -1 }))
-        const safeOrders = orders.map(toSafeOrder)
+        const safeOrders = orders.map(toSafeOrder).map(order => {
+            if (isSuperOrAdmin || !sellerStoreName) return order
+            // Filter cart items for this seller's store only
+            return {
+                ...order,
+                cartItems: (order.cartItems || []).filter(item => 
+                    item.seller_store_name && item.seller_store_name.trim().toLowerCase() === sellerStoreName.trim().toLowerCase()
+                )
+            }
+        })
         const delivered  = safeOrders.filter(o => (o.delivery_status || '').toLowerCase() === 'delivered')
 
-        const totalSellerEarning   = delivered.reduce((acc, o) => acc + o.cartItems.reduce((s, item) => s + item.sellerPrice  * item.quantity, 0), 0)
-        const totalSnapitMargin    = delivered.reduce((acc, o) => acc + o.cartItems.reduce((s, item) => s + item.snapitMargin * item.quantity, 0), 0)
-        const totalDeliveryFees    = delivered.reduce((acc, o) => acc + o.delivery_fee, 0)
-        const totalGross           = delivered.reduce((acc, o) => acc + o.totalAmt, 0)
+        const totalSellerEarning   = delivered.reduce((acc, o) => acc + (o.cartItems || []).reduce((s, item) => s + (Number(item.sellerPrice) || 0) * (Number(item.quantity) || 1), 0), 0)
+        const totalSnapitMargin    = delivered.reduce((acc, o) => acc + (o.cartItems || []).reduce((s, item) => s + (Number(item.snapitMargin) || 0) * (Number(item.quantity) || 1), 0), 0)
+        const totalDeliveryFees    = delivered.reduce((acc, o) => acc + (Number(o.delivery_fee) || 0), 0)
+        const totalGross           = delivered.reduce((acc, o) => acc + (Number(o.totalAmt) || 0), 0)
         const totalSells           = delivered.length
         const totalSalesExDelivery = totalGross - totalDeliveryFees
 
@@ -2112,18 +2124,33 @@ export const claimBirthdayBonusController = async (request, response) => {
             return response.status(400).json({ message: 'Already claimed this year.', error: true, success: false })
         }
 
-        await UserModel.findByIdAndUpdate(userId, {
-            $inc: { walletBalance: BIRTHDAY_BONUS_AMOUNT },
-            $set: { birthdayBonusClaimedYear: currentYear },
-            $push: {
-                walletTransactions: {
-                    type: 'CREDIT',
-                    amount: BIRTHDAY_BONUS_AMOUNT,
-                    description: 'Birthday Month Bonus',
-                    date: new Date()
+        const updatedUser = await UserModel.findOneAndUpdate(
+            {
+                _id: userId,
+                dob: { $ne: null },
+                birthdayBonusClaimedYear: { $ne: currentYear }
+            },
+            {
+                $inc: { walletBalance: BIRTHDAY_BONUS_AMOUNT },
+                $set: { birthdayBonusClaimedYear: currentYear },
+                $push: {
+                    walletTransactions: {
+                        $each: [{
+                            type: 'CREDIT',
+                            amount: BIRTHDAY_BONUS_AMOUNT,
+                            description: 'Birthday Month Bonus',
+                            date: new Date()
+                        }],
+                        $position: 0
+                    }
                 }
-            }
-        })
+            },
+            { new: true }
+        )
+
+        if (!updatedUser) {
+            return response.status(400).json({ message: 'Already claimed this year or invalid eligibility.', error: true, success: false })
+        }
 
         return response.json({
             message: `🎂 ₹${BIRTHDAY_BONUS_AMOUNT} birthday bonus added to wallet!`,
@@ -2147,6 +2174,7 @@ export const claimSurpriseBoxController = async (request, response) => {
         if (!user) return response.status(404).json({ message: 'User not found.', error: true, success: false })
 
         const now = new Date()
+        const cooldownDate = new Date(Date.now() - SURPRISE_BOX_COOLDOWN_DAYS * 24 * 60 * 60 * 1000)
         if (user.lastSurpriseBoxAt) {
             const daysSince = (now - new Date(user.lastSurpriseBoxAt)) / (1000 * 60 * 60 * 24)
             if (daysSince < SURPRISE_BOX_COOLDOWN_DAYS) {
@@ -2157,18 +2185,36 @@ export const claimSurpriseBoxController = async (request, response) => {
 
         const reward = Math.floor(Math.random() * (SURPRISE_BOX_MAX - SURPRISE_BOX_MIN + 1)) + SURPRISE_BOX_MIN
 
-        await UserModel.findByIdAndUpdate(userId, {
-            $inc: { walletBalance: reward },
-            $set: { lastSurpriseBoxAt: now },
-            $push: {
-                walletTransactions: {
-                    type: 'CREDIT',
-                    amount: reward,
-                    description: 'Weekly Surprise Box',
-                    date: now
+        const updatedUser = await UserModel.findOneAndUpdate(
+            {
+                _id: userId,
+                $or: [
+                    { lastSurpriseBoxAt: null },
+                    { lastSurpriseBoxAt: { $exists: false } },
+                    { lastSurpriseBoxAt: { $lte: cooldownDate } }
+                ]
+            },
+            {
+                $inc: { walletBalance: reward },
+                $set: { lastSurpriseBoxAt: now },
+                $push: {
+                    walletTransactions: {
+                        $each: [{
+                            type: 'CREDIT',
+                            amount: reward,
+                            description: 'Weekly Surprise Box',
+                            date: now
+                        }],
+                        $position: 0
+                    }
                 }
-            }
-        })
+            },
+            { new: true }
+        )
+
+        if (!updatedUser) {
+            return response.status(400).json({ message: 'Weekly surprise box is on cooldown. Please check back later.', error: true, success: false })
+        }
 
         return response.json({
             message: `🎁 You won ₹${reward}!`,

@@ -66,33 +66,40 @@ streakRouter.post('/claim', auth, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid milestone' });
         }
 
-        const user = await UserModel.findById(req.userId);
-        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-        if (user.claimedMilestones.includes(milestoneNum)) {
-            return res.status(400).json({ success: false, message: 'Reward already claimed' });
-        }
-
-        if (user.currentStreak < milestoneNum) {
-            return res.status(400).json({ success: false, message: 'Streak not reached yet' });
-        }
-
         const coins = STREAK_MILESTONES[milestoneNum];
 
-        user.walletBalance = (user.walletBalance || 0) + coins;
-        user.walletTransactions.push({
+        const transaction = {
             type:        'CREDIT',
             amount:      coins,
             description: `🔥 ${milestoneNum}-Day Streak Reward`,
             date:        new Date()
-        });
-        user.claimedMilestones.push(milestoneNum);
-        await user.save();
+        };
+
+        const updatedUser = await UserModel.findOneAndUpdate(
+            {
+                _id: req.userId,
+                currentStreak: { $gte: milestoneNum },
+                claimedMilestones: { $ne: milestoneNum }
+            },
+            {
+                $inc: { walletBalance: coins },
+                $addToSet: { claimedMilestones: milestoneNum },
+                $push: { walletTransactions: { $each: [transaction], $position: 0 } }
+            },
+            { new: true, select: 'walletBalance' }
+        );
+
+        if (!updatedUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'Reward already claimed or streak milestone not reached yet.'
+            });
+        }
 
         return res.json({
             success: true,
             message: `${coins} coins added to your Snapit Wallet!`,
-            newBalance: user.walletBalance
+            newBalance: updatedUser.walletBalance
         });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });

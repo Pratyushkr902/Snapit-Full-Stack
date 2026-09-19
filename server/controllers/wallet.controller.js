@@ -140,14 +140,21 @@ export async function payWithWallet(req, res) {
             date: new Date()
         }
 
-        const updated = await UserModel.findByIdAndUpdate(
-            req.userId,
+        const updated = await UserModel.findOneAndUpdate(
+            { _id: req.userId, walletBalance: { $gte: amount } },
             {
                 $inc: { walletBalance: -amount },
                 $push: { walletTransactions: { $each: [transaction], $position: 0 } } // Push to top
             },
             { new: true, select: 'walletBalance' }
         )
+
+        if (!updated) {
+            return res.status(400).json({
+                success: false,
+                message: 'Transaction failed. Insufficient wallet balance.'
+            })
+        }
 
         return res.json({
             success: true,

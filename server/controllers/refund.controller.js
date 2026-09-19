@@ -112,18 +112,21 @@ export const submitRefund = async (req, res) => {
             });
         }
 
-        // ── 9. PARTIAL REFUND ONLY — cap at affected items value, never full order
-        if (affectedItems && affectedItems.length > 0) {
-            const maxAllowedRefund = affectedItems.reduce(
-                (sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)),
-                0
-            );
-            if (Number(refundAmount) > maxAllowedRefund) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Refund amount ₹${refundAmount} exceeds the value of affected items ₹${maxAllowedRefund}. You can only claim refund for affected items.`,
-                });
-            }
+        // ── 9. PARTIAL REFUND ONLY — cap at affected items value or order total, positive amount required
+        const parsedRefundAmount = Number(refundAmount);
+        if (isNaN(parsedRefundAmount) || parsedRefundAmount <= 0) {
+            return res.status(400).json({ success: false, message: "A valid positive refund amount is required." });
+        }
+
+        const maxAllowedRefund = (affectedItems && affectedItems.length > 0)
+            ? affectedItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)), 0)
+            : Number(order.totalAmt || 0);
+
+        if (parsedRefundAmount > maxAllowedRefund) {
+            return res.status(400).json({
+                success: false,
+                message: `Refund amount ₹${parsedRefundAmount} exceeds maximum allowed value ₹${maxAllowedRefund}.`,
+            });
         }
 
         // ── 10. Create refund
@@ -134,7 +137,7 @@ export const submitRefund = async (req, res) => {
             description:   description   || "",
             photos:        photos        || [],
             affectedItems: affectedItems || [],
-            refundAmount:  refundAmount  || 0,
+            refundAmount:  parsedRefundAmount,
         });
 
         return res.json({ success: true, message: "Refund request submitted successfully", data: refund });
@@ -212,6 +215,11 @@ export const resolveRefund = async (req, res) => {
         const refund = await RefundModel.findById(refundId);
         if (!refund)
             return res.status(404).json({ success: false, message: "Refund not found" });
+
+        // Guard against duplicate wallet credits if already processed
+        if (["Approved", "Refunded"].includes(refund.status)) {
+            return res.status(400).json({ success: false, message: "This refund has already been resolved and processed." });
+        }
 
         refund.status     = status;
         refund.adminNote  = adminNote || "";

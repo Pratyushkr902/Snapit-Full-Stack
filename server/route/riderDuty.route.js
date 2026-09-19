@@ -1,6 +1,6 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
-import { admin } from '../middleware/Admin.js';
+import { admin, rider } from '../middleware/Admin.js';
 import {
   toggleDutyController,
   getRiderDutyStatusController,
@@ -10,10 +10,10 @@ import {
 
 const riderDutyRouter = express.Router();
 
-// Rider Duty Actions
-riderDutyRouter.post('/toggle', auth, toggleDutyController);
-riderDutyRouter.get('/status', auth, getRiderDutyStatusController);
-riderDutyRouter.post('/location', auth, updateRiderLocationController);
+// Rider Duty Actions (Only delivery fleet or admin can toggle or update GPS)
+riderDutyRouter.post('/toggle', auth, rider, toggleDutyController);
+riderDutyRouter.get('/status', auth, rider, getRiderDutyStatusController);
+riderDutyRouter.post('/location', auth, rider, updateRiderLocationController);
 
 // Admin / Super Admin Live Fleet
 riderDutyRouter.get('/admin/live-fleet', auth, admin, getAdminLiveRidersController);
