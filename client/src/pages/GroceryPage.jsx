@@ -7,6 +7,7 @@ import CardProduct from '../components/CardProduct'
 import CardLoading from '../components/CardLoading'
 import AxiosToastError from '../utils/AxiosToastError'
 import SmartCombosSection from '../components/SmartCombosSection'
+import BuyAgainStrip from '../components/BuyAgainStrip'
 import { preloadImages, optimizeImageUrl } from '../utils/optimizeImageUrl'
 
 const SORT_OPTIONS = [
@@ -273,9 +274,14 @@ const GroceryPage = () => {
         )}
       </div>
 
-      {/* ── Blockbuster Deals (Shown on top-level browsing) ── */}
+      {/* ── Blockbuster Deals & Re-Order Strip (Shown on top-level browsing) ── */}
       {activeCategory === 'all' && activeSubCategory === 'all' && (
-        <SmartCombosSection />
+        <>
+          <div className="pt-3">
+            <BuyAgainStrip type="grocery" />
+          </div>
+          <SmartCombosSection />
+        </>
       )}
 
       {/* ── Product Grid ── */}

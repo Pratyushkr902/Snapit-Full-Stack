@@ -59,10 +59,12 @@ const CheckoutPage = () => {
     : null
 
   const PLATFORM_FEE = 3
+  const SMALL_CART_THRESHOLD = 99
+  const smallCartFee = (totalPrice > 0 && totalPrice < SMALL_CART_THRESHOLD) ? 10 : 0
   const isPreOrder = Boolean(isStoreClosed || (typeof window !== 'undefined' && sessionStorage.getItem('snapit_preorder_mode') === 'true'))
   const deliverySlot = isPreOrder ? "Tomorrow Morning (7:00 AM – 8:30 AM)" : ""
   const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
-  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + PLATFORM_FEE + tipAmt) - discountAmount)
+  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + PLATFORM_FEE + smallCartFee + tipAmt) - discountAmount)
 
   // Coords for backend — from effective address or store fallback
   const getCoords = () => ({
@@ -155,6 +157,7 @@ const CheckoutPage = () => {
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           platform_fee:     PLATFORM_FEE,
+          small_cart_fee:   smallCartFee,
           totalAmt:         grandTotal,
           tip:              tipAmt,
           lat:              c.lat,
@@ -198,6 +201,7 @@ const CheckoutPage = () => {
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           platform_fee:     PLATFORM_FEE,
+          small_cart_fee:   smallCartFee,
           totalAmt:         grandTotal,
           tip:              tipAmt,
           lat:              c.lat,
@@ -249,6 +253,7 @@ const CheckoutPage = () => {
           subTotalAmt:      totalPrice,
           delivery_fee:     deliveryFee,
           platform_fee:     PLATFORM_FEE,
+          small_cart_fee:   smallCartFee,
           totalAmt:         grandTotal,
           tip:              tipAmt,
           deliveryLocation: { lat: c.lat, lng: c.lng },
@@ -304,6 +309,7 @@ const CheckoutPage = () => {
                   subTotalAmt:         totalPrice,
                   delivery_fee:        deliveryFee,
                   platform_fee:        PLATFORM_FEE,
+                  small_cart_fee:      smallCartFee,
                   totalAmt:            grandTotal,
                   tip:                 tipAmt,
                   deliveryLocation:    { lat: c.lat, lng: c.lng },
@@ -561,9 +567,17 @@ const CheckoutPage = () => {
               </p>
             </div>
             <div className='flex justify-between text-slate-600 font-semibold text-sm'>
-              <p>Platform / Handling Fee</p>
+              <p>Platform Fee</p>
               <p className='font-bold text-slate-900'>₹{PLATFORM_FEE}</p>
             </div>
+            {smallCartFee > 0 && (
+              <div className='flex justify-between items-center text-xs sm:text-sm text-amber-800 font-semibold bg-amber-50 p-2.5 rounded-xl border border-amber-200'>
+                <p className='flex items-center gap-1.5'>
+                  <span>💡 Small Cart Fee (Orders under ₹99)</span>
+                </p>
+                <p className='font-black'>₹{smallCartFee}</p>
+              </div>
+            )}
             {couponApplied && (
               <div className='flex justify-between text-green-600 font-bold bg-green-50 p-2 rounded-lg border border-green-200 border-dashed'>
                 <p>🎟️ {discountLabel || 'Promo Discount'} ({couponCode.trim().toUpperCase()})</p>

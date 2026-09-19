@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import { optimizeImageUrl, FALLBACK_IMAGE, preloadImages } from '../utils/optimizeImageUrl'
+import BuyAgainStrip from '../components/BuyAgainStrip'
 
 // ── Haversine distance (km) ───────────────────────────────────────────────────
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -207,6 +208,12 @@ const FoodHomePage = () => {
 
 
 
+
+      {!search && (
+        <div className='pt-2'>
+          <BuyAgainStrip type="food" />
+        </div>
+      )}
 
       {/* ── Restaurant Cards ── */}
       <div className='px-4 pt-2'>

@@ -101,6 +101,9 @@ import {
 import { validateCoupon } from '../utils/couponValidation.js'
 
 export const PLATFORM_FEE = 3 // Nominal ₹3 platform fee to support super-fast delivery infrastructure
+export const SMALL_CART_THRESHOLD = 99 // Orders below ₹99 incur small cart handling fee
+export const SMALL_CART_FEE = 10 // ₹10 small cart fee to cover rider dispatch & packaging
+export const calcSmallCartFee = (subTotal) => (Number(subTotal) > 0 && Number(subTotal) < SMALL_CART_THRESHOLD) ? SMALL_CART_FEE : 0
 
 const checkDeliveryServiceability = (lat, lng) => {
   const dist = getDistanceFromStore(lat, lng)
@@ -496,7 +499,8 @@ export async function CashOnDeliveryOrderController(request, response) {
         }
 
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
-        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE - validDiscountAmt + sanitizedTip)
+        const small_cart_fee = calcSmallCartFee(actualSubTotal)
+        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee - validDiscountAmt + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
@@ -530,6 +534,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             totalAmt:         finalTotalAmt,
             delivery_fee,
             platform_fee:     PLATFORM_FEE,
+            small_cart_fee,
             tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,
@@ -712,7 +717,8 @@ export async function WalletPaymentOrderController(request, response) {
         }
 
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
-        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE - validDiscountAmt + sanitizedTip)
+        const small_cart_fee = calcSmallCartFee(actualSubTotal)
+        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee - validDiscountAmt + sanitizedTip)
         if ((user.walletBalance || 0) < exactRequiredTotal) {
             return response.status(400).json({
                 message: `Insufficient wallet balance. Need ₹${(exactRequiredTotal - (user.walletBalance || 0)).toFixed(2)} more.`,
@@ -763,7 +769,7 @@ export async function WalletPaymentOrderController(request, response) {
 
         if (!updatedUser) {
             return response.status(400).json({
-                message: 'Insufficient wallet balance or concurrent transaction in progress.',
+                message: 'Wallet transaction failed. Please ensure balance is sufficient and retry.',
                 error: true,
                 success: false
             })
@@ -823,6 +829,7 @@ export async function WalletPaymentOrderController(request, response) {
             totalAmt:         exactRequiredTotal,
             delivery_fee,
             platform_fee:     PLATFORM_FEE,
+            small_cart_fee,
             tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,
@@ -983,7 +990,8 @@ export async function paymentController(request, response) {
             }
 
             const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
-            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE - validDiscountAmt + sanitizedTip)
+            const small_cart_fee = calcSmallCartFee(actualSubTotal)
+            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee - validDiscountAmt + sanitizedTip)
             if (calculatedTotal > 0) {
                 payableAmount = calculatedTotal
             }
@@ -1139,7 +1147,8 @@ export async function verifyPaymentController(request, response) {
         }
 
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
-        const serverTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE - validDiscountAmt + sanitizedTip)
+        const small_cart_fee = calcSmallCartFee(actualSubTotal)
+        const serverTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee - validDiscountAmt + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
@@ -1173,6 +1182,7 @@ export async function verifyPaymentController(request, response) {
             totalAmt:         serverTotal,
             delivery_fee,
             platform_fee:     PLATFORM_FEE,
+            small_cart_fee,
             tip:              sanitizedTip,
             rider_fee:        delivery_fee > 0 ? delivery_fee : 15,
             is_express:       !!isExpress,

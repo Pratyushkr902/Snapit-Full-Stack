@@ -46,7 +46,9 @@ const DisplayCartItem = ({close}) => {
         : (isSnapitPlus ? 0 : 12)
     const isEstimate = !deliveryInfo
     const PLATFORM_FEE = 3;
-    const grandTotal = totalPrice + deliveryFee + PLATFORM_FEE;
+    const SMALL_CART_THRESHOLD = 99;
+    const smallCartFee = (totalPrice > 0 && totalPrice < SMALL_CART_THRESHOLD) ? 10 : 0;
+    const grandTotal = totalPrice + deliveryFee + PLATFORM_FEE + smallCartFee;
 
     const redirectToCheckoutPage = (e) => {
         if (e) {
@@ -129,6 +131,14 @@ const DisplayCartItem = ({close}) => {
                                     isLongDistance={deliveryInfo?.isLongDistance}
                                 />
 
+                                {totalPrice > 0 && totalPrice < SMALL_CART_THRESHOLD && (
+                                    <div className='flex items-center justify-between px-3.5 py-2 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800/60 rounded-2xl text-[11px] font-bold shadow-xs flex-shrink-0'>
+                                        <p className='flex items-center gap-1.5'>
+                                            <span>💡</span> Add <b>₹{SMALL_CART_THRESHOLD - totalPrice}</b> more to save ₹10 Small Cart Fee!
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className='flex items-center justify-between px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-xs font-bold shadow-sm flex-shrink-0'>
                                     <p className='flex items-center gap-1.5'><span>🎉</span> Your total savings</p>
                                     <p className='text-emerald-700 dark:text-emerald-400 font-extrabold text-sm'>{DisplayPriceInRupees(notDiscountTotalPrice - totalPrice)}</p>
@@ -195,9 +205,18 @@ const DisplayCartItem = ({close}) => {
                                         </p>
                                     </div>
                                     <div className='flex justify-between text-xs sm:text-sm'>
-                                        <p className='text-slate-500 dark:text-slate-400'>Platform / Handling Fee</p>
+                                        <p className='text-slate-500 dark:text-slate-400'>Platform Fee</p>
                                         <p className='font-bold text-slate-800 dark:text-slate-200'>₹{PLATFORM_FEE}</p>
                                     </div>
+                                    {smallCartFee > 0 && (
+                                        <div className='flex justify-between text-xs sm:text-sm text-amber-700 dark:text-amber-300 font-medium'>
+                                            <p className='flex items-center gap-1.5'>
+                                                <span>Small Cart Fee</span>
+                                                <span className='text-[10px] bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 rounded text-amber-800 dark:text-amber-200 font-bold'>Below ₹99</span>
+                                            </p>
+                                            <p className='font-bold'>₹{smallCartFee}</p>
+                                        </div>
+                                    )}
                                     {deliveryInfo?.isLongDistance && (
                                         <div className='bg-blue-50 dark:bg-blue-950/40 p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60'>
                                             <p className='text-[11px] text-blue-800 dark:text-blue-300 font-bold text-center'>

@@ -56,6 +56,7 @@ const orderSchema = new mongoose.Schema(
         // ── Delivery fee & platform fee ──
         delivery_fee: { type: Number, default: 0 },
         platform_fee: { type: Number, default: 0 },
+        small_cart_fee: { type: Number, default: 0 },
         rider_fee:    { type: Number, default: 0 },
         campus_surcharge: { type: Number, default: 0 },
 

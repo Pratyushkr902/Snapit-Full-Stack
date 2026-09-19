@@ -231,9 +231,11 @@ const FoodCheckoutPage = () => {
   const deliveryFee = restaurantPricing.reduce((s, r) => s + r.fee, 0)
 
   const walletBal = Number(user?.walletBalance || 0)
+  const SMALL_CART_THRESHOLD = 99
+  const smallCartFee = (subTotal > 0 && subTotal < SMALL_CART_THRESHOLD && !isFlashEligible) ? 10 : 0
   // Customer pays ₹0 for food when eligible for Sunday Flash Offer
   const payableFood = Math.max(0, subTotal - flashDiscount - couponDiscount)
-  const preWallet = payableFood + deliveryFee + tipAmt
+  const preWallet = payableFood + deliveryFee + smallCartFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
   const grandTotal = Math.max(0, preWallet - walletDeduct)
   const totalSaved = 48 + flashDiscount + couponDiscount + walletDeduct
@@ -1140,6 +1142,14 @@ const FoodCheckoutPage = () => {
               }
             </span>
           </div>
+          {smallCartFee > 0 && (
+            <div className='flex justify-between items-center text-sm text-amber-800 font-semibold bg-amber-50 p-2 rounded-xl border border-amber-200'>
+              <span className='flex items-center gap-1'>
+                <span>💡 Small Cart Fee (&lt; ₹99)</span>
+              </span>
+              <span className='font-bold'>₹{smallCartFee}</span>
+            </div>
+          )}
           {tipAmt > 0 && (
             <div className='flex justify-between text-sm'>
               <span className='text-gray-500'>Rider tip</span>

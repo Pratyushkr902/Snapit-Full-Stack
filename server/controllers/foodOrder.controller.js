@@ -343,7 +343,9 @@ const priceAllGroups = async (groups, fields, user) => {
 
     // For Sunday Flash: 100% food cost is waived up to ₹149 (customer pays ₹0 for food)
     const foodPayable = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
-    const payablePreWallet = foodPayable + g.deliveryFee + g.tip - g.couponDiscount
+    const small_cart_fee = (g.subTotalAmt > 0 && g.subTotalAmt < 99 && !g.isSundayFlash) ? 10 : 0
+    g.small_cart_fee = small_cart_fee
+    const payablePreWallet = foodPayable + g.deliveryFee + g.tip + small_cart_fee - g.couponDiscount
     g.totalAmt = Math.max(0, payablePreWallet - g.walletAmountUsed)
   })
 
@@ -377,6 +379,7 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
     subTotalAmt:      group.subTotalAmt,
     campus_surcharge: group.campusSurcharge || 0,
     delivery_fee:     group.deliveryFee,
+    small_cart_fee:   group.small_cart_fee || 0,
     rider_fee:        group.riderFee || 29,
     totalAmt:         group.totalAmt,
     tip:              group.tip,
