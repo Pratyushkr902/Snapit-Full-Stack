@@ -807,7 +807,15 @@ export async function createRiderController(request, response) {
             })
         }
 
-        const numMobile = Number(mobile)
+        const cleanDigits = String(mobile).replace(/\D/g, '')
+        if (cleanDigits.length < 10) {
+            return response.status(400).json({
+                message: "Please provide a valid 10-digit mobile number",
+                error: true,
+                success: false
+            })
+        }
+        const numMobile = Number(cleanDigits.slice(-10))
         const cleanEmail = (email || `rider_${numMobile}@snapit.in`).trim().toLowerCase()
 
         const existing = await UserModel.findOne({
@@ -884,6 +892,22 @@ export async function updateRiderStatusController(request, response) {
         if (!riderId || !status) {
             return response.status(400).json({
                 message: "riderId and status ('Active' | 'Inactive') are required",
+                error: true,
+                success: false
+            })
+        }
+
+        if (!['Active', 'Inactive'].includes(status)) {
+            return response.status(400).json({
+                message: "Status must be either 'Active' or 'Inactive'",
+                error: true,
+                success: false
+            })
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(riderId)) {
+            return response.status(400).json({
+                message: "Invalid riderId format",
                 error: true,
                 success: false
             })

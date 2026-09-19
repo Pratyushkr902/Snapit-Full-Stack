@@ -167,6 +167,7 @@ export async function notifyAllRiders({ title, body, data = {} }) {
         const { default: UserModel } = await import('../models/user.model.js')
         const riders = await UserModel.find({
             role: { $in: ['RIDER', 'rider'] },
+            status: 'Active',
             $or: [
                 { fcmToken: { $exists: true, $ne: null, $ne: '' } },
                 { 'fcmTokens.0': { $exists: true } }
