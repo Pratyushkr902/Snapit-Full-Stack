@@ -57,7 +57,9 @@ const orderSchema = new mongoose.Schema(
         delivery_fee: { type: Number, default: 0 },
         platform_fee: { type: Number, default: 0 },
         small_cart_fee: { type: Number, default: 0 },
-        rider_fee:    { type: Number, default: 0 },
+        surge_fee:      { type: Number, default: 0 },
+        surge_reason:   { type: String, default: "" }, // "Late Night Surcharge" | "Rain Delivery Surge"
+        rider_fee:      { type: Number, default: 0 },
         campus_surcharge: { type: Number, default: 0 },
 
         // ── Next Morning Pre-Orders ──
@@ -230,6 +232,11 @@ orderSchema.pre('save', function () {
     this.wasNew = this.isNew
     this.wasModifiedDeliveryStatus = this.isModified('delivery_status')
 })
+
+// Compound indexes for ultra-fast queries under high volume
+orderSchema.index({ userId: 1, createdAt: -1 })
+orderSchema.index({ delivery_status: 1, createdAt: -1 })
+orderSchema.index({ createdAt: -1 })
 
 const OrderModel = mongoose.model("order", orderSchema);
 export default OrderModel;

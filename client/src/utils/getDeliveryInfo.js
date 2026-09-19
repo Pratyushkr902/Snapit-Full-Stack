@@ -174,3 +174,22 @@ export const getDeliveryInfoFromOrigin = (originLat, originLng, customerLat, cus
 export const getDeliveryInfo = (customerLat, customerLng, cartTotal = 0, isSnapitPlus = false) =>
   getDeliveryInfoFromOrigin(STORE_LAT, STORE_LNG, customerLat, customerLng, cartTotal, isSnapitPlus, true)
 
+// Dynamic Weather & Late Night Surge Helpers
+export const isLateNightSurgeTime = () => {
+  const now = new Date()
+  const istOffset = 5.5 * 60 * 60 * 1000
+  const istDate = new Date(now.getTime() + istOffset)
+  const hours = istDate.getUTCHours()
+  const minutes = istDate.getUTCMinutes()
+  const timeInMins = hours * 60 + minutes
+  // 10:30 PM (22:30 = 1350 mins) to 6:00 AM (06:00 = 360 mins)
+  return timeInMins >= 1350 || timeInMins < 360
+}
+
+export const getSurgeFeeDetails = () => {
+  if (isLateNightSurgeTime()) {
+    return { fee: 15, reason: 'Late Night Surcharge', description: 'Supports delivery partners during late hours' }
+  }
+  return { fee: 0, reason: '', description: '' }
+}
+

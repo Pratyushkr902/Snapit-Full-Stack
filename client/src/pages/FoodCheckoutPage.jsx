@@ -7,7 +7,7 @@ import AxiosToastError from '../utils/AxiosToastError'
 import toast from 'react-hot-toast'
 import { loadRazorpay } from '../utils/loadRazorpay'
 import { useGlobalContext } from '../provider/GlobalProvider'
-import { getDeliveryInfoFromOrigin } from '../utils/getDeliveryInfo'
+import { getDeliveryInfoFromOrigin, getSurgeFeeDetails } from '../utils/getDeliveryInfo'
 import { useFullCart, foodCartStore } from '../utils/foodCartStore'
 import { isStoreOpen, getStoreStatus } from '../components/StoreClosedOverlay'
 import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
@@ -233,9 +233,10 @@ const FoodCheckoutPage = () => {
   const walletBal = Number(user?.walletBalance || 0)
   const SMALL_CART_THRESHOLD = 99
   const smallCartFee = (subTotal > 0 && subTotal < SMALL_CART_THRESHOLD && !isFlashEligible) ? 10 : 0
+  const { fee: surgeFee, reason: surgeReason } = getSurgeFeeDetails()
   // Customer pays ₹0 for food when eligible for Sunday Flash Offer
   const payableFood = Math.max(0, subTotal - flashDiscount - couponDiscount)
-  const preWallet = payableFood + deliveryFee + smallCartFee + tipAmt
+  const preWallet = payableFood + deliveryFee + smallCartFee + surgeFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
   const grandTotal = Math.max(0, preWallet - walletDeduct)
   const totalSaved = 48 + flashDiscount + couponDiscount + walletDeduct
@@ -1148,6 +1149,14 @@ const FoodCheckoutPage = () => {
                 <span>💡 Small Cart Fee (&lt; ₹99)</span>
               </span>
               <span className='font-bold'>₹{smallCartFee}</span>
+            </div>
+          )}
+          {surgeFee > 0 && (
+            <div className='flex justify-between items-center text-sm text-indigo-800 font-semibold bg-indigo-50 p-2 rounded-xl border border-indigo-200'>
+              <span className='flex items-center gap-1'>
+                <span>🌙 {surgeReason}</span>
+              </span>
+              <span className='font-bold'>₹{surgeFee}</span>
             </div>
           )}
           {tipAmt > 0 && (

@@ -5,6 +5,7 @@ import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import CardProduct from '../components/CardProduct'
 import CardLoading from '../components/CardLoading'
+import PrescriptionUploadModal from '../components/PrescriptionUploadModal'
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://snapit-full-stack-production.up.railway.app'
 
@@ -63,6 +64,7 @@ const PharmacyPage = () => {
   const [showSort, setShowSort]         = useState(false)
   const [bannerIndex, setBannerIndex]   = useState(0)
   const [browseMode, setBrowseMode]     = useState(true)
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false)
 
   const observerRef = useRef(null)
   const sentinelRef = useRef(null)
@@ -301,6 +303,65 @@ const PharmacyPage = () => {
             </div>
           </div>
 
+          {/* ── Order with Doctor's Prescription Banner ── */}
+          <div className="rounded-2xl bg-linear-to-r from-teal-700 via-emerald-700 to-teal-800 p-4 text-white shadow-md flex items-center justify-between gap-3 border border-teal-600/40">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-2xl shrink-0">
+                📸
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-black tracking-tight">Order with Prescription</h3>
+                  <span className="bg-amber-400 text-amber-950 font-black text-[9px] px-2 py-0.5 rounded-full">
+                    10 MIN
+                  </span>
+                </div>
+                <p className="text-[11px] text-teal-100 mt-0.5 leading-snug">
+                  Upload doctor's slip — our pharmacist prepares the order for you
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPrescriptionModal(true)}
+              className="shrink-0 px-3.5 py-2 bg-white text-teal-900 hover:bg-teal-50 active:scale-95 font-black text-xs rounded-xl shadow-xs transition"
+            >
+              Upload Slip
+            </button>
+          </div>
+
+          {/* ── Quick Health & Emergency Kits ── */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-black text-gray-800 flex items-center gap-1.5">
+                <span>🩹</span> Quick Health Kits
+              </h3>
+              <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
+                1-Tap Filter
+              </span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {[
+                { label: '🤧 Cold & Flu Kit', query: 'cold' },
+                { label: '🩹 First Aid Box', query: 'antiseptic' },
+                { label: '👶 Baby Care Pack', query: 'baby' },
+                { label: '🌿 Immunity & Wellness', query: 'wellness' },
+                { label: '💊 Pain Relief Kit', query: 'pain' },
+                { label: '🌿 Digestion & Gas', query: 'digest' },
+              ].map(kit => (
+                <button
+                  key={kit.label}
+                  onClick={() => {
+                    setSearch(kit.query)
+                    setBrowseMode(false)
+                  }}
+                  className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-teal-200 text-teal-900 text-xs font-bold shadow-2xs hover:bg-teal-50 active:scale-95 transition"
+                >
+                  {kit.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Shop by Category */}
           <div>
             <h2 className="text-sm font-bold text-gray-700 mb-3">🛒 Shop by Category</h2>
@@ -414,6 +475,11 @@ const PharmacyPage = () => {
       )}
 
       {showSort && <div className="fixed inset-0 z-40" onClick={() => setShowSort(false)} />}
+
+      <PrescriptionUploadModal
+        isOpen={showPrescriptionModal}
+        onClose={() => setShowPrescriptionModal(false)}
+      />
     </section>
   )
 }

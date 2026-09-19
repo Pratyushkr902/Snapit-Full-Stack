@@ -35,7 +35,7 @@ import sendEmail from './sendEmail.js'
 // to the OrderModel schema's hardcoded rider_name/rider_contact defaults
 // (a specific person's real name + personal phone number). Reuse the same
 // load-balanced rider assignment grocery orders already use.
-import { assignAvailableRider } from './order.controller.js'
+import { assignAvailableRider, calcSurgeFee } from './order.controller.js'
 
 const getRazorpay = () => new Razorpay({
   key_id:     process.env.RAZORPAY_KEY_ID,
@@ -345,7 +345,10 @@ const priceAllGroups = async (groups, fields, user) => {
     const foodPayable = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
     const small_cart_fee = (g.subTotalAmt > 0 && g.subTotalAmt < 99 && !g.isSundayFlash) ? 10 : 0
     g.small_cart_fee = small_cart_fee
-    const payablePreWallet = foodPayable + g.deliveryFee + g.tip + small_cart_fee - g.couponDiscount
+    const { surge_fee, surge_reason } = calcSurgeFee()
+    g.surge_fee = idx === 0 ? surge_fee : 0
+    g.surge_reason = idx === 0 ? surge_reason : ''
+    const payablePreWallet = foodPayable + g.deliveryFee + g.tip + small_cart_fee + g.surge_fee - g.couponDiscount
     g.totalAmt = Math.max(0, payablePreWallet - g.walletAmountUsed)
   })
 
@@ -380,6 +383,8 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
     campus_surcharge: group.campusSurcharge || 0,
     delivery_fee:     group.deliveryFee,
     small_cart_fee:   group.small_cart_fee || 0,
+    surge_fee:        group.surge_fee || 0,
+    surge_reason:     group.surge_reason || '',
     rider_fee:        group.riderFee || 29,
     totalAmt:         group.totalAmt,
     tip:              group.tip,

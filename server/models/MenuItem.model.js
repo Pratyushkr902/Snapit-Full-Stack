@@ -67,6 +67,7 @@ menuItemSchema.index(
 )
 
 menuItemSchema.index({ restaurantId: 1, category: 1, sortOrder: 1 })
+menuItemSchema.index({ restaurantId: 1, isAvailable: 1 })
 
 const MenuItemModel = mongoose.model('MenuItem', menuItemSchema)
 export default MenuItemModel

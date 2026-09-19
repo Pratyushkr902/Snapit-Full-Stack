@@ -215,6 +215,55 @@ const FoodHomePage = () => {
         </div>
       )}
 
+      {/* ── ⭐ Featured / Sponsored Restaurants ── */}
+      {!search && restaurantsWithDist.some(r => r.isFeatured) && (
+        <div className='px-4 pt-2 pb-1'>
+          <div className='flex items-center justify-between mb-2'>
+            <div className='flex items-center gap-1.5'>
+              <span className='text-amber-500 text-sm'>⭐</span>
+              <h3 className='text-xs font-black text-gray-900 uppercase tracking-wider'>
+                Featured & Top Rated
+              </h3>
+            </div>
+            <span className='text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full'>
+              Partner Picks
+            </span>
+          </div>
+
+          <div className='flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x'>
+            {restaurantsWithDist.filter(r => r.isFeatured).map(r => (
+              <div
+                key={`feat-${r._id}`}
+                onClick={() => r.isOpen && navigate(`/restaurant/${r._id}`)}
+                className='snap-start shrink-0 w-48 bg-white rounded-2xl border border-amber-200 overflow-hidden shadow-xs cursor-pointer active:scale-95 transition'
+              >
+                <div className='relative h-24 bg-orange-100'>
+                  {r.image ? (
+                    <img
+                      src={optimizeImageUrl(r.image, 300, 75)}
+                      alt={r.name}
+                      className='w-full h-full object-cover'
+                    />
+                  ) : (
+                    <div className='w-full h-full flex items-center justify-center text-3xl'>🍽️</div>
+                  )}
+                  <span className='absolute top-1.5 left-1.5 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-md shadow-xs'>
+                    ⭐ {r.featuredBadge || 'Featured'}
+                  </span>
+                </div>
+                <div className='p-2.5'>
+                  <h4 className='text-xs font-bold text-gray-900 truncate'>{r.name}</h4>
+                  <div className='flex items-center justify-between mt-1 text-[11px]'>
+                    <span className='text-green-700 font-bold'>★ {r.rating?.toFixed(1) || '4.0'}</span>
+                    <span className='text-gray-400'>{r.deliveryTime || '25-35'} min</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Restaurant Cards ── */}
       <div className='px-4 pt-2'>
         {loading ? (
@@ -279,6 +328,11 @@ const FoodHomePage = () => {
                     <p className='text-xs text-gray-500'>Opens at {r.opensAt || '10:00 AM'}</p>
                   </div>
                 </div>
+              )}
+              {r.isFeatured && (
+                <span className='absolute top-3 left-3 bg-linear-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-xs'>
+                  ⭐ {r.featuredBadge || 'Featured'}
+                </span>
               )}
               {r.isPureVeg && (
                 <span className='absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-2 py-1 rounded-lg'>

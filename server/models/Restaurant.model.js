@@ -73,9 +73,18 @@ const restaurantSchema = new mongoose.Schema(
     // ── Ownership ────────────────────────────────────────────────────────────
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     fssaiLicense: { type: String, default: '' },
+
+    // ── Monetization & Sponsored Placements ──────────────────────────────────
+    isFeatured: { type: Boolean, default: false, index: true },
+    featuredPriority: { type: Number, default: 0 },
+    featuredBadge: { type: String, default: 'Featured' }, // 'Featured' | 'Sponsored' | 'Trending'
   },
   { timestamps: true }
 )
+
+// Compound indexes for lightning-fast listings
+restaurantSchema.index({ isActive: 1, isFeatured: -1, rating: -1 })
+restaurantSchema.index({ isActive: 1, isOpen: 1 })
 
 const RestaurantModel = mongoose.models.Restaurant || mongoose.model('Restaurant', restaurantSchema)
 export default RestaurantModel

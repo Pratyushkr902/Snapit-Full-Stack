@@ -8,7 +8,7 @@ import Axios, { SummaryApi } from '../utils/Axios'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { loadRazorpay } from '../utils/loadRazorpay'
-import { getDeliveryInfo } from '../utils/getDeliveryInfo'
+import { getDeliveryInfo, getSurgeFeeDetails } from '../utils/getDeliveryInfo'
 import { isStoreOpen, getStoreStatus } from '../components/StoreClosedOverlay'
 import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
 import FreeDeliveryProgressBar from '../components/FreeDeliveryProgressBar'
@@ -61,10 +61,11 @@ const CheckoutPage = () => {
   const PLATFORM_FEE = 3
   const SMALL_CART_THRESHOLD = 99
   const smallCartFee = (totalPrice > 0 && totalPrice < SMALL_CART_THRESHOLD) ? 10 : 0
+  const { fee: surgeFee, reason: surgeReason } = getSurgeFeeDetails()
   const isPreOrder = Boolean(isStoreClosed || (typeof window !== 'undefined' && sessionStorage.getItem('snapit_preorder_mode') === 'true'))
   const deliverySlot = isPreOrder ? "Tomorrow Morning (7:00 AM – 8:30 AM)" : ""
   const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
-  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + PLATFORM_FEE + smallCartFee + tipAmt) - discountAmount)
+  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + PLATFORM_FEE + smallCartFee + surgeFee + tipAmt) - discountAmount)
 
   // Coords for backend — from effective address or store fallback
   const getCoords = () => ({
@@ -158,6 +159,8 @@ const CheckoutPage = () => {
           delivery_fee:     deliveryFee,
           platform_fee:     PLATFORM_FEE,
           small_cart_fee:   smallCartFee,
+          surge_fee:        surgeFee,
+          surge_reason:     surgeReason,
           totalAmt:         grandTotal,
           tip:              tipAmt,
           lat:              c.lat,
@@ -202,6 +205,8 @@ const CheckoutPage = () => {
           delivery_fee:     deliveryFee,
           platform_fee:     PLATFORM_FEE,
           small_cart_fee:   smallCartFee,
+          surge_fee:        surgeFee,
+          surge_reason:     surgeReason,
           totalAmt:         grandTotal,
           tip:              tipAmt,
           lat:              c.lat,
@@ -254,6 +259,8 @@ const CheckoutPage = () => {
           delivery_fee:     deliveryFee,
           platform_fee:     PLATFORM_FEE,
           small_cart_fee:   smallCartFee,
+          surge_fee:        surgeFee,
+          surge_reason:     surgeReason,
           totalAmt:         grandTotal,
           tip:              tipAmt,
           deliveryLocation: { lat: c.lat, lng: c.lng },
@@ -310,6 +317,8 @@ const CheckoutPage = () => {
                   delivery_fee:        deliveryFee,
                   platform_fee:        PLATFORM_FEE,
                   small_cart_fee:      smallCartFee,
+                  surge_fee:           surgeFee,
+                  surge_reason:        surgeReason,
                   totalAmt:            grandTotal,
                   tip:                 tipAmt,
                   deliveryLocation:    { lat: c.lat, lng: c.lng },
@@ -576,6 +585,14 @@ const CheckoutPage = () => {
                   <span>💡 Small Cart Fee (Orders under ₹99)</span>
                 </p>
                 <p className='font-black'>₹{smallCartFee}</p>
+              </div>
+            )}
+            {surgeFee > 0 && (
+              <div className='flex justify-between items-center text-xs sm:text-sm text-indigo-800 font-semibold bg-indigo-50 p-2.5 rounded-xl border border-indigo-200'>
+                <p className='flex items-center gap-1.5'>
+                  <span>🌙 {surgeReason}</span>
+                </p>
+                <p className='font-black'>₹{surgeFee}</p>
               </div>
             )}
             {couponApplied && (

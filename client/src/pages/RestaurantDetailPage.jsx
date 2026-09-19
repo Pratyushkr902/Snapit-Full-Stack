@@ -22,6 +22,7 @@ import { useRestaurantCart } from '../utils/foodCartStore'
 import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
 import { getEffectiveAddressCoords } from '../utils/serviceArea'
 import { useGlobalContext } from '../provider/GlobalProvider'
+import CompleteYourMealStrip from '../components/CompleteYourMealStrip'
 
 // ── Fallbacks ─────────────────────────────────────────────────────────────────
 const FALLBACK_IMG = FALLBACK_IMAGE
@@ -840,6 +841,19 @@ export default function RestaurantDetailPage() {
               </>
             )}
           </div>
+
+          {/* ── Complete Your Meal Cross-Sell Strip ── */}
+          {cartCount > 0 && (
+            <div className="max-w-4xl mx-auto px-4">
+              <CompleteYourMealStrip
+                menuItems={menu.flatMap(cat => cat.items || [])}
+                foodCart={foodCart}
+                onAdd={wrappedAdd}
+                isLongDistance={isLongDistance}
+                getCampusAdjustedPrice={getCampusAdjustedPrice}
+              />
+            </div>
+          )}
 
           <div className="h-28" />
         </>

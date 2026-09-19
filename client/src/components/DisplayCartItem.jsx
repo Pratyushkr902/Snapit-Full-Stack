@@ -9,7 +9,7 @@ import AddToCartButton from './AddToCartButton'
 import imageEmpty from '../assets/empty_cart.webp'
 import toast from 'react-hot-toast'
 import { optimizeImage } from '../utils/optimizeImage'
-import { getDeliveryInfo } from '../utils/getDeliveryInfo'
+import { getDeliveryInfo, getSurgeFeeDetails } from '../utils/getDeliveryInfo'
 import { getEffectiveAddressCoords } from '../utils/serviceArea'
 import { useFullCart } from '../utils/foodCartStore'
 import FreeDeliveryProgressBar from './FreeDeliveryProgressBar'
@@ -44,11 +44,12 @@ const DisplayCartItem = ({close}) => {
     const deliveryFee = deliveryInfo
         ? deliveryInfo.charge
         : (isSnapitPlus ? 0 : 12)
-    const isEstimate = !deliveryInfo
+    const isEstimate = !deliveryInfo;
     const PLATFORM_FEE = 3;
     const SMALL_CART_THRESHOLD = 99;
     const smallCartFee = (totalPrice > 0 && totalPrice < SMALL_CART_THRESHOLD) ? 10 : 0;
-    const grandTotal = totalPrice + deliveryFee + PLATFORM_FEE + smallCartFee;
+    const { fee: surgeFee, reason: surgeReason } = getSurgeFeeDetails();
+    const grandTotal = totalPrice + deliveryFee + PLATFORM_FEE + smallCartFee + surgeFee;
 
     const redirectToCheckoutPage = (e) => {
         if (e) {
@@ -215,6 +216,16 @@ const DisplayCartItem = ({close}) => {
                                                 <span className='text-[10px] bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 rounded text-amber-800 dark:text-amber-200 font-bold'>Below ₹99</span>
                                             </p>
                                             <p className='font-bold'>₹{smallCartFee}</p>
+                                        </div>
+                                    )}
+                                    {surgeFee > 0 && (
+                                        <div className='flex justify-between text-xs sm:text-sm text-indigo-700 dark:text-indigo-300 font-medium'>
+                                            <p className='flex items-center gap-1.5'>
+                                                <span>🌙</span>
+                                                <span>{surgeReason}</span>
+                                                <span className='text-[10px] bg-indigo-100 dark:bg-indigo-900/60 px-1.5 py-0.5 rounded text-indigo-800 dark:text-indigo-200 font-bold'>Night</span>
+                                            </p>
+                                            <p className='font-bold'>₹{surgeFee}</p>
                                         </div>
                                     )}
                                     {deliveryInfo?.isLongDistance && (

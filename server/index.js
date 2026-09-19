@@ -72,6 +72,7 @@ import riderRemittanceRouter from './route/riderRemittance.route.js' // ✅ Ride
 import publicTrackingRouter  from './route/publicTracking.route.js'  // ✅ Public Live Tracking for Recipients
 import marketingRouter       from './route/marketing.route.js'       // ✅ Automated Marketing Engine
 import { initMarketingCron } from './utils/marketingCron.js'         // ✅ Daily Craving Crons
+import prescriptionRouter   from './route/prescription.route.js'    // 💊 Pharmacy Prescription Orders
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -444,6 +445,7 @@ app.use('/api/rider-duty',       riderDutyRouter)          // ✅ Rider Duty Shi
 app.use('/api/rider-remittance', riderRemittanceRouter)    // ✅ Rider Cash Remittance
 app.use('/api/public-tracking',  publicTrackingRouter)     // ✅ Public Live Tracking for Recipients
 app.use('/api/marketing',        marketingRouter)          // ✅ Automated Marketing Engine
+app.use('/api/prescription',     prescriptionRouter)       // 💊 Pharmacy Prescription Orders
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

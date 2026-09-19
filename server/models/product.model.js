@@ -111,6 +111,20 @@ const productSchema = new mongoose.Schema({
         originalPrice: {
             type: Number
         }
+    },
+    // ── Monetization & Sponsored Placements ──
+    isFeatured: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    featuredPriority: {
+        type: Number,
+        default: 0
+    },
+    featuredBadge: {
+        type: String,
+        default: 'Featured'
     }
 },{
     timestamps : true
@@ -125,6 +139,11 @@ productSchema.index({
         description : 5
     }
 })
+
+// Compound indexes for fast catalog searches & filters
+productSchema.index({ category: 1, isAvailable: 1 })
+productSchema.index({ subCategory: 1, isAvailable: 1 })
+productSchema.index({ isFeatured: -1, createdAt: -1 })
 
 productSchema.pre('save', async function() {
 
