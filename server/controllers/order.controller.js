@@ -1579,9 +1579,25 @@ export const verifyDeliveryOtpController = async (request, response) => {
         })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
-        if (!order.riderId || order.riderId.toString() !== userId) {
-            console.warn(`MARK_DELIVERED_IDOR | user=${userId} | orderId=${orderId} | ip=${request.ip}`)
-            return response.status(403).json({ message: 'This order is not assigned to you.', error: true, success: false })
+        const isAdminOrSuper = ['ADMIN', 'SUPER_ADMIN'].includes(request.userRole)
+        if (request.userRole === 'RIDER') {
+            if (!order.riderId) {
+                const riderUser = await UserModel.findById(userId).select('name mobile').lean()
+                order.riderId = userId
+                order.rider_name = riderUser?.name || 'Assigned Rider'
+                order.rider_contact = riderUser?.mobile || ''
+                await OrderModel.updateOne(
+                    { _id: order._id },
+                    {
+                        riderId: userId,
+                        rider_name: order.rider_name,
+                        rider_contact: order.rider_contact
+                    }
+                )
+            } else if (order.riderId.toString() !== userId && !isAdminOrSuper) {
+                console.warn(`MARK_DELIVERED_IDOR | user=${userId} | orderId=${orderId} | ip=${request.ip}`)
+                return response.status(403).json({ message: 'This order is not assigned to you.', error: true, success: false })
+            }
         }
 
         if (order.delivery_status === 'Delivered') {
@@ -1642,8 +1658,22 @@ export const collectPaymentController = async (request, response) => {
         })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
+        const isAdminOrSuper = ['ADMIN', 'SUPER_ADMIN'].includes(request.userRole)
         if (request.userRole === 'RIDER') {
-            if (!order.riderId || order.riderId.toString() !== userId) {
+            if (!order.riderId) {
+                const riderUser = await UserModel.findById(userId).select('name mobile').lean()
+                order.riderId = userId
+                order.rider_name = riderUser?.name || 'Assigned Rider'
+                order.rider_contact = riderUser?.mobile || ''
+                await OrderModel.updateOne(
+                    { _id: order._id },
+                    {
+                        riderId: userId,
+                        rider_name: order.rider_name,
+                        rider_contact: order.rider_contact
+                    }
+                )
+            } else if (order.riderId.toString() !== userId && !isAdminOrSuper) {
                 console.warn(`COLLECT_PAYMENT_IDOR | user=${userId} | orderId=${orderId} | ip=${request.ip}`)
                 return response.status(403).json({ message: 'This order is not assigned to you.', error: true, success: false })
             }
@@ -1687,8 +1717,22 @@ export const reportOrderDisputeController = async (request, response) => {
         })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
+        const isAdminOrSuper = ['ADMIN', 'SUPER_ADMIN'].includes(userRole)
         if (userRole === 'RIDER') {
-            if (!order.riderId || order.riderId.toString() !== userId) {
+            if (!order.riderId) {
+                const riderUser = await UserModel.findById(userId).select('name mobile').lean()
+                order.riderId = userId
+                order.rider_name = riderUser?.name || 'Assigned Rider'
+                order.rider_contact = riderUser?.mobile || ''
+                await OrderModel.updateOne(
+                    { _id: order._id },
+                    {
+                        riderId: userId,
+                        rider_name: order.rider_name,
+                        rider_contact: order.rider_contact
+                    }
+                )
+            } else if (order.riderId.toString() !== userId && !isAdminOrSuper) {
                 return response.status(403).json({ message: 'This order is not assigned to you.', error: true, success: false })
             }
         }
@@ -1745,7 +1789,7 @@ export const getRiderLocationController = async (request, response) => {
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
         const isOwner  = order.userId?.toString() === userId
-        const isRider  = order.riderId?.toString() === userId
+        const isRider  = order.riderId?.toString() === userId || (!order.riderId && userRole === 'RIDER')
         const isAdmin  = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
 
         if (!isOwner && !isRider && !isAdmin) {
