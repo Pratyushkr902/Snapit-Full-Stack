@@ -235,7 +235,7 @@ const FoodHomePage = () => {
               <div
                 key={`feat-${r._id}`}
                 onClick={() => r.isOpen && navigate(`/restaurant/${r._id}`)}
-                className='snap-start shrink-0 w-48 bg-white rounded-2xl border border-amber-200 overflow-hidden shadow-xs cursor-pointer active:scale-95 transition'
+                className='snap-start shrink-0 w-48 bg-white rounded-2xl border border-amber-200 overflow-hidden shadow-sm cursor-pointer active:scale-95 transition'
               >
                 <div className='relative h-24 bg-orange-100'>
                   {r.image ? (
@@ -247,7 +247,7 @@ const FoodHomePage = () => {
                   ) : (
                     <div className='w-full h-full flex items-center justify-center text-3xl'>🍽️</div>
                   )}
-                  <span className='absolute top-1.5 left-1.5 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-md shadow-xs'>
+                  <span className='absolute top-1.5 left-1.5 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-md shadow-sm'>
                     ⭐ {r.featuredBadge || 'Featured'}
                   </span>
                 </div>
@@ -330,7 +330,7 @@ const FoodHomePage = () => {
                 </div>
               )}
               {r.isFeatured && (
-                <span className='absolute top-3 left-3 bg-linear-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-xs'>
+                <span className='absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-sm'>
                   ⭐ {r.featuredBadge || 'Featured'}
                 </span>
               )}
@@ -365,7 +365,7 @@ const FoodHomePage = () => {
 
               {/* Free delivery badge */}
               <div className='flex items-center gap-1.5 mb-2'>
-                <span className='inline-flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-green-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-2xs'>
+                <span className='inline-flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-green-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm'>
                   <span>⚡</span>
                   <span>FREE DELIVERY</span>
                   <span className='opacity-85 font-semibold text-[9px]'>| Fast Order</span>

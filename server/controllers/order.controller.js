@@ -1173,7 +1173,11 @@ export async function verifyPaymentController(request, response) {
 
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
         const small_cart_fee = calcSmallCartFee(actualSubTotal)
-        const { surge_fee, surge_reason } = calcSurgeFee()
+        const clientSurgeFee = Number(request.body.surge_fee) || 0
+        const clientSurgeReason = request.body.surge_reason || ''
+        const { surge_fee: calcSurge, surge_reason: calcReason } = calcSurgeFee()
+        const surge_fee = clientSurgeFee > 0 ? clientSurgeFee : calcSurge
+        const surge_reason = clientSurgeReason || calcReason
         const serverTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))

@@ -1,17 +1,35 @@
 import React from 'react'
 import { optimizeImageUrl, FALLBACK_IMAGE } from '../utils/optimizeImageUrl'
 
-const ADDON_REGEX = /beverage|drink|shake|lassi|cold|dessert|sweet|ice cream|gulab|rasgulla|cake|pastry|juice|mocktail/i
+const ADDON_REGEX = /beverage|drink|shake|lassi|cold|dessert|sweet|ice cream|gulab|rasgulla|cake|pastry|juice|mocktail|chai|tea|coffee/i
 
-export default function CompleteYourMealStrip({ menuItems = [], foodCart = [], onAdd, isLongDistance = false, getCampusAdjustedPrice }) {
-  if (!menuItems || menuItems.length === 0 || !foodCart || foodCart.length === 0) {
+export default function CompleteYourMealStrip({
+  menuItems = [],
+  foodCart = {},
+  onAdd,
+  isLongDistance = false,
+  getCampusAdjustedPrice,
+}) {
+  if (!menuItems || menuItems.length === 0 || !foodCart) {
     return null
   }
 
-  // Get item IDs already in cart
-  const cartItemIds = new Set(foodCart.map(c => String(c.id || c._id || c.productId)))
+  // Safely extract cart entries whether foodCart is an object { [id]: { qty } } or array
+  const cartEntries = Array.isArray(foodCart)
+    ? foodCart
+    : Object.entries(foodCart).map(([id, val]) => ({ id, ...(typeof val === 'object' ? val : {}) }))
 
-  // Filter available items that match beverages or desserts
+  const activeCartCount = cartEntries.reduce((acc, curr) => acc + (Number(curr.qty) || 0), 0)
+  if (activeCartCount === 0) return null
+
+  // Collect IDs of items currently in the cart with qty > 0
+  const cartItemIds = new Set(
+    cartEntries
+      .filter(e => (Number(e.qty) || 0) > 0)
+      .map(c => String(c.id || c._id || c.item?._id || c.productId))
+  )
+
+  // Filter available items that match beverages or desserts and aren't already in cart
   const crossSellItems = menuItems.filter(item => {
     if (!item || !item.isAvailable) return false
     const matchCategory = ADDON_REGEX.test(item.category || '')
@@ -22,7 +40,7 @@ export default function CompleteYourMealStrip({ menuItems = [], foodCart = [], o
   if (crossSellItems.length === 0) return null
 
   return (
-    <div className="bg-linear-to-r from-amber-50 to-orange-50/80 border-y border-amber-200/70 py-3 px-4 my-3 rounded-2xl shadow-xs">
+    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-y border-amber-200/70 py-3 px-4 my-3 rounded-2xl shadow-sm">
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-1.5">
           <span className="text-base">🥤</span>
@@ -47,7 +65,7 @@ export default function CompleteYourMealStrip({ menuItems = [], foodCart = [], o
           return (
             <div
               key={item._id}
-              className="snap-start shrink-0 w-32 bg-white rounded-xl p-2 border border-amber-100 shadow-xs flex flex-col justify-between"
+              className="snap-start shrink-0 w-32 bg-white rounded-xl p-2 border border-amber-100 shadow-sm flex flex-col justify-between"
             >
               <div className="relative w-full h-20 rounded-lg overflow-hidden bg-gray-100 mb-1.5">
                 <img
@@ -70,7 +88,7 @@ export default function CompleteYourMealStrip({ menuItems = [], foodCart = [], o
                   </span>
                   <button
                     onClick={() => onAdd(item)}
-                    className="px-2.5 py-1 bg-green-600 hover:bg-green-700 active:scale-95 text-white text-[10px] font-black rounded-lg transition shadow-xs flex items-center gap-0.5"
+                    className="px-2.5 py-1 bg-green-600 hover:bg-green-700 active:scale-95 text-white text-[10px] font-black rounded-lg transition shadow-sm flex items-center gap-0.5"
                   >
                     <span>+</span> ADD
                   </button>
@@ -83,4 +101,3 @@ export default function CompleteYourMealStrip({ menuItems = [], foodCart = [], o
     </div>
   )
 }
-

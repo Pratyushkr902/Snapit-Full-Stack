@@ -304,9 +304,9 @@ const PharmacyPage = () => {
           </div>
 
           {/* ── Order with Doctor's Prescription Banner ── */}
-          <div className="rounded-2xl bg-linear-to-r from-teal-700 via-emerald-700 to-teal-800 p-4 text-white shadow-md flex items-center justify-between gap-3 border border-teal-600/40">
+          <div className="rounded-2xl bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 p-4 text-white shadow-md flex items-center justify-between gap-3 border border-teal-600/40">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-2xl shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl shrink-0">
                 📸
               </div>
               <div>
@@ -323,7 +323,7 @@ const PharmacyPage = () => {
             </div>
             <button
               onClick={() => setShowPrescriptionModal(true)}
-              className="shrink-0 px-3.5 py-2 bg-white text-teal-900 hover:bg-teal-50 active:scale-95 font-black text-xs rounded-xl shadow-xs transition"
+              className="shrink-0 px-3.5 py-2 bg-white text-teal-900 hover:bg-teal-50 active:scale-95 font-black text-xs rounded-xl shadow-sm transition"
             >
               Upload Slip
             </button>
@@ -354,7 +354,7 @@ const PharmacyPage = () => {
                     setSearch(kit.query)
                     setBrowseMode(false)
                   }}
-                  className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-teal-200 text-teal-900 text-xs font-bold shadow-2xs hover:bg-teal-50 active:scale-95 transition"
+                  className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-teal-200 text-teal-900 text-xs font-bold shadow-sm hover:bg-teal-50 active:scale-95 transition"
                 >
                   {kit.label}
                 </button>

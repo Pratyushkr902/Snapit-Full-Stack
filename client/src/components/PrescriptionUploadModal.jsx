@@ -104,11 +104,11 @@ export default function PrescriptionUploadModal({ isOpen, onClose, onSuccess }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
       <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="bg-linear-to-r from-teal-600 to-emerald-600 px-6 py-4 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="text-2xl">📸</span>
             <div>
@@ -198,7 +198,7 @@ export default function PrescriptionUploadModal({ isOpen, onClose, onSuccess }) 
                   value={patientName}
                   onChange={(e) => setPatientName(e.target.value)}
                   placeholder="e.g. Rahul Sharma"
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-hidden font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-none font-medium"
                 />
               </div>
 
@@ -212,7 +212,7 @@ export default function PrescriptionUploadModal({ isOpen, onClose, onSuccess }) 
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="10-digit mobile number"
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-hidden font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-none font-medium"
                 />
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function PrescriptionUploadModal({ isOpen, onClose, onSuccess }) 
                 <select
                   value={selectedAddressId}
                   onChange={(e) => setSelectedAddressId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-hidden font-medium bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-none font-medium bg-white"
                 >
                   {addressList.map(addr => (
                     <option key={addr._id} value={addr._id}>
@@ -243,7 +243,7 @@ export default function PrescriptionUploadModal({ isOpen, onClose, onSuccess }) 
                   value={manualAddress}
                   onChange={(e) => setManualAddress(e.target.value)}
                   placeholder="Enter house/room number, landmark, area"
-                  className="w-full mt-2 px-3 py-2.5 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-hidden font-medium"
+                  className="w-full mt-2 px-3 py-2.5 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-none font-medium"
                 />
               )}
             </div>
@@ -258,7 +258,7 @@ export default function PrescriptionUploadModal({ isOpen, onClose, onSuccess }) 
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g. Send 1 strip of Paracetamol 650mg and 1 bottle of Benadryl syrup"
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-hidden font-medium resize-none"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-teal-500 focus:outline-none font-medium resize-none"
               />
             </div>
 
