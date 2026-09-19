@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import auth from '../middleware/auth.js'
 import optionalAuth from '../middleware/optionalAuth.js'
-import admin from '../middleware/admin.js'
+import { admin } from '../middleware/Admin.js'
 import {
   uploadPrescriptionController,
   getMyPrescriptionsController,
