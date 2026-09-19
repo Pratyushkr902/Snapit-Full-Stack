@@ -1335,7 +1335,13 @@ export const updateOrderStatusController = async (request, response) => {
             return response.status(400).json({ message: 'Invalid status value.', error: true, success: false })
         }
 
-        const order = await OrderModel.findOne({ orderId })
+        const isHexId = mongoose.Types.ObjectId.isValid(orderId)
+        const order = await OrderModel.findOne({
+            $or: [
+                { orderId },
+                ...(isHexId ? [{ _id: orderId }] : [])
+            ]
+        })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
         let assignedRiderInfo = null
@@ -1382,7 +1388,7 @@ export const updateOrderStatusController = async (request, response) => {
         }
 
         const updatedOrder = await OrderModel.findOneAndUpdate(
-            { orderId },
+            { _id: order._id },
             updateFields,
             { new: true }
         )
@@ -1564,7 +1570,13 @@ export const verifyDeliveryOtpController = async (request, response) => {
             return response.status(400).json({ message: 'orderId and deliveryProofPhoto are required.', error: true, success: false })
         }
 
-        const order = await OrderModel.findOne({ orderId })
+        const isHexId = mongoose.Types.ObjectId.isValid(orderId)
+        const order = await OrderModel.findOne({
+            $or: [
+                { orderId },
+                ...(isHexId ? [{ _id: orderId }] : [])
+            ]
+        })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
         if (!order.riderId || order.riderId.toString() !== userId) {
@@ -1581,11 +1593,15 @@ export const verifyDeliveryOtpController = async (request, response) => {
         }
 
         const updatedOrder = await OrderModel.findOneAndUpdate(
-            { orderId },
+            { _id: order._id },
             {
                 delivery_status: 'Delivered',
                 deliveredAt: new Date(),
                 deliveryProofPhoto,
+                'deliveryProof.photo': deliveryProofPhoto,
+                'deliveryProof.capturedAt': new Date(),
+                'deliveryProof.riderId': userId,
+                'deliveryProof.isUploaded': true,
                 otpVerifiedAt: new Date(),
                 payment_collected: true
             },
@@ -1617,7 +1633,13 @@ export const collectPaymentController = async (request, response) => {
 
         if (!orderId) return response.status(400).json({ message: 'orderId is required.', error: true, success: false })
 
-        const order = await OrderModel.findOne({ orderId })
+        const isHexId = mongoose.Types.ObjectId.isValid(orderId)
+        const order = await OrderModel.findOne({
+            $or: [
+                { orderId },
+                ...(isHexId ? [{ _id: orderId }] : [])
+            ]
+        })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
         if (request.userRole === 'RIDER') {
@@ -1628,7 +1650,7 @@ export const collectPaymentController = async (request, response) => {
         }
 
         const updated = await OrderModel.findOneAndUpdate(
-            { orderId },
+            { _id: order._id },
             {
                 ...(payment_status          && { payment_status }),
                 payment_collected: true,
@@ -1656,7 +1678,13 @@ export const reportOrderDisputeController = async (request, response) => {
 
         if (!orderId) return response.status(400).json({ message: 'orderId is required.', error: true, success: false })
 
-        const order = await OrderModel.findOne({ orderId })
+        const isHexId = mongoose.Types.ObjectId.isValid(orderId)
+        const order = await OrderModel.findOne({
+            $or: [
+                { orderId },
+                ...(isHexId ? [{ _id: orderId }] : [])
+            ]
+        })
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
         if (userRole === 'RIDER') {
@@ -1669,13 +1697,13 @@ export const reportOrderDisputeController = async (request, response) => {
         const disputeType  = allowedTypes.includes(type) ? type : 'DENIED_ORDER'
 
         const updated = await OrderModel.findOneAndUpdate(
-            { orderId },
+            { _id: order._id },
             {
                 $push: {
                     disputes: {
                         type:         disputeType,
                         reportedBy:   userId,
-                        reporterRole: userRole === 'ADMIN' ? 'ADMIN' : 'RIDER',
+                        reporterRole: (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') ? 'ADMIN' : 'RIDER',
                         note:         note || '',
                         createdAt:    new Date(),
                     }
@@ -1703,8 +1731,14 @@ export const getRiderLocationController = async (request, response) => {
         const userId   = request.userId
         const userRole = request.userRole
 
+        const isHexId = mongoose.Types.ObjectId.isValid(orderId)
         const order = await OrderModel
-            .findOne({ orderId })
+            .findOne({
+                $or: [
+                    { orderId },
+                    ...(isHexId ? [{ _id: orderId }] : [])
+                ]
+            })
             .select('orderId userId riderId rider_name rider_contact riderLocation delivery_status delivery_lat delivery_lng delivery_address delivery_instructions recipient_name recipient_mobile')
             .populate('delivery_address')
 
@@ -1712,7 +1746,7 @@ export const getRiderLocationController = async (request, response) => {
 
         const isOwner  = order.userId?.toString() === userId
         const isRider  = order.riderId?.toString() === userId
-        const isAdmin  = userRole === 'ADMIN'
+        const isAdmin  = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
 
         if (!isOwner && !isRider && !isAdmin) {
             console.warn(`RIDER_LOCATION_IDOR | user=${userId} | orderId=${orderId} | ip=${request.ip}`)
@@ -1760,7 +1794,13 @@ export const updateRiderLocationController = async (request, response) => {
             return response.status(400).json({ message: 'Invalid coordinates.', error: true, success: false })
         }
 
-        const order = await OrderModel.findOne({ orderId }).select('riderId')
+        const isHexId = mongoose.Types.ObjectId.isValid(orderId)
+        const order = await OrderModel.findOne({
+            $or: [
+                { orderId },
+                ...(isHexId ? [{ _id: orderId }] : [])
+            ]
+        }).select('riderId')
         if (!order) return response.status(404).json({ message: 'Order not found.', error: true, success: false })
 
         if (request.userRole === 'RIDER' && order.riderId && order.riderId.toString() !== userId) {
@@ -1778,7 +1818,7 @@ export const updateRiderLocationController = async (request, response) => {
         }
 
         const updated = await OrderModel.findOneAndUpdate(
-            { orderId },
+            { _id: order._id },
             { $set: updateSet },
             { new: true, select: 'orderId riderLocation riderId' }
         )
