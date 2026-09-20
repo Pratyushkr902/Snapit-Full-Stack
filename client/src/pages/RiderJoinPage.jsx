@@ -137,7 +137,7 @@ export default function RiderJoinPage() {
           </div>
 
           <a
-            href="https://wa.me/919931602627?text=Hi%20Snapit,%20I%20want%20to%20join%20as%20a%20delivery%20partner%20in%20Paliganj"
+            href="https://wa.me/919472026580?text=Hi%20Snapit,%20I%20want%20to%20join%20as%20a%20delivery%20partner%20in%20Paliganj"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 bg-emerald-700/60 hover:bg-emerald-600 text-emerald-100 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-500/40 transition"
@@ -182,7 +182,7 @@ export default function RiderJoinPage() {
           </h1>
 
           <p className="text-slate-300 text-sm sm:text-base max-w-xl mx-auto font-medium">
-            Earn <span className="text-white font-bold">₹15,000 – ₹25,000+ / month</span> delivering grocery & essentials in your local town. Same app, instant joining, daily UPI payouts!
+            Earn <span className="text-white font-bold">₹7,000 – ₹15,000+ / month</span> delivering grocery & essentials in your local town. Same app, instant joining, daily UPI payouts!
           </p>
 
           {/* Quick Stat Badges */}
@@ -257,7 +257,7 @@ export default function RiderJoinPage() {
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <a
-                href={`https://wa.me/919931602627?text=${encodeURIComponent(`Hi Snapit Admin, I have submitted my rider application. Name: ${submittedApp.name}, Mobile: ${submittedApp.mobile}. Please review and approve my account.`)}`}
+                href={`https://wa.me/919472026580?text=${encodeURIComponent(`Hi Snapit Admin, I have submitted my rider application. Name: ${submittedApp.name}, Mobile: ${submittedApp.mobile}. Please review and approve my account.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl text-sm transition shadow-lg shadow-emerald-600/30"
@@ -533,14 +533,14 @@ export default function RiderJoinPage() {
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <a
-              href="tel:9931602627"
+              href="tel:9472026580"
               className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-4 py-2 rounded-xl border border-slate-700 transition"
             >
               <FaPhoneAlt className="text-green-400 text-xs" />
-              <span>Call: +91 99316 02627</span>
+              <span>Call: +91 94720 26580</span>
             </a>
             <a
-              href="https://wa.me/919931602627?text=Hi%20Snapit,%20I%20have%20questions%20about%20joining%20as%20a%20rider"
+              href="https://wa.me/919472026580?text=Hi%20Snapit,%20I%20have%20questions%20about%20joining%20as%20a%20rider"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-500/40 transition"
