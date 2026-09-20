@@ -1268,6 +1268,33 @@ export async function adminResetCustomerPinController(request, response) {
         }
 
         if (!user) {
+            if (digits.length === 10 || (digits.length === 12 && digits.startsWith('91'))) {
+                const cleanMobile = digits.length === 12 ? digits.slice(2) : digits
+                const salt = await bcryptjs.genSalt(10)
+                const hashPassword = await bcryptjs.hash(cleanPin, salt)
+                user = await UserModel.create({
+                    name: "Snapit Customer",
+                    mobile: Number(cleanMobile),
+                    email: `${cleanMobile}@snapit.in`,
+                    password: hashPassword,
+                    role: "USER",
+                    status: "Active",
+                    verify_email: true,
+                    is_phone_verified: true
+                })
+                return response.json({
+                    message: `New account created and PIN set to: ${cleanPin} for mobile ${cleanMobile}`,
+                    error: false,
+                    success: true,
+                    data: {
+                        userId: user._id,
+                        name: user.name,
+                        email: user.email,
+                        mobile: String(user.mobile),
+                        newPin: cleanPin
+                    }
+                })
+            }
             return response.status(404).json({
                 message: `No account found for "${queryIdentifier}". Please verify the mobile number or email address.`,
                 error: true,
