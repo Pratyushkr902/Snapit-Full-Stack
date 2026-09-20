@@ -12,7 +12,7 @@ import secureStorage from '../utils/secureStorage'
 import snapitLogo from '/logo.png'
 
 const Login = () => {
-    const [searchParams] = useSearchParams()
+    const [searchParams, setSearchParams] = useSearchParams()
     const refCode = searchParams.get('ref') || ''
 
     // 'mobile_pin' (default) or 'email_otp'
@@ -66,10 +66,30 @@ const Login = () => {
     useEffect(() => {
         const mode = searchParams.get('mode')
         const isRegister = mode === 'register' || searchParams.get('register') === 'true' || searchParams.get('signup') === 'true'
-        if (isRegister) {
+        if (isRegister && mobileMode !== 'register') {
             setMobileMode('register')
         }
     }, [searchParams])
+
+    const switchMobileMode = (newMode) => {
+        setMobileMode(newMode)
+        if (newMode === 'register') {
+            if (mobileNumber && !regMobile) setRegMobile(mobileNumber)
+            if (pin && pin.trim().length >= 4 && !regPin) setRegPin(pin.trim())
+        } else {
+            if (regMobile && !mobileNumber) setMobileNumber(regMobile)
+            if (regPin && !pin) setPin(regPin)
+        }
+        const newParams = new URLSearchParams(searchParams)
+        if (newMode === 'register') {
+            newParams.set('mode', 'register')
+        } else {
+            newParams.delete('mode')
+            newParams.delete('register')
+            newParams.delete('signup')
+        }
+        setSearchParams(newParams, { replace: true })
+    }
 
     // Countdown timer for Resend Email OTP
     useEffect(() => {
@@ -105,7 +125,10 @@ const Login = () => {
             console.warn('Initial userDetails fetch warning:', e)
         }
 
-        const redirectPath = searchParams.get('redirect') || '/'
+        let redirectPath = searchParams.get('redirect') || '/'
+        if (redirectPath.startsWith('/login') || redirectPath.startsWith('/register')) {
+            redirectPath = '/'
+        }
         navigate(redirectPath, { replace: true })
     }
 
@@ -120,7 +143,7 @@ const Login = () => {
         }
         if (!pin.trim()) {
             // New user without a PIN yet -> seamlessly move to Create Account
-            setMobileMode('register')
+            switchMobileMode('register')
             setRegMobile(clean)
             toast("New to Snapit? Let's create your account in 5 seconds 🎉", { id: 'mobile-login', duration: 4000 })
             return
@@ -146,7 +169,7 @@ const Login = () => {
             const resData = err?.response?.data
             const msg = resData?.message || err?.message || 'Sign in failed. Please check your mobile number and PIN.'
             if (resData?.notRegistered || msg.toLowerCase().includes('not registered') || msg.toLowerCase().includes('create account') || msg.toLowerCase().includes('no account found')) {
-                setMobileMode('register')
+                switchMobileMode('register')
                 setRegMobile(clean)
                 if (pin && pin.trim().length >= 4) {
                     setRegPin(pin.trim())
@@ -187,7 +210,7 @@ const Login = () => {
                     name: regName.trim(),
                     email: clean,
                     password: regPin.trim(),
-                    referralCode: regRefCode.trim() || undefined
+                    referralCode: (regRefCode || '').trim() || undefined
                 }
             })
 
@@ -390,11 +413,7 @@ const Login = () => {
                             <div className="flex bg-gray-50 border border-gray-200/80 p-1 rounded-xl mb-5">
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setMobileMode('login')
-                                        if (regMobile && !mobileNumber) setMobileNumber(regMobile)
-                                        if (regPin && !pin) setPin(regPin)
-                                    }}
+                                    onClick={() => switchMobileMode('login')}
                                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                                         mobileMode === 'login'
                                             ? 'bg-white text-green-800 shadow-sm font-extrabold'
@@ -405,11 +424,7 @@ const Login = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setMobileMode('register')
-                                        if (mobileNumber && !regMobile) setRegMobile(mobileNumber)
-                                        if (pin && !regPin) setRegPin(pin)
-                                    }}
+                                    onClick={() => switchMobileMode('register')}
                                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                                         mobileMode === 'register'
                                             ? 'bg-white text-green-800 shadow-sm font-extrabold'
@@ -510,11 +525,7 @@ const Login = () => {
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setMobileMode('register')
-                                                if (mobileNumber) setRegMobile(mobileNumber)
-                                                if (pin && pin.trim().length >= 4) setRegPin(pin.trim())
-                                            }}
+                                            onClick={() => switchMobileMode('register')}
                                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm whitespace-nowrap transition-all"
                                         >
                                             Create Account
@@ -632,11 +643,7 @@ const Login = () => {
                                     <div className="text-center pt-2">
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setMobileMode('login')
-                                                if (regMobile && !mobileNumber) setMobileNumber(regMobile)
-                                                if (regPin && !pin) setPin(regPin)
-                                            }}
+                                            onClick={() => switchMobileMode('login')}
                                             className="text-xs font-semibold text-green-700 hover:text-green-900 transition-colors"
                                         >
                                             Already registered? Sign in &rarr;

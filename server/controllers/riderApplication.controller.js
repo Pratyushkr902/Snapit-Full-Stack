@@ -162,11 +162,9 @@ export const approveRiderApplicationController = async (req, res) => {
       user.verify_email = true
       user.is_phone_verified = true
 
-      // If user had no password/PIN (e.g. OTP-only account), set default PIN so they can log in via Mobile + PIN
-      if (!user.password) {
-        const salt = await bcryptjs.genSalt(10)
-        user.password = await bcryptjs.hash(DEFAULT_RIDER_PIN, salt)
-      }
+      // Set default PIN '1234' so rider can log in immediately with the PIN sent by admin
+      const salt = await bcryptjs.genSalt(10)
+      user.password = await bcryptjs.hash(DEFAULT_RIDER_PIN, salt)
       await user.save()
     } else {
       // Create user with default 4-digit PIN '1234' for immediate mobile login
