@@ -18,7 +18,7 @@ export const applyRiderController = async (req, res) => {
       area
     } = req.body
 
-    if (!name || !name.trim()) {
+    if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({
         success: false,
         error: true,
@@ -87,14 +87,24 @@ export const applyRiderController = async (req, res) => {
       })
     }
 
+    const ALLOWED_VEHICLES = ['BIKE', 'SCOOTER', 'EV', 'BICYCLE']
+    const cleanVehicle = ALLOWED_VEHICLES.includes(String(vehicleType || '').toUpperCase())
+      ? String(vehicleType).toUpperCase()
+      : 'BIKE'
+
+    const ALLOWED_HOURS = ['FULL_TIME', 'MORNING', 'EVENING', 'WEEKEND']
+    const cleanHours = ALLOWED_HOURS.includes(String(preferredHours || '').toUpperCase())
+      ? String(preferredHours).toUpperCase()
+      : 'FULL_TIME'
+
     const application = await RiderApplicationModel.create({
       name: name.trim(),
       mobile: numMobile,
       email: email ? String(email).trim().toLowerCase() : '',
-      vehicleType: vehicleType || 'BIKE',
+      vehicleType: cleanVehicle,
       vehicleNumber: vehicleNumber ? String(vehicleNumber).trim().toUpperCase() : '',
       licenseNumber: licenseNumber ? String(licenseNumber).trim().toUpperCase() : '',
-      preferredHours: preferredHours || 'FULL_TIME',
+      preferredHours: cleanHours,
       area: area ? String(area).trim() : 'Paliganj',
       status: 'PENDING'
     })

@@ -400,6 +400,7 @@ io.on('connection', (socket) => {
 // ─── RATE LIMITERS APPLIED ────────────────────────────────────────────────────
 app.use('/api/user/login',                      authLimiter)
 app.use('/api/user/register',                   registerLimiter)
+app.use('/api/rider-application/apply',         registerLimiter)
 app.use('/api/user/forgot-password',            authLimiter)
 app.use('/api/user/verify-forgot-password-otp', authLimiter)
 app.use('/api/user/reset-password',             authLimiter)

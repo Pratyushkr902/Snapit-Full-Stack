@@ -37,6 +37,8 @@ const FREEZE_MINUTES = 5
 
 const hitLog = new Map()
 const frozenCache = new Map()
+const notFrozenCache = new Map()
+const NOT_FROZEN_CACHE_MS = 60 * 1000 // 60s in-memory negative cache
 
 function getClientIp(request) {
     const cfIp = request.headers['cf-connecting-ip']
@@ -47,25 +49,43 @@ function getClientIp(request) {
 }
 
 async function isFrozen(ip) {
+    const now = Date.now()
     const cached = frozenCache.get(ip)
-    if (cached && cached > Date.now()) return true
+    if (cached && cached > now) return true
     if (cached) frozenCache.delete(ip)
 
-    const doc = await FrozenIpModel.findOne({ ip })
-    if (doc && doc.expiresAt > new Date()) {
-        frozenCache.set(ip, doc.expiresAt.getTime())
-        return true
+    // In-memory negative cache: if verified clean within last 60s, skip DB query!
+    const notFrozenUntil = notFrozenCache.get(ip)
+    if (notFrozenUntil && notFrozenUntil > now) return false
+    if (notFrozenUntil) notFrozenCache.delete(ip)
+
+    try {
+        const doc = await FrozenIpModel.findOne({ ip }).lean()
+        if (doc && doc.expiresAt > new Date()) {
+            frozenCache.set(ip, doc.expiresAt.getTime())
+            return true
+        }
+        // Cache negative result in memory so subsequent requests take 0ms
+        notFrozenCache.set(ip, now + NOT_FROZEN_CACHE_MS)
+        return false
+    } catch {
+        // Fail-open on DB connection timeout so abuseGuard doesn't block the API
+        return false
     }
-    return false
 }
 
 async function freezeIp(ip, reason) {
     const expiresAt = new Date(Date.now() + FREEZE_MINUTES * 60 * 1000)
-    await FrozenIpModel.findOneAndUpdate(
-        { ip },
-        { ip, reason, expiresAt, $inc: { hitCount: 1 } },
-        { upsert: true, new: true }
-    )
+    notFrozenCache.delete(ip)
+    try {
+        await FrozenIpModel.findOneAndUpdate(
+            { ip },
+            { ip, reason, expiresAt, $inc: { hitCount: 1 } },
+            { upsert: true, new: true }
+        )
+    } catch (err) {
+        console.error('[abuseGuard] Failed to persist frozen IP:', err?.message)
+    }
     frozenCache.set(ip, expiresAt.getTime())
 }
 
