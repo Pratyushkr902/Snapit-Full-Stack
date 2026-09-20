@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -123,6 +123,9 @@ function MapController({ selectedCoords, ridersWithGps, centerTrigger }) {
 
 const AdminRiderFleet = () => {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab')?.toUpperCase() === 'APPLICATIONS' ? 'APPLICATIONS' : 'FLEET'
+
   const [fleet, setFleet] = useState([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
@@ -134,7 +137,7 @@ const AdminRiderFleet = () => {
   const markerRefs = useRef({})
 
   // ── Applications State & Handlers ──
-  const [mainTab, setMainTab] = useState('FLEET') // 'FLEET' | 'APPLICATIONS'
+  const [mainTab, setMainTab] = useState(initialTab) // 'FLEET' | 'APPLICATIONS'
   const [applications, setApplications] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
   const [appFilter, setAppFilter] = useState('PENDING')
@@ -158,6 +161,29 @@ const AdminRiderFleet = () => {
       setLoadingApps(false)
     }
   }, [appFilter])
+
+  // Sync tab with URL query parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')?.toUpperCase()
+    if (tabParam === 'APPLICATIONS' && mainTab !== 'APPLICATIONS') {
+      setMainTab('APPLICATIONS')
+      fetchApplications(appFilter)
+    } else if (tabParam === 'FLEET' && mainTab !== 'FLEET') {
+      setMainTab('FLEET')
+    }
+  }, [searchParams, mainTab, appFilter, fetchApplications])
+
+  const handleTabChange = (tab) => {
+    setMainTab(tab)
+    const newParams = new URLSearchParams(searchParams)
+    if (tab === 'APPLICATIONS') {
+      newParams.set('tab', 'applications')
+      fetchApplications(appFilter)
+    } else {
+      newParams.delete('tab')
+    }
+    setSearchParams(newParams, { replace: true })
+  }
 
   useEffect(() => {
     fetchApplications('PENDING')
@@ -414,7 +440,7 @@ const AdminRiderFleet = () => {
         <div className='flex flex-wrap items-center justify-between gap-3 mb-6 border-b border-slate-800 pb-4'>
           <div className='flex items-center gap-2'>
             <button
-              onClick={() => setMainTab('FLEET')}
+              onClick={() => handleTabChange('FLEET')}
               className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 ${
                 mainTab === 'FLEET'
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
@@ -426,10 +452,7 @@ const AdminRiderFleet = () => {
             </button>
 
             <button
-              onClick={() => {
-                setMainTab('APPLICATIONS')
-                fetchApplications(appFilter)
-              }}
+              onClick={() => handleTabChange('APPLICATIONS')}
               className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 relative ${
                 mainTab === 'APPLICATIONS'
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'

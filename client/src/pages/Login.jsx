@@ -68,8 +68,10 @@ const Login = () => {
         const isRegister = mode === 'register' || searchParams.get('register') === 'true' || searchParams.get('signup') === 'true'
         if (isRegister && mobileMode !== 'register') {
             setMobileMode('register')
+        } else if (!isRegister && mobileMode !== 'login') {
+            setMobileMode('login')
         }
-    }, [searchParams])
+    }, [searchParams, mobileMode])
 
     const switchMobileMode = (newMode) => {
         setMobileMode(newMode)

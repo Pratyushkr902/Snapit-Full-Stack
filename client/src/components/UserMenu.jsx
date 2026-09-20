@@ -85,6 +85,13 @@ const UserMenu = ({close}) => {
                   className='px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 font-bold text-blue-700 dark:text-blue-300 border-l-4 border-blue-500 transition-colors'>
                   🛵 Live Rider Fleet Tracker
                 </Link>
+                <Link onClick={handleClose} to={"/dashboard/rider-fleet?tab=applications"}
+                  className='px-2.5 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 dark:hover:bg-teal-900/50 font-bold text-teal-800 dark:text-teal-300 border-l-4 border-teal-500 transition-colors flex items-center justify-between'>
+                  <span>📋 Rider Enquiries / Approvals</span>
+                  <span className='text-[10px] bg-teal-200 dark:bg-teal-800 text-teal-950 dark:text-teal-100 px-1.5 py-0.5 rounded-full font-black'>
+                    Review
+                  </span>
+                </Link>
                 <Link onClick={handleClose} to={"/dashboard/marketing"}
                   className='px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 font-bold text-amber-800 dark:text-amber-300 border-l-4 border-amber-500 transition-colors'>
                   📢 Marketing & Notification Hub

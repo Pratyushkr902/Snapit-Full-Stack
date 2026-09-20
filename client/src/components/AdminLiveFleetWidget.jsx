@@ -255,6 +255,14 @@ const AdminLiveFleetWidget = ({ isEmbedded = false }) => {
           </button>
           
           <button
+            onClick={() => navigate('/dashboard/rider-fleet?tab=applications')}
+            className='px-2.5 sm:px-3 py-1.5 rounded-xl bg-teal-600/20 border border-teal-500/40 hover:bg-teal-600/30 text-teal-300 font-bold text-[11px] sm:text-xs flex items-center gap-1 transition active:scale-95'
+            title='Review Rider Applications / Enquiries'
+          >
+            <span>Applications</span>
+          </button>
+
+          <button
             onClick={() => navigate('/dashboard/rider-fleet')}
             className='px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] sm:text-xs flex items-center gap-1 transition active:scale-95 shadow-md shadow-blue-600/20'
           >
