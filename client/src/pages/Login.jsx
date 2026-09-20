@@ -373,68 +373,53 @@ const Login = () => {
                         </div>
                     </div>
 
-                    {/* Top Mode Selector: Mobile & PIN vs Email OTP */}
-                    <div className="flex bg-gray-100 p-1 rounded-2xl mb-6">
-                        <button
-                            type="button"
-                            onClick={() => setAuthMode('mobile_pin')}
-                            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                                authMode === 'mobile_pin'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-900'
-                            }`}
-                        >
-                            <MdPhoneAndroid className="text-base" />
-                            <span>Mobile & PIN</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setAuthMode('email_otp')
-                                setStep('input')
-                            }}
-                            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                                authMode === 'email_otp'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-900'
-                            }`}
-                        >
-                            <MdEmail className="text-base" />
-                            <span>Email OTP</span>
-                        </button>
-                    </div>
+                    {/* Primary Tab Switcher: Sign In vs Create Account */}
+                    {authMode === 'mobile_pin' ? (
+                        <div className="flex bg-gray-100 p-1 rounded-2xl mb-6">
+                            <button
+                                type="button"
+                                onClick={() => switchMobileMode('login')}
+                                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+                                    mobileMode === 'login'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-900'
+                                }`}
+                            >
+                                Sign In
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => switchMobileMode('register')}
+                                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+                                    mobileMode === 'register'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-900'
+                                }`}
+                            >
+                                Create Account
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="mb-5">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAuthMode('mobile_pin')
+                                    setStep('input')
+                                }}
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                            >
+                                <FaArrowLeft size={11} />
+                                <span>Back to Mobile Login</span>
+                            </button>
+                        </div>
+                    )}
 
                     {/* ───────────────────────────────────────────────────────────── */}
                     {/* OPTION 1: MOBILE & PIN (Instant 5-Second Login / Register)     */}
                     {/* ───────────────────────────────────────────────────────────── */}
                     {authMode === 'mobile_pin' && (
                         <div>
-                            {/* Sign In vs Create Account Toggle */}
-                            <div className="flex bg-gray-50 border border-gray-200/80 p-1 rounded-xl mb-5">
-                                <button
-                                    type="button"
-                                    onClick={() => switchMobileMode('login')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                                        mobileMode === 'login'
-                                            ? 'bg-white text-green-800 shadow-sm font-extrabold'
-                                            : 'text-gray-500 hover:text-gray-800'
-                                    }`}
-                                >
-                                    Sign In
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => switchMobileMode('register')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                                        mobileMode === 'register'
-                                            ? 'bg-white text-green-800 shadow-sm font-extrabold'
-                                            : 'text-gray-500 hover:text-gray-800'
-                                    }`}
-                                >
-                                    Create Account
-                                </button>
-                            </div>
-
                             {mobileMode === 'login' ? (
                                 /* ── Mobile Sign In Form ── */
                                 <form onSubmit={handleMobileLogin} className="space-y-4">
@@ -470,29 +455,18 @@ const Login = () => {
 
                                     {/* 4-Digit PIN */}
                                     <div>
-                                        <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center justify-between mb-1.5">
                                             <label className="block text-xs font-semibold text-gray-700">
-                                                4-Digit PIN
+                                                4-Digit PIN <span className="text-rose-500">*</span>
                                             </label>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => switchMobileMode('register')}
-                                                    className="text-[11px] font-medium text-gray-500 hover:text-green-700 transition-colors"
-                                                >
-                                                    Don't have a PIN?
-                                                </button>
-                                                <span className="text-gray-300 text-[10px]">•</span>
-                                                <a
-                                                    href={whatsappResetUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors"
-                                                >
-                                                    <FaWhatsapp size={12} className="text-emerald-600" />
-                                                    <span>Forgot PIN?</span>
-                                                </a>
-                                            </div>
+                                            <a
+                                                href={whatsappResetUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
+                                            >
+                                                Forgot PIN?
+                                            </a>
                                         </div>
                                         <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
                                             <MdLockOutline className="text-gray-400 text-lg mr-2 flex-shrink-0" />
@@ -527,20 +501,37 @@ const Login = () => {
                                         {loading ? 'Signing in...' : 'Sign In'}
                                     </button>
 
-                                    {/* Clean New Customer Card */}
-                                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200/80">
-                                        <div className="text-left">
-                                            <p className="text-xs font-semibold text-gray-800">New to Snapit?</p>
-                                            <p className="text-[11px] text-gray-500">Don't have a 4-digit PIN? Join in 5 seconds.</p>
-                                        </div>
+                                    {/* Clean Switch Prompt */}
+                                    <p className="text-center text-xs text-gray-600 pt-1">
+                                        New to Snapit?{' '}
                                         <button
                                             type="button"
                                             onClick={() => switchMobileMode('register')}
-                                            className="px-3 py-1.5 text-xs font-bold text-green-700 hover:text-green-800 bg-white border border-gray-200 hover:border-gray-300 active:bg-gray-50 rounded-lg shadow-sm transition-all whitespace-nowrap"
+                                            className="font-bold text-green-700 hover:text-green-800 hover:underline transition-colors"
                                         >
-                                            Create Account
+                                            Create an account
                                         </button>
+                                    </p>
+
+                                    {/* Alternative Sign In Options */}
+                                    <div className="relative flex items-center justify-center my-2">
+                                        <div className="border-t border-gray-100 w-full" />
+                                        <span className="bg-white px-3 text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+                                            or
+                                        </span>
                                     </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setAuthMode('email_otp')
+                                            setStep('input')
+                                        }}
+                                        className="w-full h-11 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <MdEmail className="text-base text-gray-500" />
+                                        <span>Continue with Email OTP</span>
+                                    </button>
                                 </form>
                             ) : (
                                 /* ── Mobile Create Account Form ── */
@@ -650,15 +641,37 @@ const Login = () => {
                                         {loading ? 'Creating Account...' : 'Create Account & Continue'}
                                     </button>
 
-                                    <div className="text-center pt-2">
+                                    {/* Clean Switch Prompt */}
+                                    <p className="text-center text-xs text-gray-600 pt-1">
+                                        Already have an account?{' '}
                                         <button
                                             type="button"
                                             onClick={() => switchMobileMode('login')}
-                                            className="text-xs font-semibold text-green-700 hover:text-green-900 transition-colors"
+                                            className="font-bold text-green-700 hover:text-green-800 hover:underline transition-colors"
                                         >
-                                            Already registered? Sign in &rarr;
+                                            Sign in
                                         </button>
+                                    </p>
+
+                                    {/* Alternative Sign In Options */}
+                                    <div className="relative flex items-center justify-center my-2">
+                                        <div className="border-t border-gray-100 w-full" />
+                                        <span className="bg-white px-3 text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+                                            or
+                                        </span>
                                     </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setAuthMode('email_otp')
+                                            setStep('input')
+                                        }}
+                                        className="w-full h-11 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <MdEmail className="text-base text-gray-500" />
+                                        <span>Continue with Email OTP</span>
+                                    </button>
                                 </form>
                             )}
                         </div>
@@ -725,6 +738,17 @@ const Login = () => {
                                     >
                                         {loading ? 'Sending code...' : 'Continue'}
                                     </button>
+
+                                    <p className="text-center text-xs text-gray-600 pt-1">
+                                        Prefer mobile?{' '}
+                                        <button
+                                            type="button"
+                                            onClick={() => setAuthMode('mobile_pin')}
+                                            className="font-bold text-green-700 hover:text-green-800 hover:underline transition-colors"
+                                        >
+                                            Sign in with Mobile & PIN
+                                        </button>
+                                    </p>
                                 </form>
                             ) : (
                                 <form onSubmit={handleVerifyOtp} className="space-y-4">
@@ -798,31 +822,32 @@ const Login = () => {
                     )}
 
                     {/* Support Links */}
-                    <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col items-center gap-2">
+                    <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-center gap-3 text-xs text-gray-500">
                         <a
                             href={whatsappSupportUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-2 text-xs font-semibold text-gray-600 hover:text-emerald-700 transition-colors"
+                            className="inline-flex items-center gap-1.5 font-semibold text-gray-600 hover:text-emerald-700 transition-colors"
                         >
-                            <FaWhatsapp className="text-sm text-emerald-600" />
-                            <span>Need help? Contact Customer Support</span>
+                            <FaWhatsapp className="text-emerald-600 text-sm" />
+                            <span>WhatsApp Support</span>
                         </a>
+                        <span className="text-gray-300">•</span>
                         <Link
                             to="/forgot-password"
-                            className="text-[11px] font-medium text-gray-400 hover:text-gray-600 transition-colors"
+                            className="font-medium text-gray-500 hover:text-gray-800 transition-colors"
                         >
-                            Forgot password / PIN via registered email? Click here
+                            Email Recovery
                         </Link>
                     </div>
 
                     {/* Terms & Privacy */}
-                    <div className="mt-4 text-center">
-                        <p className="text-[11px] text-gray-400">
-                            By continuing, you agree to Snapit's{' '}
-                            <Link to="/privacy-policy" className="text-gray-600 font-semibold underline underline-offset-2 hover:text-gray-900">Terms & Privacy Policy</Link>.
-                        </p>
-                    </div>
+                    <p className="mt-3 text-center text-[11px] text-gray-400">
+                        By continuing, you agree to Snapit's{' '}
+                        <Link to="/privacy-policy" className="text-gray-600 font-semibold underline underline-offset-2 hover:text-gray-900">
+                            Terms & Privacy Policy
+                        </Link>.
+                    </p>
 
                 </div>
             </div>
