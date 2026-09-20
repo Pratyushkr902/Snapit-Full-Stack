@@ -542,6 +542,24 @@ const SummaryApi = {
         url: '/api/admin/toggle-store-status',
         method: 'post'
     },
+
+    // ── Rider Onboarding Application & Admin Approval ──────────
+    applyRider: {
+        url: '/api/rider-application/apply',
+        method: 'post'
+    },
+    getAllRiderApplications: {
+        url: '/api/rider-application/all',
+        method: 'get'
+    },
+    approveRiderApplication: {
+        url: '/api/rider-application/approve',
+        method: 'post'
+    },
+    rejectRiderApplication: {
+        url: '/api/rider-application/reject',
+        method: 'post'
+    },
 }
 
 export default SummaryApi

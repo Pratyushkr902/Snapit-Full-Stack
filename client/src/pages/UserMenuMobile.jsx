@@ -177,6 +177,19 @@ const UserMenuMobile = () => {
         <span>📦</span> My Subscriptions
       </Link>
       <Link to={"/dashboard/address"} className='px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Save Address</Link>
+
+      {/* RIDER ONBOARDING (Earn with Snapit) */}
+      {role !== "RIDER" && (
+        <Link to={"/rider/join"} className='px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-bold text-emerald-800 dark:text-emerald-300 border-l-4 border-emerald-500 transition-colors flex items-center justify-between my-0.5'>
+          <span className='flex items-center gap-2'>
+            <span className='text-base'>🛵</span>
+            <span>Deliver with Snapit</span>
+          </span>
+          <span className='text-[10px] bg-emerald-200 dark:bg-emerald-800 text-emerald-950 dark:text-emerald-100 px-2 py-0.5 rounded-full font-black'>
+            Earn Daily
+          </span>
+        </Link>
+      )}
       <button
         type='button'
         onClick={() => window.dispatchEvent(new CustomEvent('open-smart-rating'))}
