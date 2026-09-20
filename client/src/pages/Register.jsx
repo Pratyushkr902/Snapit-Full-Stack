@@ -3,12 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 
 const Register = () => {
     const [searchParams] = useSearchParams()
-    const refCode = searchParams.get('ref') || ''
     const navigate = useNavigate()
 
     useEffect(() => {
-        navigate(refCode ? `/login?ref=${refCode}` : '/login', { replace: true })
-    }, [refCode, navigate])
+        const params = new URLSearchParams(searchParams)
+        params.set('mode', 'register')
+        navigate(`/login?${params.toString()}`, { replace: true })
+    }, [searchParams, navigate])
 
     return null
 }

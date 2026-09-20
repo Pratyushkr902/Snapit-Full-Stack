@@ -234,7 +234,7 @@ const router = createHashRouter([
       { path: "", element: <Home /> },
       { path: "search", element: <S><SearchPage /></S> },
       { path: "login", element: <Login /> },
-      { path: "register", element: <Register /> },
+      { path: "register", element: <Navigate to="/login?mode=register" replace /> },
       { path: "forgot-password", element: <S><ForgotPassword /></S> },
       { path: "verify-email", element: <S><VerifyEmail /></S> },
       { path: "verification-otp", element: <S><OtpVerification /></S> },

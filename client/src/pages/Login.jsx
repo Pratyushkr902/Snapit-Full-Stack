@@ -19,7 +19,12 @@ const Login = () => {
     const [authMode, setAuthMode] = useState('mobile_pin')
 
     // ── Mobile PIN Mode: 'login' or 'register' ──
-    const [mobileMode, setMobileMode] = useState('login')
+    const initialMode = (
+        searchParams.get('mode') === 'register' ||
+        searchParams.get('register') === 'true' ||
+        searchParams.get('signup') === 'true'
+    ) ? 'register' : 'login'
+    const [mobileMode, setMobileMode] = useState(initialMode)
     const [mobileNumber, setMobileNumber] = useState('')
     const [pin, setPin] = useState('')
     const [showPin, setShowPin] = useState(false)
@@ -56,6 +61,15 @@ const Login = () => {
     useEffect(() => {
         toast.dismiss()
     }, [authMode, mobileMode, step])
+
+    // Sync mobileMode with query params (?mode=register, ?register=true, or ?signup=true)
+    useEffect(() => {
+        const mode = searchParams.get('mode')
+        const isRegister = mode === 'register' || searchParams.get('register') === 'true' || searchParams.get('signup') === 'true'
+        if (isRegister) {
+            setMobileMode('register')
+        }
+    }, [searchParams])
 
     // Countdown timer for Resend Email OTP
     useEffect(() => {
@@ -105,7 +119,10 @@ const Login = () => {
             return
         }
         if (!pin.trim()) {
-            toast.error('Please enter your 4-digit PIN')
+            // New user without a PIN yet -> seamlessly move to Create Account
+            setMobileMode('register')
+            setRegMobile(clean)
+            toast("New to Snapit? Let's create your account in 5 seconds 🎉", { id: 'mobile-login', duration: 4000 })
             return
         }
 
@@ -126,8 +143,18 @@ const Login = () => {
                 toast.error(res.data?.message || 'Login failed. Please check your PIN.', { id: 'mobile-login', duration: 4000 })
             }
         } catch (err) {
-            const msg = err?.response?.data?.message || err?.message || 'Sign in failed. Please check your mobile number and PIN.'
-            toast.error(msg, { id: 'mobile-login', duration: 5000 })
+            const resData = err?.response?.data
+            const msg = resData?.message || err?.message || 'Sign in failed. Please check your mobile number and PIN.'
+            if (resData?.notRegistered || msg.toLowerCase().includes('not registered') || msg.toLowerCase().includes('create account') || msg.toLowerCase().includes('no account found')) {
+                setMobileMode('register')
+                setRegMobile(clean)
+                if (pin && pin.trim().length >= 4) {
+                    setRegPin(pin.trim())
+                }
+                toast.success("Welcome! Let's create your account in 5 seconds 🎉", { id: 'mobile-login', duration: 4000 })
+            } else {
+                toast.error(msg, { id: 'mobile-login', duration: 5000 })
+            }
         } finally {
             setLoading(false)
         }
@@ -363,7 +390,11 @@ const Login = () => {
                             <div className="flex bg-gray-50 border border-gray-200/80 p-1 rounded-xl mb-5">
                                 <button
                                     type="button"
-                                    onClick={() => setMobileMode('login')}
+                                    onClick={() => {
+                                        setMobileMode('login')
+                                        if (regMobile && !mobileNumber) setMobileNumber(regMobile)
+                                        if (regPin && !pin) setPin(regPin)
+                                    }}
                                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                                         mobileMode === 'login'
                                             ? 'bg-white text-green-800 shadow-sm font-extrabold'
@@ -377,6 +408,7 @@ const Login = () => {
                                     onClick={() => {
                                         setMobileMode('register')
                                         if (mobileNumber && !regMobile) setRegMobile(mobileNumber)
+                                        if (pin && !regPin) setRegPin(pin)
                                     }}
                                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                                         mobileMode === 'register'
@@ -425,7 +457,7 @@ const Login = () => {
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
                                             <label className="block text-xs font-semibold text-gray-700">
-                                                4-Digit PIN <span className="text-rose-500">*</span>
+                                                4-Digit PIN
                                             </label>
                                             <a
                                                 href={whatsappResetUrl}
@@ -447,7 +479,6 @@ const Login = () => {
                                                 onChange={e => setPin(e.target.value)}
                                                 placeholder="Enter your 4-digit PIN"
                                                 className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
-                                                required
                                             />
                                             <button
                                                 type="button"
@@ -461,26 +492,32 @@ const Login = () => {
 
                                     <button
                                         type="submit"
-                                        disabled={loading || mobileNumber.replace(/\D/g, '').length !== 10 || !pin.trim()}
+                                        disabled={loading || mobileNumber.replace(/\D/g, '').length !== 10}
                                         className={`w-full h-12 rounded-xl text-sm font-bold text-white transition-all shadow-sm flex items-center justify-center gap-2
-                                            ${mobileNumber.replace(/\D/g, '').length === 10 && pin.trim() && !loading
+                                            ${mobileNumber.replace(/\D/g, '').length === 10 && !loading
                                                 ? 'bg-green-700 hover:bg-green-800 active:scale-[0.99] cursor-pointer'
                                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                             }`}
                                     >
-                                        {loading ? 'Signing in...' : 'Sign In'}
+                                        {loading ? 'Checking...' : (pin.trim() ? 'Sign In' : 'Continue / Create Account')}
                                     </button>
 
-                                    <div className="text-center pt-2">
+                                    {/* Prominent New Customer Callout */}
+                                    <div className="bg-emerald-50 border border-emerald-200/90 rounded-xl p-3 flex items-center justify-between gap-3">
+                                        <div className="text-left">
+                                            <p className="text-xs font-bold text-emerald-950">New to Snapit?</p>
+                                            <p className="text-[11px] text-emerald-700 font-medium">Don't have a 4-digit PIN? Join in 5 seconds.</p>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 setMobileMode('register')
-                                                if (mobileNumber && !regMobile) setRegMobile(mobileNumber)
+                                                if (mobileNumber) setRegMobile(mobileNumber)
+                                                if (pin && pin.trim().length >= 4) setRegPin(pin.trim())
                                             }}
-                                            className="text-xs font-semibold text-green-700 hover:text-green-900 transition-colors"
+                                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm whitespace-nowrap transition-all"
                                         >
-                                            New customer? Create account in 5 seconds &rarr;
+                                            Create Account
                                         </button>
                                     </div>
                                 </form>
@@ -595,7 +632,11 @@ const Login = () => {
                                     <div className="text-center pt-2">
                                         <button
                                             type="button"
-                                            onClick={() => setMobileMode('login')}
+                                            onClick={() => {
+                                                setMobileMode('login')
+                                                if (regMobile && !mobileNumber) setMobileNumber(regMobile)
+                                                if (regPin && !pin) setPin(regPin)
+                                            }}
                                             className="text-xs font-semibold text-green-700 hover:text-green-900 transition-colors"
                                         >
                                             Already registered? Sign in &rarr;

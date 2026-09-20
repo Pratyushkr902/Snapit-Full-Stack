@@ -349,9 +349,10 @@ export async function loginController(request, response) {
         if (!user) {
             return response.status(400).json({
                 message: phone 
-                    ? "Mobile number not registered. Please tap 'Create Account' to join in 5 seconds."
+                    ? "Mobile number not registered. Redirecting you to Create Account..."
                     : "No account found with this email or mobile number.",
                 error: true,
+                notRegistered: !!phone,
                 success: false
             })
         }
