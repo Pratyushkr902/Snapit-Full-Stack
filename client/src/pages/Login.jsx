@@ -474,15 +474,25 @@ const Login = () => {
                                             <label className="block text-xs font-semibold text-gray-700">
                                                 4-Digit PIN
                                             </label>
-                                            <a
-                                                href={whatsappResetUrl}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors"
-                                            >
-                                                <FaWhatsapp size={12} className="text-emerald-600" />
-                                                <span>Forgot PIN?</span>
-                                            </a>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => switchMobileMode('register')}
+                                                    className="text-[11px] font-medium text-gray-500 hover:text-green-700 transition-colors"
+                                                >
+                                                    Don't have a PIN?
+                                                </button>
+                                                <span className="text-gray-300 text-[10px]">•</span>
+                                                <a
+                                                    href={whatsappResetUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors"
+                                                >
+                                                    <FaWhatsapp size={12} className="text-emerald-600" />
+                                                    <span>Forgot PIN?</span>
+                                                </a>
+                                            </div>
                                         </div>
                                         <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
                                             <MdLockOutline className="text-gray-400 text-lg mr-2 flex-shrink-0" />
@@ -514,19 +524,19 @@ const Login = () => {
                                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                             }`}
                                     >
-                                        {loading ? 'Checking...' : (pin.trim() ? 'Sign In' : 'Continue / Create Account')}
+                                        {loading ? 'Signing in...' : 'Sign In'}
                                     </button>
 
-                                    {/* Prominent New Customer Callout */}
-                                    <div className="bg-emerald-50 border border-emerald-200/90 rounded-xl p-3 flex items-center justify-between gap-3">
+                                    {/* Clean New Customer Card */}
+                                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200/80">
                                         <div className="text-left">
-                                            <p className="text-xs font-bold text-emerald-950">New to Snapit?</p>
-                                            <p className="text-[11px] text-emerald-700 font-medium">Don't have a 4-digit PIN? Join in 5 seconds.</p>
+                                            <p className="text-xs font-semibold text-gray-800">New to Snapit?</p>
+                                            <p className="text-[11px] text-gray-500">Don't have a 4-digit PIN? Join in 5 seconds.</p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => switchMobileMode('register')}
-                                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm whitespace-nowrap transition-all"
+                                            className="px-3 py-1.5 text-xs font-bold text-green-700 hover:text-green-800 bg-white border border-gray-200 hover:border-gray-300 active:bg-gray-50 rounded-lg shadow-sm transition-all whitespace-nowrap"
                                         >
                                             Create Account
                                         </button>
