@@ -53,8 +53,16 @@ export default function RiderJoinPage() {
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'mobile') {
-      const cleanDigits = value.replace(/\D/g, '').slice(0, 10)
-      setFormData((prev) => ({ ...prev, mobile: cleanDigits }))
+      let digits = value.replace(/\D/g, '')
+      if (digits.length === 12 && digits.startsWith('91')) {
+        digits = digits.slice(2)
+      } else if (digits.length > 10 && digits.startsWith('91')) {
+        digits = digits.slice(2)
+      }
+      if (digits.length > 10) {
+        digits = digits.slice(-10)
+      }
+      setFormData((prev) => ({ ...prev, mobile: digits }))
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }))
     }
@@ -68,7 +76,13 @@ export default function RiderJoinPage() {
       return
     }
 
-    const cleanMobile = formData.mobile.replace(/\D/g, '')
+    let cleanMobile = formData.mobile.replace(/\D/g, '')
+    if (cleanMobile.length === 12 && cleanMobile.startsWith('91')) {
+      cleanMobile = cleanMobile.slice(2)
+    }
+    if (cleanMobile.length > 10) {
+      cleanMobile = cleanMobile.slice(-10)
+    }
     if (cleanMobile.length !== 10) {
       toast.error('Please enter a valid 10-digit mobile number')
       return
@@ -543,3 +557,4 @@ export default function RiderJoinPage() {
     </div>
   )
 }
+

@@ -617,7 +617,11 @@ const AdminRiderFleet = () => {
                         </a>
 
                         <a
-                          href={`https://wa.me/91${app.mobile}?text=${encodeURIComponent(`Hi ${app.name}, we received your application to join Snapit Fleet as a delivery partner in Paliganj!`)}`}
+                          href={`https://wa.me/91${app.mobile}?text=${encodeURIComponent(
+                            isApproved
+                              ? `Hi ${app.name}, your Snapit Delivery Partner account is approved & active! 🎉\n\nTo start delivering:\n1. Open Snapit app\n2. Log in with Mobile: ${app.mobile} and PIN: 1234\n3. Tap '🛵 Rider Panel' to go online and accept delivery orders in Paliganj!`
+                              : `Hi ${app.name}, we received your application to join Snapit Fleet as a delivery partner in Paliganj! We are reviewing your application.`
+                          )}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className='flex-1 py-2 px-3 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition'
@@ -659,8 +663,9 @@ const AdminRiderFleet = () => {
                       )}
 
                       {isApproved && (
-                        <div className='bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-2.5 text-center text-xs text-emerald-300 font-medium'>
-                          ✅ Account activated with RIDER role. Can log in anytime!
+                        <div className='bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-2.5 text-center text-xs text-emerald-300 font-medium space-y-1'>
+                          <p>✅ Active Rider Account • Login PIN: <span className='font-mono font-bold text-white bg-slate-900 px-1.5 py-0.5 rounded'>1234</span></p>
+                          <p className='text-[10px] text-emerald-400/80'>Tap 'WhatsApp' above to send login credentials to the rider.</p>
                         </div>
                       )}
 

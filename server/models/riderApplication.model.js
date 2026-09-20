@@ -71,3 +71,4 @@ const riderApplicationSchema = new mongoose.Schema(
 
 const RiderApplicationModel = mongoose.model('RiderApplication', riderApplicationSchema)
 export default RiderApplicationModel
+

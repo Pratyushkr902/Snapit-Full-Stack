@@ -138,28 +138,40 @@ export const approveRiderApplicationController = async (req, res) => {
     }
 
     const numMobile = application.mobile
-    const cleanEmail = application.email || `rider_${numMobile}@snapit.in`
+    const cleanEmail = application.email ? application.email.trim().toLowerCase() : `${numMobile}@snapit.in`
 
-    // Check if user already exists
+    // Check if user already exists across mobile number and email variations
     let user = await UserModel.findOne({
       $or: [
         { mobile: numMobile },
-        { email: cleanEmail }
+        { mobile: String(numMobile) },
+        { email: cleanEmail },
+        { email: `${numMobile}@snapit.in` },
+        { email: `${numMobile}@snapit.express` }
       ]
     })
+
+    const DEFAULT_RIDER_PIN = '1234'
 
     if (user) {
       user.role = 'RIDER'
       user.status = 'Active'
-      user.name = application.name
+      if (!user.name || user.name === 'Snapit Customer') {
+        user.name = application.name
+      }
       user.verify_email = true
       user.is_phone_verified = true
+
+      // If user had no password/PIN (e.g. OTP-only account), set default PIN so they can log in via Mobile + PIN
+      if (!user.password) {
+        const salt = await bcryptjs.genSalt(10)
+        user.password = await bcryptjs.hash(DEFAULT_RIDER_PIN, salt)
+      }
       await user.save()
     } else {
-      // Create user with a secure random password
-      const randomPassword = crypto.randomBytes(6).toString('hex')
+      // Create user with default 4-digit PIN '1234' for immediate mobile login
       const salt = await bcryptjs.genSalt(10)
-      const hashedPassword = await bcryptjs.hash(randomPassword, salt)
+      const hashedPassword = await bcryptjs.hash(DEFAULT_RIDER_PIN, salt)
 
       user = await UserModel.create({
         name: application.name,
@@ -182,9 +194,10 @@ export const approveRiderApplicationController = async (req, res) => {
     return res.json({
       success: true,
       error: false,
-      message: `🎉 Rider ${user.name} approved & activated! They can now log into the Snapit app.`,
+      message: `🎉 Rider ${user.name} approved & activated! Default PIN is 1234. Share with candidate to log in.`,
       data: {
         application,
+        defaultPin: DEFAULT_RIDER_PIN,
         rider: {
           _id: user._id,
           name: user.name,
@@ -249,3 +262,4 @@ export const rejectRiderApplicationController = async (req, res) => {
     })
   }
 }
+

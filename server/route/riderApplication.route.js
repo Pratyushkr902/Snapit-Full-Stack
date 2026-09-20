@@ -19,3 +19,4 @@ riderApplicationRouter.post('/approve', auth, admin, approveRiderApplicationCont
 riderApplicationRouter.post('/reject', auth, admin, rejectRiderApplicationController)
 
 export default riderApplicationRouter
+
