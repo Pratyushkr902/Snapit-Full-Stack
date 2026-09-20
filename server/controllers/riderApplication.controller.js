@@ -36,7 +36,43 @@ export const applyRiderController = async (req, res) => {
     }
     const numMobile = Number(cleanDigits.slice(-10))
 
-    // Guard against spamming duplicate pending applications for the same mobile
+    // 1. Guard if candidate is already an active rider in the user system
+    const existingRider = await UserModel.findOne({
+      $or: [
+        { mobile: numMobile },
+        { mobile: String(numMobile) }
+      ],
+      role: 'RIDER'
+    })
+    if (existingRider) {
+      return res.status(200).json({
+        success: true,
+        error: false,
+        message: 'You are already registered as an active Snapit Rider! Please log in to your account to open your Rider Panel.',
+        data: {
+          _id: existingRider._id,
+          name: existingRider.name,
+          mobile: existingRider.mobile,
+          status: 'APPROVED'
+        }
+      })
+    }
+
+    // 2. Guard against duplicate approved application
+    const existingApproved = await RiderApplicationModel.findOne({
+      mobile: numMobile,
+      status: 'APPROVED'
+    })
+    if (existingApproved) {
+      return res.status(200).json({
+        success: true,
+        error: false,
+        message: 'Your rider application was already approved! Please log in with your mobile number and default PIN 1234.',
+        data: existingApproved
+      })
+    }
+
+    // 3. Guard against spamming duplicate pending applications for the same mobile
     const existingPending = await RiderApplicationModel.findOne({
       mobile: numMobile,
       status: 'PENDING'

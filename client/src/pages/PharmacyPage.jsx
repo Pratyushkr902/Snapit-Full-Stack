@@ -92,12 +92,15 @@ const PharmacyPage = () => {
   }, [activeCatId, debouncedSearch, allCategory?.length])
 
   const fetchProducts = useCallback(async (pageNum = 1, reset = false) => {
-    if (!allCategory?.length) return
     try {
       setLoading(true)
 
+      // Dynamically resolve category IDs from allCategory if available, otherwise fallback to known IDs
+      const dynamicPharmaId = allCategory?.find(c => c.name?.toLowerCase().includes('pharma') || c.name?.toLowerCase().includes('medicine'))?._id || PHARMA_ID
+      const dynamicBabyId = allCategory?.find(c => c.name?.toLowerCase().includes('baby'))?._id || BABY_ID
+
       // Always fetch BOTH categories in parallel, then merge + dedupe
-      const catIds = activeCatId ? [activeCatId] : [PHARMA_ID, BABY_ID]
+      const catIds = activeCatId ? [activeCatId] : [dynamicPharmaId, dynamicBabyId]
 
       const results = await Promise.all(
         catIds.map(id =>
