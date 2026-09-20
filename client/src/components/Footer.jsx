@@ -11,6 +11,8 @@ const Footer = () => {
                 <span className='hidden sm:inline text-slate-300 dark:text-slate-700'>•</span>
                 <Link to="/privacy-policy" className='hover:text-amber-600 dark:hover:text-amber-400 transition-colors'>Privacy Policy</Link>
                 <span className='hidden sm:inline text-slate-300 dark:text-slate-700'>•</span>
+                <Link to="/rider/join" className='hover:text-emerald-600 dark:hover:text-emerald-400 font-medium transition-colors'>Deliver with Snapit 🛵</Link>
+                <span className='hidden sm:inline text-slate-300 dark:text-slate-700'>•</span>
                 <p className='font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1'>
                     Co-powered by <span className='font-bold text-slate-800 dark:text-white tracking-wide'>PiyaZo</span>
                 </p>

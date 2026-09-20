@@ -163,8 +163,8 @@ const UserMenu = ({close}) => {
             </Link>
             <Link onClick={handleClose} to={"/dashboard/address"} className='px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium transition-colors'>Save Address</Link>
 
-            {/* RIDER ONBOARDING (Earn with Snapit) */}
-            {role !== "RIDER" && (
+            {/* RIDER ONBOARDING (Earn with Snapit) - Only for regular customers / normal users */}
+            {(!role || role === "USER") && (
               <Link onClick={handleClose} to={"/rider/join"}
                 className='px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-bold text-emerald-800 dark:text-emerald-300 border-l-4 border-emerald-500 transition-colors flex items-center justify-between my-0.5'>
                 <span className='flex items-center gap-1.5'>
