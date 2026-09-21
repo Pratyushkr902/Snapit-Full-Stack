@@ -366,7 +366,7 @@ const Login = () => {
     )}`
 
     return (
-        <section className="relative min-h-screen overflow-hidden flex items-center justify-center px-4 py-8">
+        <section className="relative min-h-screen overflow-y-auto px-4 py-12 flex flex-col items-center justify-center">
 
             {/* ── BACKGROUND: Snapit green gradient (Blinkit / Zepto style) ── */}
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-green-500 to-teal-400" />
