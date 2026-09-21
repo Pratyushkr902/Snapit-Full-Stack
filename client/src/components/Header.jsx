@@ -16,9 +16,9 @@ import { getStoreStatus } from './StoreClosedOverlay';
 const Header = ({ openCart }) => {
     const [isMobile] = useMobile()
     const location = useLocation()
-    const currentNormalizedRoute = (location.pathname + (location.hash || "")).toLowerCase()
-    const isHomePage = location.pathname === '/' || location.pathname === '' || location.hash === '#/' || location.hash === ''
-    const isSearchPage = currentNormalizedRoute.includes('/search')
+    const currentNormalizedRoute = location.pathname.toLowerCase()
+    const isHomePage = location.pathname === '/' || location.pathname === ''
+    const isSearchPage = location.pathname === '/search' || location.pathname.startsWith('/search/')
     const navigate = useNavigate()
     const user = useSelector((state) => state?.user)
     const [openUserMenu, setOpenUserMenu] = useState(false)
