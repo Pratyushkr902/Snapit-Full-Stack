@@ -10,7 +10,7 @@ import { useDispatch } from 'react-redux'
 import { setUserDetails } from '../store/userSlice'
 import fetchUserDetails from '../utils/fetchUserDetails'
 import secureStorage from '../utils/secureStorage'
-import snapitLogo from '/logo.png'
+import snapitLogo from '../assets/snapit.png'
 
 const Login = () => {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -409,12 +409,10 @@ const Login = () => {
 
             {/* ── Left panel: only visible on large screens ── */}
             <div className="hidden lg:flex flex-col items-start justify-center flex-1 max-w-lg pr-16 z-10">
-                <div className="flex items-center gap-3 mb-6">
-                    <img src={snapitLogo} alt="Snapit" className="w-14 h-14 object-contain rounded-2xl shadow-lg" />
-                    <div>
-                        <h1 className="text-3xl font-black text-white leading-tight">Snapit</h1>
-                        <p className="text-emerald-100 text-sm font-semibold">9-Minute Express Delivery</p>
-                    </div>
+                <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md rounded-2xl px-5 py-3 shadow-xl border border-white/40 mb-6">
+                    <img src={snapitLogo} alt="Snapit" className="h-10 w-auto object-contain" />
+                    <span className="h-5 w-px bg-slate-200" />
+                    <span className="text-xs font-bold text-emerald-800 tracking-tight uppercase">9-Min Delivery</span>
                 </div>
 
                 {/* Tagline */}
@@ -447,39 +445,32 @@ const Login = () => {
             {/* ── Auth Card ── */}
             <div className="w-full max-w-[420px] z-10">
                 {/* Mobile-only mini brand strip above card */}
-                <div className="lg:hidden flex items-center gap-2 mb-5 justify-center">
-                    <img src={snapitLogo} alt="Snapit" className="w-9 h-9 object-contain rounded-xl shadow-md" />
-                    <span className="text-white font-black text-lg tracking-tight">Snapit <span className="text-yellow-300 text-sm font-bold">9 Min Delivery</span></span>
+                <div className="lg:hidden flex items-center justify-center mb-4">
+                    <div className="inline-flex items-center gap-2 bg-white/95 backdrop-blur-md rounded-2xl px-4 py-2 shadow-lg border border-white/40">
+                        <img src={snapitLogo} alt="Snapit" className="h-7 w-auto object-contain" />
+                        <span className="h-3.5 w-px bg-slate-200" />
+                        <span className="text-emerald-800 text-[11px] font-black tracking-tight uppercase">9 Min Delivery</span>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8">
 
                     {/* Brand Header & Return Button */}
-                    <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-2.5">
-                            <div className="relative">
-                                <img
-                                    src={snapitLogo}
-                                    alt="Snapit"
-                                    className="w-12 h-12 object-contain rounded-2xl shadow-md border border-emerald-100"
-                                    width={48}
-                                    height={48}
-                                />
-                                <span className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full w-4 h-4 flex items-center justify-center ring-2 ring-white">
-                                    <span className="block w-2 h-2 rounded-full bg-white animate-pulse" />
-                                </span>
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-black text-gray-900 leading-tight">Snapit</h1>
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
-                                    9-Min Delivery
-                                </span>
-                            </div>
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <img
+                                src={snapitLogo}
+                                alt="Snapit"
+                                className="h-9 w-auto object-contain"
+                            />
+                            <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                9-Min Delivery
+                            </span>
                         </div>
                         <button
                             type="button"
                             onClick={handleCloseAuth}
-                            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-700 flex items-center justify-center transition-colors"
+                            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-700 flex items-center justify-center transition-colors cursor-pointer"
                             title="Return to shopping"
                             aria-label="Close"
                         >
