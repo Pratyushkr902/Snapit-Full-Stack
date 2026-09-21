@@ -70,6 +70,15 @@ function App() {
   // Dedicated mobile user account page
   const isUserPage = currentNormalizedRoute === '/user' || currentNormalizedRoute.startsWith('/user/');
 
+  // Dedicated clean auth pages (Blinkit / Zepto / Zomato style distraction-free login/signup)
+  const isAuthPage = 
+    currentNormalizedRoute.includes('/login') || 
+    currentNormalizedRoute.includes('/register') || 
+    currentNormalizedRoute.includes('/forgot-password') || 
+    currentNormalizedRoute.includes('/reset-password') || 
+    currentNormalizedRoute.includes('/verification-otp') ||
+    currentNormalizedRoute.includes('/verify-email');
+
   useEffect(() => {
     if (isCheckoutOrCartPage) {
       setShowCart(false)
@@ -317,28 +326,28 @@ function App() {
           <AppUpdateModal />
           <SmartRatingModal />
           <NotificationPermissionBanner />
-          {!isDashboard && (!isFoodPage || IS_CLOSED_FOR_TODAY) && !isSelectLocation && !isCartPage && !isUserPage && <StoreClosedOverlay />}
-          {!isDashboard && !isSelectLocation && !isCartPage && !isUserPage && <Header openCart={() => setShowCart(true)} />}
+          {!isDashboard && !isAuthPage && (!isFoodPage || IS_CLOSED_FOR_TODAY) && !isSelectLocation && !isCartPage && !isUserPage && <StoreClosedOverlay />}
+          {!isDashboard && !isAuthPage && !isSelectLocation && !isCartPage && !isUserPage && <Header openCart={() => setShowCart(true)} />}
           
-          <main className={isDashboard || isSelectLocation || isCartPage || isUserPage ? '' : 'min-h-[78vh]'}>
+          <main className={isDashboard || isAuthPage || isSelectLocation || isCartPage || isUserPage ? '' : 'min-h-[78vh]'}>
             <Outlet />
           </main>
           
-          {!isDashboard && !isSelectLocation && !isCartPage && !isUserPage && <Footer />}
+          {!isDashboard && !isAuthPage && !isSelectLocation && !isCartPage && !isUserPage && <Footer />}
           {/* {!isDashboard && <WhatsAppButton />} */}
           
           <Toaster position="top-center" reverseOrder={false} />
 
-          {showCart && !isCheckoutOrCartPage && !isFoodPage && (
+          {showCart && !isCheckoutOrCartPage && !isFoodPage && !isAuthPage && (
             <DisplayCartItem close={() => setShowCart(false)} />
           )}
 
-          {!isCheckoutOrCartPage && !isDashboard && !isFoodPage && !isSelectLocation && (
+          {!isCheckoutOrCartPage && !isDashboard && !isFoodPage && !isSelectLocation && !isAuthPage && (
             <CartMobileLink />
           )}
 
           {/* {!isDashboard && <WhatsAppButton />} */}
-          {!isDashboard && !isSelectLocation && !isCartPage && !showCart && <ChatBox />}
+          {!isDashboard && !isAuthPage && !isSelectLocation && !isCartPage && !showCart && <ChatBox />}
         </div>
       </GlobalProvider>
     </RemoteConfigProvider>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { FaArrowLeft, FaWhatsapp, FaRegEye, FaRegEyeSlash } from "react-icons/fa6"
 import { MdEmail, MdPerson, MdPhoneAndroid, MdLockOutline } from "react-icons/md"
+import { IoClose } from "react-icons/io5"
 import toast from 'react-hot-toast'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
@@ -91,6 +92,17 @@ const Login = () => {
             newParams.delete('signup')
         }
         setSearchParams(newParams, { replace: true })
+    }
+
+    const handleCloseAuth = () => {
+        const redirectPath = searchParams.get('redirect')
+        if (redirectPath && !redirectPath.startsWith('/login') && !redirectPath.startsWith('/register')) {
+            navigate(redirectPath, { replace: true })
+        } else if (window.history.length > 1) {
+            navigate(-1)
+        } else {
+            navigate('/', { replace: true })
+        }
     }
 
     // Countdown timer for Resend Email OTP
@@ -358,21 +370,32 @@ const Login = () => {
             <div className="w-full max-w-[420px]">
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
 
-                    {/* Brand Header */}
-                    <div className="flex items-center gap-3 mb-6">
-                        <img
-                            src={snapitLogo}
-                            alt="Snapit"
-                            className="w-11 h-11 object-contain"
-                            width={44}
-                            height={44}
-                        />
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900 leading-tight">Snapit</h1>
-                            <span className="text-xs font-medium text-gray-500">
-                                9-Minute Express Delivery
-                            </span>
+                    {/* Brand Header & Return Button */}
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <img
+                                src={snapitLogo}
+                                alt="Snapit"
+                                className="w-11 h-11 object-contain rounded-xl"
+                                width={44}
+                                height={44}
+                            />
+                            <div>
+                                <h1 className="text-xl font-bold text-gray-900 leading-tight">Snapit</h1>
+                                <span className="text-xs font-medium text-gray-500">
+                                    9-Minute Express Delivery
+                                </span>
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onClick={handleCloseAuth}
+                            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-700 flex items-center justify-center transition-colors"
+                            title="Return to shopping"
+                            aria-label="Close"
+                        >
+                            <IoClose size={18} />
+                        </button>
                     </div>
 
                     {/* Primary Tab Switcher: Sign In vs Create Account */}
