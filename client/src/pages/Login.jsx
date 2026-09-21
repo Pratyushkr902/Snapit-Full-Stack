@@ -413,14 +413,14 @@ const Login = () => {
                     <img src={snapitLogo} alt="Snapit" className="w-14 h-14 object-contain rounded-2xl shadow-lg" />
                     <div>
                         <h1 className="text-3xl font-black text-white leading-tight">Snapit</h1>
-                        <p className="text-emerald-100 text-sm font-semibold">9-Minute Express Delivery ⚡</p>
+                        <p className="text-emerald-100 text-sm font-semibold">9-Minute Express Delivery</p>
                     </div>
                 </div>
 
                 {/* Tagline */}
                 <h2 className="text-4xl font-black text-white leading-snug mb-4">
                     Groceries at<br />
-                    <span className="text-yellow-300">lightning speed</span> ⚡
+                    <span className="text-yellow-300">lightning speed</span>
                 </h2>
                 <p className="text-emerald-100 text-base leading-relaxed mb-8 max-w-sm">
                     Order fresh fruits, vegetables, dairy, snacks and daily essentials — delivered to your door in 9 minutes from Paliganj.
@@ -429,7 +429,7 @@ const Login = () => {
                 {/* Trust badges */}
                 <div className="flex flex-col gap-3">
                     {[
-                        { icon: '⚡', label: '9-Minute Delivery', sub: 'Express delivery in Paliganj' },
+                        { icon: '🚀', label: '9-Minute Delivery', sub: 'Express delivery in Paliganj' },
                         { icon: '🛡️', label: '100% Safe & Secure', sub: 'Encrypted payments & data' },
                         { icon: '🎁', label: 'Exclusive Offers', sub: 'Save more on every order' },
                     ].map((b, i) => (
@@ -449,7 +449,7 @@ const Login = () => {
                 {/* Mobile-only mini brand strip above card */}
                 <div className="lg:hidden flex items-center gap-2 mb-5 justify-center">
                     <img src={snapitLogo} alt="Snapit" className="w-9 h-9 object-contain rounded-xl shadow-md" />
-                    <span className="text-white font-black text-lg tracking-tight">Snapit <span className="text-yellow-300 text-sm font-bold">⚡ 9 Min Delivery</span></span>
+                    <span className="text-white font-black text-lg tracking-tight">Snapit <span className="text-yellow-300 text-sm font-bold">9 Min Delivery</span></span>
                 </div>
 
                 <div className="bg-white rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8">
@@ -472,7 +472,7 @@ const Login = () => {
                             <div>
                                 <h1 className="text-lg font-black text-gray-900 leading-tight">Snapit</h1>
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
-                                    ⚡ 9-Min Delivery
+                                    9-Min Delivery
                                 </span>
                             </div>
                         </div>

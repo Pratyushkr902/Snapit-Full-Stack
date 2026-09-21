@@ -106,7 +106,6 @@ const Header = ({ openCart }) => {
                                 <h2 className='font-black text-slate-900 dark:text-white text-[15px] uppercase tracking-tighter'>
                                     Delivery in <span className='text-yellow-500 animate-pulse'>10 MINS</span>
                                 </h2>
-                                <span className='text-lg'>⚡</span>
                             </div>
                             {storeStatus?.isClosedForToday ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 tracking-tight shadow-2xs">
@@ -229,7 +228,7 @@ const Header = ({ openCart }) => {
                                 <div className='flex flex-col justify-center border-l-2 pl-2 border-slate-100 dark:border-slate-800 min-w-0'>
                                     <div className='flex items-center gap-1.5'>
                                         <span className='font-black text-slate-900 dark:text-white text-[11px] uppercase tracking-tighter whitespace-nowrap'>
-                                            in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
+                                            in <span className='text-yellow-500 animate-pulse'>9 MINS</span>
                                         </span>
                                         {storeStatus?.isClosedForToday ? (
                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[8.5px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 whitespace-nowrap">
