@@ -447,15 +447,6 @@ const Login = () => {
 
             {/* ── Auth Card ── */}
             <div className="w-full max-w-[420px] z-10">
-                {/* Mobile-only mini brand strip above card */}
-                <div className="lg:hidden flex items-center justify-center mb-4">
-                    <div className="inline-flex items-center gap-2 bg-white/95 backdrop-blur-md rounded-2xl px-4 py-2 shadow-lg border border-white/40">
-                        <img src={snapitLogo} alt="Snapit" className="h-7 w-auto object-contain" />
-                        <span className="h-3.5 w-px bg-slate-200" />
-                        <span className="text-emerald-800 text-[11px] font-black tracking-tight uppercase">9 Min Delivery</span>
-                    </div>
-                </div>
-
                 <div className="bg-white rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8">
 
                     {/* Brand Header & Return Button */}
@@ -581,11 +572,12 @@ const Login = () => {
                                             <input
                                                 type={showPin ? "text" : "password"}
                                                 inputMode="numeric"
-                                                maxLength={8}
+                                                pattern="[0-9]*"
+                                                maxLength={4}
                                                 value={pin}
-                                                onChange={e => setPin(e.target.value)}
+                                                onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
                                                 placeholder="Enter your 4-digit PIN"
-                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
+                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400 tracking-wider"
                                             />
                                             <button
                                                 type="button"
@@ -702,11 +694,12 @@ const Login = () => {
                                             <input
                                                 type={showRegPin ? "text" : "password"}
                                                 inputMode="numeric"
-                                                maxLength={8}
+                                                pattern="[0-9]*"
+                                                maxLength={4}
                                                 value={regPin}
-                                                onChange={e => setRegPin(e.target.value)}
+                                                onChange={e => setRegPin(e.target.value.replace(/\D/g, ''))}
                                                 placeholder="Choose a 4-digit PIN (e.g. 1234)"
-                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400"
+                                                className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400 tracking-wider"
                                                 required
                                             />
                                             <button

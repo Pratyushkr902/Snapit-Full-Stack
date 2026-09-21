@@ -64,6 +64,20 @@ export const paymentLimiter = rateLimit({
     }
 })
 
+// Rider application limiter
+export const riderApplicationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 15, // max 15 submissions per 15 min window
+    message: {
+        success: false,
+        error: true,
+        message: "Too many rider application submissions. Please try again after 15 minutes."
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+})
+
+
 // --- INPUT SANITIZER ---
 // Manual middleware — express-mongo-sanitize is incompatible with Express 5
 // (req.query is read-only in Express 5, causing a TypeError on every request)

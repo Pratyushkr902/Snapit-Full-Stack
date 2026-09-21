@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import auth from '../middleware/auth.js'
 import { admin } from '../middleware/Admin.js'
+import { riderApplicationLimiter } from '../middleware/security.js'
 import {
   applyRiderController,
   getAllRiderApplicationsController,
@@ -10,8 +11,8 @@ import {
 
 const riderApplicationRouter = Router()
 
-// Public / Candidate endpoint
-riderApplicationRouter.post('/apply', applyRiderController)
+// Public / Candidate endpoint (rate limited)
+riderApplicationRouter.post('/apply', riderApplicationLimiter, applyRiderController)
 
 // Admin-only endpoints
 riderApplicationRouter.get('/all', auth, admin, getAllRiderApplicationsController)

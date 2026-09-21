@@ -19,7 +19,7 @@ export const options = {
   },
 };
 
-const BASE_URL = 'http://127.0.0.1:8080';
+const BASE_URL = __ENV.API_URL || 'https://snapit-full-stack-production.up.railway.app';
 
 export default function () {
   const params = {
