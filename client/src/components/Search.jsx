@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { IoSearch, IoClose, IoMic } from "react-icons/io5"
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { TypeAnimation } from 'react-type-animation'
-import { FaArrowLeft } from "react-icons/fa"
 import useMobile from '../hooks/useMobile'
 import VoiceSearchModal from './VoiceSearchModal'
 
@@ -76,18 +75,15 @@ const Search = () => {
 
         {/* Left icon */}
         <div className='flex-shrink-0'>
-          {isMobile && isSearchPage ? (
-            <Link to="/" className='flex justify-center items-center h-full p-2 m-1 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 bg-white dark:bg-slate-800 rounded-xl shadow-sm'>
-              <FaArrowLeft size={16} />
-            </Link>
-          ) : (
-            <button
-              className='flex justify-center items-center h-full p-3 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 text-slate-500 dark:text-slate-400'
-              onClick={!isSearchPage ? handlePlaceholderClick : undefined}
-            >
-              <IoSearch size={20} />
-            </button>
-          )}
+          <button
+            type='button'
+            className='flex justify-center items-center h-full p-3 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 text-slate-500 dark:text-slate-400 cursor-pointer'
+            onClick={!isSearchPage ? handlePlaceholderClick : undefined}
+            tabIndex={!isSearchPage ? 0 : -1}
+            aria-label="Search"
+          >
+            <IoSearch size={20} />
+          </button>
         </div>
 
         {/* Input / Placeholder */}

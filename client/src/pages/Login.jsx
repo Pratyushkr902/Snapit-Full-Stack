@@ -366,24 +366,113 @@ const Login = () => {
     )}`
 
     return (
-        <section className="min-h-screen bg-[#F4F6F8] flex items-center justify-center px-4 py-8">
-            <div className="w-full max-w-[420px]">
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
+        <section className="relative min-h-screen overflow-hidden flex items-center justify-center px-4 py-8">
+
+            {/* ── BACKGROUND: Snapit green gradient (Blinkit / Zepto style) ── */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-green-500 to-teal-400" />
+
+            {/* ── Subtle radial light bloom at top-right (depth) ── */}
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-800/30 rounded-full blur-3xl pointer-events-none" />
+
+            {/* ── Floating grocery items — purely decorative ── */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">
+                {/* Row 1 — top scatter */}
+                <span className="absolute text-4xl opacity-25 top-6 left-[6%] rotate-12 animate-[bounce_6s_ease-in-out_infinite]">🥛</span>
+                <span className="absolute text-3xl opacity-20 top-12 left-[22%] -rotate-6 animate-[bounce_7.5s_ease-in-out_1s_infinite]">🧀</span>
+                <span className="absolute text-5xl opacity-20 top-4 left-[45%] rotate-3 animate-[bounce_5s_ease-in-out_0.5s_infinite]">🥚</span>
+                <span className="absolute text-3xl opacity-25 top-8 right-[20%] rotate-12 animate-[bounce_8s_ease-in-out_2s_infinite]">🍌</span>
+                <span className="absolute text-4xl opacity-20 top-3 right-[5%] -rotate-12 animate-[bounce_6.5s_ease-in-out_0.3s_infinite]">🍎</span>
+
+                {/* Left edge — middle */}
+                <span className="absolute text-5xl opacity-20 top-[28%] left-[1%] rotate-6 animate-[bounce_9s_ease-in-out_1.5s_infinite]">🥦</span>
+                <span className="absolute text-3xl opacity-20 top-[42%] left-[4%] -rotate-6 animate-[bounce_7s_ease-in-out_0.8s_infinite]">🧅</span>
+                <span className="absolute text-4xl opacity-25 top-[58%] left-[2%] rotate-12 animate-[bounce_8s_ease-in-out_2.5s_infinite]">🍋</span>
+
+                {/* Right edge — middle */}
+                <span className="absolute text-5xl opacity-20 top-[30%] right-[1%] -rotate-12 animate-[bounce_7s_ease-in-out_0.4s_infinite]">🍅</span>
+                <span className="absolute text-4xl opacity-20 top-[46%] right-[3%] rotate-6 animate-[bounce_6s_ease-in-out_1.8s_infinite]">🥕</span>
+                <span className="absolute text-3xl opacity-25 top-[62%] right-[2%] -rotate-3 animate-[bounce_9s_ease-in-out_1s_infinite]">🧄</span>
+
+                {/* Bottom scatter */}
+                <span className="absolute text-4xl opacity-20 bottom-10 left-[8%] rotate-6 animate-[bounce_8s_ease-in-out_0.6s_infinite]">🍞</span>
+                <span className="absolute text-3xl opacity-25 bottom-8 left-[25%] -rotate-12 animate-[bounce_6.5s_ease-in-out_1.2s_infinite]">🍫</span>
+                <span className="absolute text-4xl opacity-20 bottom-12 left-[50%] rotate-3 animate-[bounce_7s_ease-in-out_2s_infinite]">🥤</span>
+                <span className="absolute text-3xl opacity-25 bottom-6 right-[22%] -rotate-6 animate-[bounce_8.5s_ease-in-out_0.9s_infinite]">🍪</span>
+                <span className="absolute text-4xl opacity-20 bottom-8 right-[6%] rotate-12 animate-[bounce_6s_ease-in-out_1.5s_infinite]">🍊</span>
+
+                {/* Extra mid-area fill */}
+                <span className="absolute text-3xl opacity-15 top-[20%] left-[38%] -rotate-6 animate-[bounce_10s_ease-in-out_0.7s_infinite]">🌽</span>
+                <span className="absolute text-3xl opacity-15 top-[70%] right-[35%] rotate-6 animate-[bounce_9s_ease-in-out_1.3s_infinite]">🥑</span>
+                <span className="absolute text-2xl opacity-15 top-[55%] left-[38%] rotate-12 animate-[bounce_11s_ease-in-out_2.1s_infinite]">🫐</span>
+            </div>
+
+            {/* ── Left panel: only visible on large screens ── */}
+            <div className="hidden lg:flex flex-col items-start justify-center flex-1 max-w-lg pr-16 z-10">
+                <div className="flex items-center gap-3 mb-6">
+                    <img src={snapitLogo} alt="Snapit" className="w-14 h-14 object-contain rounded-2xl shadow-lg" />
+                    <div>
+                        <h1 className="text-3xl font-black text-white leading-tight">Snapit</h1>
+                        <p className="text-emerald-100 text-sm font-semibold">9-Minute Express Delivery ⚡</p>
+                    </div>
+                </div>
+
+                {/* Tagline */}
+                <h2 className="text-4xl font-black text-white leading-snug mb-4">
+                    Groceries at<br />
+                    <span className="text-yellow-300">lightning speed</span> ⚡
+                </h2>
+                <p className="text-emerald-100 text-base leading-relaxed mb-8 max-w-sm">
+                    Order fresh fruits, vegetables, dairy, snacks and daily essentials — delivered to your door in 9 minutes from Paliganj.
+                </p>
+
+                {/* Trust badges */}
+                <div className="flex flex-col gap-3">
+                    {[
+                        { icon: '⚡', label: '9-Minute Delivery', sub: 'Express delivery in Paliganj' },
+                        { icon: '🛡️', label: '100% Safe & Secure', sub: 'Encrypted payments & data' },
+                        { icon: '🎁', label: 'Exclusive Offers', sub: 'Save more on every order' },
+                    ].map((b, i) => (
+                        <div key={i} className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20">
+                            <span className="text-2xl">{b.icon}</span>
+                            <div>
+                                <p className="text-white font-bold text-sm">{b.label}</p>
+                                <p className="text-emerald-100 text-xs">{b.sub}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Auth Card ── */}
+            <div className="w-full max-w-[420px] z-10">
+                {/* Mobile-only mini brand strip above card */}
+                <div className="lg:hidden flex items-center gap-2 mb-5 justify-center">
+                    <img src={snapitLogo} alt="Snapit" className="w-9 h-9 object-contain rounded-xl shadow-md" />
+                    <span className="text-white font-black text-lg tracking-tight">Snapit <span className="text-yellow-300 text-sm font-bold">⚡ 9 Min Delivery</span></span>
+                </div>
+
+                <div className="bg-white rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8">
 
                     {/* Brand Header & Return Button */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <img
-                                src={snapitLogo}
-                                alt="Snapit"
-                                className="w-11 h-11 object-contain rounded-xl"
-                                width={44}
-                                height={44}
-                            />
+                    <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-2.5">
+                            <div className="relative">
+                                <img
+                                    src={snapitLogo}
+                                    alt="Snapit"
+                                    className="w-12 h-12 object-contain rounded-2xl shadow-md border border-emerald-100"
+                                    width={48}
+                                    height={48}
+                                />
+                                <span className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full w-4 h-4 flex items-center justify-center ring-2 ring-white">
+                                    <span className="block w-2 h-2 rounded-full bg-white animate-pulse" />
+                                </span>
+                            </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900 leading-tight">Snapit</h1>
-                                <span className="text-xs font-medium text-gray-500">
-                                    9-Minute Express Delivery
+                                <h1 className="text-lg font-black text-gray-900 leading-tight">Snapit</h1>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                                    ⚡ 9-Min Delivery
                                 </span>
                             </div>
                         </div>

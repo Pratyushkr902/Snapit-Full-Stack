@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import logo from '../assets/snapit.png'
 import Search from './Search'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FaRegCircleUser } from "react-icons/fa6";
+import { FaRegCircleUser, FaArrowLeft } from "react-icons/fa6";
 import useMobile from '../hooks/useMobile';
 import { BsCart4 } from "react-icons/bs";
 import { useSelector } from 'react-redux';
@@ -16,8 +16,9 @@ import { getStoreStatus } from './StoreClosedOverlay';
 const Header = ({ openCart }) => {
     const [isMobile] = useMobile()
     const location = useLocation()
-    const isHomePage = location.pathname === '/' || location.pathname === ''
-    const isSearchPage = location.pathname === "/search"
+    const currentNormalizedRoute = (location.pathname + (location.hash || "")).toLowerCase()
+    const isHomePage = location.pathname === '/' || location.pathname === '' || location.hash === '#/' || location.hash === ''
+    const isSearchPage = currentNormalizedRoute.includes('/search')
     const navigate = useNavigate()
     const user = useSelector((state) => state?.user)
     const [openUserMenu, setOpenUserMenu] = useState(false)
@@ -193,83 +194,108 @@ const Header = ({ openCart }) => {
             ════════════════════════════════ */}
             <div className='lg:hidden flex flex-col'>
 
-                {/* Row 1 — always visible on mobile */}
-                <div className={`flex items-center justify-between px-3 ${
-                    isHomePage ? 'pt-1.5 pb-1' : 'pt-2 pb-1'
-                }`}>
-                    {/* Left: logo + delivery */}
-                    <div className='flex items-center gap-2 min-w-0 flex-1'>
-                        <Link to="/" className='flex-shrink-0'>
-                            <img src={logo} alt='logo' className='w-20 h-auto object-contain' />
-                        </Link>
-                        <div className='flex flex-col justify-center border-l-2 pl-2 border-slate-100 dark:border-slate-800 min-w-0'>
-                            <div className='flex items-center gap-1.5'>
-                                <span className='font-black text-slate-900 dark:text-white text-[11px] uppercase tracking-tighter whitespace-nowrap'>
-                                    in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
-                                </span>
-                                {storeStatus?.isClosedForToday ? (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[8.5px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 whitespace-nowrap">
-                                        ⛔ CLOSED
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 whitespace-nowrap">
-                                        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                                        🟢 OPEN
-                                    </span>
-                                )}
-                            </div>
-                            <Link to='/select-location' className='flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-semibold min-w-0 active:opacity-60'>
-                                <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
-                                <GoTriangleDown size={10} className='flex-shrink-0' />
-                            </Link>
+                {isSearchPage ? (
+                    /* Clean dedicated Search Header (Zepto / Blinkit / Zomato style) */
+                    <div className='flex items-center gap-2 px-3 py-2'>
+                        <button
+                            type='button'
+                            onClick={() => {
+                                if (window.history.length > 1) {
+                                    navigate(-1)
+                                } else {
+                                    navigate('/')
+                                }
+                            }}
+                            className='w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 active:scale-95 transition-all cursor-pointer'
+                            aria-label='Back'
+                        >
+                            <FaArrowLeft size={16} />
+                        </button>
+                        <div className='flex-1 min-w-0'>
+                            <Search />
                         </div>
                     </div>
+                ) : (
+                    <>
+                        {/* Row 1 — always visible on mobile */}
+                        <div className={`flex items-center justify-between px-3 ${
+                            isHomePage ? 'pt-1.5 pb-1' : 'pt-2 pb-1'
+                        }`}>
+                            {/* Left: logo + delivery */}
+                            <div className='flex items-center gap-2 min-w-0 flex-1'>
+                                <Link to="/" className='flex-shrink-0'>
+                                    <img src={logo} alt='logo' className='w-20 h-auto object-contain' />
+                                </Link>
+                                <div className='flex flex-col justify-center border-l-2 pl-2 border-slate-100 dark:border-slate-800 min-w-0'>
+                                    <div className='flex items-center gap-1.5'>
+                                        <span className='font-black text-slate-900 dark:text-white text-[11px] uppercase tracking-tighter whitespace-nowrap'>
+                                            in <span className='text-yellow-500 animate-pulse'>9 MINS</span> ⚡
+                                        </span>
+                                        {storeStatus?.isClosedForToday ? (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[8.5px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 whitespace-nowrap">
+                                                ⛔ CLOSED
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 whitespace-nowrap">
+                                                <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                                🟢 OPEN
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Link to='/select-location' className='flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-semibold min-w-0 active:opacity-60'>
+                                        <span className='truncate max-w-[90px]'>📍 {primaryAddress}</span>
+                                        <GoTriangleDown size={10} className='flex-shrink-0' />
+                                    </Link>
+                                </div>
+                            </div>
 
-                    {/* Right: user + cart icons */}
-                    <div className='flex items-center gap-3 flex-shrink-0 ml-2'>
-                        <Link to='/wallet' className='flex flex-col items-center text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'><span className='text-lg'>💰</span><span className='text-[9px] font-bold'>Wallet</span></Link>
-                        <button className='text-neutral-600 dark:text-slate-300 active:scale-90 transition-transform' onClick={handleMobileUser}>
-                            <FaRegCircleUser size={22} />
-                        </button>
+                            {/* Right: user + cart icons */}
+                            <div className='flex items-center gap-3 flex-shrink-0 ml-2'>
+                                <Link to='/wallet' className='flex flex-col items-center text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'><span className='text-lg'>💰</span><span className='text-[9px] font-bold'>Wallet</span></Link>
+                                <button className='text-neutral-600 dark:text-slate-300 active:scale-90 transition-transform' onClick={handleMobileUser}>
+                                    <FaRegCircleUser size={22} />
+                                </button>
 
-                        {/* Food cart — separate persistent cross-restaurant cart */}
-                        {foodGrandCount > 0 && (
-                            <Link to='/food-checkout' className='relative text-orange-500 active:scale-90 transition-transform'>
-                                <span className='text-xl leading-none'>🍔</span>
-                                <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white dark:ring-slate-950'>
-                                    {foodGrandCount}
-                                </span>
-                            </Link>
+                                {/* Food cart — separate persistent cross-restaurant cart */}
+                                {foodGrandCount > 0 && (
+                                    <Link to='/food-checkout' className='relative text-orange-500 active:scale-90 transition-transform'>
+                                        <span className='text-xl leading-none'>🍔</span>
+                                        <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white dark:ring-slate-950'>
+                                            {foodGrandCount}
+                                        </span>
+                                    </Link>
+                                )}
+
+                                <button 
+                                    onClick={() => {
+                                        if (isMobile) {
+                                            navigate('/cart');
+                                        } else {
+                                            openCart();
+                                        }
+                                    }} 
+                                    className='relative text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'
+                                    aria-label='Shopping Cart'
+                                >
+                                    <BsCart4 size={22} />
+                                    {totalQty > 0 && (
+                                        <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white dark:ring-slate-950'>
+                                            {totalQty}
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Search bar — only shown on general browsing pages */}
+                        {!shouldHideMobileSearch && (
+                            <div className={`px-3 ${
+                                isHomePage ? 'pt-0.5 pb-2' : 'pb-2'
+                            }`}>
+                                <Search />
+                            </div>
                         )}
-
-                        <button 
-                            onClick={() => {
-                                if (isMobile) {
-                                    navigate('/cart');
-                                } else {
-                                    openCart();
-                                }
-                            }} 
-                            className='relative text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'
-                            aria-label='Shopping Cart'
-                        >
-                            <BsCart4 size={22} />
-                            {totalQty > 0 && (
-                                <span className='absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full ring-2 ring-white dark:ring-slate-950'>
-                                    {totalQty}
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Search bar — only shown on general browsing pages */}
-                {!shouldHideMobileSearch && (
-                    <div className={`px-3 ${
-                        isHomePage ? 'pt-0.5 pb-2' : 'pb-2'
-                    }`}>
-                        <Search />
-                    </div>
+                    </>
                 )}
 
             </div>
