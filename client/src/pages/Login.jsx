@@ -407,9 +407,12 @@ const Login = () => {
                 <span className="absolute text-2xl opacity-15 top-[55%] left-[38%] rotate-12 animate-[bounce_11s_ease-in-out_2.1s_infinite]">🫐</span>
             </div>
 
-            {/* ── Left panel: only visible on large screens ── */}
-            <div className="hidden lg:flex flex-col items-start justify-center flex-1 max-w-lg pr-16 z-10">
-                <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md rounded-2xl px-5 py-3 shadow-xl border border-white/40 mb-6">
+            {/* ── Main Content Container: Left Branding + Auth Card ── */}
+            <div className="w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 z-10">
+
+                {/* ── Left panel: only visible on large screens ── */}
+                <div className="hidden lg:flex flex-col items-start justify-center flex-1 max-w-lg">
+                    <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md rounded-2xl px-5 py-3 shadow-xl border border-white/40 mb-6">
                     <img src={snapitLogo} alt="Snapit" className="h-10 w-auto object-contain" />
                     <span className="h-5 w-px bg-slate-200" />
                     <span className="text-xs font-bold text-emerald-800 tracking-tight uppercase">9-Min Delivery</span>
@@ -955,6 +958,7 @@ const Login = () => {
                     </p>
 
                 </div>
+            </div>
             </div>
         </section>
     )
