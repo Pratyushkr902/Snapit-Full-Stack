@@ -407,43 +407,8 @@ const Login = () => {
                 <span className="absolute text-2xl opacity-15 top-[55%] left-[38%] rotate-12 animate-[bounce_11s_ease-in-out_2.1s_infinite]">🫐</span>
             </div>
 
-            {/* ── Main Content Container: Left Branding + Auth Card ── */}
-            <div className="w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 z-10">
-
-                {/* ── Left panel: only visible on large screens ── */}
-                <div className="hidden lg:flex flex-col items-start justify-center flex-1 max-w-lg">
-                    <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md rounded-2xl px-5 py-3 shadow-xl border border-white/40 mb-6">
-                    <img src={snapitLogo} alt="Snapit" className="h-10 w-auto object-contain" />
-                    <span className="h-5 w-px bg-slate-200" />
-                    <span className="text-xs font-bold text-emerald-800 tracking-tight uppercase">9-Min Delivery</span>
-                </div>
-
-                {/* Tagline */}
-                <h2 className="text-4xl font-black text-white leading-snug mb-4">
-                    Groceries at<br />
-                    <span className="text-yellow-300">lightning speed</span>
-                </h2>
-                <p className="text-emerald-100 text-base leading-relaxed mb-8 max-w-sm">
-                    Order fresh fruits, vegetables, dairy, snacks and daily essentials — delivered to your door in 9 minutes from Paliganj.
-                </p>
-
-                {/* Trust badges */}
-                <div className="flex flex-col gap-3">
-                    {[
-                        { icon: '🚀', label: '9-Minute Delivery', sub: 'Express delivery in Paliganj' },
-                        { icon: '🛡️', label: '100% Safe & Secure', sub: 'Encrypted payments & data' },
-                        { icon: '🎁', label: 'Exclusive Offers', sub: 'Save more on every order' },
-                    ].map((b, i) => (
-                        <div key={i} className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20">
-                            <span className="text-2xl">{b.icon}</span>
-                            <div>
-                                <p className="text-white font-bold text-sm">{b.label}</p>
-                                <p className="text-emerald-100 text-xs">{b.sub}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            {/* ── Main Content Container: Auth Card only (left branding panel removed — Capacitor WebView reports lg-wide viewport causing hidden lg:flex to fire on mobile) ── */}
+            <div className="w-full max-w-5xl mx-auto flex items-center justify-center z-10">
 
             {/* ── Auth Card ── */}
             <div className="w-full max-w-[420px] z-10">
