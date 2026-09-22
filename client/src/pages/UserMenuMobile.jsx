@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import secureStorage from '../utils/secureStorage'
 import ThemeToggle from '../components/ThemeToggle'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
+import { CURRENT_APP_VERSION, CURRENT_VERSION_CODE, PLAY_STORE_URL } from '../constants/appVersion'
 import {
   FiShoppingBag,
   FiHeart,
@@ -48,8 +49,28 @@ const UserMenuMobile = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const [copiedVersion, setCopiedVersion] = useState(false)
+  const [versionInfo, setVersionInfo] = useState({
+    hasUpdate: false,
+    latestVersion: CURRENT_APP_VERSION,
+    playStoreUrl: PLAY_STORE_URL
+  })
 
-  const APP_VERSION = 'v2.6.62'
+  useEffect(() => {
+    // Check if a newer version is live on Play Store
+    Axios({ url: '/api/app-version', method: 'GET' })
+      .then((res) => {
+        if (res.data?.success && res.data?.data) {
+          const { latestVersionCode, latestVersion, playStoreUrl } = res.data.data
+          const isNewer = Number(latestVersionCode) > CURRENT_VERSION_CODE
+          setVersionInfo({
+            hasUpdate: isNewer,
+            latestVersion: latestVersion || CURRENT_APP_VERSION,
+            playStoreUrl: playStoreUrl || PLAY_STORE_URL
+          })
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetchUserDetails().then((userData) => {
@@ -97,10 +118,21 @@ const UserMenuMobile = () => {
     }
   }
 
+  const handleUpdateClick = () => {
+    if (versionInfo.hasUpdate) {
+      window.open(versionInfo.playStoreUrl, '_blank')
+    } else {
+      navigator.clipboard?.writeText(`Snapit v${CURRENT_APP_VERSION} (Build ${CURRENT_VERSION_CODE})`)
+      setCopiedVersion(true)
+      toast.success(`App is up to date (v${CURRENT_APP_VERSION})`)
+      setTimeout(() => setCopiedVersion(false), 2000)
+    }
+  }
+
   const handleCopyVersion = () => {
-    navigator.clipboard?.writeText(`Snapit ${APP_VERSION} (Build 102)`)
+    navigator.clipboard?.writeText(`Snapit v${CURRENT_APP_VERSION} (Build ${CURRENT_VERSION_CODE})`)
     setCopiedVersion(true)
-    toast.success(`Copied Snapit ${APP_VERSION}`)
+    toast.success(`Copied Snapit v${CURRENT_APP_VERSION}`)
     setTimeout(() => setCopiedVersion(false), 2000)
   }
 
@@ -246,24 +278,52 @@ const UserMenuMobile = () => {
 
         {/* ── APP STATUS & APPEARANCE STRIP ── */}
         <div className='bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 divide-y divide-slate-100 dark:divide-slate-800/80 shadow-xs overflow-hidden'>
-          {/* App Update Row */}
+          {/* App Update Row (Blinkit style dynamic state) */}
           <div
-            onClick={handleCopyVersion}
-            className='flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors select-none'
+            onClick={handleUpdateClick}
+            className={`flex items-center justify-between p-3 cursor-pointer transition-colors select-none ${
+              versionInfo.hasUpdate
+                ? 'bg-amber-50/80 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/50'
+                : 'hover:bg-slate-50 dark:hover:bg-slate-850'
+            }`}
           >
             <div className='flex items-center gap-3'>
-              <div className='w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0'>
-                <FiCheck size={16} />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                versionInfo.hasUpdate
+                  ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-300'
+                  : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400'
+              }`}>
+                {versionInfo.hasUpdate ? (
+                  <FiRefreshCw className='animate-spin' style={{ animationDuration: '4s' }} size={16} />
+                ) : (
+                  <FiCheck size={16} />
+                )}
               </div>
               <div>
-                <p className='text-xs font-bold text-slate-900 dark:text-white leading-none'>App Up to Date</p>
-                <p className='text-[10px] text-slate-400 mt-0.5 font-medium'>Snapit Latest Release</p>
+                <p className={`text-xs font-bold leading-none ${
+                  versionInfo.hasUpdate
+                    ? 'text-amber-900 dark:text-amber-200'
+                    : 'text-slate-900 dark:text-white'
+                }`}>
+                  {versionInfo.hasUpdate ? 'App Update Available' : 'App is Up to Date'}
+                </p>
+                <p className='text-[10px] text-slate-400 mt-0.5 font-medium'>
+                  {versionInfo.hasUpdate ? 'Tap to update from Play Store' : 'Snapit Latest Release'}
+                </p>
               </div>
             </div>
-            <div className='flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-300 text-xs font-mono font-bold'>
-              <span>{APP_VERSION}</span>
-              {copiedVersion ? <FiCheck className='text-emerald-500' size={12} /> : <FiCopy size={12} />}
-            </div>
+
+            {versionInfo.hasUpdate ? (
+              <div className='flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-950 px-2.5 py-1 rounded-lg text-xs font-bold shadow-xs active:scale-95 transition-all'>
+                <span>v{versionInfo.latestVersion}</span>
+                <FiChevronRight size={13} />
+              </div>
+            ) : (
+              <div className='flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-300 text-xs font-mono font-bold'>
+                <span>v{CURRENT_APP_VERSION}</span>
+                {copiedVersion ? <FiCheck className='text-emerald-500' size={12} /> : <FiCopy size={12} />}
+              </div>
+            )}
           </div>
 
           {/* Theme Row */}
