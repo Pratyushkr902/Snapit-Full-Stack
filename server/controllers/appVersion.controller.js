@@ -6,15 +6,15 @@ export const getAppVersionController = async (req, res) => {
       error: false,
       data: {
         enabled: true,
-        latestVersion: "2.6.62",
-        latestVersionCode: 102,
+        latestVersion: "2.6.63",
+        latestVersionCode: 103,
         minRequiredVersionCode: 100,
         forceUpdate: false,
         remindIntervalHours: 1,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit-ashy.vercel.app/app-release.apk",
         title: "New Snapit Update Available! 🚀",
-        message: "A new version of Snapit (v2.6.62) is available with ultra-fast Redis caching, Blinkit-style profile, and faster image loading!",
+        message: "A new version of Snapit (v2.6.63) is available with ultra-fast Redis caching, Blinkit-style profile, and faster image loading!",
         releaseNotes: [
           "🛠️ Fixed app launch crash ('Snapit keeps stopping')",
           "📱 Full Android 15 Edge-to-Edge Display Support",
