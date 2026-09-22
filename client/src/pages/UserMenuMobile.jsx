@@ -36,7 +36,8 @@ import {
   FiRefreshCw,
   FiTrendingUp,
   FiHome,
-  FiLayers
+  FiLayers,
+  FiDollarSign
 } from 'react-icons/fi'
 import { IoArrowBack } from 'react-icons/io5'
 import { FaWhatsapp } from 'react-icons/fa'
