@@ -38,11 +38,19 @@ function resolveRedisConfig() {
         return null;
     }
 
-    // Detect unresolved Railway variable templates (e.g. ${{Redis.REDIS_URL}})
-    if (rawUrl.startsWith('${') || rawUrl === 'undefined' || rawUrl === 'null' || rawUrl.toUpperCase() === 'REDIS_URL') {
-        console.warn(`⚠️ [Cache] Redis variable "${rawUrl}" is an unresolved template or placeholder.`);
-        console.warn('   👉 Tip: Railway variable references (${{...}}) only work if Redis is in the SAME project as Snapit-Full-Stack.');
-        console.warn('   👉 If Redis is in another project, either add Redis to this project or copy the raw connection URL (redis://...).');
+    // Detect unresolved Railway variable templates (e.g. ${{Redis.REDIS_URL}} or empty substitution "redis://:@:")
+    if (
+        rawUrl.startsWith('${') ||
+        rawUrl === 'undefined' ||
+        rawUrl === 'null' ||
+        rawUrl.toUpperCase() === 'REDIS_URL' ||
+        rawUrl === 'redis://:@:' ||
+        rawUrl === 'redis://:@' ||
+        rawUrl === 'redis://' ||
+        rawUrl.startsWith('redis://:@:')
+    ) {
+        console.warn(`⚠️ [Cache] Redis variable "${rawUrl}" resolved to empty credentials.`);
+        console.warn('   👉 Please copy the real raw connection URL from your Redis service (e.g. redis://default:pass@host:port) or use ${{exciting-youthfulness.REDIS_URL}}.');
         return null;
     }
 
