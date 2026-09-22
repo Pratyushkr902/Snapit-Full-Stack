@@ -4,7 +4,6 @@ import { useSelector } from 'react-redux'
 import { IoArrowBack } from 'react-icons/io5'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
-import { useGlobalContext } from '../provider/GlobalProvider'
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -120,7 +119,6 @@ const Wallet = () => {
   const userRole = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
   const canWithdraw = ['RIDER', 'SELLER', 'RESTO_SELLER', 'ADMIN', 'SUPER_ADMIN'].includes(userRole)
 
-  const { } = useGlobalContext() || {}
 
   // ── Fetch wallet data ────────────────────────────────────────────────────────
   const fetchWallet = useCallback(async () => {
@@ -302,7 +300,6 @@ const Wallet = () => {
       }
 
       const order = orderRes.data.order
-      const planAmount = orderRes.data.amount
 
       const options = {
         key:         razorKey,
@@ -551,7 +548,7 @@ const Wallet = () => {
                   <div>
                     <div style={{ background:'linear-gradient(135deg,#fefce8,#fef9c3)', border:'2px solid #eab308', borderRadius:'18px', padding:'20px', marginBottom:'16px', textAlign:'center' }}>
                       <div style={{ fontSize:'48px', marginBottom:'8px' }}>👑</div>
-                      <h3 style={{ fontWeight:'900', color:'#92400e', fontSize:'20px', margin:'0 0 4px' }}>You're a Snapit Plus Member!</h3>
+                      <h3 style={{ fontWeight:'900', color:'#92400e', fontSize:'20px', margin:'0 0 4px' }}>You&apos;re a Snapit Plus Member!</h3>
                       {plusExpiry && (
                         <p style={{ color:'#b45309', fontSize:'13px', fontWeight:'600', margin:'4px 0 0' }}>
                           Active until {new Date(plusExpiry).toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' })}
