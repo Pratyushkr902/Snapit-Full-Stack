@@ -789,6 +789,9 @@ export const getPricingBreakdown = async (req, res) => {
 export const republishAllProducts = async (req, res) => {
     try {
         const result = await ProductModel.updateMany({ publish: false }, { $set: { publish: true } });
+        await cache.delPattern('prod_*');
+        await cache.delPattern('cat_*');
+        await cache.delPattern('batch_cats_*');
         return res.json({ success: true, message: `Re-published ${result.modifiedCount} products that were hidden.`, modifiedCount: result.modifiedCount });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
