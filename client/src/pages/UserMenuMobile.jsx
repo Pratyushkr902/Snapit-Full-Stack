@@ -10,6 +10,8 @@ import secureStorage from '../utils/secureStorage'
 import ThemeToggle from '../components/ThemeToggle'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { CURRENT_APP_VERSION, CURRENT_VERSION_CODE, PLAY_STORE_URL } from '../constants/appVersion'
+import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import {
   FiShoppingBag,
   FiHeart,
@@ -55,21 +57,55 @@ const UserMenuMobile = () => {
     playStoreUrl: PLAY_STORE_URL
   })
 
-  useEffect(() => {
-    // Check if a newer version is live on Play Store
-    Axios({ url: '/api/app-version', method: 'GET' })
-      .then((res) => {
-        if (res.data?.success && res.data?.data) {
-          const { latestVersionCode, latestVersion, playStoreUrl } = res.data.data
-          const isNewer = Number(latestVersionCode) > CURRENT_VERSION_CODE
-          setVersionInfo({
-            hasUpdate: isNewer,
-            latestVersion: latestVersion || CURRENT_APP_VERSION,
-            playStoreUrl: playStoreUrl || PLAY_STORE_URL
-          })
+  const checkAppVersion = async () => {
+    let installedCode = CURRENT_VERSION_CODE
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const appInfo = await CapacitorApp.getInfo()
+        if (appInfo?.build) {
+          const parsed = parseInt(appInfo.build, 10)
+          if (!isNaN(parsed) && parsed > 0) installedCode = parsed
         }
-      })
-      .catch(() => {})
+      }
+    } catch {
+      // fallback to CURRENT_VERSION_CODE
+    }
+
+    try {
+      const res = await Axios({ url: '/api/app-version', method: 'GET' })
+      if (res.data?.success && res.data?.data) {
+        const { latestVersionCode, latestVersion, playStoreUrl } = res.data.data
+        const isNewer = Number(latestVersionCode) > installedCode
+        setVersionInfo({
+          hasUpdate: isNewer,
+          latestVersion: latestVersion || CURRENT_APP_VERSION,
+          playStoreUrl: playStoreUrl || PLAY_STORE_URL
+        })
+      }
+    } catch {
+      // network offline
+    }
+  }
+
+  useEffect(() => {
+    checkAppVersion()
+
+    let listener = null
+    try {
+      CapacitorApp.addListener('appStateChange', (state) => {
+        if (state.isActive) {
+          checkAppVersion()
+        }
+      }).then(l => { listener = l }).catch(() => {})
+    } catch {
+      // browser environment
+    }
+
+    return () => {
+      if (listener && typeof listener.remove === 'function') {
+        listener.remove()
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -119,14 +155,24 @@ const UserMenuMobile = () => {
   }
 
   const handleUpdateClick = () => {
-    if (versionInfo.hasUpdate) {
-      window.open(versionInfo.playStoreUrl, '_blank')
-    } else {
-      navigator.clipboard?.writeText(`Snapit v${CURRENT_APP_VERSION} (Build ${CURRENT_VERSION_CODE})`)
-      setCopiedVersion(true)
-      toast.success(`App is up to date (v${CURRENT_APP_VERSION})`)
-      setTimeout(() => setCopiedVersion(false), 2000)
+    const playStoreHttp = versionInfo.playStoreUrl || PLAY_STORE_URL
+    const marketUrl = 'market://details?id=com.snapit.grocery'
+    try {
+      window.location.href = marketUrl
+      setTimeout(() => {
+        window.open(playStoreHttp, '_system')
+      }, 500)
+    } catch {
+      window.open(playStoreHttp, '_system')
     }
+  }
+
+  const handleCopyVersion = (e) => {
+    e?.stopPropagation?.()
+    navigator.clipboard?.writeText(`Snapit v${CURRENT_APP_VERSION} (Build ${CURRENT_VERSION_CODE})`)
+    setCopiedVersion(true)
+    toast.success(`App is up to date (v${CURRENT_APP_VERSION})`)
+    setTimeout(() => setCopiedVersion(false), 2000)
   }
 
   const initials = (user?.name || user?.mobile || 'S')
@@ -312,7 +358,11 @@ const UserMenuMobile = () => {
                 <FiChevronRight size={13} />
               </div>
             ) : (
-              <div className='flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-300 text-xs font-mono font-bold'>
+              <div
+                onClick={handleCopyVersion}
+                title="Tap to copy version"
+                className='flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-300 text-xs font-mono font-bold transition-colors'
+              >
                 <span>v{CURRENT_APP_VERSION}</span>
                 {copiedVersion ? <FiCheck className='text-emerald-500' size={12} /> : <FiCopy size={12} />}
               </div>
