@@ -115,6 +115,7 @@ const Wallet = () => {
   const [plusLoading,  setPlusLoading]  = useState(false)
   const [selectedPlan, setSelectedPlan] = useState('monthly')
   const [isPlusMember, setIsPlusMember] = useState(false)
+  const [plusExpiry,   setPlusExpiry]   = useState(null)
   const user = useSelector(state => state.user)
   const userRole = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
   const canWithdraw = ['RIDER', 'SELLER', 'RESTO_SELLER', 'ADMIN', 'SUPER_ADMIN'].includes(userRole)

@@ -54,7 +54,7 @@ const UserMenu = ({ close }) => {
       Axios({ ...SummaryApi.logout }).catch(() => {})
       toast.success("Logged out successfully")
       navigate("/login", { replace: true })
-    } catch (error) {
+    } catch {
       if (close) close()
       dispatch(logout())
       localStorage.removeItem('accessToken')

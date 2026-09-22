@@ -92,7 +92,7 @@ const UserMenuMobile = () => {
       Axios({ ...SummaryApi.logout }).catch(() => {})
       toast.success("Logged out successfully")
       navigate("/login", { replace: true })
-    } catch (error) {
+    } catch {
       dispatch(logout())
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
@@ -109,7 +109,7 @@ const UserMenuMobile = () => {
     if (navigator.share) {
       try {
         await navigator.share(shareData)
-      } catch (err) {
+      } catch {
         // User cancelled share
       }
     } else {
