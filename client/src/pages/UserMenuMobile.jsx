@@ -32,7 +32,6 @@ import {
   FiLogOut,
   FiChevronRight,
   FiHelpCircle,
-  FiCopy,
   FiCheck,
   FiGrid,
   FiUpload,
@@ -50,7 +49,6 @@ const UserMenuMobile = () => {
   const role = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const [copiedVersion, setCopiedVersion] = useState(false)
   const [versionInfo, setVersionInfo] = useState({
     hasUpdate: false,
     latestVersion: CURRENT_APP_VERSION,
@@ -165,14 +163,6 @@ const UserMenuMobile = () => {
     } catch {
       window.open(playStoreHttp, '_system')
     }
-  }
-
-  const handleCopyVersion = (e) => {
-    e?.stopPropagation?.()
-    navigator.clipboard?.writeText(`Snapit v${CURRENT_APP_VERSION} (Build ${CURRENT_VERSION_CODE})`)
-    setCopiedVersion(true)
-    toast.success(`App is up to date (v${CURRENT_APP_VERSION})`)
-    setTimeout(() => setCopiedVersion(false), 2000)
   }
 
   const initials = (user?.name || user?.mobile || 'S')
@@ -354,18 +344,11 @@ const UserMenuMobile = () => {
 
             {versionInfo.hasUpdate ? (
               <div className='flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-950 px-2.5 py-1 rounded-lg text-xs font-bold shadow-xs active:scale-95 transition-all'>
-                <span>v{versionInfo.latestVersion}</span>
+                <span>Update</span>
                 <FiChevronRight size={13} />
               </div>
             ) : (
-              <div
-                onClick={handleCopyVersion}
-                title="Tap to copy version"
-                className='flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-300 text-xs font-mono font-bold transition-colors'
-              >
-                <span>v{CURRENT_APP_VERSION}</span>
-                {copiedVersion ? <FiCheck className='text-emerald-500' size={12} /> : <FiCopy size={12} />}
-              </div>
+              <FiChevronRight className='text-slate-400' size={16} />
             )}
           </div>
 
