@@ -52,14 +52,43 @@ const Header = ({ openCart }) => {
     // restaurant page.
     const { grandCount: foodGrandCount, grandTotal: foodGrandTotal } = useFullCart()
 
-    // Routes that have their own dedicated search bars or full-page flows (search page must show search bar)
-    const hideMobileSearchRoutes = [
-        '/food', '/grocery', '/pharmacy', '/checkout', '/food-checkout',
-        '/wallet', '/cart', '/success', '/cancel', '/dashboard',
-        '/public-tracking', '/track-order', '/restaurant', '/rider', '/join-rider'
+    // Routes where search bar is NOT required (feature pages, membership, rewards, checkout, utility)
+    const hideSearchRoutes = [
+        '/snapit-plus',
+        '/streak',
+        '/refer',
+        '/subscriptions',
+        '/wishlist',
+        '/deals',
+        '/wallet',
+        '/checkout',
+        '/food-checkout',
+        '/cart',
+        '/success',
+        '/cancel',
+        '/dashboard',
+        '/public-tracking',
+        '/track-order',
+        '/restaurant',
+        '/rider',
+        '/rider-panel',
+        '/join-rider',
+        '/user',
+        '/privacy-policy',
+        '/select-location',
+        '/address',
+        '/pharmacy',
+        '/food',
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/reset-password',
+        '/verification-otp',
+        '/verify-email'
     ]
-    const shouldHideMobileSearch = hideMobileSearchRoutes.some(path =>
-        location.pathname === path || location.pathname.startsWith(path + '/')
+    const normalizedPath = (location.pathname || '').toLowerCase()
+    const shouldHideSearch = hideSearchRoutes.some(path =>
+        normalizedPath === path || normalizedPath.startsWith(path + '/')
     )
 
     useEffect(() => {
@@ -125,10 +154,14 @@ const Header = ({ openCart }) => {
                     </div>
                 </div>
 
-                {/* Search — grows to fill space */}
-                <div className='flex-1 max-w-xl'>
-                    <Search />
-                </div>
+                {/* Search — only on shopping / browsing pages */}
+                {!shouldHideSearch ? (
+                    <div className='flex-1 max-w-xl'>
+                        <Search />
+                    </div>
+                ) : (
+                    <div className='flex-1' />
+                )}
 
                 {/* Right actions */}
                 <div className='flex items-center gap-3 flex-shrink-0'>
@@ -287,7 +320,7 @@ const Header = ({ openCart }) => {
                         </div>
 
                         {/* Search bar — only shown on general browsing pages */}
-                        {!shouldHideMobileSearch && (
+                        {!shouldHideSearch && (
                             <div className={`px-3 ${
                                 isHomePage ? 'pt-0.5 pb-2' : 'pb-2'
                             }`}>
