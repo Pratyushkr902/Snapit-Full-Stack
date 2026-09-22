@@ -1,8 +1,6 @@
 import ProductModel from "../models/product.model.js";
 import mongoose from "mongoose";
-import NodeCache from "node-cache";
-
-const productCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
+import cache from "../config/cache.js";
 
 // Fields returned in list queries (not full details)
 const LIST_FIELDS = 'name image imageThumbnail category subCategory unit stock price sellerPrice snapitMargin sellingPrice discount publish flashSale store_inventory';
@@ -108,7 +106,9 @@ export const createProductController = async (request, response) => {
         });
 
         const saveProduct = await product.save();
-        productCache.flushAll();
+        await cache.delPattern('prod_*');
+        await cache.delPattern('cat_*');
+        await cache.delPattern('batch_cats_*');
         return response.json({
             message: "Product Created Successfully",
             data: saveProduct,
@@ -127,7 +127,7 @@ export const getProductController = async (request, response) => {
         if (!limit) limit = 100;
 
         const cacheKey = `prod_${page}_${limit}_${search || 'all'}_${inStockOnly ? '1' : '0'}`;
-        const cached = productCache.get(cacheKey);
+        const cached = await cache.get(cacheKey);
         if (cached) return response.json(cached);
 
         let query = search ? { $text: { $search: search } } : {};
@@ -147,7 +147,7 @@ export const getProductController = async (request, response) => {
             totalNoPage: Math.ceil(totalCount / limit),
             data: data.map(formatProductOutput)
         };
-        productCache.set(cacheKey, result);
+        await cache.set(cacheKey, result, 60);
         return response.json(result);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -161,7 +161,7 @@ export const getProductByCategory = async (request, response) => {
         if (!mongoose.Types.ObjectId.isValid(id)) return response.status(400).json({ message: "Invalid Category ID", error: true, success: false });
 
         const cacheKey = `cat_${id}`;
-        const cached = productCache.get(cacheKey);
+        const cached = await cache.get(cacheKey);
         if (cached) {
             return response.json(cached);
         }
@@ -176,7 +176,7 @@ export const getProductByCategory = async (request, response) => {
             message: "category product list", error: false, success: true,
             data: product.map(formatProductOutput)
         };
-        productCache.set(cacheKey, result, 120);
+        await cache.set(cacheKey, result, 120);
         return response.json(result);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -192,7 +192,7 @@ export const getProductsByCategories = async (request, response) => {
         if (invalidId) return response.status(400).json({ message: `Invalid category ID: ${invalidId}`, error: true, success: false });
 
         const cacheKey = `batch_cats_${categoryIds.slice().sort().join('_')}_lim${perCategoryLimit}`;
-        const cached = productCache.get(cacheKey);
+        const cached = await cache.get(cacheKey);
         if (cached) {
             return response.json(cached);
         }
@@ -219,7 +219,7 @@ export const getProductsByCategories = async (request, response) => {
         }
 
         const result = { message: "Products grouped by category", data: grouped, error: false, success: true };
-        productCache.set(cacheKey, result, 120);
+        await cache.set(cacheKey, result, 120);
         return response.json(result);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -235,7 +235,7 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
         if (!limit) limit = 100;
 
         const cacheKey = `cat_sub_${categoryId}_${subCategoryId || 'all'}_p${page}_l${limit}`;
-        const cached = productCache.get(cacheKey);
+        const cached = await cache.get(cacheKey);
         if (cached) {
             return response.json(cached);
         }
@@ -274,7 +274,7 @@ export const getProductByCategoryAndSubCategory = async (request, response) => {
             data: data.map(formatProductOutput),
             totalCount: dataCount, page, limit
         };
-        productCache.set(cacheKey, result, 120);
+        await cache.set(cacheKey, result, 120);
         return response.json(result);
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });
@@ -338,7 +338,9 @@ export const updateProductDetails = async (request, response) => {
             { $set: updateFields },
             { new: true, runValidators: true }
         ).populate('category subCategory');
-        productCache.flushAll();
+        await cache.delPattern('prod_*');
+        await cache.delPattern('cat_*');
+        await cache.delPattern('batch_cats_*');
 
         return response.json({ message: "updated successfully", data: updateProduct, error: false, success: true });
     } catch (error) {
@@ -370,7 +372,9 @@ export const deleteProductDetails = async (request, response) => {
         }
 
         const deleteProduct = await ProductModel.deleteOne({ _id });
-        productCache.flushAll();
+        await cache.delPattern('prod_*');
+        await cache.delPattern('cat_*');
+        await cache.delPattern('batch_cats_*');
         return response.json({ message: "Delete successfully", error: false, success: true, data: deleteProduct });
     } catch (error) {
         return response.status(500).json({ message: error.message || error, error: true, success: false });

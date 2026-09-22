@@ -1,10 +1,8 @@
 import RestaurantModel from '../models/restaurant.model.js'
 import MenuItemModel from '../models/MenuItem.model.js'
 import FestiveOfferModel from '../models/festiveOffer.model.js'
-import NodeCache from 'node-cache'
 import mongoose from 'mongoose'
-
-const cache = new NodeCache({ stdTTL: 60, checkperiod: 120 })
+import cache from '../config/cache.js'
 
 const escapeRegex = (str) => {
   if (typeof str !== 'string') return ''
@@ -19,7 +17,7 @@ export async function getAllRestaurants(req, res) {
     const safeCuisine = typeof cuisine === 'string' ? escapeRegex(cuisine) : ''
 
     const cacheKey = `all_${isOpen}_${safeCuisine}_${safeSearch}`
-    const cached = cache.get(cacheKey)
+    const cached = await cache.get(cacheKey)
     if (cached) return res.json(cached)
 
     const filter = { isActive: true }
@@ -33,7 +31,7 @@ export async function getAllRestaurants(req, res) {
       .lean()
 
     const response = { success: true, data: restaurants, message: 'Restaurants fetched successfully' }
-    cache.set(cacheKey, response)
+    await cache.set(cacheKey, response, 60)
     return res.json(response)
   } catch (err) {
     console.error(err)
@@ -49,7 +47,7 @@ export async function getRestaurantById(req, res) {
     }
 
     const cacheKey = `restaurant_${req.params.id}`
-    const cached = cache.get(cacheKey)
+    const cached = await cache.get(cacheKey)
     if (cached) return res.json(cached)
 
     const restaurant = await RestaurantModel.findById(req.params.id).lean()
@@ -125,7 +123,7 @@ export async function getRestaurantById(req, res) {
     const menu = categories.map(cat => ({ category: cat, items: categoryMap[cat] || [] }))
 
     const response = { success: true, data: { restaurant, menu }, message: 'Restaurant details fetched' }
-    cache.set(cacheKey, response)
+    await cache.set(cacheKey, response, 60)
     return res.json(response)
   } catch (err) {
     console.error(err)
@@ -138,7 +136,8 @@ export async function createRestaurant(req, res) {
   try {
     const restaurant = new RestaurantModel(req.body)
     await restaurant.save()
-    cache.flushAll()
+    await cache.delPattern('all_*')
+    await cache.delPattern('restaurant_*')
     return res.status(201).json({ success: true, data: restaurant, message: 'Restaurant created' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -154,8 +153,8 @@ export async function updateRestaurant(req, res) {
       req.params.id, req.body, { returnDocument: 'after', new: true, runValidators: true }
     )
     if (!updated) return res.status(404).json({ success: false, message: 'Restaurant not found' })
-    cache.del(`restaurant_${req.params.id}`)
-    cache.flushAll()
+    await cache.del(`restaurant_${req.params.id}`)
+    await cache.delPattern('all_*')
     return res.json({ success: true, data: updated, message: 'Restaurant updated' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -216,8 +215,8 @@ export async function addMenuItem(req, res) {
       $addToSet: { menuCategories: item.category },
     })
 
-    cache.del(`restaurant_${req.params.id}`)
-    cache.flushAll()
+    await cache.del(`restaurant_${req.params.id}`)
+    await cache.delPattern('all_*')
     return res.status(201).json({ success: true, data: item, message: 'Menu item created' })
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message })
@@ -237,8 +236,8 @@ export async function updateMenuItem(req, res) {
       req.params.itemId, req.body, { returnDocument: 'after', new: true, runValidators: true }
     )
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
-    cache.del(`restaurant_${item.restaurantId}`)
-    cache.flushAll()
+    await cache.del(`restaurant_${item.restaurantId}`)
+    await cache.delPattern('all_*')
     return res.json({ success: true, data: item, message: 'Menu item updated' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -256,8 +255,8 @@ export async function deleteMenuItem(req, res) {
 
     const item = await MenuItemModel.findByIdAndDelete(req.params.itemId)
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' })
-    cache.del(`restaurant_${item.restaurantId}`)
-    cache.flushAll()
+    await cache.del(`restaurant_${item.restaurantId}`)
+    await cache.delPattern('all_*')
     return res.json({ success: true, message: 'Menu item deleted' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -277,8 +276,8 @@ export async function createFoodItem(req, res) {
     await RestaurantModel.findByIdAndUpdate(restaurantId, {
       $addToSet: { menuCategories: item.category },
     })
-    cache.del(`restaurant_${restaurantId}`)
-    cache.flushAll()
+    await cache.del(`restaurant_${restaurantId}`)
+    await cache.delPattern('all_*')
     return res.status(201).json({ success: true, data: item, message: 'Food item created' })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })
@@ -290,8 +289,8 @@ export async function updateFoodItem(req, res) {
   try {
     const updated = await MenuItemModel.findByIdAndUpdate(req.params.id, req.body, { new: true })
     if (updated) {
-      cache.del(`restaurant_${updated.restaurantId}`)
-      cache.flushAll()
+      await cache.del(`restaurant_${updated.restaurantId}`)
+      await cache.delPattern('all_*')
     }
     return res.json({ success: true, data: updated, message: 'Food item updated' })
   } catch (err) {
@@ -358,7 +357,8 @@ export async function seedDemoRestaurants(req, res) {
       },
     ]
     await RestaurantModel.insertMany(demos)
-    cache.flushAll()
+    await cache.delPattern('all_*')
+    await cache.delPattern('restaurant_*')
     return res.json({ success: true, message: 'Demo restaurants seeded', count: demos.length })
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message })

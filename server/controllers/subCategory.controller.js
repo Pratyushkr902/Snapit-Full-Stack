@@ -1,8 +1,6 @@
 import SubCategoryModel from "../models/subCategory.model.js";
 import mongoose from "mongoose";
-import NodeCache from "node-cache";
-
-const subCategoryCache = new NodeCache({ stdTTL: 120, checkperiod: 60 });
+import cache from "../config/cache.js";
 
 export const AddSubCategoryController = async(request,response)=>{
     try {
@@ -24,7 +22,8 @@ export const AddSubCategoryController = async(request,response)=>{
 
         const createSubCategory = new SubCategoryModel(payload)
         const save = await createSubCategory.save()
-        subCategoryCache.flushAll()
+        await cache.delPattern('subcategory:*');
+        await cache.del('all_subcategories');
 
         return response.json({
             message : "Sub Category Created",
@@ -44,7 +43,7 @@ export const AddSubCategoryController = async(request,response)=>{
 
 export const getSubCategoryController = async(request,response)=>{
     try {
-        const cached = subCategoryCache.get('all_subcategories')
+        const cached = await cache.get('all_subcategories')
         if (cached) {
             return response.json({
                 message : "Sub Category data",
@@ -56,7 +55,7 @@ export const getSubCategoryController = async(request,response)=>{
         }
 
         const data = await SubCategoryModel.find().sort({createdAt : -1}).populate('category').lean()
-        subCategoryCache.set('all_subcategories', data)
+        await cache.set('all_subcategories', data, 120)
 
         return response.json({
             message : "Sub Category data",
@@ -99,7 +98,8 @@ export const updateSubCategoryController = async(request,response)=>{
             })
         }
 
-        subCategoryCache.flushAll()
+        await cache.delPattern('subcategory:*');
+        await cache.del('all_subcategories');
 
         return response.json({
             message : 'Updated Successfully',
@@ -130,7 +130,8 @@ export const deleteSubCategoryController = async(request,response)=>{
         }
 
         const deleteSub = await SubCategoryModel.findByIdAndDelete(_id)
-        subCategoryCache.flushAll()
+        await cache.delPattern('subcategory:*');
+        await cache.del('all_subcategories');
 
         return response.json({
             message : "Delete successfully",

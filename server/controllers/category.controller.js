@@ -2,9 +2,7 @@ import CategoryModel from "../models/category.model.js";
 import SubCategoryModel from "../models/subCategory.model.js";
 import ProductModel from "../models/product.model.js";
 import mongoose from "mongoose";
-import NodeCache from "node-cache";
-
-const categoryCache = new NodeCache({ stdTTL: 120, checkperiod: 60 });
+import cache from "../config/cache.js";
 
 export const AddCategoryController = async(request,response)=>{
     try {
@@ -37,7 +35,8 @@ export const AddCategoryController = async(request,response)=>{
             })
         }
 
-        categoryCache.flushAll() // Invalidate cache on mutation
+        await cache.delPattern('category:*');
+        await cache.del('all_categories');
 
         return response.json({
             message : "Add Category",
@@ -57,7 +56,7 @@ export const AddCategoryController = async(request,response)=>{
 
 export const getCategoryController = async(request,response)=>{
     try {
-        const cached = categoryCache.get('all_categories')
+        const cached = await cache.get('all_categories')
         if (cached) {
             return response.json({
                 data : cached,
@@ -68,7 +67,7 @@ export const getCategoryController = async(request,response)=>{
         }
 
         const data = await CategoryModel.find().sort({ createdAt : -1 }).lean()
-        categoryCache.set('all_categories', data)
+        await cache.set('all_categories', data, 120)
 
         return response.json({
             data : data,
@@ -110,7 +109,8 @@ export const updateCategoryController = async(request,response)=>{
             updateFields.imageThumbnail = imageThumbnail
         }
         const update = await CategoryModel.findByIdAndUpdate(_id, updateFields, { new: true })
-        categoryCache.flushAll()
+        await cache.delPattern('category:*');
+        await cache.del('all_categories');
 
         return response.json({
             message : "Updated Category",
@@ -156,7 +156,8 @@ export const deleteCategoryController = async(request,response)=>{
         }
 
         const deleteCategory = await CategoryModel.deleteOne({ _id : _id})
-        categoryCache.flushAll()
+        await cache.delPattern('category:*');
+        await cache.del('all_categories');
 
         return response.json({
             message : "Delete category successfully",

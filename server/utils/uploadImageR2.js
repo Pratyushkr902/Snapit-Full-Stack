@@ -37,6 +37,7 @@ const uploadImageClodinary = async (image) => {
         Key: fileName,
         Body: buffer,
         ContentType: mimeType,
+        CacheControl: 'public, max-age=31536000, immutable',
     }));
 
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${fileName}`;
@@ -57,6 +58,7 @@ const uploadImageClodinary = async (image) => {
             Key: thumbFileName,
             Body: thumbBuffer,
             ContentType: 'image/webp',
+            CacheControl: 'public, max-age=31536000, immutable',
         }));
         thumbnailUrl = `${process.env.R2_PUBLIC_URL}/${thumbFileName}`;
     } catch (thumbErr) {
