@@ -56,7 +56,7 @@ const Header = ({ openCart }) => {
     const hideMobileSearchRoutes = [
         '/food', '/grocery', '/pharmacy', '/checkout', '/food-checkout',
         '/wallet', '/cart', '/success', '/cancel', '/dashboard',
-        '/public-tracking', '/track-order', '/restaurant'
+        '/public-tracking', '/track-order', '/restaurant', '/rider', '/join-rider'
     ]
     const shouldHideMobileSearch = hideMobileSearchRoutes.some(path =>
         location.pathname === path || location.pathname.startsWith(path + '/')

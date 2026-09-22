@@ -118,12 +118,18 @@ export default function RiderJoinPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 pb-16">
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+      <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button
             type="button"
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-slate-300 hover:text-white text-sm font-semibold transition"
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1)
+              } else {
+                navigate('/')
+              }
+            }}
+            className="flex items-center gap-2 text-slate-300 hover:text-white text-sm font-semibold transition active:scale-95"
           >
             <FaArrowLeft className="text-base" />
             <span>Back</span>

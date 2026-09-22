@@ -48,7 +48,11 @@ function App() {
 
   const currentNormalizedRoute = (location.pathname + (location.hash || "")).toLowerCase();
 
-  const isDashboard = currentNormalizedRoute.includes('dashboard') || currentNormalizedRoute.includes('rider-panel');
+  const isDashboard = 
+    currentNormalizedRoute.includes('dashboard') || 
+    currentNormalizedRoute.includes('rider-panel') ||
+    currentNormalizedRoute.includes('rider/join') ||
+    currentNormalizedRoute.includes('join-rider');
 
   // Hide cart slide-over on checkout, cart, and food pages
   const isCheckoutOrCartPage = 
