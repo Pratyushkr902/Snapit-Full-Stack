@@ -358,7 +358,7 @@ const Login = () => {
 
     const activePhoneForReset = mobileNumber || regMobile || ''
     const whatsappResetUrl = `https://wa.me/919472026580?text=${encodeURIComponent(
-        `Hi Snapit Support, I forgot my 4-digit PIN for mobile: ${activePhoneForReset || 'my account'}. Please help me reset it.`
+        `Hi Snapit Support, I forgot my PIN for mobile: ${activePhoneForReset || 'my account'}. Please help me reset it.`
     )}`
 
     const whatsappSupportUrl = `https://wa.me/919472026580?text=${encodeURIComponent(
@@ -366,17 +366,17 @@ const Login = () => {
     )}`
 
     return (
-        <section className="relative min-h-screen overflow-y-auto px-4 py-12 flex flex-col items-center justify-center">
+        <section className="relative min-h-[100dvh] w-full bg-gradient-to-br from-emerald-600 via-green-500 to-teal-400 overflow-y-auto px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start">
 
-            {/* ── BACKGROUND: Snapit green gradient (Blinkit / Zepto style) ── */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-green-500 to-teal-400" />
+            {/* ── BACKGROUND: Snapit green gradient fixed behind everything ── */}
+            <div className="fixed inset-0 bg-gradient-to-br from-emerald-600 via-green-500 to-teal-400 pointer-events-none" />
 
-            {/* ── Subtle radial light bloom at top-right (depth) ── */}
-            <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-800/30 rounded-full blur-3xl pointer-events-none" />
+            {/* ── Subtle radial light bloom (fixed) ── */}
+            <div className="fixed -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="fixed -bottom-24 -left-24 w-96 h-96 bg-emerald-800/30 rounded-full blur-3xl pointer-events-none" />
 
-            {/* ── Floating grocery items — purely decorative ── */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">
+            {/* ── Floating grocery items — purely decorative (fixed) ── */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">
                 {/* Row 1 — top scatter */}
                 <span className="absolute text-4xl opacity-25 top-6 left-[6%] rotate-12 animate-[bounce_6s_ease-in-out_infinite]">🥛</span>
                 <span className="absolute text-3xl opacity-20 top-12 left-[22%] -rotate-6 animate-[bounce_7.5s_ease-in-out_1s_infinite]">🧀</span>
@@ -407,12 +407,9 @@ const Login = () => {
                 <span className="absolute text-2xl opacity-15 top-[55%] left-[38%] rotate-12 animate-[bounce_11s_ease-in-out_2.1s_infinite]">🫐</span>
             </div>
 
-            {/* ── Main Content Container: Auth Card only (left branding panel removed — Capacitor WebView reports lg-wide viewport causing hidden lg:flex to fire on mobile) ── */}
-            <div className="w-full max-w-5xl mx-auto flex items-center justify-center z-10">
-
-            {/* ── Auth Card ── */}
-            <div className="w-full max-w-[420px] z-10">
-                <div className="bg-white rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8">
+            {/* ── Main Content Container: Auth Card ── */}
+            <div className="w-full max-w-[420px] mx-auto my-auto py-2 z-10">
+                <div className="bg-white rounded-3xl shadow-2xl border border-white/60 p-5 sm:p-8">
 
                     {/* Brand Header & Return Button */}
                     <div className="flex items-center justify-between mb-6">
@@ -490,7 +487,7 @@ const Login = () => {
                                     <div>
                                         <h2 className="text-lg font-bold text-gray-900">Welcome Back</h2>
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Enter your mobile number and 4-digit PIN to continue.
+                                            Enter your mobile number and PIN to continue.
                                         </p>
                                     </div>
 
@@ -501,7 +498,7 @@ const Login = () => {
                                         </label>
                                         <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
                                             <span className="text-sm font-bold text-gray-700 mr-2 flex items-center gap-1 select-none border-r border-gray-200 pr-2">
-                                                +91
+                                                 +91
                                             </span>
                                             <input
                                                 type="tel"
@@ -517,11 +514,11 @@ const Login = () => {
                                         </div>
                                     </div>
 
-                                    {/* 4-Digit PIN */}
+                                    {/* PIN */}
                                     <div>
                                         <div className="flex items-center justify-between mb-1.5">
                                             <label className="block text-xs font-semibold text-gray-700">
-                                                4-Digit PIN <span className="text-rose-500">*</span>
+                                                PIN <span className="text-rose-500">*</span>
                                             </label>
                                             <a
                                                 href={whatsappResetUrl}
@@ -538,10 +535,10 @@ const Login = () => {
                                                 type={showPin ? "text" : "password"}
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
-                                                maxLength={4}
+                                                maxLength={8}
                                                 value={pin}
                                                 onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                                                placeholder="Enter your 4-digit PIN"
+                                                placeholder="Enter your PIN"
                                                 className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400 tracking-wider"
                                             />
                                             <button
@@ -604,7 +601,7 @@ const Login = () => {
                                     <div>
                                         <h2 className="text-lg font-bold text-gray-900">Create Account</h2>
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Instant signup. Just your name, mobile, and a 4-digit PIN.
+                                            Instant signup. Just your name, mobile, and a secure PIN.
                                         </p>
                                     </div>
 
@@ -652,7 +649,7 @@ const Login = () => {
                                     {/* Set 4-Digit PIN */}
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                            Set 4-Digit PIN <span className="text-rose-500">*</span>
+                                            Set Your PIN <span className="text-rose-500">*</span>
                                         </label>
                                         <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-12 focus-within:border-green-600 focus-within:bg-white transition-all">
                                             <MdLockOutline className="text-gray-400 text-lg mr-2 flex-shrink-0" />
@@ -660,10 +657,10 @@ const Login = () => {
                                                 type={showRegPin ? "text" : "password"}
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
-                                                maxLength={4}
+                                                maxLength={8}
                                                 value={regPin}
                                                 onChange={e => setRegPin(e.target.value.replace(/\D/g, ''))}
-                                                placeholder="Choose a 4-digit PIN (e.g. 1234)"
+                                                placeholder="Choose a PIN (4–8 digits)"
                                                 className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 placeholder-gray-400 tracking-wider"
                                                 required
                                             />
@@ -916,7 +913,6 @@ const Login = () => {
                     </p>
 
                 </div>
-            </div>
             </div>
         </section>
     )
