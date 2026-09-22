@@ -154,3 +154,4 @@ export default {
     delPattern: delCachePattern,
     flushAll: flushAllCache,
 };
+
