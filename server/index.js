@@ -462,37 +462,6 @@ app.get("/health", (req, res) => {
     })
 })
 
-// ─── TEMP DIAGNOSTIC — remove after debugging invoice email issue ────────────
-app.get("/debug-brevo-test", async (req, res) => {
-    try {
-        const testEmail = req.query.to
-        if (!testEmail) return res.status(400).json({ error: 'Add ?to=youremail@example.com to the URL' })
-        const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'api-key': process.env.BREVO_API_KEY
-            },
-            body: JSON.stringify({
-                sender: { name: 'Snapit', email: 'snapitxpress@gmail.com' },
-                to: [{ email: testEmail }],
-                subject: 'Snapit Brevo Test',
-                htmlContent: '<p>This is a test email from the debug endpoint.</p>'
-            })
-        })
-        const data = await brevoResponse.json()
-        return res.status(brevoResponse.status).json({
-            brevo_status: brevoResponse.status,
-            brevo_ok:     brevoResponse.ok,
-            brevo_response: data,
-            api_key_present: !!process.env.BREVO_API_KEY,
-            api_key_prefix:  process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.slice(0, 12) + '...' : null
-        })
-    } catch (error) {
-        return res.status(500).json({ error: error.message })
-    }
-})
-
 // ─── API 404 HANDLER ────────────────────────────────────────────────────────
 // Ensure unmatched /api routes return JSON 404 instead of SPA HTML index
 app.all('/api/{*splat}', (req, res) => {
@@ -500,6 +469,20 @@ app.all('/api/{*splat}', (req, res) => {
         success: false,
         error: true,
         message: `API endpoint '${req.method} ${req.originalUrl}' not found.`
+    })
+})
+
+// ─── CENTRALIZED SECURE ERROR HANDLER ────────────────────────────────────────
+app.use((err, req, res, next) => {
+    console.error(`[Unhandled Error] ${req.method} ${req.originalUrl}:`, err.message || err)
+    if (res.headersSent) {
+        return next(err)
+    }
+    const isProd = process.env.NODE_ENV === 'production'
+    return res.status(err.status || err.statusCode || 500).json({
+        success: false,
+        error: true,
+        message: isProd ? 'Internal Server Error' : (err.message || 'Something went wrong')
     })
 })
 
