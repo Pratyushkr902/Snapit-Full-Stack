@@ -129,13 +129,6 @@ const UserMenuMobile = () => {
     }
   }
 
-  const handleCopyVersion = () => {
-    navigator.clipboard?.writeText(`Snapit v${CURRENT_APP_VERSION} (Build ${CURRENT_VERSION_CODE})`)
-    setCopiedVersion(true)
-    toast.success(`Copied Snapit v${CURRENT_APP_VERSION}`)
-    setTimeout(() => setCopiedVersion(false), 2000)
-  }
-
   const initials = (user?.name || user?.mobile || 'S')
     .split(' ')
     .map(n => n[0])
@@ -886,18 +879,10 @@ const UserMenuMobile = () => {
         </div>
 
         {/* ── FOOTER BRANDING (Blinkit Style) ── */}
-        <div className='pt-6 pb-2 text-center space-y-1.5 select-none'>
+        <div className='pt-6 pb-2 text-center space-y-1 select-none'>
           <h4 className='text-lg font-black tracking-tight text-slate-400 dark:text-slate-600 uppercase'>
             Snapit
           </h4>
-          <button
-            type='button'
-            onClick={handleCopyVersion}
-            className='inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium hover:text-slate-600 dark:hover:text-slate-300 transition-colors'
-          >
-            <span>{APP_VERSION} (102)</span>
-            <FiCopy size={11} />
-          </button>
           <p className='text-[11px] text-slate-400/80 dark:text-slate-600 font-medium'>
             Made with ❤️ for Paliganj, Bihar
           </p>
