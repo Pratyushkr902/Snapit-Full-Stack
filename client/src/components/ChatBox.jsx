@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   IoChatbubbleEllipses,
   IoClose,
@@ -57,6 +57,8 @@ export default function ChatBox() {
   const user = useSelector(state => state.user)
   const reduxOrders = useSelector(state => state.orders?.order || [])
   const navigate = useNavigate()
+  const location = useLocation()
+  const isHomeScreen = location.pathname === '/' || location.pathname === ''
 
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([])
@@ -490,8 +492,8 @@ export default function ChatBox() {
 
   return (
     <>
-      {/* ── FLOATING TRIGGER BUTTON (Blinkit / Zepto / Zomato style) ── */}
-      {!open && (
+      {/* ── FLOATING TRIGGER BUTTON (Hidden on Home Screen & User Menu) ── */}
+      {!open && !isHomeScreen && location.pathname !== '/user-menu' && (
         <div
           className='fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-50 flex items-center gap-2 group animate-fade-in'
         >
