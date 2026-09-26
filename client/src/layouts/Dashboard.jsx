@@ -24,7 +24,8 @@ const Dashboard = () => {
     location.pathname.includes('super-admin')      ||
     location.pathname.includes('marketing')        ||
     location.pathname.includes('treasury')         ||
-    location.pathname.includes('store-orders')
+    location.pathname.includes('store-orders')     ||
+    location.pathname.includes('support-desk')
 
   if (isFullScreen) {
     return <Outlet />

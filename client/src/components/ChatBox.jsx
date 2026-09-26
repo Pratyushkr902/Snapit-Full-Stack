@@ -13,14 +13,33 @@ import {
   IoWalletOutline,
   IoAlertCircleOutline
 } from 'react-icons/io5'
-import { RiRobot2Line } from 'react-icons/ri'
-import Axios from '../utils/Axios'
+import { RiRobot2Line, RiCustomerService2Fill } from 'react-icons/ri'
+import Axios, { baseURL } from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { haptic } from '../utils/haptics'
+import { io } from 'socket.io-client'
 
 const SUPPORT_PHONE = '+919472026580'
 const SUPPORT_WHATSAPP = '919472026580'
+
+// Synthesize pleasant incoming chime for user
+const playUserChime = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(440, ctx.currentTime) // A4
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15) // A5
+    gain.gain.setValueAtTime(0.08, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.3)
+  } catch {}
+}
 
 const QUICK_ACTIONS = [
   { id: 'track_order', label: '📦 Track My Order', query: 'track my order' },
@@ -45,8 +64,10 @@ export default function ChatBox() {
   const [isTyping, setIsTyping] = useState(false)
   const [hasUnread, setHasUnread] = useState(true)
   const [latestOrders, setLatestOrders] = useState([])
+  const [serverChatId, setServerChatId] = useState(null)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
+  const socketRef = useRef(null)
 
   // Sync orders from Redux or fetch fallback
   useEffect(() => {
@@ -131,6 +152,77 @@ export default function ChatBox() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages, isTyping, open])
+
+  // Sync active support chat thread from server
+  useEffect(() => {
+    if (!user?._id) return
+
+    Axios({ ...SummaryApi.getMySupportChat })
+      .then((res) => {
+        if (res.data?.success && res.data.data?._id) {
+          const chatDoc = res.data.data
+          setServerChatId(chatDoc._id)
+
+          if (Array.isArray(chatDoc.messages) && chatDoc.messages.length > 1) {
+            const formatted = chatDoc.messages.map((m) => ({
+              id: m._id || `${Date.now()}-${Math.random()}`,
+              sender: m.sender,
+              senderName: m.senderName,
+              text: m.text,
+              time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              cardType: m.cardType,
+              cardData: m.cardData,
+            }))
+            setMessages(formatted)
+          }
+        }
+      })
+      .catch(() => {})
+  }, [user?._id])
+
+  // Real-time socket listener for live support messages
+  useEffect(() => {
+    if (!serverChatId) return
+
+    const socket = io(baseURL, {
+      path: '/socket.io/',
+      transports: ['websocket', 'polling'],
+    })
+    socketRef.current = socket
+
+    socket.emit('join_support_chat', serverChatId)
+
+    socket.on('new_support_message', (payload) => {
+      if (payload?.message) {
+        const msg = payload.message
+        setMessages((prev) => {
+          if (prev.some((m) => String(m.id) === String(msg._id))) return prev
+          if (msg.sender === 'admin') {
+            playUserChime()
+            haptic.success()
+            setHasUnread(true)
+          }
+          return [
+            ...prev,
+            {
+              id: msg._id || Date.now(),
+              sender: msg.sender,
+              senderName: msg.senderName,
+              text: msg.text,
+              time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              cardType: msg.cardType,
+              cardData: msg.cardData,
+            },
+          ]
+        })
+      }
+    })
+
+    return () => {
+      socket.emit('leave_support_chat', serverChatId)
+      socket.disconnect()
+    }
+  }, [serverChatId])
 
   // Open / Close toggles
   const handleToggle = () => {
@@ -372,6 +464,23 @@ export default function ChatBox() {
     setMessages(prev => [...prev, userMsg])
     setInputText('')
 
+    // Sync with backend helpdesk
+    if (user?._id) {
+      Axios({
+        ...SummaryApi.sendUserSupportMessage,
+        data: {
+          text: trimmed,
+          orderId: latestOrders[0] ? (latestOrders[0].orderId || latestOrders[0]._id) : '',
+        },
+      })
+        .then((res) => {
+          if (res.data?.chat?._id && !serverChatId) {
+            setServerChatId(res.data.chat._id)
+          }
+        })
+        .catch(() => {})
+    }
+
     processQuery(trimmed)
   }
 
@@ -491,9 +600,19 @@ export default function ChatBox() {
                     className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs text-xs leading-relaxed ${
                       msg.sender === 'user'
                         ? 'bg-emerald-600 text-white rounded-br-xs font-medium'
+                        : msg.sender === 'admin'
+                        ? 'bg-gradient-to-tr from-teal-900 via-teal-800 to-emerald-900 text-white rounded-bl-xs font-medium border border-teal-600/50 shadow-md'
                         : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-xs border border-slate-100 dark:border-slate-700/60'
                     }`}
                   >
+                    {msg.sender === 'admin' && (
+                      <div className='flex items-center gap-1.5 mb-1.5 text-[10px] font-black text-emerald-200 border-b border-white/20 pb-1'>
+                        <RiCustomerService2Fill size={13} />
+                        <span>Support Executive</span>
+                        <span>•</span>
+                        <span>{msg.senderName || 'Live Helpdesk'}</span>
+                      </div>
+                    )}
                     <p className='whitespace-pre-wrap'>{msg.text}</p>
 
                     {/* DYNAMIC CARD: ORDER STATUS */}

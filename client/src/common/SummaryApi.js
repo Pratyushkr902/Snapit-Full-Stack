@@ -560,6 +560,32 @@ const SummaryApi = {
         url: '/api/rider-application/reject',
         method: 'post'
     },
+
+    // ── 24/7 Live Support Chat & Helpdesk ──────────────────────
+    getMySupportChat: {
+        url: '/api/support/my-chat',
+        method: 'get'
+    },
+    sendUserSupportMessage: {
+        url: '/api/support/message',
+        method: 'post'
+    },
+    getAdminSupportChats: {
+        url: '/api/support/admin/chats',
+        method: 'get'
+    },
+    getAdminSupportChatById: {
+        url: '/api/support/admin/chat/:id',
+        method: 'get'
+    },
+    sendAdminSupportMessage: {
+        url: '/api/support/admin/chat/:id/message',
+        method: 'post'
+    },
+    updateSupportChatStatus: {
+        url: '/api/support/admin/chat/:id/status',
+        method: 'put'
+    },
 }
 
 export default SummaryApi

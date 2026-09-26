@@ -84,6 +84,7 @@ const AdminRiderFleet        = lazyRetry(() => import('../pages/AdminRiderFleet'
 const MarketingHubPage       = lazyRetry(() => import('../pages/MarketingHubPage'))
 const AdminResetPinPage      = lazyRetry(() => import('../pages/AdminResetPinPage'))
 const RiderJoinPage          = lazyRetry(() => import('../pages/RiderJoinPage'))
+const AdminSupportDesk       = lazyRetry(() => import('../pages/AdminSupportDesk'))
 
 // Spinner shown while lazy chunks load
 const PageLoader = () => (
@@ -265,6 +266,10 @@ const router = createHashRouter([
           { path: "myorders", element: <S><MyOrders /></S> },
           { path: "address", element: <S><Address /></S> },
           { path: "store-orders", element: <S><StoreOrders /></S> },
+          {
+            path: "support-desk",
+            element: <S><AdminPermision><AdminSupportDesk /></AdminPermision></S>
+          },
           {
             path: "seller-dashboard",
             element: <S><SellerPermission><SellerDashboard /></SellerPermission></S>

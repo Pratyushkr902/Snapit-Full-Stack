@@ -74,6 +74,7 @@ import marketingRouter       from './route/marketing.route.js'       // ✅ Auto
 import { initMarketingCron } from './utils/marketingCron.js'         // ✅ Daily Craving Crons
 import prescriptionRouter   from './route/prescription.route.js'    // 💊 Pharmacy Prescription Orders
 import riderApplicationRouter from './route/riderApplication.route.js' // 🛵 Rider Onboarding Application
+import supportChatRouter     from './route/supportChat.route.js'     // 🎧 24/7 Live Support Chat & Helpdesk
 
 import './utils/subscriptionCron.js'
 import OrderModel from './models/order.model.js'
@@ -386,6 +387,27 @@ io.on('connection', (socket) => {
         console.log(`[Socket] Admin ${socket.id} left room: admin_live_fleet`)
     })
 
+    // ── Live Customer Support Rooms ───────────────────────────────────────────
+    socket.on('join_support_chat', (chatId) => {
+        if (!chatId) return
+        socket.join(`support_chat_${chatId}`)
+        console.log(`[Socket] ${socket.id} joined support room: support_chat_${chatId}`)
+    })
+
+    socket.on('leave_support_chat', (chatId) => {
+        if (!chatId) return
+        socket.leave(`support_chat_${chatId}`)
+    })
+
+    socket.on('join_admin_support', () => {
+        socket.join('admin_support_channel')
+        console.log(`[Socket] Admin ${socket.id} joined room: admin_support_channel`)
+    })
+
+    socket.on('leave_admin_support', () => {
+        socket.leave('admin_support_channel')
+    })
+
     socket.on('leave_order', (orderId) => {
         if (!orderId) return
         socket.leave(orderId)
@@ -451,6 +473,7 @@ app.use('/api/public-tracking',  publicTrackingRouter)     // ✅ Public Live Tr
 app.use('/api/marketing',        marketingRouter)          // ✅ Automated Marketing Engine
 app.use('/api/prescription',     prescriptionRouter)       // 💊 Pharmacy Prescription Orders
 app.use('/api/rider-application', riderApplicationRouter)   // 🛵 Rider Onboarding Application & Approval
+app.use('/api/support',           supportChatRouter)        // 🎧 24/7 Live Support Chat & Helpdesk
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
