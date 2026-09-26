@@ -36,7 +36,7 @@ const getShortOrderId = (id) => String(id || '').slice(-8).toUpperCase()
 
 export default function ChatBox() {
   const user = useSelector(state => state.user)
-  const reduxOrders = useSelector(state => state.order.order || [])
+  const reduxOrders = useSelector(state => state.orders?.order || [])
   const navigate = useNavigate()
 
   const [open, setOpen] = useState(false)

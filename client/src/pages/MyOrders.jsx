@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 const REASONS = ['Wrong item delivered', 'Item damaged', 'Item missing', 'Poor quality', 'Other']
 
 const MyOrders = () => {
-  const orders   = useSelector(state => state.orders.order)
+  const orders   = useSelector(state => state.orders?.order || [])
   const navigate = useNavigate()
   const dispatch = useDispatch()
 
