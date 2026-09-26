@@ -341,14 +341,21 @@ const Success = () => {
             Share real-time GPS tracking with your recipient on WhatsApp so they can track the rider live.
           </p>
 
-          <a
-            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hey ${location.state.orderData.recipient_name}! 🛍️ I placed a Snapit order for you! Track live delivery here: ${window.location.origin}/#/track-order/live`)}`}
-            target='_blank'
-            rel='noopener noreferrer'
-            className='w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white font-black py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 shadow-md shadow-green-600/20 active:scale-95 transition-all text-sm'
-          >
-            <span>💬 Share Live Tracking on WhatsApp</span>
-          </a>
+          {(() => {
+            const baseOrigin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('capacitor://'))
+              ? window.location.origin
+              : 'https://snapit.pages.dev'
+            return (
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hey ${location.state.orderData.recipient_name}! 🛍️ I placed a Snapit order for you! Track live delivery here: ${baseOrigin}/#/track-order/live`)}`}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white font-black py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 shadow-md shadow-green-600/20 active:scale-95 transition-all text-sm'
+              >
+                <span>💬 Share Live Tracking on WhatsApp</span>
+              </a>
+            )
+          })()}
         </div>
       )}
 

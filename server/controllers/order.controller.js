@@ -389,7 +389,7 @@ async function sendOrderInvoiceEmail(order, user) {
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot } = request.body
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference } = request.body
 
         const parsedSubTotal = Number(subTotalAmt)
         const parsedTotal = Number(totalAmt)
@@ -548,6 +548,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             recipient_mobile:         recipientMobile,
             order_for:                orderFor,
             delivery_instructions:    deliveryInstructions,
+            item_substitution_preference: ['CALL_ME', 'AUTO_SUBSTITUTE', 'DO_NOT_SUBSTITUTE'].includes(item_substitution_preference) ? item_substitution_preference : 'CALL_ME',
             shareable_tracking_token: shareableToken,
             subTotalAmt:      actualSubTotal,
             totalAmt:         finalTotalAmt,
@@ -619,7 +620,7 @@ export async function CashOnDeliveryOrderController(request, response) {
 export async function WalletPaymentOrderController(request, response) {
     try {
         const userId = request.userId
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot } = request.body
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference } = request.body
 
         if (!list_items?.length || !addressId || !subTotalAmt || !totalAmt) {
             return response.status(400).json({ message: 'Missing required order fields.', error: true, success: false })
@@ -846,6 +847,7 @@ export async function WalletPaymentOrderController(request, response) {
             recipient_mobile:         recipientMobile,
             order_for:                orderFor,
             delivery_instructions:    deliveryInstructions,
+            item_substitution_preference: ['CALL_ME', 'AUTO_SUBSTITUTE', 'DO_NOT_SUBSTITUTE'].includes(item_substitution_preference) ? item_substitution_preference : 'CALL_ME',
             shareable_tracking_token: shareableToken,
             subTotalAmt:      actualSubTotal,
             totalAmt:         exactRequiredTotal,
@@ -1053,7 +1055,7 @@ export async function verifyPaymentController(request, response) {
         const userId = request.userId
         const {
             razorpay_order_id, razorpay_payment_id, razorpay_signature,
-            list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress, tip, isPreOrder, deliverySlot
+            list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference
         } = request.body
 
         if (!verifyRazorpaySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
@@ -1207,6 +1209,7 @@ export async function verifyPaymentController(request, response) {
             recipient_mobile:         recipientMobile,
             order_for:                orderFor,
             delivery_instructions:    deliveryInstructions,
+            item_substitution_preference: ['CALL_ME', 'AUTO_SUBSTITUTE', 'DO_NOT_SUBSTITUTE'].includes(item_substitution_preference) ? item_substitution_preference : 'CALL_ME',
             shareable_tracking_token: shareableToken,
             subTotalAmt:      actualSubTotal,
             totalAmt:         serverTotal,

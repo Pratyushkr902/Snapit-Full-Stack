@@ -492,6 +492,22 @@ const StoreOrders = () => {
                                                     </div>
                                                 )}
 
+                                                {/* Customer Out-Of-Stock Preference */}
+                                                {order.item_substitution_preference && (
+                                                    <div className='flex items-center gap-1.5 mb-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-300 font-semibold'>
+                                                        <span>🔄</span>
+                                                        <span>
+                                                            If item missing: <strong className='font-bold'>
+                                                                {order.item_substitution_preference === 'CALL_ME'
+                                                                    ? 'Call customer before replacing'
+                                                                    : order.item_substitution_preference === 'AUTO_SUBSTITUTE'
+                                                                        ? 'Auto-substitute similar brand'
+                                                                        : 'Do NOT substitute (Refund)'}
+                                                            </strong>
+                                                        </span>
+                                                    </div>
+                                                )}
+
                                                 {/* ── Interactive Packing Checklist ── */}
                                                 <div className='mb-3 bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3 border border-slate-100 dark:border-slate-800'>
                                                     <div className='flex items-center justify-between mb-2'>

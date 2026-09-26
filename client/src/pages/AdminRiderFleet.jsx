@@ -232,7 +232,10 @@ const AdminRiderFleet = () => {
   }
 
   const handleCopyJoinLink = () => {
-    const url = `${window.location.origin}/#/rider/join`
+    const baseOrigin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('capacitor://'))
+      ? window.location.origin
+      : 'https://snapit.pages.dev'
+    const url = `${baseOrigin}/#/rider/join`
     navigator.clipboard?.writeText(url)
     toast.success('Rider onboarding link copied! Share with candidates on WhatsApp.')
   }

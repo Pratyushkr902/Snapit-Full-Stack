@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -8,8 +8,9 @@ import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { FaPhone } from 'react-icons/fa'
-import { IoArrowBack } from 'react-icons/io5'
+import { IoArrowBack, IoShareSocialOutline, IoLogoWhatsapp } from 'react-icons/io5'
 import toast from 'react-hot-toast'
+import { haptic } from '../utils/haptics'
 
 // Fix Leaflet default marker icons
 delete L.Icon.Default.prototype._getIconUrl
@@ -91,6 +92,25 @@ const TrackingPage = () => {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelReason, setCancelReason]       = useState('Changed my mind')
   const [cancelling, setCancelling]           = useState(false)
+  const [cancelSecondsLeft, setCancelSecondsLeft] = useState(null)
+
+  // ── 60-Second cancellation window countdown (Zepto / Blinkit) ─
+  useEffect(() => {
+    if (!order?.createdAt || order.delivery_status !== 'Pending' || (order.seller_status && order.seller_status !== 'Pending')) {
+      setCancelSecondsLeft(null)
+      return
+    }
+
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000)
+      const remaining = Math.max(0, 60 - elapsed)
+      setCancelSecondsLeft(remaining)
+    }
+
+    updateTimer()
+    const timer = setInterval(updateTimer, 1000)
+    return () => clearInterval(timer)
+  }, [order?.createdAt, order?.delivery_status, order?.seller_status])
 
   // ── Fetch order ──────────────────────────────────────────────
   const fetchOrder = async () => {
@@ -131,6 +151,37 @@ const TrackingPage = () => {
       toast.error(err?.response?.data?.message || 'Error cancelling order')
     } finally {
       setCancelling(false)
+    }
+  }
+
+  // ── Share live tracking handler ──────────────────────────────
+  const handleShareTracking = async () => {
+    haptic.medium()
+    const token = order.shareable_tracking_token || order.orderId
+    const baseOrigin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('capacitor://'))
+      ? window.location.origin
+      : 'https://snapit.pages.dev'
+    const shareUrl = `${baseOrigin}/#/public-tracking/${token}`
+    const shareText = `Track my Snapit delivery live #${order.orderId?.slice(-6)} 🏍️: ${shareUrl}`
+
+    if (navigator?.share) {
+      try {
+        await navigator.share({
+          title: `Snapit Live Delivery Tracking`,
+          text: `Track my Snapit order live #${order.orderId?.slice(-6)}:`,
+          url: shareUrl,
+        })
+        return
+      } catch (err) {
+        if (err.name === 'AbortError') return
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success('📋 Tracking link copied to clipboard!')
+    } catch {
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank')
     }
   }
 
@@ -216,6 +267,10 @@ const TrackingPage = () => {
     return `~${eta} min${eta > 1 ? 's' : ''}`
   }
 
+  const storeLocation = (order?.store_details?.location?.coordinates && order.store_details.location.coordinates.length >= 2)
+    ? [Number(order.store_details.location.coordinates[1]), Number(order.store_details.location.coordinates[0])]
+    : [SHOP_LAT, SHOP_LNG]
+
   const mapCenter = riderPos || storeLocation
   const currentStep = getCurrentStepIndex()
 
@@ -258,6 +313,14 @@ const TrackingPage = () => {
           <p className='text-[11px] text-slate-400 font-mono'>#{order.orderId?.slice(-8)}</p>
         </div>
         <div className='ml-auto flex items-center gap-2'>
+          <button
+            onClick={handleShareTracking}
+            className='flex items-center gap-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-1.5 rounded-full transition-all'
+            title='Share live delivery tracking link'
+          >
+            <IoShareSocialOutline size={15} />
+            <span className='hidden sm:inline'>Share</span>
+          </button>
           <span className='text-[11px] font-black uppercase px-3 py-1 rounded-full animate-pulse'
             style={{
               background: order.delivery_status === 'Delivered' ? '#dcfce7' : '#fef9c3',
@@ -431,13 +494,45 @@ const TrackingPage = () => {
             <p className='font-black text-slate-800'>{order.rider_name || 'Snapit Rider'}</p>
             <p className='text-xs text-slate-400'>Delivery Partner</p>
           </div>
-          <a
-            href={`tel:${order.rider_contact || '9576467701'}`}
-            className='bg-green-600 text-white p-3 rounded-full shadow-md active:scale-95 transition-all'
-          >
-            <FaPhone size={16} />
-          </a>
+          <div className='flex items-center gap-2'>
+            <a
+              href={`https://api.whatsapp.com/send?phone=91${(order.rider_contact || '9576467701').replace(/\D/g, '').slice(-10)}&text=${encodeURIComponent(`Hi ${order.rider_name || 'Rider'}, I am tracking my Snapit Order #${(order.orderId || '').slice(-6)} 🏍️`)}`}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='bg-[#25D366] hover:bg-[#1EBE5D] text-white p-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center'
+              title='WhatsApp Rider'
+            >
+              <IoLogoWhatsapp size={16} />
+            </a>
+            <a
+              href={`tel:${order.rider_contact || '9576467701'}`}
+              className='bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center'
+              title='Call Rider'
+            >
+              <FaPhone size={16} />
+            </a>
+          </div>
         </div>
+      </div>
+
+      {/* Share with Family / Friends Strip */}
+      <div className='bg-gradient-to-r from-emerald-50 to-teal-50 mx-4 mt-3 rounded-2xl p-3.5 border border-emerald-100 flex items-center justify-between shadow-xs'>
+        <div className='flex items-center gap-2.5'>
+          <div className='w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg shrink-0'>
+            📲
+          </div>
+          <div>
+            <p className='text-xs font-bold text-slate-800'>Share live tracking</p>
+            <p className='text-[10px] text-slate-500'>Send real-time map link to friends or family</p>
+          </div>
+        </div>
+        <button
+          onClick={handleShareTracking}
+          className='bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all shrink-0'
+        >
+          <IoShareSocialOutline size={14} />
+          <span>Share</span>
+        </button>
       </div>
 
       {/* Order Summary */}
@@ -465,12 +560,31 @@ const TrackingPage = () => {
           </div>
         </div>
 
-        {/* Zomato-Style Cancel Order Action (Visible ONLY when Pending & Unaccepted by Vendor) */}
+        {/* Modern Cancellation Window (Zepto / Blinkit style) */}
         {order.delivery_status === 'Pending' && (!order.seller_status || order.seller_status === 'Pending') && (
           <div className='mt-4 pt-3 border-t border-slate-100'>
+            {cancelSecondsLeft !== null && cancelSecondsLeft > 0 && (
+              <div className='mb-2.5 bg-amber-50/80 border border-amber-200/80 rounded-xl p-2.5 shadow-2xs'>
+                <div className='flex items-center justify-between text-xs font-black text-amber-900 mb-1.5'>
+                  <span className='flex items-center gap-1.5'>
+                    <span>⏱️</span> Cancellation window
+                  </span>
+                  <span className='font-mono bg-amber-200/80 text-amber-950 px-2 py-0.5 rounded-full text-[11px] font-bold'>
+                    00:{cancelSecondsLeft < 10 ? '0' : ''}{cancelSecondsLeft}s
+                  </span>
+                </div>
+                <div className='w-full bg-amber-200/50 rounded-full h-1.5 overflow-hidden'>
+                  <div
+                    className='bg-amber-600 h-full rounded-full transition-all duration-1000 ease-linear'
+                    style={{ width: `${(cancelSecondsLeft / 60) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <button
               onClick={() => setShowCancelModal(true)}
-              className='w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm'
+              className='w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xs'
             >
               ❌ Cancel Order
             </button>
@@ -479,6 +593,43 @@ const TrackingPage = () => {
             </p>
           </div>
         )}
+
+        {/* Packing Notice when vendor accepts */}
+        {order.delivery_status === 'Pending' && order.seller_status === 'Packing' && (
+          <div className='mt-4 pt-3 border-t border-slate-100 bg-blue-50/70 border border-blue-100 rounded-xl p-3 text-center'>
+            <p className='text-xs font-black text-blue-900 flex items-center justify-center gap-1.5'>
+              <span>📦</span> Dark Store is Packing Your Order
+            </p>
+            <p className='text-[10px] text-blue-600 mt-0.5 font-medium'>
+              Items are being packed fresh right now. Cancellation is now closed.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* 24/7 Support Banner (Zomato / Blinkit / Zepto style) */}
+      <div className='bg-white mx-4 mt-3 mb-6 rounded-2xl p-3.5 shadow-sm border border-slate-100 flex items-center justify-between'>
+        <div className='flex items-center gap-3'>
+          <div className='w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shrink-0 border border-emerald-100'>
+            🎧
+          </div>
+          <div>
+            <p className='text-xs font-black text-slate-800 leading-tight'>Need help with this order?</p>
+            <p className='text-[10px] text-slate-500 font-medium'>Chat with our 24/7 automated support</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            if (window.openSnapitChat) {
+              window.openSnapitChat({ orderId: order._id || order.orderId })
+            } else {
+              window.open(`https://wa.me/919472026580?text=${encodeURIComponent(`Hi Snapit, I need help with order #${(order.orderId || order._id).slice(-8)}`)}`, '_blank')
+            }
+          }}
+          className='bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2 rounded-xl active:scale-95 transition-all shadow-xs shrink-0'
+        >
+          Chat with Us
+        </button>
       </div>
 
       {/* Cancel Order Modal */}

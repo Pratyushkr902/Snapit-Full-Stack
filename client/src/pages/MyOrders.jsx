@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { IoArrowBack } from 'react-icons/io5'
 import NoData from '../components/NoData'
 import OrderInvoice from '../components/OrderInvoice'
+import ReorderButton from '../components/ReorderButton'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { setOrder } from '../store/orderSlice'
@@ -62,8 +63,11 @@ const MyOrders = () => {
       setLoadingRefunds(true)
       const res = await Axios({ ...SummaryApi.getMyRefunds })
       if (res.data.success) setMyRefunds(res.data.data)
-    } catch {}
-    finally { setLoadingRefunds(false) }
+    } catch {
+      // Handled silently
+    } finally {
+      setLoadingRefunds(false)
+    }
   }
 
   const openRefundModal = (order) => {
@@ -146,7 +150,7 @@ const MyOrders = () => {
             {!orders || orders.length === 0 ? (
               <div className='mt-20'>
                 <NoData />
-                <p className='text-center text-neutral-400 mt-4'>You haven't placed any orders yet.</p>
+                <p className='text-center text-neutral-400 mt-4'>You haven&apos;t placed any orders yet.</p>
               </div>
             ) : (
               orders.map((order, index) => (
@@ -215,17 +219,23 @@ const MyOrders = () => {
                     </button>
 
                     {/* WhatsApp share button for recipient orders */}
-                    {order.recipient_name && order.delivery_status !== 'Cancelled' && (
-                      <a
-                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hey ${order.recipient_name}! 🛍️ Track your live Snapit delivery here: ${window.location.origin}/#/public-tracking/${order.shareable_tracking_token || order.orderId}`)}`}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='bg-[#25D366] hover:bg-[#1EBE5D] text-white px-3 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all'
-                        title='Share Live Tracking with Recipient'
-                      >
-                        <span>💬 Share Link</span>
-                      </a>
-                    )}
+                    {order.recipient_name && order.delivery_status !== 'Cancelled' && (() => {
+                      const baseOrigin = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('capacitor://'))
+                        ? window.location.origin
+                        : 'https://snapit.pages.dev'
+                      const shareLink = `${baseOrigin}/#/public-tracking/${order.shareable_tracking_token || order.orderId}`
+                      return (
+                        <a
+                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hey ${order.recipient_name}! 🛍️ Track your live Snapit delivery here: ${shareLink}`)}`}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='bg-[#25D366] hover:bg-[#1EBE5D] text-white px-3 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all'
+                          title='Share Live Tracking with Recipient'
+                        >
+                          <span>💬 Share Link</span>
+                        </a>
+                      )
+                    })()}
 
                     <OrderInvoice order={order} />
 
@@ -237,6 +247,11 @@ const MyOrders = () => {
                       >
                         ❌ Cancel
                       </button>
+                    )}
+
+                    {/* Repeat Order Button */}
+                    {order.delivery_status !== 'Pending' && (
+                      <ReorderButton order={order} />
                     )}
 
                     {order.delivery_status === 'Delivered' && (

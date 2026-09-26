@@ -13,6 +13,7 @@ import StoreClosedOverlay, { IS_CLOSED_FOR_TODAY } from './components/StoreClose
 import AppUpdateModal from './components/AppUpdateModal'
 import NotificationPermissionBanner from './components/NotificationPermissionBanner'
 import SmartRatingModal from './components/SmartRatingModal'
+import OfflineBanner from './components/OfflineBanner'
 
 import fetchUserDetails from './utils/fetchUserDetails';
 import { setUserDetails, logout } from './store/userSlice';
@@ -327,6 +328,7 @@ function App() {
     <RemoteConfigProvider>
       <GlobalProvider>
         <div className="App">
+          <OfflineBanner />
           <AppUpdateModal />
           <SmartRatingModal />
           <NotificationPermissionBanner />
@@ -350,8 +352,8 @@ function App() {
             <CartMobileLink />
           )}
 
-          {/* {!isDashboard && <WhatsAppButton />} */}
-          {!isDashboard && !isAuthPage && !isSelectLocation && !isCartPage && !showCart && <ChatBox />}
+          {/* 24/7 Support ChatBox (Zomato / Blinkit / Zepto style) */}
+          <ChatBox />
         </div>
       </GlobalProvider>
     </RemoteConfigProvider>

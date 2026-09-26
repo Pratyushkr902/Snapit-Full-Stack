@@ -9,6 +9,7 @@ import { useSelector } from 'react-redux'
 import { FaMinus, FaPlus } from "react-icons/fa6"
 import { useState } from 'react'
 import { isStoreOpen, getStoreStatus } from './StoreClosedOverlay'
+import { haptic } from '../utils/haptics'
 
 export const getEffectiveStock = (item) => {
     if (!item) return 0
@@ -51,6 +52,7 @@ const AddToCartButton = ({ data }) => {
     const handleADDTocart = async (e) => {
         e.preventDefault()
         e.stopPropagation()
+        haptic.medium()
         try {
             setLoading(true)
             const response = await Axios({
@@ -80,7 +82,11 @@ const AddToCartButton = ({ data }) => {
     const increaseQty = async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        if (isOutOfStock) return
+        if (isOutOfStock) {
+            haptic.warning()
+            return
+        }
+        haptic.light()
         if (!updateCartItem) return
         const response = await updateCartItem(cartItemDetails?._id, qty + 1)
         if (response?.success) {
@@ -99,6 +105,7 @@ const AddToCartButton = ({ data }) => {
     const decreaseQty = async (e) => {
         e.preventDefault()
         e.stopPropagation()
+        haptic.light()
         if (!updateCartItem || !deleteCartItem) return
         if (qty === 1) {
             deleteCartItem(cartItemDetails?._id)

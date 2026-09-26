@@ -192,6 +192,22 @@ const Header = ({ openCart }) => {
                         <button onClick={() => navigate('/login')} className='text-lg px-2 font-bold text-slate-700 dark:text-slate-200 hover:text-green-700 dark:hover:text-emerald-400 transition-colors'>Login</button>
                     )}
 
+                    <button
+                        type='button'
+                        onClick={() => {
+                            if (window.openSnapitChat) {
+                                window.openSnapitChat()
+                            } else {
+                                window.open('https://wa.me/919472026580?text=Hi%20Snapit,%20I%20need%20assistance', '_blank')
+                            }
+                        }}
+                        className='flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors'
+                        title='24/7 Live Support'
+                    >
+                        <span className='text-base leading-none'>🎧</span>
+                        <span className='hidden xl:inline'>24/7 Help</span>
+                    </button>
+
                     {/* Food cart — separate persistent cross-restaurant cart */}
                     {foodGrandCount > 0 && (
                         <Link
@@ -281,7 +297,23 @@ const Header = ({ openCart }) => {
                             </div>
 
                             {/* Right: user + cart icons */}
-                            <div className='flex items-center gap-3 flex-shrink-0 ml-2'>
+                            <div className='flex items-center gap-2.5 flex-shrink-0 ml-2'>
+                                <button
+                                    type='button'
+                                    onClick={() => {
+                                        if (window.openSnapitChat) {
+                                            window.openSnapitChat()
+                                        } else {
+                                            window.open('https://wa.me/919472026580?text=Hi%20Snapit,%20I%20need%20assistance', '_blank')
+                                        }
+                                    }}
+                                    className='flex flex-col items-center text-emerald-700 dark:text-emerald-400 active:scale-90 transition-transform'
+                                    aria-label='Help & Support'
+                                    title='24/7 Help'
+                                >
+                                    <span className='text-lg leading-none'>🎧</span>
+                                    <span className='text-[8.5px] font-bold'>Help</span>
+                                </button>
                                 <Link to='/wallet' className='flex flex-col items-center text-green-700 dark:text-emerald-400 active:scale-90 transition-transform'><span className='text-lg'>💰</span><span className='text-[9px] font-bold'>Wallet</span></Link>
                                 <button className='text-neutral-600 dark:text-slate-300 active:scale-90 transition-transform' onClick={handleMobileUser}>
                                     <FaRegCircleUser size={22} />

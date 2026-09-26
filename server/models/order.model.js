@@ -79,6 +79,11 @@ const orderSchema = new mongoose.Schema(
         order_for:                { type: String, enum: ["SELF", "SOMEONE_ELSE"], default: "SELF" },
         delivery_instructions:    { type: String, default: "" },
         cooking_instructions:     { type: String, default: "" },
+        item_substitution_preference: {
+            type: String,
+            enum: ["CALL_ME", "AUTO_SUBSTITUTE", "DO_NOT_SUBSTITUTE"],
+            default: "CALL_ME"
+        },
         shareable_tracking_token: { type: String, unique: true, sparse: true },
 
         invoice_receipt: { type: String, default: "" },

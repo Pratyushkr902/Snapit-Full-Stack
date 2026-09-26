@@ -13,6 +13,7 @@ import { isStoreOpen, getStoreStatus } from '../components/StoreClosedOverlay'
 import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
 import { getCampusAdjustedPrice } from './RestaurantDetailPage'
 import FreeDeliveryProgressBar from '../components/FreeDeliveryProgressBar'
+import { haptic } from '../utils/haptics'
 
 const COOKING_PRESETS = [
   '🌶️ Less spicy',
@@ -267,6 +268,7 @@ const FoodCheckoutPage = () => {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleTipPreset = (idx, amt) => {
+    haptic.medium()
     setActiveTipIdx(idx)
     setCustomTip('')
     setTipAmt(amt)

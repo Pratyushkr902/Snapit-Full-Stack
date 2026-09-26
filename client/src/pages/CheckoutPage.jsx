@@ -13,6 +13,7 @@ import { isStoreOpen, getStoreStatus } from '../components/StoreClosedOverlay'
 import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, getEffectiveAddressCoords } from '../utils/serviceArea'
 import FreeDeliveryProgressBar from '../components/FreeDeliveryProgressBar'
 import CartQuickAddSuggestions from '../components/CartQuickAddSuggestions'
+import { haptic } from '../utils/haptics'
 
 const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
@@ -44,6 +45,7 @@ const CheckoutPage = () => {
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false)
   const [tipAmt, setTipAmt]                       = useState(0)
   const [activeTipIdx, setActiveTipIdx]           = useState(0)
+  const [substitutionPref, setSubstitutionPref]   = useState('CALL_ME')
 
   const isSnapitPlus = user?.isSnapitPlusMember && new Date() < new Date(user?.snapitPlusExpiresAt)
   const isStoreClosed = !isStoreOpen(user?.role)
@@ -170,6 +172,7 @@ const CheckoutPage = () => {
           deliveryLocation: { lat: c.lat, lng: c.lng },
           couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
           discountAmt:      discountAmount,
+          item_substitution_preference: substitutionPref,
           isPreOrder:       isPreOrder,
           deliverySlot:     deliverySlot
         }
@@ -214,6 +217,7 @@ const CheckoutPage = () => {
           deliveryLocation: { lat: c.lat, lng: c.lng },
           couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
           discountAmt:      discountAmount,
+          item_substitution_preference: substitutionPref,
           isPreOrder:       isPreOrder,
           deliverySlot:     deliverySlot
         }
@@ -324,6 +328,7 @@ const CheckoutPage = () => {
                   deliveryLocation:    { lat: c.lat, lng: c.lng },
                   couponCode:          couponApplied ? couponCode.trim().toUpperCase() : null,
                   discountAmt:         discountAmount,
+                  item_substitution_preference: substitutionPref,
                   isPreOrder:          isPreOrder,
                   deliverySlot:        deliverySlot
                 }
@@ -524,7 +529,11 @@ const CheckoutPage = () => {
                 <button
                   key={t.amt}
                   type='button'
-                  onClick={() => { setActiveTipIdx(idx); setTipAmt(t.amt) }}
+                  onClick={() => {
+                    haptic.medium()
+                    setActiveTipIdx(idx)
+                    setTipAmt(t.amt)
+                  }}
                   className={`py-2 px-1 rounded-xl text-xs font-black transition-all flex flex-col items-center ${
                     activeTipIdx === idx
                       ? 'bg-slate-900 text-white shadow-xs scale-[1.02]'
@@ -533,6 +542,49 @@ const CheckoutPage = () => {
                 >
                   <span>{t.amt === 0 ? 'No tip' : `₹${t.amt}`}</span>
                   {t.label && <span className='text-[9px] font-medium opacity-80'>{t.label}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Item Substitution Policy (Blinkit / Zepto style) ── */}
+          <div className='mx-4 mb-4 bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs'>
+            <div className='flex items-center justify-between mb-1.5'>
+              <div className='flex items-center gap-1.5'>
+                <span className='text-base'>🔄</span>
+                <p className='text-xs font-black text-slate-800'>If an item is out of stock</p>
+              </div>
+              <span className='text-[10px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-full'>
+                Store Picking
+              </span>
+            </div>
+            <p className='text-[11px] text-slate-500 font-medium mb-3'>
+              Choose what we should do if an item runs out during packing.
+            </p>
+            <div className='grid grid-cols-3 gap-2'>
+              {[
+                { id: 'CALL_ME', label: 'Call me', sub: 'Before replacing', icon: '📞' },
+                { id: 'AUTO_SUBSTITUTE', label: 'Substitute', sub: 'Similar product', icon: '🤖' },
+                { id: 'DO_NOT_SUBSTITUTE', label: 'Don’t replace', sub: 'Instant refund', icon: '❌' },
+              ].map((sub) => (
+                <button
+                  key={sub.id}
+                  type='button'
+                  onClick={() => {
+                    haptic.light()
+                    setSubstitutionPref(sub.id)
+                  }}
+                  className={`py-2.5 px-1.5 rounded-xl text-center transition-all flex flex-col items-center justify-center ${
+                    substitutionPref === sub.id
+                      ? 'bg-emerald-900 text-white shadow-xs scale-[1.02]'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/60'
+                  }`}
+                >
+                  <span className='text-sm mb-0.5'>{sub.icon}</span>
+                  <span className='text-xs font-black leading-tight'>{sub.label}</span>
+                  <span className={`text-[9px] font-medium leading-tight mt-0.5 ${substitutionPref === sub.id ? 'text-emerald-200' : 'text-slate-400'}`}>
+                    {sub.sub}
+                  </span>
                 </button>
               ))}
             </div>
