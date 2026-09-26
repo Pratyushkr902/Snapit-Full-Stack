@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSelector } from 'react-redux'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   IoChatbubbleEllipses,
   IoClose,
@@ -57,14 +57,11 @@ export default function ChatBox() {
   const user = useSelector(state => state.user)
   const reduxOrders = useSelector(state => state.orders?.order || [])
   const navigate = useNavigate()
-  const location = useLocation()
-  const isHomeScreen = location.pathname === '/' || location.pathname === ''
 
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([])
   const [inputText, setInputText] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-  const [hasUnread, setHasUnread] = useState(true)
   const [latestOrders, setLatestOrders] = useState([])
   const [serverChatId, setServerChatId] = useState(null)
   const messagesEndRef = useRef(null)
@@ -135,6 +132,7 @@ export default function ChatBox() {
       setHasUnread(false)
       haptic.medium()
       initGreeting(detail.orderId || null)
+      setTimeout(() => inputRef.current?.focus(), 350)
     }
 
     window.addEventListener('open-snapit-chat', handleOpenChat)
@@ -492,36 +490,6 @@ export default function ChatBox() {
 
   return (
     <>
-      {/* ── FLOATING TRIGGER BUTTON (Hidden on Home Screen & User Menu) ── */}
-      {!open && !isHomeScreen && location.pathname !== '/user-menu' && (
-        <div
-          className='fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-50 flex items-center gap-2 group animate-fade-in'
-        >
-          {/* Desktop Hover Pill */}
-          <div className='hidden sm:flex items-center gap-1.5 bg-slate-900/90 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none'>
-            <span>Need Help? Chat with us</span>
-            <span className='w-2 h-2 rounded-full bg-emerald-400 animate-ping'></span>
-          </div>
-
-          <button
-            onClick={handleToggle}
-            aria-label='Open Snapit Support Chat'
-            className='relative h-12 px-3.5 sm:h-14 sm:w-14 sm:px-0 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all duration-300 active:scale-95 hover:scale-105 ring-4 ring-emerald-500/20'
-          >
-            <IoChatbubbleEllipses size={24} className='animate-pulse' />
-            <span className='text-xs font-black sm:hidden'>Chat</span>
-
-            {/* Live Online Glowing Pulse / Unread indicator */}
-            {hasUnread && (
-              <span className='absolute -top-1 -right-1 flex h-3.5 w-3.5'>
-                <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75'></span>
-                <span className='relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-400 border-2 border-white'></span>
-              </span>
-            )}
-          </button>
-        </div>
-      )}
-
       {/* ── CHAT WINDOW (Mobile Drawer / Desktop Floating Card) ── */}
       {open && (
         <div

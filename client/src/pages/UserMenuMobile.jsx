@@ -191,15 +191,7 @@ const UserMenuMobile = () => {
           <IoArrowBack size={18} />
         </button>
         <h1 className='text-base font-extrabold text-slate-900 dark:text-white tracking-tight'>Profile</h1>
-        <a
-          href="https://wa.me/919472026580?text=Hi%20Snapit%20Support,%20I%20need%20help%20with%20my%20account"
-          target="_blank"
-          rel="noopener noreferrer"
-          className='w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center active:scale-90 transition-transform border border-emerald-200/50 dark:border-emerald-800/50'
-          aria-label='Help'
-        >
-          <FaWhatsapp size={18} />
-        </a>
+        <div className='w-9 h-9' aria-hidden="true" />
       </div>
 
       <div className='max-w-xl mx-auto px-4 pt-4 space-y-4'>
@@ -275,20 +267,28 @@ const UserMenuMobile = () => {
           </Link>
 
           {/* Card 2: 24/7 Support */}
-          <a
-            href="https://wa.me/919472026580?text=Hi%20Snapit,%20I%20need%20assistance"
-            target="_blank"
-            rel="noopener noreferrer"
-            className='bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/70 rounded-2xl p-3 flex flex-col justify-between hover:border-blue-500/40 transition-all active:scale-[0.98] shadow-2xs group'
+          <button
+            type='button'
+            onClick={() => {
+              if (typeof window.openSnapitChat === 'function') {
+                window.openSnapitChat()
+              } else {
+                window.dispatchEvent(new CustomEvent('open-snapit-chat'))
+              }
+            }}
+            className='bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/70 rounded-2xl p-3 flex flex-col justify-between hover:border-blue-500/40 text-left transition-all active:scale-[0.98] shadow-2xs group cursor-pointer'
           >
             <div className='w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform'>
               <FiHelpCircle size={16} />
             </div>
             <div>
               <p className='text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-none'>24/7 Support</p>
-              <p className='text-sm font-black text-blue-600 dark:text-blue-400 mt-1'>Get Help</p>
+              <p className='text-sm font-black text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1'>
+                <span>Get Help</span>
+                <span className='text-[10px]'>💬</span>
+              </p>
             </div>
-          </a>
+          </button>
 
           {/* Card 3: Orders */}
           <Link
