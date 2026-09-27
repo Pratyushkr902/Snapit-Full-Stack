@@ -44,6 +44,7 @@ const CheckoutPage = () => {
   const [discountLabel, setDiscountLabel]         = useState('')
   const [couponApplied, setCouponApplied]         = useState(false)
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false)
+  const [useCoins, setUseCoins]                   = useState(false)
   const [tipAmt, setTipAmt]                       = useState(0)
   const [activeTipIdx, setActiveTipIdx]           = useState(0)
   const [substitutionPref, setSubstitutionPref]   = useState('CALL_ME')
@@ -68,7 +69,17 @@ const CheckoutPage = () => {
   const isPreOrder = Boolean(isStoreClosed || (typeof window !== 'undefined' && sessionStorage.getItem('snapit_preorder_mode') === 'true'))
   const deliverySlot = isPreOrder ? "Tomorrow Morning (7:00 AM – 8:30 AM)" : ""
   const deliveryFee = deliveryInfo ? deliveryInfo.charge : 12
-  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + PLATFORM_FEE + smallCartFee + surgeFee + tipAmt) - discountAmount)
+
+  // ── Snapit Coins Redemption (Min order ₹199, 1 coin = ₹0.10, max ₹10 off) ──
+  const availableCoins = Math.max(0, Number(user?.coins || 0))
+  const eligibleCoins = Math.min(availableCoins, 100)
+  const potentialCoinDiscount = Math.floor(eligibleCoins * 0.10)
+  const actualCoinsToUse = potentialCoinDiscount * 10
+  const isCoinEligible = totalPrice >= 199 && potentialCoinDiscount > 0
+  const coinDiscount = (useCoins && isCoinEligible) ? potentialCoinDiscount : 0
+  const coinsRedeemed = (useCoins && isCoinEligible) ? actualCoinsToUse : 0
+
+  const grandTotal  = Math.max(0, (totalPrice + deliveryFee + PLATFORM_FEE + smallCartFee + surgeFee + tipAmt) - discountAmount - coinDiscount)
 
   // Coords for backend — from effective address or store fallback
   const getCoords = () => ({
@@ -173,6 +184,7 @@ const CheckoutPage = () => {
           deliveryLocation: { lat: c.lat, lng: c.lng },
           couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
           discountAmt:      discountAmount,
+          coinsRedeemed:    coinsRedeemed,
           item_substitution_preference: substitutionPref,
           isPreOrder:       isPreOrder,
           deliverySlot:     deliverySlot
@@ -218,6 +230,7 @@ const CheckoutPage = () => {
           deliveryLocation: { lat: c.lat, lng: c.lng },
           couponCode:       couponApplied ? couponCode.trim().toUpperCase() : null,
           discountAmt:      discountAmount,
+          coinsRedeemed:    coinsRedeemed,
           item_substitution_preference: substitutionPref,
           isPreOrder:       isPreOrder,
           deliverySlot:     deliverySlot
@@ -268,6 +281,7 @@ const CheckoutPage = () => {
           surge_reason:     surgeReason,
           totalAmt:         grandTotal,
           tip:              tipAmt,
+          coinsRedeemed:    coinsRedeemed,
           deliveryLocation: { lat: c.lat, lng: c.lng },
           isPreOrder:       isPreOrder,
           deliverySlot:     deliverySlot
@@ -331,6 +345,7 @@ const CheckoutPage = () => {
                   deliveryLocation:    { lat: c.lat, lng: c.lng },
                   couponCode:          couponApplied ? couponCode.trim().toUpperCase() : null,
                   discountAmt:         discountAmount,
+                  coinsRedeemed:       coinsRedeemed,
                   item_substitution_preference: substitutionPref,
                   isPreOrder:          isPreOrder,
                   deliverySlot:        deliverySlot
@@ -500,6 +515,66 @@ const CheckoutPage = () => {
             )}
           </div>
 
+          {/* ── Snapit Coins Redemption Widget (Option B) ── */}
+          <div className='mx-4 mb-4 bg-gradient-to-r from-amber-50/90 via-amber-50/50 to-orange-50/90 border border-amber-200/90 rounded-2xl p-3.5 shadow-2xs'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <div className='w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-lg shadow-inner'>
+                  🪙
+                </div>
+                <div>
+                  <div className='flex items-center gap-1.5'>
+                    <p className='text-xs font-black text-amber-950 uppercase tracking-wide'>Snapit Coins</p>
+                    <span className='text-[10px] font-black text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded-full'>
+                      {availableCoins} available
+                    </span>
+                  </div>
+                  <p className='text-[10px] text-amber-800/80 font-medium'>
+                    10 coins = ₹1 off • Min order ₹199 • Max ₹10 off
+                  </p>
+                </div>
+              </div>
+
+              {isCoinEligible ? (
+                <button
+                  type='button'
+                  onClick={() => {
+                    haptic.light()
+                    setUseCoins(prev => !prev)
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+                    useCoins
+                      ? 'bg-amber-600 text-white shadow-xs scale-[1.02]'
+                      : 'bg-white text-amber-900 border border-amber-300 hover:bg-amber-100/60'
+                  }`}
+                >
+                  {useCoins ? 'Applied ✓' : `Redeem ₹${potentialCoinDiscount}`}
+                </button>
+              ) : null}
+            </div>
+
+            {/* Contextual Status / Eligibility Messages */}
+            {totalPrice < 199 ? (
+              <div className='mt-2.5 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px] font-semibold text-amber-900/90'>
+                <span>Add items worth ₹{199 - totalPrice} more to redeem coins</span>
+                <span className='text-[10px] bg-white/80 text-amber-800 font-bold px-2 py-0.5 rounded-md border border-amber-200/60'>Min ₹199</span>
+              </div>
+            ) : availableCoins < 10 ? (
+              <div className='mt-2.5 pt-2 border-t border-amber-200/60 text-[11px] font-semibold text-amber-800/90'>
+                Earn 10+ coins from daily streaks to start redeeming discounts!
+              </div>
+            ) : useCoins ? (
+              <div className='mt-2.5 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px] font-bold text-emerald-800'>
+                <span>🎉 Redeemed {actualCoinsToUse} coins for an extra ₹{potentialCoinDiscount} OFF!</span>
+                <span className='text-[10px] text-amber-800'>({availableCoins - actualCoinsToUse} coins left)</span>
+              </div>
+            ) : (
+              <div className='mt-2.5 pt-2 border-t border-amber-200/60 text-[11px] font-semibold text-amber-800/90'>
+                Tap 'Redeem ₹{potentialCoinDiscount}' to use {actualCoinsToUse} coins and save instantly.
+              </div>
+            )}
+          </div>
+
           {/* Free Delivery Progress Bar & Quick Adds (Zepto / Blinkit) */}
           <div className='mx-4 mb-3'>
             <FreeDeliveryProgressBar
@@ -654,6 +729,12 @@ const CheckoutPage = () => {
               <div className='flex justify-between text-green-600 font-bold bg-green-50 p-2 rounded-lg border border-green-200 border-dashed'>
                 <p>🎟️ {discountLabel || 'Promo Discount'} ({couponCode.trim().toUpperCase()})</p>
                 <p>- {DisplayPriceInRupees(discountAmount)}</p>
+              </div>
+            )}
+            {coinDiscount > 0 && (
+              <div className='flex justify-between text-amber-800 font-bold bg-amber-50 p-2 rounded-lg border border-amber-200 border-dashed'>
+                <p>🪙 Snapit Coins Redeemed ({coinsRedeemed} coins)</p>
+                <p>- {DisplayPriceInRupees(coinDiscount)}</p>
               </div>
             )}
             {tipAmt > 0 && (

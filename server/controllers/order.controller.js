@@ -99,6 +99,7 @@ import {
   EXPRESS_DELIVERY_FEE,
 } from '../utils/deliveryFee.js'
 import { validateCoupon } from '../utils/couponValidation.js'
+import { validateCoinRedemption } from '../utils/coinRedemption.js'
 
 export const PLATFORM_FEE = 3 // Nominal ₹3 platform fee to support super-fast delivery infrastructure
 export const SMALL_CART_THRESHOLD = 99 // Orders below ₹99 incur small cart handling fee
@@ -422,7 +423,7 @@ async function sendOrderInvoiceEmail(order, user) {
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference } = request.body
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference, coinsRedeemed } = request.body
 
         const parsedSubTotal = Number(subTotalAmt)
         const parsedTotal = Number(totalAmt)
@@ -552,7 +553,13 @@ export async function CashOnDeliveryOrderController(request, response) {
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
         const small_cart_fee = calcSmallCartFee(actualSubTotal)
         const { surge_fee, surge_reason } = calcSurgeFee()
-        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt + sanitizedTip)
+
+        // Coin Redemption Validation (Min Order ₹199, 1 coin = ₹0.10, Max ₹10 discount)
+        const coinValidation = validateCoinRedemption(currentUser?.coins, coinsRedeemed, actualSubTotal)
+        const validCoinDiscount = coinValidation.valid ? coinValidation.discountAmt : 0
+        const validCoinsUsed = coinValidation.valid ? coinValidation.coinsToDeduct : 0
+
+        const finalTotalAmt = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt - validCoinDiscount + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || currentUser?.name || 'Customer').trim()
@@ -609,10 +616,17 @@ export async function CashOnDeliveryOrderController(request, response) {
             payment_collected: false,
             coupon_used:      validCouponCode,
             discount_amount:  validDiscountAmt,
+            coins_redeemed:   validCoinsUsed,
+            coin_discount:    validCoinDiscount,
         }
 
         const generatedOrder = new OrderModel(payload)
         await generatedOrder.save()
+
+        // Deduct redeemed coins from user balance
+        if (validCoinsUsed > 0) {
+            await UserModel.findByIdAndUpdate(userId, { $inc: { coins: -validCoinsUsed } })
+        }
         sendOrderInvoiceEmail(generatedOrder, currentUser).catch(()=>{})
         notifyUserOrderPlaced(userId, generatedOrder.orderId, currentUser?.fcmToken).catch(() => {})
         notifySellersOfNewOrder(generatedOrder).catch(() => {})
@@ -653,7 +667,7 @@ export async function CashOnDeliveryOrderController(request, response) {
 export async function WalletPaymentOrderController(request, response) {
     try {
         const userId = request.userId
-        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference } = request.body
+        const { list_items, totalAmt, addressId, subTotalAmt, lat, lng, couponCode, discountAmt, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference, coinsRedeemed } = request.body
 
         if (!list_items?.length || !addressId || !subTotalAmt || !totalAmt) {
             return response.status(400).json({ message: 'Missing required order fields.', error: true, success: false })
@@ -774,7 +788,13 @@ export async function WalletPaymentOrderController(request, response) {
         const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
         const small_cart_fee = calcSmallCartFee(actualSubTotal)
         const { surge_fee, surge_reason } = calcSurgeFee()
-        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt + sanitizedTip)
+
+        // Coin Redemption Validation (Min Order ₹199, 1 coin = ₹0.10, Max ₹10 discount)
+        const coinValidation = validateCoinRedemption(user?.coins, coinsRedeemed, actualSubTotal)
+        const validCoinDiscount = coinValidation.valid ? coinValidation.discountAmt : 0
+        const validCoinsUsed = coinValidation.valid ? coinValidation.coinsToDeduct : 0
+
+        const exactRequiredTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt - validCoinDiscount + sanitizedTip)
         if ((user.walletBalance || 0) < exactRequiredTotal) {
             return response.status(400).json({
                 message: `Insufficient wallet balance. Need ₹${(exactRequiredTotal - (user.walletBalance || 0)).toFixed(2)} more.`,
@@ -908,10 +928,17 @@ export async function WalletPaymentOrderController(request, response) {
             payment_collected: true,
             coupon_used:      validCouponCode,
             discount_amount:  validDiscountAmt,
+            coins_redeemed:   validCoinsUsed,
+            coin_discount:    validCoinDiscount,
         }
 
         const newOrder = new OrderModel(payload)
         await newOrder.save()
+
+        // Deduct redeemed coins from user balance
+        if (validCoinsUsed > 0) {
+            await UserModel.findByIdAndUpdate(userId, { $inc: { coins: -validCoinsUsed } })
+        }
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
         notifySellersOfNewOrder(newOrder).catch(() => {})
@@ -977,7 +1004,7 @@ export async function WalletPaymentOrderController(request, response) {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function paymentController(request, response) {
     try {
-        const { totalAmt, addressId, list_items, couponCode, isExpress, tip, isPreOrder, deliverySlot } = request.body
+        const { totalAmt, addressId, list_items, couponCode, isExpress, tip, isPreOrder, deliverySlot, coinsRedeemed } = request.body
         const userId = request.userId
 
         let payableAmount = Number(totalAmt)
@@ -1051,7 +1078,12 @@ export async function paymentController(request, response) {
             const sanitizedTip = Math.max(0, Math.min(500, Number(tip || 0)))
             const small_cart_fee = calcSmallCartFee(actualSubTotal)
             const { surge_fee } = calcSurgeFee()
-            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt + sanitizedTip)
+
+            // Coin Redemption Validation (Min Order ₹199, 1 coin = ₹0.10, Max ₹10 discount)
+            const coinValidation = validateCoinRedemption(currentUser?.coins, coinsRedeemed, actualSubTotal)
+            const validCoinDiscount = coinValidation.valid ? coinValidation.discountAmt : 0
+
+            const calculatedTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt - validCoinDiscount + sanitizedTip)
             if (calculatedTotal > 0) {
                 payableAmount = calculatedTotal
             }
@@ -1088,7 +1120,7 @@ export async function verifyPaymentController(request, response) {
         const userId = request.userId
         const {
             razorpay_order_id, razorpay_payment_id, razorpay_signature,
-            list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference
+            list_items, addressId, subTotalAmt, totalAmt, couponCode, discountAmt, lat, lng, isExpress, tip, isPreOrder, deliverySlot, item_substitution_preference, coinsRedeemed
         } = request.body
 
         if (!verifyRazorpaySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
@@ -1213,7 +1245,13 @@ export async function verifyPaymentController(request, response) {
         const { surge_fee: calcSurge, surge_reason: calcReason } = calcSurgeFee()
         const surge_fee = clientSurgeFee > 0 ? clientSurgeFee : calcSurge
         const surge_reason = clientSurgeReason || calcReason
-        const serverTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt + sanitizedTip)
+
+        // Coin Redemption Validation (Min Order ₹199, 1 coin = ₹0.10, Max ₹10 discount)
+        const coinValidation = validateCoinRedemption(user?.coins, coinsRedeemed, actualSubTotal)
+        const validCoinDiscount = coinValidation.valid ? coinValidation.discountAmt : 0
+        const validCoinsUsed = coinValidation.valid ? coinValidation.coinsToDeduct : 0
+
+        const serverTotal = Math.max(0, actualSubTotal + delivery_fee + PLATFORM_FEE + small_cart_fee + surge_fee - validDiscountAmt - validCoinDiscount + sanitizedTip)
 
         const isGift = Boolean(address?.recipient_name || (address?.address_type === 'FRIENDS_FAMILY' && address?.recipient_name))
         const recipientName = String((isGift ? address.recipient_name : null) || address?.recipient_name || user?.name || 'Customer').trim()
@@ -1270,10 +1308,17 @@ export async function verifyPaymentController(request, response) {
             payment_collected: true,
             coupon_used:      validCouponCode,
             discount_amount:  validDiscountAmt,
+            coins_redeemed:   validCoinsUsed,
+            coin_discount:    validCoinDiscount,
         }
 
         const newOrder = new OrderModel(payload)
         await newOrder.save()
+
+        // Deduct redeemed coins from user balance
+        if (validCoinsUsed > 0) {
+            await UserModel.findByIdAndUpdate(userId, { $inc: { coins: -validCoinsUsed } })
+        }
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
         notifySellersOfNewOrder(newOrder).catch(() => {})
@@ -1448,6 +1493,11 @@ export const updateOrderStatusController = async (request, response) => {
                 } else if (status === 'Cancelled') {
                     const refund = updatedOrder.payment_status === 'PAID' ? updatedOrder.totalAmt : 0
                     notifyUserOrderCancelled(updatedOrder.userId, orderId, refund, token).catch(() => {})
+                    if (updatedOrder.coins_redeemed > 0) {
+                        UserModel.findByIdAndUpdate(updatedOrder.userId, {
+                            $inc: { coins: updatedOrder.coins_redeemed }
+                        }).catch(err => console.warn('[Coin Restore Error on Status Cancel]', err.message))
+                    }
                 }
             }
         } catch (e) {
@@ -1540,6 +1590,13 @@ export async function customerCancelOrderController(request, response) {
                     }
                 }
             })
+        }
+
+        // Restore redeemed coins back to user
+        if (order.coins_redeemed > 0) {
+            await UserModel.findByIdAndUpdate(userId, {
+                $inc: { coins: order.coins_redeemed }
+            }).catch(err => console.warn('[Coin Restore Error on Customer Cancel]', err.message))
         }
 
         // Restore inventory / product stock

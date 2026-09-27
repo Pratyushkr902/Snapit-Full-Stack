@@ -25,6 +25,7 @@ import {
 } from './sundayFlashOffer.controller.js'
 import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { validateCoupon } from '../utils/couponValidation.js'
+import { validateCoinRedemption } from '../utils/coinRedemption.js'
 import { notifyAllRiders } from '../utils/firebaseNotify.js'
 import {
     notifyUserOrderPlaced,
@@ -131,6 +132,7 @@ const extractBody = (body) => {
     couponCode           = null,
     couponDiscount       = 0,
     walletAmountUsed     = 0,
+    coinsRedeemed        = 0,
     deliveryInstructions = null,
     cookingInstructions  = null,
     scheduledDelivery    = null,
@@ -146,6 +148,7 @@ const extractBody = (body) => {
     couponCode:           couponCode || null,
     couponDiscount:       Math.max(0, Number(couponDiscount || 0)),
     walletAmountUsed:     Math.max(0, Number(walletAmountUsed || 0)),
+    coinsRedeemed:        Math.max(0, Number(coinsRedeemed || 0)),
     deliveryInstructions: deliveryInstructions ? String(deliveryInstructions).trim().slice(0, 300) : null,
     cookingInstructions:  cookingInstructions  ? String(cookingInstructions).trim().slice(0, 300)  : null,
     scheduledDelivery:    scheduledDelivery    || null,
@@ -334,12 +337,19 @@ const priceAllGroups = async (groups, fields, user) => {
     }
   }
 
+  // Coin Redemption Validation (Min Order ₹199, 1 coin = ₹0.10, Max ₹10 discount)
+  const coinValidation = validateCoinRedemption(user?.coins, fields.coinsRedeemed, totalSubTotal)
+  const validCoinDiscount = coinValidation.valid ? coinValidation.discountAmt : 0
+  const validCoinsUsed = coinValidation.valid ? coinValidation.coinsToDeduct : 0
+
   priced.forEach((g, idx) => {
     g.tip              = idx === 0 ? fields.tip : 0
     g.couponDiscount   = idx === 0 ? couponDiscount : 0
     g.walletAmountUsed = idx === 0 ? fields.walletAmountUsed : 0
     g.offerKey         = g.isSundayFlash ? 'SUNDAY_FLASH_FREE_FOOD' : (idx === 0 ? fields.offerKey : null)
     g.couponCode       = idx === 0 ? validCouponCode : null
+    g.coins_redeemed   = idx === 0 ? validCoinsUsed : 0
+    g.coin_discount    = idx === 0 ? validCoinDiscount : 0
 
     // For Sunday Flash: 100% food cost is waived up to ₹149 (customer pays ₹0 for food)
     const foodPayable = g.isSundayFlash ? Math.max(0, g.subTotalAmt - g.sundayFlashDiscount) : g.subTotalAmt
@@ -348,12 +358,12 @@ const priceAllGroups = async (groups, fields, user) => {
     const { surge_fee, surge_reason } = calcSurgeFee()
     g.surge_fee = idx === 0 ? surge_fee : 0
     g.surge_reason = idx === 0 ? surge_reason : ''
-    const payablePreWallet = foodPayable + g.deliveryFee + g.tip + small_cart_fee + g.surge_fee - g.couponDiscount
+    const payablePreWallet = foodPayable + g.deliveryFee + g.tip + small_cart_fee + g.surge_fee - g.couponDiscount - g.coin_discount
     g.totalAmt = Math.max(0, payablePreWallet - g.walletAmountUsed)
   })
 
   const grandTotal = priced.reduce((s, g) => s + g.totalAmt, 0)
-  return { priced, grandTotal }
+  return { priced, grandTotal, validCoinsUsed, validCoinDiscount }
 }
 
 // ── Build one order document's fields for a single restaurant group ─────────
@@ -391,7 +401,9 @@ const buildOrderFields = (userId, groupOrderId, group, fields, extra = {}, user 
     offerKey:         group.offerKey,
     couponCode:       group.couponCode,
     couponDiscount:   group.couponDiscount,
-    discount_amount:  (group.sundayFlashDiscount || 0) + (group.couponDiscount || 0),
+    coins_redeemed:   group.coins_redeemed || 0,
+    coin_discount:    group.coin_discount || 0,
+    discount_amount:  (group.sundayFlashDiscount || 0) + (group.couponDiscount || 0) + (group.coin_discount || 0),
     isSundayFlashOffer: Boolean(group.isSundayFlash),
     walletAmountUsed: group.walletAmountUsed,
     deliveryInstructions: fields.deliveryInstructions || addressDoc?.delivery_instructions || '',
@@ -581,10 +593,10 @@ const prepareMultiRestaurantOrder = async (req) => {
 
   await assertStoreOpenForOrder({ list_items: fields.items, userRole: user?.role, orderType: 'food' })
 
-  const { priced, grandTotal } = await priceAllGroups(groups, fields, user)
+  const { priced, grandTotal, validCoinsUsed, validCoinDiscount } = await priceAllGroups(groups, fields, user)
   const groupOrderId = genGroupOrderId()
 
-  return { fields, user, addressDoc, priced, grandTotal, groupOrderId }
+  return { fields, user, addressDoc, priced, grandTotal, groupOrderId, validCoinsUsed, validCoinDiscount }
 }
 
 // ── POST /api/restaurant/food-order/cash-on-delivery ───────────────────────
@@ -605,6 +617,7 @@ export async function foodOrderCOD(req, res) {
     priced = prep.priced
     grandTotal = prep.grandTotal
     groupOrderId = prep.groupOrderId
+    const validCoinsUsed = prep.validCoinsUsed || 0
 
     if (user?.isCodBlocked) {
       return res.status(403).json({
@@ -652,6 +665,12 @@ export async function foodOrderCOD(req, res) {
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
     }
+
+    // Deduct redeemed coins from user balance
+    if (validCoinsUsed > 0) {
+      await UserModel.findByIdAndUpdate(req.userId, { $inc: { coins: -validCoinsUsed } })
+    }
+
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
 
     console.log(`[foodOrderCOD] ✅ group=${groupOrderId} restaurants=${orders.length} orderIds=${orders.map(o => o.orderId).join(',')}`)
@@ -703,6 +722,7 @@ export async function foodOrderWallet(req, res) {
     priced = prep.priced
     grandTotal = prep.grandTotal
     groupOrderId = prep.groupOrderId
+    const validCoinsUsed = prep.validCoinsUsed || 0
 
     const walletBal = Number(user.walletBalance || 0)
     deductAmt = fields.walletAmountUsed > 0 ? fields.walletAmountUsed : grandTotal
@@ -745,6 +765,11 @@ export async function foodOrderWallet(req, res) {
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
+    }
+
+    // Deduct redeemed coins from user balance
+    if (validCoinsUsed > 0) {
+      await UserModel.findByIdAndUpdate(req.userId, { $inc: { coins: -validCoinsUsed } })
     }
 
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
@@ -833,6 +858,7 @@ export async function foodOrderVerifyPayment(req, res) {
     priced = prep.priced
     grandTotal = prep.grandTotal
     groupOrderId = prep.groupOrderId
+    const validCoinsUsed = prep.validCoinsUsed || 0
 
     // ── ATOMIC SUNDAY FLASH CLAIM LOCK ──
     flashGroup = priced.find(g => g.isSundayFlash && g.offerId)
@@ -869,6 +895,11 @@ export async function foodOrderVerifyPayment(req, res) {
       await order.save()
       orders.push(order)
       notifyFoodOrderPlaced(order, user)
+    }
+
+    // Deduct redeemed coins from user balance
+    if (validCoinsUsed > 0) {
+      await UserModel.findByIdAndUpdate(req.userId, { $inc: { coins: -validCoinsUsed } })
     }
 
     console.log(`[foodOrderVerifyPayment] ✅ group=${groupOrderId} paymentId=${razorpay_payment_id} restaurants=${orders.length}`)

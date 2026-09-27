@@ -123,6 +123,7 @@ const FoodCheckoutPage = () => {
   const [couponLoading,    setCouponLoading]    = useState(false)
 
   const [walletApplied, setWalletApplied]   = useState(false)
+  const [useCoins, setUseCoins]             = useState(false)
 
   const [scheduleNow,   setScheduleNow]     = useState(true)
   const [scheduleSlot,  setScheduleSlot]    = useState('Today, 7:00 PM – 7:30 PM')
@@ -236,12 +237,22 @@ const FoodCheckoutPage = () => {
   const SMALL_CART_THRESHOLD = 99
   const smallCartFee = (subTotal > 0 && subTotal < SMALL_CART_THRESHOLD && !isFlashEligible) ? 10 : 0
   const { fee: surgeFee, reason: surgeReason } = getSurgeFeeDetails()
+
+  // ── Snapit Coins Redemption (Min order ₹199, 1 coin = ₹0.10, max ₹10 off) ──
+  const availableCoins = Math.max(0, Number(user?.coins || 0))
+  const eligibleCoins = Math.min(availableCoins, 100)
+  const potentialCoinDiscount = Math.floor(eligibleCoins * 0.10)
+  const actualCoinsToUse = potentialCoinDiscount * 10
+  const isCoinEligible = subTotal >= 199 && potentialCoinDiscount > 0
+  const coinDiscount = (useCoins && isCoinEligible) ? potentialCoinDiscount : 0
+  const coinsRedeemed = (useCoins && isCoinEligible) ? actualCoinsToUse : 0
+
   // Customer pays ₹0 for food when eligible for Sunday Flash Offer
-  const payableFood = Math.max(0, subTotal - flashDiscount - couponDiscount)
+  const payableFood = Math.max(0, subTotal - flashDiscount - couponDiscount - coinDiscount)
   const preWallet = payableFood + deliveryFee + smallCartFee + surgeFee + tipAmt
   const walletDeduct = walletApplied ? Math.min(walletBal, preWallet) : 0
   const grandTotal = Math.max(0, preWallet - walletDeduct)
-  const totalSaved = 48 + flashDiscount + couponDiscount + walletDeduct
+  const totalSaved = 48 + flashDiscount + couponDiscount + coinDiscount + walletDeduct
 
   const unserviceableResto = restaurantPricing.find(r => r.info && !r.info.serviceable)
 
@@ -384,6 +395,7 @@ const FoodCheckoutPage = () => {
       couponCode: appliedCouponCode || undefined,
       couponDiscount: couponDiscount || undefined,
       walletAmountUsed: walletDeduct || undefined,
+      coinsRedeemed: coinsRedeemed || undefined,
       items,
       deliveryLocation: { lat: coords.lat, lng: coords.lng },
       isSundayFlash: isFlashEligible,
@@ -392,7 +404,7 @@ const FoodCheckoutPage = () => {
     }
   }, [
     activeTags, instructions, activeCookingChips, cookingNotes, addressList, selectAddress, scheduleNow, scheduleSlot,
-    tipAmt, appliedCouponCode, couponDiscount, walletDeduct,
+    tipAmt, appliedCouponCode, couponDiscount, walletDeduct, coinsRedeemed,
     restaurantItemLists, isFlashEligible,
   ])
 
@@ -1038,6 +1050,68 @@ const FoodCheckoutPage = () => {
         </div>
       )}
 
+      {/* ── Snapit Coins Redemption (Option B) ── */}
+      <div className='bg-white mt-2 px-4 py-4'>
+        <div className='bg-gradient-to-r from-amber-50/90 via-amber-50/50 to-orange-50/90 border border-amber-200/90 rounded-2xl p-3.5 shadow-2xs'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2.5'>
+              <div className='w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center text-lg shadow-inner'>
+                🪙
+              </div>
+              <div>
+                <div className='flex items-center gap-1.5'>
+                  <p className='text-xs font-black text-amber-950 uppercase tracking-wide'>Snapit Coins</p>
+                  <span className='text-[10px] font-black text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded-full'>
+                    {availableCoins} available
+                  </span>
+                </div>
+                <p className='text-[10px] text-amber-800/80 font-medium'>
+                  10 coins = ₹1 off • Min order ₹199 • Max ₹10 off
+                </p>
+              </div>
+            </div>
+
+            {isCoinEligible ? (
+              <button
+                type='button'
+                onClick={() => {
+                  haptic.light()
+                  setUseCoins(prev => !prev)
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+                  useCoins
+                    ? 'bg-amber-600 text-white shadow-xs scale-[1.02]'
+                    : 'bg-white text-amber-900 border border-amber-300 hover:bg-amber-100/60'
+                }`}
+              >
+                {useCoins ? 'Applied ✓' : `Redeem ₹${potentialCoinDiscount}`}
+              </button>
+            ) : null}
+          </div>
+
+          {/* Contextual Status / Eligibility Messages */}
+          {subTotal < 199 ? (
+            <div className='mt-2.5 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px] font-semibold text-amber-900/90'>
+              <span>Add food items worth ₹{199 - subTotal} more to redeem coins</span>
+              <span className='text-[10px] bg-white/80 text-amber-800 font-bold px-2 py-0.5 rounded-md border border-amber-200/60'>Min ₹199</span>
+            </div>
+          ) : availableCoins < 10 ? (
+            <div className='mt-2.5 pt-2 border-t border-amber-200/60 text-[11px] font-semibold text-amber-800/90'>
+              Earn 10+ coins from daily streaks to start redeeming discounts!
+            </div>
+          ) : useCoins ? (
+            <div className='mt-2.5 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px] font-bold text-emerald-800'>
+              <span>🎉 Redeemed {actualCoinsToUse} coins for an extra ₹{potentialCoinDiscount} OFF!</span>
+              <span className='text-[10px] text-amber-800'>({availableCoins - actualCoinsToUse} coins left)</span>
+            </div>
+          ) : (
+            <div className='mt-2.5 pt-2 border-t border-amber-200/60 text-[11px] font-semibold text-amber-800/90'>
+              Tap 'Redeem ₹{potentialCoinDiscount}' to use {actualCoinsToUse} coins and save instantly.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Bill details ─────────────────────────────────────────────── */}
       <div className='bg-white mt-2 px-4 py-4'>
         {/* Free Delivery Banner for Food (Within 5 km) */}
@@ -1107,6 +1181,14 @@ const FoodCheckoutPage = () => {
             <div className='flex justify-between text-sm'>
               <span className='text-gray-500'>Coupon ({appliedCouponCode})</span>
               <span className='font-semibold text-green-600'>−₹{couponDiscount}</span>
+            </div>
+          )}
+          {coinDiscount > 0 && (
+            <div className='flex justify-between text-sm bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60'>
+              <span className='text-amber-800 font-bold flex items-center gap-1'>
+                <span>🪙</span> Snapit Coins Redeemed ({coinsRedeemed} coins)
+              </span>
+              <span className='font-black text-amber-700'>−₹{coinDiscount}</span>
             </div>
           )}
           {walletDeduct > 0 && (

@@ -163,6 +163,8 @@ const orderSchema = new mongoose.Schema(
         // ── Promotions ───────────────────────────────────────────────
         coupon_used:     { type: String, default: null },
         discount_amount: { type: Number, default: 0 },
+        coins_redeemed:  { type: Number, default: 0 },
+        coin_discount:   { type: Number, default: 0 },
         scratch_cards:   { type: Array,  default: [] },
 
         // ── Food order extras ────────────────────────────────────────
