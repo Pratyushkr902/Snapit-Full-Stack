@@ -89,6 +89,7 @@ export default function AdminSupportDesk() {
   const [isMuted, setIsMuted] = useState(false)
 
   const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
   const socketRef = useRef(null)
   const inputRef = useRef(null)
   const selectedChatIdRef = useRef(selectedChatId)
@@ -219,10 +220,16 @@ export default function AdminSupportDesk() {
     }
   }, [])
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages or chat change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [activeChat?.messages])
+    const timer = setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+      }
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 60)
+    return () => clearTimeout(timer)
+  }, [selectedChatId, activeChat?._id, activeChat?.messages?.length])
 
   // Send admin reply
   const handleSendReply = async (customText = null) => {
@@ -369,10 +376,10 @@ export default function AdminSupportDesk() {
         </div>
 
         {/* ── MAIN WORKSPACE (2-COLUMN) ── */}
-        <div className='flex-1 flex overflow-hidden'>
+        <div className='flex-1 min-h-0 flex overflow-hidden'>
           {/* ──── LEFT PANEL: TICKET LIST ──── */}
           <div
-            className={`w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-slate-50/70 dark:bg-slate-900/50 ${
+            className={`w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-slate-800 flex flex-col min-h-0 h-full bg-slate-50/70 dark:bg-slate-900/50 ${
               selectedChatId && 'hidden md:flex'
             }`}
           >
@@ -434,7 +441,7 @@ export default function AdminSupportDesk() {
             </div>
 
             {/* Ticket List Stream */}
-            <div className='flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60'>
+            <div className='flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60'>
               {loading ? (
                 <div className='p-8 text-center text-xs text-slate-400'>Loading conversations...</div>
               ) : filteredChats.length === 0 ? (
@@ -513,7 +520,7 @@ export default function AdminSupportDesk() {
 
           {/* ──── RIGHT PANEL: CHAT THREAD & ACTION DESK ──── */}
           <div
-            className={`flex-1 flex flex-col bg-white dark:bg-slate-950 ${
+            className={`flex-1 min-h-0 h-full flex flex-col overflow-hidden bg-white dark:bg-slate-950 ${
               !selectedChatId ? 'hidden md:flex items-center justify-center' : ''
             }`}
           >
@@ -640,7 +647,11 @@ export default function AdminSupportDesk() {
                 </div>
 
                 {/* ── MESSAGES CONTAINER ── */}
-                <div className='flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40 dark:bg-slate-950/40'>
+                <div
+                  ref={messagesContainerRef}
+                  className='flex-1 min-h-0 h-0 overflow-y-auto p-4 space-y-3 bg-slate-50/40 dark:bg-slate-950/40 overscroll-contain scroll-smooth'
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
                   {loadingChat ? (
                     <div className='p-8 text-center text-xs text-slate-400'>Loading message history...</div>
                   ) : activeChat?.messages?.length === 0 ? (

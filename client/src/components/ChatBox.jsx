@@ -541,15 +541,6 @@ export default function ChatBox() {
                 >
                   <IoCall size={18} />
                 </a>
-                <a
-                  href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent('Hi Snapit Support, I need help with my order')}`}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='p-2 hover:bg-white/15 active:scale-95 rounded-full text-white/90 hover:text-white transition-all'
-                  title='WhatsApp Support'
-                >
-                  <IoLogoWhatsapp size={19} />
-                </a>
                 <button
                   onClick={handleRestart}
                   className='p-2 hover:bg-white/15 active:scale-95 rounded-full text-white/90 hover:text-white transition-all'
@@ -568,7 +559,7 @@ export default function ChatBox() {
             </div>
 
             {/* ── CONVERSATION STREAM ── */}
-            <div className='flex-1 overflow-y-auto p-3.5 space-y-3 bg-slate-50 dark:bg-slate-900/60'>
+            <div className='flex-1 min-h-0 overflow-y-auto p-3.5 space-y-3 bg-slate-50 dark:bg-slate-900/60 overscroll-contain'>
               {messages.map((msg) => (
                 <div
                   key={msg.id}
