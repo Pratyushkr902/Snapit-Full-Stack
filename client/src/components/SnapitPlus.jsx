@@ -263,7 +263,13 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
         await Axios({
           method: 'DELETE',
           url: `/api/subscription/cancel/${plusSub._id}`,
-          data: { id: plusSub._id }
+          data: { id: plusSub._id, isSnapitPlus: true }
+        })
+      } else {
+        await Axios({
+          method: 'DELETE',
+          url: `/api/subscription/cancel`,
+          data: { isSnapitPlus: true }
         })
       }
 

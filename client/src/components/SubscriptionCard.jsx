@@ -219,7 +219,7 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
                       const res = await Axios({
                         method: 'DELETE',
                         url: `/api/subscription/cancel/${subscription._id}`,
-                        data: { id: subscription._id }
+                        data: { id: subscription._id, isSnapitPlus: true }
                       })
                       if (res.data?.success) {
                         setCurrentStatus('Cancelled')

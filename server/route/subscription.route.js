@@ -167,6 +167,23 @@ subscriptionRouter.post('/resume',      auth, (req, res) => handleStatusChange(r
 const handleCancel = async (req, res) => {
     try {
         const id = extractSubId(req);
+
+        // Special handling for synthesized Snapit Plus subscription card
+        if (id === 'snapit_plus_synced' || req.body?.isSnapitPlus) {
+            await UserModel.findByIdAndUpdate(req.userId, {
+                isSnapitPlusMember: false,
+                snapitPlusExpiresAt: null
+            });
+            await SubscriptionModel.updateMany(
+                { ...getUserMatchQuery(req.userId), isSnapitPlus: true },
+                { status: 'Cancelled' }
+            );
+            return res.json({
+                success: true,
+                message: 'Snapit Plus VIP membership cancelled successfully'
+            });
+        }
+
         if (!id || !mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ success: false, message: 'Invalid subscription ID' });
         }
