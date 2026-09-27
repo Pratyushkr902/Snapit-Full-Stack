@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snapit-v6'
+const CACHE_NAME = 'snapit-v11'
 const STATIC_ASSETS = ['/', '/index.html']
 
 self.addEventListener('install', (event) => {

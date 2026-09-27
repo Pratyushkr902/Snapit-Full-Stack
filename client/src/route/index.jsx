@@ -11,14 +11,37 @@ import Register from "../pages/RegisterOtp";
 const lazyRetry = (componentImport) =>
   lazy(async () => {
     try {
-      return await componentImport()
+      const component = await componentImport()
+      // Component successfully imported: reset retry guard
+      sessionStorage.removeItem('snapit_chunk_retry_time')
+      return component
     } catch (error) {
       console.warn('[lazyRetry] Chunk load error, attempting recovery:', error?.message)
-      const reloadKey = 'snapit_chunk_reload_' + (window.location.hash || window.location.pathname)
-      if (!sessionStorage.getItem(reloadKey)) {
-        sessionStorage.setItem(reloadKey, '1')
+      const msg = String(error?.message || error || '').toLowerCase()
+      const isChunkError =
+        msg.includes('dynamically imported module') ||
+        msg.includes('loading chunk') ||
+        msg.includes('failed to fetch') ||
+        msg.includes('chunkloaderror') ||
+        msg.includes('text/html') ||
+        msg.includes('mime type') ||
+        msg.includes('module script') ||
+        msg.includes('syntaxerror')
+
+      const lastRetry = parseInt(sessionStorage.getItem('snapit_chunk_retry_time') || '0', 10)
+      const now = Date.now()
+
+      // Only retry reload if not already attempted in the last 8 seconds (prevents loops)
+      if (isChunkError && now - lastRetry > 8000) {
+        sessionStorage.setItem('snapit_chunk_retry_time', String(now))
+        if ('caches' in window) {
+          try {
+            const keys = await window.caches.keys()
+            await Promise.all(keys.filter(k => k.includes('snapit')).map(k => window.caches.delete(k)))
+          } catch (_) {}
+        }
         window.location.reload()
-        return new Promise(() => {}) // Hold until reload
+        return new Promise(() => {}) // Hold pending reload
       }
       throw error
     }
@@ -125,9 +148,15 @@ const ErrorPage = () => {
       errMsg.includes('syntaxerror') ||
       errMsg.includes('importing a module')
     ) {
-      const reloadKey = 'snapit_chunk_reload_' + (window.location.hash || window.location.pathname)
-      if (!sessionStorage.getItem(reloadKey)) {
-        sessionStorage.setItem(reloadKey, '1')
+      const lastRetry = parseInt(sessionStorage.getItem('snapit_errpage_reload') || '0', 10)
+      const now = Date.now()
+      if (now - lastRetry > 8000) {
+        sessionStorage.setItem('snapit_errpage_reload', String(now))
+        if ('caches' in window) {
+          window.caches.keys().then((keys) => {
+            return Promise.all(keys.filter((k) => k.includes('snapit')).map((k) => window.caches.delete(k)))
+          }).catch(() => {})
+        }
         window.location.reload()
       }
     }
@@ -149,7 +178,14 @@ const ErrorPage = () => {
       
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
         <button
-          onClick={() => {
+          onClick={async () => {
+            try {
+              sessionStorage.clear()
+              if ('caches' in window) {
+                const keys = await window.caches.keys()
+                await Promise.all(keys.map(k => window.caches.delete(k)))
+              }
+            } catch (_) {}
             window.location.reload()
           }}
           style={{
@@ -161,7 +197,14 @@ const ErrorPage = () => {
           🔄 Try Again
         </button>
         <button
-          onClick={() => {
+          onClick={async () => {
+            try {
+              sessionStorage.clear()
+              if ('caches' in window) {
+                const keys = await window.caches.keys()
+                await Promise.all(keys.map(k => window.caches.delete(k)))
+              }
+            } catch (_) {}
             navigate('/', { replace: true })
             window.location.hash = '#/'
             window.location.reload()
