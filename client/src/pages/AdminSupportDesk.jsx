@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useSelector } from 'react-redux'
+import { Link } from 'react-router-dom'
 import {
   IoSearch,
   IoSend,
@@ -11,7 +12,12 @@ import {
   IoChevronBack,
   IoAlertCircle,
   IoPersonCircleOutline,
-  IoTimeOutline
+  IoTimeOutline,
+  IoVolumeHighOutline,
+  IoVolumeMuteOutline,
+  IoClose,
+  IoCopyOutline,
+  IoOpenOutline
 } from 'react-icons/io5'
 import { RiRobot2Line, RiCustomerService2Fill } from 'react-icons/ri'
 import Axios from '../utils/Axios'
@@ -31,7 +37,8 @@ const QUICK_REPLIES = [
 ]
 
 // Synthesize pleasant incoming chime via Web Audio API
-const playChime = () => {
+const playChime = (muted = false) => {
+  if (muted) return
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
     const osc = ctx.createOscillator()
@@ -59,6 +66,15 @@ const formatTimeAgo = (dateStr) => {
   return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
+const copyToClipboard = (text, label = 'Information') => {
+  if (!text) return
+  if (navigator?.clipboard?.writeText) {
+    navigator.clipboard.writeText(String(text))
+    toast.success(`${label} copied to clipboard!`)
+    try { haptic.selection() } catch {}
+  }
+}
+
 export default function AdminSupportDesk() {
   const user = useSelector(state => state.user)
   const [chats, setChats] = useState([])
@@ -70,15 +86,21 @@ export default function AdminSupportDesk() {
   const [searchQuery, setSearchQuery] = useState('')
   const [replyText, setReplyText] = useState('')
   const [sending, setSending] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
 
   const messagesEndRef = useRef(null)
   const socketRef = useRef(null)
   const inputRef = useRef(null)
   const selectedChatIdRef = useRef(selectedChatId)
+  const isMutedRef = useRef(isMuted)
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId
   }, [selectedChatId])
+
+  useEffect(() => {
+    isMutedRef.current = isMuted
+  }, [isMuted])
 
   // Fetch all ticket threads
   const fetchChats = async (showLoading = true) => {
@@ -153,7 +175,7 @@ export default function AdminSupportDesk() {
 
     socket.on('admin_support_ticket_updated', (updatedData) => {
       const ticketId = updatedData._id || updatedData.chatId
-      playChime()
+      playChime(isMutedRef.current)
       haptic.medium()
       setChats((prev) => {
         const idx = prev.findIndex((c) => (c._id || c.chatId) === ticketId)
@@ -285,6 +307,14 @@ export default function AdminSupportDesk() {
     return chats.reduce((acc, c) => acc + (c.unreadCountAdmin || 0), 0)
   }, [chats])
 
+  const openCount = useMemo(() => {
+    return chats.filter((c) => c.status === 'OPEN').length
+  }, [chats])
+
+  const resolvedCount = useMemo(() => {
+    return chats.filter((c) => c.status === 'RESOLVED').length
+  }, [chats])
+
   return (
     <div className='min-h-[calc(100vh-80px)] bg-slate-100 dark:bg-slate-950 p-2 sm:p-4'>
       <div className='max-w-7xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl overflow-hidden flex flex-col h-[calc(100vh-100px)]'>
@@ -309,8 +339,23 @@ export default function AdminSupportDesk() {
 
           <div className='flex items-center gap-2'>
             <button
+              onClick={() => {
+                haptic.selection()
+                setIsMuted(!isMuted)
+                toast.success(!isMuted ? 'Sound alerts MUTED' : 'Sound alerts turned ON')
+              }}
+              className={`p-2 rounded-xl border transition-all active:scale-95 ${
+                isMuted
+                  ? 'bg-rose-500/25 text-rose-200 border-rose-400/40'
+                  : 'bg-white/10 hover:bg-white/20 text-white border-white/15'
+              }`}
+              title={isMuted ? 'Sound Muted (Click to Unmute)' : 'Sound Enabled (Click to Mute)'}
+            >
+              {isMuted ? <IoVolumeMuteOutline size={18} /> : <IoVolumeHighOutline size={18} />}
+            </button>
+            <button
               onClick={() => fetchChats(true)}
-              className='p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all active:scale-95'
+              className='p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all active:scale-95'
               title='Refresh'
             >
               <IoRefreshOutline size={18} />
@@ -340,25 +385,51 @@ export default function AdminSupportDesk() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder='Search customer, phone, order #...'
-                  className='w-full pl-9 pr-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500'
+                  className='w-full pl-9 pr-8 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500'
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className='absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                    title='Clear search'
+                  >
+                    <IoClose size={15} />
+                  </button>
+                )}
               </div>
 
-              {/* Status pills */}
+              {/* Status pills with live counts */}
               <div className='flex items-center gap-1.5'>
-                {['ALL', 'OPEN', 'RESOLVED'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setFilterStatus(st)}
-                    className={`flex-1 py-1 text-[11px] font-black rounded-lg transition-all ${
-                      filterStatus === st
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {st === 'ALL' ? 'All' : st === 'OPEN' ? '🟢 Open' : '✓ Resolved'}
-                  </button>
-                ))}
+                <button
+                  onClick={() => { haptic.selection(); setFilterStatus('ALL') }}
+                  className={`flex-1 py-1 text-[11px] font-black rounded-lg transition-all ${
+                    filterStatus === 'ALL'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  All ({chats.length})
+                </button>
+                <button
+                  onClick={() => { haptic.selection(); setFilterStatus('OPEN') }}
+                  className={`flex-1 py-1 text-[11px] font-black rounded-lg transition-all ${
+                    filterStatus === 'OPEN'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  🟢 Open ({openCount})
+                </button>
+                <button
+                  onClick={() => { haptic.selection(); setFilterStatus('RESOLVED') }}
+                  className={`flex-1 py-1 text-[11px] font-black rounded-lg transition-all ${
+                    filterStatus === 'RESOLVED'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  ✓ Solved ({resolvedCount})
+                </button>
               </div>
             </div>
 
@@ -489,10 +560,45 @@ export default function AdminSupportDesk() {
                           {activeChat?.status === 'OPEN' ? '🟢 Active Open' : '✓ Resolved'}
                         </span>
                       </div>
-                      <p className='text-xs text-slate-400'>
-                        {activeChat?.userMobile ? `+91 ${activeChat.userMobile}` : activeChat?.userEmail || ''}
-                        {activeChat?.activeOrderId && ` • Order #${activeChat.activeOrderId}`}
-                      </p>
+                      <div className='flex items-center flex-wrap gap-2 text-xs text-slate-400 mt-0.5'>
+                        {activeChat?.userMobile ? (
+                          <button
+                            type='button'
+                            onClick={() => copyToClipboard(`+91${activeChat.userMobile}`, 'Mobile number')}
+                            className='inline-flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium'
+                            title='Click to copy phone number'
+                          >
+                            <span>+91 {activeChat.userMobile}</span>
+                            <IoCopyOutline size={12} className='text-slate-400' />
+                          </button>
+                        ) : activeChat?.userEmail ? (
+                          <button
+                            type='button'
+                            onClick={() => copyToClipboard(activeChat.userEmail, 'Email address')}
+                            className='inline-flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium'
+                            title='Click to copy email'
+                          >
+                            <span>{activeChat.userEmail}</span>
+                            <IoCopyOutline size={12} className='text-slate-400' />
+                          </button>
+                        ) : null}
+
+                        {activeChat?.activeOrderId && (
+                          <>
+                            <span>•</span>
+                            <Link
+                              to={`/order-tracking/${activeChat.activeOrderId}`}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                              className='inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold transition-all'
+                              title='Open Order in Live Tracker'
+                            >
+                              <span>Order #{String(activeChat.activeOrderId).slice(-6).toUpperCase()}</span>
+                              <IoOpenOutline size={12} />
+                            </Link>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -581,6 +687,50 @@ export default function AdminSupportDesk() {
                             }`}
                           >
                             <p className='whitespace-pre-wrap font-medium'>{msg.text}</p>
+
+                            {/* Card Attachments (if message has card payload) */}
+                            {msg.cardType === 'order_status' && (msg.cardData?.targetOrderId || activeChat?.activeOrderId) && (
+                              <div className='mt-2.5 p-2 rounded-xl bg-white/70 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 text-[11px] text-slate-800 dark:text-slate-200 space-y-1.5'>
+                                <div className='flex items-center justify-between'>
+                                  <span className='font-bold uppercase tracking-wider text-[10px] text-slate-400'>Order Reference</span>
+                                  <Link
+                                    to={`/order-tracking/${msg.cardData?.targetOrderId || activeChat?.activeOrderId}`}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold hover:underline'
+                                  >
+                                    #{String(msg.cardData?.targetOrderId || activeChat?.activeOrderId).slice(-6).toUpperCase()}
+                                    <IoOpenOutline size={11} />
+                                  </Link>
+                                </div>
+                                {msg.cardData?.status && (
+                                  <p className='text-[10px] text-slate-500'>
+                                    Delivery Status: <span className='font-semibold text-amber-600 dark:text-amber-400'>{msg.cardData.status}</span>
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {msg.cardType === 'damage_card' && (
+                              <div className='mt-2.5 p-2 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-[11px] text-red-700 dark:text-red-300'>
+                                <p className='font-bold flex items-center gap-1'>⚠️ Quality / Missing Items Issue</p>
+                                <p className='text-[10px] text-red-600 dark:text-red-400 mt-0.5'>Customer reported damaged or missing items.</p>
+                              </div>
+                            )}
+
+                            {msg.cardType === 'cancel_card' && (
+                              <div className='mt-2.5 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-[11px] text-amber-700 dark:text-amber-300'>
+                                <p className='font-bold flex items-center gap-1'>🛑 Cancellation Request</p>
+                                <p className='text-[10px] text-amber-600 dark:text-amber-400 mt-0.5'>Customer submitted an order cancellation request.</p>
+                              </div>
+                            )}
+
+                            {msg.cardType === 'wallet_card' && (
+                              <div className='mt-2.5 p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-[11px] text-blue-700 dark:text-blue-300'>
+                                <p className='font-bold flex items-center gap-1'>💳 Wallet / Refund Query</p>
+                                <p className='text-[10px] text-blue-600 dark:text-blue-400 mt-0.5'>Customer has a query about balance or cashbacks.</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )

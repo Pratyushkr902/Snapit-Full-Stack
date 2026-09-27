@@ -9,6 +9,8 @@ import toast from 'react-hot-toast'
 import secureStorage from '../utils/secureStorage'
 import ThemeToggle from './ThemeToggle'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
+import { haptic } from '../utils/haptics'
+import { RiCustomerService2Fill } from 'react-icons/ri'
 import {
   FiShoppingBag,
   FiHeart,
@@ -104,22 +106,53 @@ const UserMenu = ({ close }) => {
           )}
         </div>
 
-        {/* Quick Wallet Row */}
-        <Link
-          onClick={handleClose}
-          to='/wallet'
-          className='mt-2.5 flex items-center justify-between p-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/40 hover:bg-emerald-100/60 transition-colors'
-        >
-          <div className='flex items-center gap-2'>
-            <div className='w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0'>
-              <FiCreditCard size={12} />
+        {/* Quick Wallet & 24/7 Support Grid */}
+        <div className='mt-2.5 grid grid-cols-2 gap-2'>
+          <Link
+            onClick={handleClose}
+            to='/wallet'
+            className='flex items-center justify-between p-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/40 hover:bg-emerald-100/60 transition-colors'
+          >
+            <div className='flex items-center gap-1.5 min-w-0'>
+              <div className='w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0'>
+                <FiCreditCard size={12} />
+              </div>
+              <div className='min-w-0'>
+                <p className='text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-tight'>Wallet</p>
+                <p className='text-xs font-black text-emerald-700 dark:text-emerald-300 truncate'>
+                  {DisplayPriceInRupees(user?.walletBalance || 0)}
+                </p>
+              </div>
             </div>
-            <span className='text-xs font-bold text-emerald-900 dark:text-emerald-200'>Snapit Wallet</span>
-          </div>
-          <span className='text-xs font-black text-emerald-700 dark:text-emerald-300'>
-            {DisplayPriceInRupees(user?.walletBalance || 0)} →
-          </span>
-        </Link>
+          </Link>
+
+          <button
+            type='button'
+            onClick={() => {
+              handleClose()
+              haptic.medium()
+              if (typeof window.openSnapitChat === 'function') {
+                window.openSnapitChat()
+              } else {
+                window.dispatchEvent(new CustomEvent('open-snapit-chat'))
+              }
+            }}
+            className='flex items-center justify-between p-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/40 hover:bg-blue-100/60 transition-colors text-left cursor-pointer'
+          >
+            <div className='flex items-center gap-1.5 min-w-0'>
+              <div className='w-6 h-6 rounded-lg bg-blue-500 text-white flex items-center justify-center text-xs shrink-0'>
+                <RiCustomerService2Fill size={13} />
+              </div>
+              <div className='min-w-0'>
+                <p className='text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-tight'>24/7 Help</p>
+                <p className='text-xs font-black text-blue-600 dark:text-blue-400 truncate flex items-center gap-1'>
+                  <span>Live Chat</span>
+                  <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' />
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
 
         <div className='my-2'>
           <ThemeToggle variant="row" />

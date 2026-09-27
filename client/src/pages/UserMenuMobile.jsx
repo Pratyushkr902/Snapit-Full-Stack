@@ -44,6 +44,7 @@ import {
 } from 'react-icons/fi'
 import { IoArrowBack } from 'react-icons/io5'
 import { FaWhatsapp } from 'react-icons/fa'
+import { RiCustomerService2Fill } from 'react-icons/ri'
 
 const UserMenuMobile = () => {
   const user = useSelector((state) => state.user)
@@ -271,19 +272,26 @@ const UserMenuMobile = () => {
           <button
             type='button'
             onClick={() => {
+              haptic.medium()
               if (typeof window.openSnapitChat === 'function') {
                 window.openSnapitChat()
               } else {
                 window.dispatchEvent(new CustomEvent('open-snapit-chat'))
               }
             }}
-            className='bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/70 rounded-2xl p-3 flex flex-col justify-between hover:border-blue-500/40 text-left transition-all active:scale-[0.98] shadow-2xs group cursor-pointer'
+            className='bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/70 rounded-2xl p-3 flex flex-col justify-between hover:border-blue-500/50 text-left transition-all active:scale-[0.98] shadow-2xs group cursor-pointer relative overflow-hidden'
           >
-            <div className='w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform'>
-              <FiHelpCircle size={16} />
+            <div className='flex items-center justify-between w-full mb-2'>
+              <div className='w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform'>
+                <RiCustomerService2Fill size={18} />
+              </div>
+              <span className='inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/50'>
+                <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' />
+                Live
+              </span>
             </div>
             <div>
-              <p className='text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-none'>24/7 Support</p>
+              <p className='text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-none'>24/7 Helpdesk</p>
               <p className='text-sm font-black text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1'>
                 <span>Get Help</span>
                 <span className='text-[10px]'>💬</span>
