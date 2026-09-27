@@ -213,14 +213,24 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
                   type='button'
                   disabled={isCancelling}
                   onClick={async () => {
-                    haptic.heavy()
+                    try { haptic.heavy() } catch {}
                     setIsCancelling(true)
                     try {
-                      const res = await Axios({
-                        method: 'DELETE',
-                        url: `/api/subscription/cancel/${subscription._id}`,
-                        data: { id: subscription._id, isSnapitPlus: true }
-                      })
+                      let res
+                      const payload = { id: subscription._id, isSnapitPlus: true }
+                      try {
+                        res = await Axios({
+                          method: 'DELETE',
+                          url: `/api/subscription/cancel/${subscription._id}`,
+                          data: payload
+                        })
+                      } catch {
+                        res = await Axios({
+                          method: 'POST',
+                          url: `/api/subscription/cancel/${subscription._id}`,
+                          data: payload
+                        })
+                      }
                       if (res.data?.success) {
                         setCurrentStatus('Cancelled')
                         toast.success('Snapit Plus membership cancelled')
@@ -299,28 +309,43 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
   }
 
   const handleConfirmCancel = async () => {
-    haptic.heavy()
+    try { haptic.heavy() } catch {}
     setIsCancelling(true)
     try {
       let res
+      const payload = {
+        id: subscription._id,
+        subscriptionId: subscription._id,
+        isSnapitPlus: Boolean(subscription.isSnapitPlus || subscription._id === 'snapit_plus_synced')
+      }
+
       try {
         res = await Axios({
           method: 'DELETE',
           url: `/api/subscription/cancel/${subscription._id}`,
-          data: { id: subscription._id }
+          data: payload
         })
       } catch (deleteErr) {
-        // Fallback to POST in case DELETE method is blocked by proxy or firewall
-        res = await Axios({
-          method: 'POST',
-          url: `/api/subscription/cancel/${subscription._id}`,
-          data: { id: subscription._id }
-        })
+        // Fallback to POST /cancel/:id
+        try {
+          res = await Axios({
+            method: 'POST',
+            url: `/api/subscription/cancel/${subscription._id}`,
+            data: payload
+          })
+        } catch (postErr) {
+          // Fallback to POST /cancel
+          res = await Axios({
+            method: 'POST',
+            url: '/api/subscription/cancel',
+            data: payload
+          })
+        }
       }
 
       if (res?.data?.success) {
         setCurrentStatus('Cancelled')
-        toast.success(res.data.message || 'Subscription cancelled successfully')
+        toast.success(res.data.message || 'Recurring delivery cancelled successfully')
         setShowCancelModal(false)
         if (onUpdate) onUpdate()
       } else {

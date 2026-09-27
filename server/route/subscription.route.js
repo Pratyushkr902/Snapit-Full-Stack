@@ -133,14 +133,18 @@ const handleStatusChange = async (req, res, targetStatus) => {
         }
 
         const userMatch = getUserMatchQuery(req.userId);
-        const sub = await SubscriptionModel.findOne({ _id: id, ...userMatch });
+        const objectId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
+        
+        // Use findOneAndUpdate with runValidators: false to prevent legacy schema validation blockages
+        const sub = await SubscriptionModel.findOneAndUpdate(
+            { _id: objectId || id, ...userMatch },
+            { $set: { status: targetStatus } },
+            { runValidators: false, new: true }
+        );
 
         if (!sub) {
             return res.status(404).json({ success: false, message: 'Subscription not found' });
         }
-
-        sub.status = targetStatus;
-        await sub.save();
 
         return res.json({
             success: true,
@@ -176,7 +180,7 @@ const handleCancel = async (req, res) => {
             });
             await SubscriptionModel.updateMany(
                 { ...getUserMatchQuery(req.userId), isSnapitPlus: true },
-                { status: 'Cancelled' }
+                { $set: { status: 'Cancelled' } }
             );
             return res.json({
                 success: true,
@@ -189,15 +193,23 @@ const handleCancel = async (req, res) => {
         }
 
         const userMatch = getUserMatchQuery(req.userId);
-        const sub = await SubscriptionModel.findOne({ _id: id, ...userMatch });
+        const objectId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
+
+        // Resilient atomic update bypassing strict validation on untouched legacy fields
+        const sub = await SubscriptionModel.findOneAndUpdate(
+            { _id: objectId || id, ...userMatch },
+            {
+                $set: {
+                    status: 'Cancelled',
+                    nextDeliveryDate: null
+                }
+            },
+            { runValidators: false, new: true }
+        );
 
         if (!sub) {
             return res.status(404).json({ success: false, message: 'Subscription not found or already cancelled' });
         }
-
-        sub.status = 'Cancelled';
-        sub.nextDeliveryDate = null;
-        await sub.save();
 
         // If this was a Snapit Plus VIP subscription, synchronize UserModel
         if (sub.isSnapitPlus) {

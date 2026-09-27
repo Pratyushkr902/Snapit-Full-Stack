@@ -252,24 +252,27 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
 
   // Cancel Membership Handler
   const handleCancelMembership = async () => {
-    haptic.heavy()
+    try { haptic.heavy() } catch {}
     setIsCancelling(true)
     try {
       // Find sub ID or cancel directly
       const subRes = await Axios({ url: '/api/subscription/my-subscriptions', method: 'get' })
       const plusSub = subRes.data?.data?.find(s => s.isSnapitPlus && s.status === 'Active')
 
-      if (plusSub?._id) {
+      const payload = { id: plusSub?._id || 'snapit_plus_synced', isSnapitPlus: true }
+      const targetUrl = plusSub?._id ? `/api/subscription/cancel/${plusSub._id}` : '/api/subscription/cancel'
+
+      try {
         await Axios({
           method: 'DELETE',
-          url: `/api/subscription/cancel/${plusSub._id}`,
-          data: { id: plusSub._id, isSnapitPlus: true }
+          url: targetUrl,
+          data: payload
         })
-      } else {
+      } catch {
         await Axios({
-          method: 'DELETE',
-          url: `/api/subscription/cancel`,
-          data: { isSnapitPlus: true }
+          method: 'POST',
+          url: targetUrl,
+          data: payload
         })
       }
 
@@ -387,56 +390,144 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
           </div>
         )}
 
-        {/* Plan Selection Row (when not active) */}
+        {/* Plan Selection Section (Executive VIP Grade) */}
         {!isMember && (
-          <div className='space-y-3'>
-            <h3 className='font-black text-sm text-slate-900 dark:text-white'>
-              Choose Membership Duration
-            </h3>
+          <div className='space-y-3.5'>
+            <div className='flex items-center justify-between'>
+              <h3 className='font-black text-sm text-slate-900 dark:text-white flex items-center gap-1.5'>
+                <FaCrown className='text-amber-500' size={14} />
+                <span>Select Membership Plan</span>
+              </h3>
+              <span className='text-[11px] font-bold text-slate-400'>
+                Instant 1-tap activation
+              </span>
+            </div>
 
-            <div className='grid grid-cols-2 gap-3'>
-              {/* Monthly Plan */}
-              <button
-                type='button'
-                onClick={() => { haptic.selection(); setPlan('monthly') }}
-                className={`relative rounded-2xl p-4 text-left border-2 transition-all active:scale-[0.98] ${
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3.5'>
+              {/* Monthly Plan Card */}
+              <div
+                role='button'
+                tabIndex={0}
+                onClick={() => {
+                  try { haptic.selection() } catch {}
+                  setPlan('monthly')
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    setPlan('monthly')
+                  }
+                }}
+                className={`relative rounded-2xl p-4 sm:p-5 text-left border-2 cursor-pointer transition-all duration-200 select-none ${
                   plan === 'monthly'
-                    ? 'border-emerald-600 dark:border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+                    ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30 shadow-md ring-2 ring-emerald-500/20'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
-                <p className='text-xs font-bold text-slate-500 dark:text-slate-400'>Monthly VIP</p>
-                <div className='flex items-baseline gap-1 mt-1'>
-                  <span className='text-2xl font-black text-slate-900 dark:text-white'>₹99</span>
-                  <span className='text-xs font-semibold text-slate-400'>/month</span>
-                </div>
-                <p className='text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1'>
-                  30 days unlimited VIP
-                </p>
-              </button>
+                <div className='flex items-start justify-between gap-2'>
+                  <div>
+                    <span className='inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 mb-1.5'>
+                      Monthly Flexibility
+                    </span>
+                    <h4 className='text-sm font-black text-slate-900 dark:text-white leading-tight'>
+                      Monthly VIP
+                    </h4>
+                  </div>
 
-              {/* Yearly Plan */}
-              <button
-                type='button'
-                onClick={() => { haptic.selection(); setPlan('yearly') }}
-                className={`relative rounded-2xl p-4 text-left border-2 transition-all active:scale-[0.98] ${
+                  {/* Radio Indicator */}
+                  <div className='shrink-0 mt-0.5'>
+                    {plan === 'monthly' ? (
+                      <IoCheckmarkCircle className='text-emerald-600 dark:text-emerald-400 text-2xl drop-shadow-xs' />
+                    ) : (
+                      <div className='w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900' />
+                    )}
+                  </div>
+                </div>
+
+                <div className='flex items-baseline gap-1 mt-2.5'>
+                  <span className='text-3xl font-black text-slate-900 dark:text-white tracking-tight'>
+                    ₹99
+                  </span>
+                  <span className='text-xs font-bold text-slate-400'>
+                    / 30 days
+                  </span>
+                </div>
+
+                <div className='mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] font-bold'>
+                  <span className='text-emerald-600 dark:text-emerald-400'>
+                    ✓ Unlimited ₹0 deliveries
+                  </span>
+                  <span className='text-slate-400'>
+                    Billed monthly
+                  </span>
+                </div>
+              </div>
+
+              {/* Annual Plan Card (Recommended) */}
+              <div
+                role='button'
+                tabIndex={0}
+                onClick={() => {
+                  try { haptic.selection() } catch {}
+                  setPlan('yearly')
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    setPlan('yearly')
+                  }
+                }}
+                className={`relative rounded-2xl p-4 sm:p-5 text-left border-2 cursor-pointer transition-all duration-200 select-none ${
                   plan === 'yearly'
-                    ? 'border-emerald-600 dark:border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+                    ? 'border-emerald-500 dark:border-emerald-400 bg-gradient-to-br from-emerald-50/70 via-amber-50/30 to-emerald-50/60 dark:from-emerald-950/40 dark:via-amber-950/20 dark:to-emerald-950/30 shadow-md ring-2 ring-emerald-500/20'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
-                <span className='absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[9px] uppercase tracking-wider shadow-xs'>
-                  SAVE 25%
-                </span>
-                <p className='text-xs font-bold text-slate-500 dark:text-slate-400'>Annual VIP</p>
-                <div className='flex items-baseline gap-1 mt-1'>
-                  <span className='text-2xl font-black text-slate-900 dark:text-white'>₹899</span>
-                  <span className='text-xs font-semibold text-slate-400'>/year</span>
+                {/* Floating Best Value Badge with pointer-events-none */}
+                <div className='absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-sm pointer-events-none flex items-center gap-1'>
+                  <FaCrown size={9} />
+                  <span>SAVE 25% • BEST VALUE</span>
                 </div>
-                <p className='text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-1'>
-                  = ₹75/mo (Best Value)
-                </p>
-              </button>
+
+                <div className='flex items-start justify-between gap-2'>
+                  <div>
+                    <span className='inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 mb-1.5 border border-amber-300 dark:border-amber-800/60'>
+                      Full Year Pass
+                    </span>
+                    <h4 className='text-sm font-black text-slate-900 dark:text-white leading-tight'>
+                      Annual VIP
+                    </h4>
+                  </div>
+
+                  {/* Radio Indicator */}
+                  <div className='shrink-0 mt-0.5'>
+                    {plan === 'yearly' ? (
+                      <IoCheckmarkCircle className='text-emerald-600 dark:text-emerald-400 text-2xl drop-shadow-xs' />
+                    ) : (
+                      <div className='w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900' />
+                    )}
+                  </div>
+                </div>
+
+                <div className='flex items-baseline gap-1 mt-2.5'>
+                  <span className='text-3xl font-black text-slate-900 dark:text-white tracking-tight'>
+                    ₹899
+                  </span>
+                  <span className='text-xs font-bold text-slate-400'>
+                    / 12 months
+                  </span>
+                  <span className='ml-2 text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-2 py-0.5 rounded-md'>
+                    = ₹75/mo
+                  </span>
+                </div>
+
+                <div className='mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] font-bold'>
+                  <span className='text-amber-600 dark:text-amber-400'>
+                    💰 Save ₹289 vs Monthly
+                  </span>
+                  <span className='text-slate-400'>
+                    Full 365 Days
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -448,7 +539,7 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
               <h3 className='font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-1.5'>
                 <span>💡 See Your Monthly Savings</span>
               </h3>
-              <span className='text-[11px] font-bold text-emerald-600 dark:text-emerald-400'>
+              <span className='text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-lg'>
                 {orderFreq} orders/mo
               </span>
             </div>
@@ -478,8 +569,12 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
                 <span className='line-through text-rose-500 font-semibold'>₹{withoutPlus}</span>
               </div>
               <div className='flex justify-between text-slate-600 dark:text-slate-400'>
-                <span>Snapit Plus membership</span>
-                <span className='font-bold text-emerald-600 dark:text-emerald-400'>₹{monthlyEquivalent}/mo</span>
+                <span>
+                  Snapit Plus membership ({plan === 'yearly' ? 'Annual VIP' : 'Monthly VIP'})
+                </span>
+                <span className='font-bold text-emerald-600 dark:text-emerald-400'>
+                  ₹{monthlyEquivalent}/mo {plan === 'yearly' && <span className='text-[10px] font-normal text-slate-400'>(₹899 billed yearly)</span>}
+                </span>
               </div>
               <div className='pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center font-bold'>
                 <span className='text-slate-900 dark:text-white'>Estimated Net Savings</span>
@@ -544,7 +639,7 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
                 <span>
                   {payingWithWallet
                     ? 'Activating via Wallet...'
-                    : `⚡ 1-Tap Pay ₹${planPrice} with Snapit Wallet`}
+                    : `⚡ 1-Tap Pay ₹${planPrice} with Snapit Wallet (${plan === 'yearly' ? 'Annual' : 'Monthly'})`}
                 </span>
                 <span className='text-xs opacity-75 font-bold'>(Bal: ₹{walletBalance})</span>
               </button>
@@ -563,9 +658,9 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
                 <>
                   <FaShieldAlt size={14} />
                   <span>
-                    {canPayWithWallet
-                      ? `Pay ₹${planPrice} with UPI / Card`
-                      : `Activate Snapit Plus — ₹${planPrice}`}
+                    {plan === 'yearly'
+                      ? 'Activate Annual VIP — ₹899 / Year (Save 25%)'
+                      : 'Activate Monthly VIP — ₹99 / Month'}
                   </span>
                 </>
               )}
