@@ -54,14 +54,8 @@ export const updateUserStreak = async (userId) => {
             bonusCoins = STREAK_MILESTONES[newStreak];
             milestoneReached = newStreak;
 
-            // Add coins to wallet
-            user.walletBalance = (user.walletBalance || 0) + bonusCoins;
-            user.walletTransactions.push({
-                type: 'CREDIT',
-                amount: bonusCoins,
-                description: `🔥 ${newStreak}-Day Streak Reward`,
-                date: new Date()
-            });
+            // Zero real-money loss: add loyalty coins only, never wallet cash
+            user.coins = (user.coins || 0) + bonusCoins;
             user.claimedMilestones.push(newStreak);
         }
 

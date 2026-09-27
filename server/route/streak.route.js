@@ -14,11 +14,11 @@ const STREAK_MILESTONES = {
 
 const DAILY_CHECKIN_COINS = 5;
 
-// GET /api/streak/me
+// GET /api/streak/me - Fetch user streak telemetry & coin balance
 streakRouter.get('/me', auth, async (req, res) => {
     try {
         const user = await UserModel.findById(req.userId).select(
-            'currentStreak lastOrderDate claimedMilestones walletBalance lastCheckin checkinHistory'
+            'currentStreak lastOrderDate claimedMilestones walletBalance coins lastCheckin checkinHistory'
         );
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
@@ -63,6 +63,7 @@ streakRouter.get('/me', auth, async (req, res) => {
                 milestones:        STREAK_MILESTONES,
                 checkedInToday,
                 checkinRewardCoins: DAILY_CHECKIN_COINS,
+                coins:             user.coins || 0,
                 walletBalance:     user.walletBalance || 0
             }
         });
@@ -71,7 +72,7 @@ streakRouter.get('/me', auth, async (req, res) => {
     }
 });
 
-// POST /api/streak/checkin - Instant 1-tap daily login reward
+// POST /api/streak/checkin - Instant 1-tap daily login reward (Snapit Loyalty Coins ONLY - Zero Wallet Cash Loss)
 streakRouter.post('/checkin', auth, async (req, res) => {
     try {
         const user = await UserModel.findById(req.userId);
@@ -89,24 +90,18 @@ streakRouter.post('/checkin', auth, async (req, res) => {
         if (isAlreadyCheckedIn) {
             return res.status(400).json({
                 success: false,
-                message: "You've already claimed today's check-in reward! Come back tomorrow."
+                message: "You've already collected today's check-in coins! Come back tomorrow."
             });
         }
 
-        const transaction = {
-            type:        'CREDIT',
-            amount:      DAILY_CHECKIN_COINS,
-            description: '🎁 Daily App Check-in Reward',
-            date:        now
-        };
-
+        // Zero financial loss protection: Credits Snapit Loyalty Coins ONLY (user.coins)
+        // Never mutates walletBalance and never creates wallet cash transactions
         const updatedUser = await UserModel.findByIdAndUpdate(
             req.userId,
             {
-                $inc: { walletBalance: DAILY_CHECKIN_COINS, coins: DAILY_CHECKIN_COINS },
+                $inc: { coins: DAILY_CHECKIN_COINS },
                 $set: { lastCheckin: now },
                 $push: {
-                    walletTransactions: { $each: [transaction], $position: 0 },
                     checkinHistory: { $each: [now], $slice: -30 }
                 }
             },
@@ -115,10 +110,10 @@ streakRouter.post('/checkin', auth, async (req, res) => {
 
         return res.json({
             success: true,
-            message: `🎉 +${DAILY_CHECKIN_COINS} coins added to your wallet!`,
+            message: `🎉 +${DAILY_CHECKIN_COINS} Snapit Coins collected!`,
             data: {
-                newBalance: updatedUser.walletBalance,
-                coins: updatedUser.coins,
+                coins: updatedUser.coins || 0,
+                walletBalance: updatedUser.walletBalance || 0,
                 checkedInToday: true
             }
         });
@@ -127,7 +122,7 @@ streakRouter.post('/checkin', auth, async (req, res) => {
     }
 });
 
-// POST /api/streak/claim - Claim milestone bonus
+// POST /api/streak/claim - Claim milestone bonus coins (Snapit Loyalty Coins ONLY - Zero Wallet Cash Loss)
 streakRouter.post('/claim', auth, async (req, res) => {
     try {
         const { milestone } = req.body;
@@ -139,13 +134,8 @@ streakRouter.post('/claim', auth, async (req, res) => {
 
         const coins = STREAK_MILESTONES[milestoneNum];
 
-        const transaction = {
-            type:        'CREDIT',
-            amount:      coins,
-            description: `🔥 ${milestoneNum}-Day Streak Reward`,
-            date:        new Date()
-        };
-
+        // Zero financial loss protection: Credits Snapit Loyalty Coins ONLY (user.coins)
+        // Never mutates walletBalance and never creates wallet cash transactions
         const updatedUser = await UserModel.findOneAndUpdate(
             {
                 _id: req.userId,
@@ -153,9 +143,8 @@ streakRouter.post('/claim', auth, async (req, res) => {
                 claimedMilestones: { $ne: milestoneNum }
             },
             {
-                $inc: { walletBalance: coins, coins },
-                $addToSet: { claimedMilestones: milestoneNum },
-                $push: { walletTransactions: { $each: [transaction], $position: 0 } }
+                $inc: { coins: coins },
+                $addToSet: { claimedMilestones: milestoneNum }
             },
             { new: true, select: 'walletBalance coins claimedMilestones' }
         );
@@ -169,9 +158,10 @@ streakRouter.post('/claim', auth, async (req, res) => {
 
         return res.json({
             success: true,
-            message: `🎉 +${coins} coins added to your Snapit Wallet!`,
+            message: `🎉 +${coins} Snapit Coins collected for your ${milestoneNum}-day streak!`,
             data: {
-                newBalance: updatedUser.walletBalance,
+                coins: updatedUser.coins || 0,
+                walletBalance: updatedUser.walletBalance || 0,
                 claimedMilestones: updatedUser.claimedMilestones
             }
         });

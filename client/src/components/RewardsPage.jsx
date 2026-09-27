@@ -203,7 +203,7 @@ export default function RewardsPage() {
         setClaimedRewards(prev => [...prev, days])
         const earned = MILESTONES.find(m => m.days === days)?.coins || 0
         setCoins(prev => prev + earned)
-        toast.success(`🎉 ${earned} coins added to your wallet!`)
+        toast.success(`🎉 +${earned} Snapit Coins collected!`)
         if (fetchUser) fetchUser()
       }
     } catch (err) {
@@ -284,8 +284,8 @@ export default function RewardsPage() {
             </span>
             <span style={{ color:'rgba(255,255,255,.7)', fontSize:'14px', fontWeight:'700', marginBottom:'4px' }}>coins</span>
           </div>
-          <p style={{ color:'rgba(255,255,255,.65)', fontSize:'12px', fontWeight:'600', margin:'8px 0 0' }}>
-            ≈ ₹{(coins * 0.25).toFixed(2)} value · 1 coin = ₹0.25 off
+          <p style={{ color:'rgba(255,255,255,.75)', fontSize:'12px', fontWeight:'600', margin:'8px 0 0' }}>
+            Collect coins to unlock streak badges &amp; exclusive member rewards
           </p>
 
           <div style={{ display:'flex', gap:'8px', marginTop:'14px', flexWrap:'wrap' }}>
@@ -423,7 +423,7 @@ export default function RewardsPage() {
                   {m.days} Days · {m.label}
                 </p>
                 <p style={{ fontSize:'11px', fontWeight:'700', color: achieved ? '#EF9F27' : '#cbd5e1', margin:'2px 0 0' }}>
-                  +{m.coins} coins to wallet
+                  +{m.coins} Snapit Coins
                 </p>
               </div>
               <span style={{

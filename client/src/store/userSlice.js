@@ -44,6 +44,8 @@ const emptyUser = {
     restaurantId:         null,
     isSnapitPlusMember:   false, // in-memory only — never written to localStorage
     snapitPlusExpiresAt:  null,  // in-memory only — never written to localStorage
+    walletBalance:        0,
+    coins:                0,
 }
 
 // Load non-sensitive display fields from localStorage on startup.
@@ -99,6 +101,8 @@ const userSlice = createSlice({
             state.restaurantId         = p.restaurantId ?? null
             state.isSnapitPlusMember   = p.isSnapitPlusMember ?? false   // in Redux memory only
             state.snapitPlusExpiresAt  = p.snapitPlusExpiresAt ?? null   // in Redux memory only
+            state.walletBalance        = Number(p.walletBalance ?? 0)
+            state.coins                = Number(p.coins ?? 0)
 
             // SECURITY FIX: persist display fields but NOT role / membership
             persistUser(p)
