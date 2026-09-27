@@ -12,11 +12,13 @@ const STREAK_MILESTONES = {
     30: 300,
 };
 
+const DAILY_CHECKIN_COINS = 5;
+
 // GET /api/streak/me
 streakRouter.get('/me', auth, async (req, res) => {
     try {
         const user = await UserModel.findById(req.userId).select(
-            'currentStreak lastOrderDate claimedMilestones walletBalance'
+            'currentStreak lastOrderDate claimedMilestones walletBalance lastCheckin checkinHistory'
         );
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
@@ -26,29 +28,42 @@ streakRouter.get('/me', auth, async (req, res) => {
             ? new Date(user.lastOrderDate.getFullYear(), user.lastOrderDate.getMonth(), user.lastOrderDate.getDate())
             : null;
 
-        const orderedToday = lastOrder && lastOrder.getTime() === today.getTime();
+        const orderedToday = Boolean(lastOrder && lastOrder.getTime() === today.getTime());
 
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
         const streakAlive =
             orderedToday ||
-            (lastOrder && lastOrder.getTime() === yesterday.getTime());
+            Boolean(lastOrder && lastOrder.getTime() === yesterday.getTime());
+
+        // Check if user already claimed daily check-in today
+        const lastCheckin = user.lastCheckin ? new Date(user.lastCheckin) : null;
+        const checkedInToday = Boolean(
+            lastCheckin &&
+            lastCheckin.getFullYear() === now.getFullYear() &&
+            lastCheckin.getMonth() === now.getMonth() &&
+            lastCheckin.getDate() === now.getDate()
+        );
 
         const milestoneKeys      = Object.keys(STREAK_MILESTONES).map(Number).sort((a, b) => a - b);
-        const nextMilestone      = milestoneKeys.find(m => m > user.currentStreak) || null;
+        const effectiveStreak    = streakAlive ? (user.currentStreak || 0) : 0;
+        const nextMilestone      = milestoneKeys.find(m => m > effectiveStreak) || null;
         const nextMilestoneCoins = nextMilestone ? STREAK_MILESTONES[nextMilestone] : null;
 
         return res.json({
             success: true,
             data: {
-                currentStreak:     streakAlive ? user.currentStreak : 0,
+                currentStreak:     effectiveStreak,
                 lastOrderDate:     user.lastOrderDate,
                 orderedToday,
                 streakAlive,
-                claimedMilestones: user.claimedMilestones,
+                claimedMilestones: user.claimedMilestones || [],
                 nextMilestone,
                 nextMilestoneCoins,
                 milestones:        STREAK_MILESTONES,
+                checkedInToday,
+                checkinRewardCoins: DAILY_CHECKIN_COINS,
+                walletBalance:     user.walletBalance || 0
             }
         });
     } catch (err) {
@@ -56,7 +71,63 @@ streakRouter.get('/me', auth, async (req, res) => {
     }
 });
 
-// POST /api/streak/claim
+// POST /api/streak/checkin - Instant 1-tap daily login reward
+streakRouter.post('/checkin', auth, async (req, res) => {
+    try {
+        const user = await UserModel.findById(req.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const now = new Date();
+        const lastCheckin = user.lastCheckin ? new Date(user.lastCheckin) : null;
+        const isAlreadyCheckedIn = Boolean(
+            lastCheckin &&
+            lastCheckin.getFullYear() === now.getFullYear() &&
+            lastCheckin.getMonth() === now.getMonth() &&
+            lastCheckin.getDate() === now.getDate()
+        );
+
+        if (isAlreadyCheckedIn) {
+            return res.status(400).json({
+                success: false,
+                message: "You've already claimed today's check-in reward! Come back tomorrow."
+            });
+        }
+
+        const transaction = {
+            type:        'CREDIT',
+            amount:      DAILY_CHECKIN_COINS,
+            description: '🎁 Daily App Check-in Reward',
+            date:        now
+        };
+
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            req.userId,
+            {
+                $inc: { walletBalance: DAILY_CHECKIN_COINS, coins: DAILY_CHECKIN_COINS },
+                $set: { lastCheckin: now },
+                $push: {
+                    walletTransactions: { $each: [transaction], $position: 0 },
+                    checkinHistory: { $each: [now], $slice: -30 }
+                }
+            },
+            { new: true, select: 'walletBalance coins lastCheckin' }
+        );
+
+        return res.json({
+            success: true,
+            message: `🎉 +${DAILY_CHECKIN_COINS} coins added to your wallet!`,
+            data: {
+                newBalance: updatedUser.walletBalance,
+                coins: updatedUser.coins,
+                checkedInToday: true
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// POST /api/streak/claim - Claim milestone bonus
 streakRouter.post('/claim', auth, async (req, res) => {
     try {
         const { milestone } = req.body;
@@ -82,11 +153,11 @@ streakRouter.post('/claim', auth, async (req, res) => {
                 claimedMilestones: { $ne: milestoneNum }
             },
             {
-                $inc: { walletBalance: coins },
+                $inc: { walletBalance: coins, coins },
                 $addToSet: { claimedMilestones: milestoneNum },
                 $push: { walletTransactions: { $each: [transaction], $position: 0 } }
             },
-            { new: true, select: 'walletBalance' }
+            { new: true, select: 'walletBalance coins claimedMilestones' }
         );
 
         if (!updatedUser) {
@@ -98,8 +169,11 @@ streakRouter.post('/claim', auth, async (req, res) => {
 
         return res.json({
             success: true,
-            message: `${coins} coins added to your Snapit Wallet!`,
-            newBalance: updatedUser.walletBalance
+            message: `🎉 +${coins} coins added to your Snapit Wallet!`,
+            data: {
+                newBalance: updatedUser.walletBalance,
+                claimedMilestones: updatedUser.claimedMilestones
+            }
         });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });

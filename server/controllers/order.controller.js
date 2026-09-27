@@ -253,7 +253,40 @@ const buildTaggedCartItems = async (list_items, storeName) => {
 }
 
 const updateStreak = async (userId) => {
-    // Streak update logic unchanged
+    try {
+        const user = await UserModel.findById(userId)
+        if (!user) return
+
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const lastOrder = user.lastOrderDate
+            ? new Date(user.lastOrderDate.getFullYear(), user.lastOrderDate.getMonth(), user.lastOrderDate.getDate())
+            : null
+
+        // Already ordered today — keep streak alive and update timestamp
+        if (lastOrder && lastOrder.getTime() === today.getTime()) {
+            user.lastOrderDate = now
+            await user.save()
+            return
+        }
+
+        const yesterday = new Date(today)
+        yesterday.setDate(today.getDate() - 1)
+
+        if (lastOrder && lastOrder.getTime() === yesterday.getTime()) {
+            // Consecutive day: increment streak
+            user.currentStreak = (user.currentStreak || 0) + 1
+        } else {
+            // First order or missed day: start at 1
+            user.currentStreak = 1
+        }
+
+        user.lastOrderDate = now
+        await user.save()
+        console.log(`[STREAK] User ${userId} streak updated to ${user.currentStreak} day(s)`)
+    } catch (err) {
+        console.error('[STREAK UPDATE ERROR]:', err.message)
+    }
 }
 
 // ── Snapit Plus cashback config ──────────────────────────────────────────────

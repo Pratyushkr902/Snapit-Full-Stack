@@ -423,6 +423,10 @@ const SummaryApi = {
         url: '/api/streak/me',
         method: 'get'
     },
+    dailyCheckin: {
+        url: '/api/streak/checkin',
+        method: 'post'
+    },
     claimStreakMilestone: {
         url: '/api/streak/claim',
         method: 'post'
