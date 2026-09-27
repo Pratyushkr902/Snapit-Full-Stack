@@ -8,15 +8,16 @@ import {
   FiCreditCard,
   FiXCircle,
   FiShoppingBag,
-  FiCheckCircle,
   FiAlertCircle,
   FiHeadphones,
-  FiChevronRight
+  FiChevronRight,
+  FiRotateCcw
 } from 'react-icons/fi'
 import { FaCrown } from 'react-icons/fa'
 import { Link } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { setUserDetails } from '../store/userSlice'
 import Axios from '../utils/Axios'
-import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { haptic } from '../utils/haptics'
@@ -51,6 +52,7 @@ const formatNextDelivery = (dateStr) => {
 }
 
 export default function SubscriptionCard({ subscription, onUpdate }) {
+  const dispatch = useDispatch()
   const [currentStatus, setCurrentStatus] = useState(subscription.status || 'Active')
   const [isLoading, setIsLoading] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
@@ -72,13 +74,26 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
       ? new Date(subscription.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
       : 'Active'
 
+    // Compute remaining days
+    const daysLeft = subscription.expiresAt
+      ? Math.max(0, Math.ceil((new Date(subscription.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : null
+
     return (
-      <div className='relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-amber-600/10 border border-amber-300 dark:border-amber-700/60 p-5 shadow-xs transition-all'>
+      <div className={`relative overflow-hidden rounded-2xl border p-5 shadow-xs transition-all ${
+        isCancelled
+          ? 'bg-slate-100/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-80'
+          : 'bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-amber-600/10 border-amber-300 dark:border-amber-700/60'
+      }`}>
         <div className='absolute -right-6 -bottom-6 w-28 h-28 bg-amber-400/10 rounded-full blur-xl pointer-events-none' />
 
         <div className='flex items-start justify-between gap-3 relative z-10'>
           <div className='flex items-center gap-3'>
-            <div className='w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 flex items-center justify-center text-xl shadow-md shadow-amber-500/20 shrink-0'>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-md shrink-0 ${
+              isCancelled
+                ? 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                : 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 shadow-amber-500/20'
+            }`}>
               <FaCrown />
             </div>
             <div>
@@ -87,27 +102,48 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
                   Snapit Plus VIP Membership
                 </h3>
                 <span className='px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'>
-                  {isYearly ? 'Annual VIP' : 'Monthly VIP'}
+                  {isYearly ? 'Annual VIP (12 Mo)' : 'Monthly VIP (30 Days)'}
                 </span>
               </div>
               <p className='text-xs text-slate-500 dark:text-slate-400 font-medium mt-1'>
-                Valid until: <span className='font-bold text-slate-800 dark:text-slate-200'>{expiresDate}</span>
+                {isCancelled ? (
+                  <span className='text-rose-600 dark:text-rose-400 font-bold'>Membership Cancelled</span>
+                ) : (
+                  <>
+                    Valid until: <span className='font-bold text-slate-800 dark:text-slate-200'>{expiresDate}</span>
+                    {daysLeft !== null && (
+                      <span className='ml-1 text-[11px] text-amber-700 dark:text-amber-400 font-bold'>
+                        ({daysLeft} days left)
+                      </span>
+                    )}
+                  </>
+                )}
               </p>
             </div>
           </div>
 
-          <span className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0'>
-            <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse' />
-            Active
-          </span>
+          <div>
+            {!isCancelled ? (
+              <span className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0'>
+                <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse' />
+                Active VIP
+              </span>
+            ) : (
+              <span className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0'>
+                <FiXCircle size={11} />
+                Cancelled
+              </span>
+            )}
+          </div>
         </div>
 
+        {/* Benefits banner */}
         <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3 border-t border-amber-200/50 dark:border-amber-800/40 relative z-10 text-[11px] font-bold text-amber-950 dark:text-amber-200'>
           <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
-            <span>🚀 Free Delivery</span>
+            <span>🚀 Free Delivery (₹99+)</span>
           </div>
           <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
-            <span>💰 5% Cashback</span>
+            <span>💰 5% Cashbacks</span>
           </div>
           <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
             <span>⚡ Priority Pack</span>
@@ -117,18 +153,104 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
           </div>
         </div>
 
+        {/* Bottom controls for Snapit Plus */}
         <div className='mt-4 flex items-center justify-between gap-3 pt-3 border-t border-amber-200/50 dark:border-amber-800/40'>
           <Link
             to='/snapit-plus'
             className='text-xs font-extrabold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1'
           >
-            <span>View all VIP benefits & savings</span>
+            <span>{isCancelled ? 'Reactivate Snapit Plus' : 'View all VIP benefits & savings'}</span>
             <FiChevronRight size={14} />
           </Link>
-          <span className='text-xs font-black text-slate-800 dark:text-slate-200'>
-            {DisplayPriceInRupees(subscription.items?.[0]?.price || (isYearly ? 499 : 49))}
-          </span>
+
+          <div className='flex items-center gap-2'>
+            {!isCancelled ? (
+              <button
+                type='button'
+                onClick={() => setShowCancelModal(true)}
+                className='text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-2.5 py-1 rounded-lg transition-colors'
+              >
+                Cancel VIP
+              </button>
+            ) : (
+              <Link
+                to='/snapit-plus'
+                className='text-xs font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1'
+              >
+                <FiRotateCcw size={12} />
+                <span>Rejoin VIP</span>
+              </Link>
+            )}
+          </div>
         </div>
+
+        {/* Cancellation confirmation modal for Snapit Plus */}
+        {showCancelModal && (
+          <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150'>
+            <div className='bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4'>
+              <div className='w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto text-2xl'>
+                <FiAlertCircle />
+              </div>
+
+              <div className='text-center space-y-1.5'>
+                <h3 className='font-black text-slate-900 dark:text-white text-base'>
+                  Cancel Snapit Plus VIP?
+                </h3>
+                <p className='text-xs text-slate-500 dark:text-slate-400 leading-relaxed'>
+                  Are you sure you want to cancel your VIP membership? You will lose free delivery on orders ₹99+, 5% cashback on all groceries, and priority VIP support immediately.
+                </p>
+              </div>
+
+              <div className='grid grid-cols-2 gap-2.5 pt-2'>
+                <button
+                  type='button'
+                  onClick={() => setShowCancelModal(false)}
+                  className='px-4 py-2.5 rounded-xl font-bold text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-750 transition-colors'
+                >
+                  Keep VIP
+                </button>
+                <button
+                  type='button'
+                  disabled={isCancelling}
+                  onClick={async () => {
+                    haptic.heavy()
+                    setIsCancelling(true)
+                    try {
+                      const res = await Axios({
+                        method: 'DELETE',
+                        url: `/api/subscription/cancel/${subscription._id}`,
+                        data: { id: subscription._id }
+                      })
+                      if (res.data?.success) {
+                        setCurrentStatus('Cancelled')
+                        toast.success('Snapit Plus membership cancelled')
+                        setShowCancelModal(false)
+                        try {
+                          const userRes = await Axios({ url: '/api/user/user-details', method: 'get' })
+                          if (userRes.data?.success) dispatch(setUserDetails(userRes.data.data))
+                        } catch (_) {}
+                        if (onUpdate) onUpdate()
+                      } else {
+                        toast.error(res.data?.message || 'Failed to cancel membership')
+                      }
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || 'Failed to cancel membership')
+                    } finally {
+                      setIsCancelling(false)
+                    }
+                  }}
+                  className='px-4 py-2.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all flex items-center justify-center'
+                >
+                  {isCancelling ? (
+                    <span className='w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                  ) : (
+                    'Yes, Cancel VIP'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -157,7 +279,11 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
         ? `/api/subscription/pause/${subscription._id}`
         : `/api/subscription/resume/${subscription._id}`
 
-      const res = await Axios({ method: 'PATCH', url: endpoint })
+      const res = await Axios({
+        method: 'PATCH',
+        url: endpoint,
+        data: { id: subscription._id }
+      })
       if (res.data?.success) {
         setCurrentStatus(nextStatus)
         toast.success(`Subscription ${nextStatus.toLowerCase()} successfully!`)
@@ -176,22 +302,58 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
     haptic.heavy()
     setIsCancelling(true)
     try {
-      const res = await Axios({
-        method: 'DELETE',
-        url: `/api/subscription/cancel/${subscription._id}`
-      })
-      if (res.data?.success) {
+      let res
+      try {
+        res = await Axios({
+          method: 'DELETE',
+          url: `/api/subscription/cancel/${subscription._id}`,
+          data: { id: subscription._id }
+        })
+      } catch (deleteErr) {
+        // Fallback to POST in case DELETE method is blocked by proxy or firewall
+        res = await Axios({
+          method: 'POST',
+          url: `/api/subscription/cancel/${subscription._id}`,
+          data: { id: subscription._id }
+        })
+      }
+
+      if (res?.data?.success) {
         setCurrentStatus('Cancelled')
-        toast.success('Subscription cancelled successfully')
+        toast.success(res.data.message || 'Subscription cancelled successfully')
         setShowCancelModal(false)
         if (onUpdate) onUpdate()
       } else {
-        toast.error(res.data?.message || 'Failed to cancel subscription')
+        toast.error(res?.data?.message || 'Failed to cancel subscription')
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to cancel subscription')
+      console.error('Cancel sub error:', err)
+      toast.error(err.response?.data?.message || err.message || 'Failed to cancel subscription')
     } finally {
       setIsCancelling(false)
+    }
+  }
+
+  const handleReactivate = async () => {
+    haptic.medium()
+    setIsLoading(true)
+    try {
+      const res = await Axios({
+        method: 'PATCH',
+        url: `/api/subscription/resume/${subscription._id}`,
+        data: { id: subscription._id }
+      })
+      if (res.data?.success) {
+        setCurrentStatus('Active')
+        toast.success('Subscription reactivated!')
+        if (onUpdate) onUpdate()
+      } else {
+        toast.error(res.data?.message || 'Failed to reactivate')
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reactivate')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -311,7 +473,7 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
                 Next Delivery:
               </span>
               <span className='text-slate-600 dark:text-slate-300 truncate'>
-                {formatNextDelivery(subscription.nextDeliveryDate)}
+                {isCancelled ? 'No upcoming delivery (Cancelled)' : formatNextDelivery(subscription.nextDeliveryDate)}
               </span>
             </div>
           </div>
@@ -338,7 +500,7 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
           </button>
 
           <div className='flex items-center gap-2 ml-auto'>
-            {!isCancelled && (
+            {!isCancelled ? (
               <>
                 <button
                   type='button'
@@ -373,6 +535,22 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
                   )}
                 </button>
               </>
+            ) : (
+              <button
+                type='button'
+                disabled={isLoading}
+                onClick={handleReactivate}
+                className='inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs shadow-emerald-600/20 transition-all active:scale-95'
+              >
+                {isLoading ? (
+                  <span className='inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                ) : (
+                  <>
+                    <FiRotateCcw size={12} />
+                    <span>Restart Delivery</span>
+                  </>
+                )}
+              </button>
             )}
           </div>
         </div>
@@ -394,7 +572,7 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
                 You will no longer receive automatic morning deliveries for{' '}
                 <strong className='text-slate-800 dark:text-slate-200'>
                   {product.name || firstItem.name || 'this item'}
-                </strong>. You can also pause instead to skip upcoming dates.
+                </strong>. You can pause instead to temporarily skip upcoming dates.
               </p>
             </div>
 

@@ -457,6 +457,10 @@ const SummaryApi = {
         url: '/api/subscription/cancel',
         method: 'delete'
     },
+    subscribeSnapitPlusWallet: {
+        url: '/api/payment/subscribe-wallet',
+        method: 'post'
+    },
 
     // ── Restaurant & Food Ordering ───────────────────────────
     getAllRestaurants: {

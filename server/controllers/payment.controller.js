@@ -265,3 +265,89 @@ export const verifySubscription = async (req, res) => {
         return res.status(500).json({ success: false, message: msg })
     }
 }
+
+// POST /api/payment/subscribe-wallet
+export const subscribeWithWallet = async (req, res) => {
+    try {
+        const { planType } = req.body
+        const userId = req.userId
+
+        const plans = { monthly: 99, yearly: 899 }
+        const planAmount = plans[planType]
+
+        if (!planAmount) {
+            return res.status(400).json({ success: false, message: 'Invalid plan. Use "monthly" or "yearly".' })
+        }
+
+        const user = await UserModel.findById(userId).select('walletBalance name isSnapitPlusMember snapitPlusExpiresAt')
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+
+        if ((user.walletBalance || 0) < planAmount) {
+            return res.status(400).json({
+                success: false,
+                message: `Insufficient wallet balance. You have ₹${user.walletBalance || 0}, but need ₹${planAmount}.`
+            })
+        }
+
+        // Calculate expiry
+        const expiresAt = new Date()
+        if (planType === 'yearly') {
+            expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+        } else {
+            expiresAt.setMonth(expiresAt.getMonth() + 1)
+        }
+
+        const updatedUser = await UserModel.findOneAndUpdate(
+            { _id: userId, walletBalance: { $gte: planAmount } },
+            {
+                $inc: { walletBalance: -planAmount },
+                $push: {
+                    walletTransactions: {
+                        type: 'DEBIT',
+                        amount: planAmount,
+                        description: `Snapit Plus ${planType === 'yearly' ? 'Annual (12 Mo)' : 'Monthly'} Membership Activation`,
+                        date: new Date()
+                    }
+                },
+                isSnapitPlusMember: true,
+                snapitPlusExpiresAt: expiresAt
+            },
+            { new: true }
+        )
+
+        if (!updatedUser) {
+            return res.status(400).json({ success: false, message: 'Could not process wallet debit. Please retry.' })
+        }
+
+        // Create or update subscription record
+        await SubscriptionModel.create({
+            userId,
+            items: [{
+                name: `Snapit Plus — ${planType === 'yearly' ? 'Yearly (12 months)' : 'Monthly (30 days)'}`,
+                quantity: 1,
+                price: planAmount,
+            }],
+            frequency: planType === 'yearly' ? 'yearly' : 'monthly',
+            nextDeliveryDate: expiresAt,
+            payment_method: 'WALLET',
+            status: 'Active',
+            isSnapitPlus: true,
+            planType,
+            expiresAt,
+            paymentId: `wallet_sub_${Date.now()}`
+        })
+
+        console.log(`[subscribeWithWallet] ✅ Snapit Plus activated via wallet for userId=${userId}`)
+        return res.json({
+            success: true,
+            message: `Welcome to Snapit Plus Club! Paid ₹${planAmount} from wallet. 🎉`,
+            data: { planType, expiresAt, walletBalance: updatedUser.walletBalance }
+        })
+
+    } catch (err) {
+        console.error('[subscribeWithWallet] ❌', err.message)
+        return res.status(500).json({ success: false, message: err.message })
+    }
+}

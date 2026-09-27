@@ -29,7 +29,7 @@ const subscriptionSchema = new mongoose.Schema({
     items: [subscriptionItemSchema],
     frequency: {
         type: String,
-        enum: ['DAILY', 'WEEKLY', 'ALTERNATIVE', 'monthly', 'yearly'],  // ✅ FIXED: added monthly/yearly for Snapit Plus
+        enum: ['DAILY', 'WEEKLY', 'ALTERNATIVE', 'monthly', 'yearly', 'daily', 'weekly', 'alternative', 'MONTHLY', 'YEARLY'],
         required: true
     },
     delivery_address: {
@@ -48,7 +48,7 @@ const subscriptionSchema = new mongoose.Schema({
     },
     payment_method: {
         type: String,
-        enum: ['WALLET', 'COD', 'Online'],  // ✅ FIXED: added Online for Razorpay payments
+        enum: ['WALLET', 'COD', 'Online', 'wallet', 'cod', 'online'],
         default: 'WALLET'
     },
 
