@@ -32,7 +32,8 @@ import {
   FiTrendingUp,
   FiHome,
   FiLayers,
-  FiDollarSign
+  FiDollarSign,
+  FiHeadphones
 } from 'react-icons/fi'
 
 const UserMenu = ({ close }) => {
@@ -136,6 +137,16 @@ const UserMenu = ({ close }) => {
             <p className='text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 px-1 pt-1'>
               Admin & Operations
             </p>
+            <Link onClick={handleClose} to="/dashboard/support-desk"
+              className='flex items-center justify-between px-2.5 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-bold text-indigo-700 dark:text-indigo-300 border-l-3 border-indigo-500 transition-colors'>
+              <div className='flex items-center gap-2'>
+                <FiHeadphones size={14} />
+                <span>24/7 Live Support Desk</span>
+              </div>
+              <span className='text-[9px] bg-indigo-200 dark:bg-indigo-800 text-indigo-950 dark:text-indigo-100 px-1.5 py-0.5 rounded-full font-black'>
+                Live
+              </span>
+            </Link>
             <Link onClick={handleClose} to="/dashboard/store-orders"
               className='flex items-center justify-between px-2.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-bold text-emerald-800 dark:text-emerald-300 border-l-3 border-emerald-500 transition-colors'>
               <div className='flex items-center gap-2'>

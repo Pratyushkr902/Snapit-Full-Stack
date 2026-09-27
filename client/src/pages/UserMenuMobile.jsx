@@ -39,7 +39,8 @@ import {
   FiTrendingUp,
   FiHome,
   FiLayers,
-  FiDollarSign
+  FiDollarSign,
+  FiHeadphones
 } from 'react-icons/fi'
 import { IoArrowBack } from 'react-icons/io5'
 import { FaWhatsapp } from 'react-icons/fa'
@@ -612,6 +613,24 @@ const UserMenuMobile = () => {
               Admin &amp; Operations
             </p>
             <div className='bg-white dark:bg-slate-900 rounded-2xl border border-purple-200/60 dark:border-purple-900/40 divide-y divide-slate-100 dark:divide-slate-800/80 shadow-xs overflow-hidden'>
+              <Link
+                to='/dashboard/support-desk'
+                className='flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors'
+              >
+                <div className='flex items-center gap-3'>
+                  <div className='w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0'>
+                    <FiHeadphones size={16} />
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <span className='font-bold text-sm text-indigo-800 dark:text-indigo-300'>24/7 Support Desk</span>
+                    <span className='text-[10px] bg-indigo-200 dark:bg-indigo-800 text-indigo-950 dark:text-indigo-100 px-1.5 py-0.5 rounded-full font-black'>
+                      Live
+                    </span>
+                  </div>
+                </div>
+                <FiChevronRight className='text-slate-400' size={16} />
+              </Link>
+
               <Link
                 to='/dashboard/store-orders'
                 className='flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors'
