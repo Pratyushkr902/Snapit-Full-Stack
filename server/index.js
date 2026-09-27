@@ -16,7 +16,7 @@ import cron from 'node-cron'
 import { abuseGuard, isAdminRequest } from './middleware/abuseGuard.js'
 
 // ─── PRE-REGISTER MODELS ──────────────────────────────────────────────────────
-import UserModel from './models/user.model.js'
+import './models/user.model.js'
 import './models/category.model.js'
 import './models/subCategory.model.js'
 import ProductModel from './models/product.model.js'
