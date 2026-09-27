@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import SupportChatModel from '../models/supportChat.model.js'
 import UserModel from '../models/user.model.js'
 
@@ -103,9 +104,12 @@ export async function sendUserMessageController(request, response) {
         message: chat.messages[chat.messages.length - 1],
       })
       io.to('admin_support_channel').emit('admin_support_ticket_updated', {
+        _id: chat._id,
         chatId: chat._id,
+        userId: chat.userId,
         userName: chat.userName,
         userMobile: chat.userMobile,
+        userEmail: chat.userEmail,
         lastMessage: trimmedText,
         lastMessageAt: chat.lastMessageAt,
         unreadCountAdmin: chat.unreadCountAdmin,
@@ -139,7 +143,7 @@ export async function getAdminChatsController(request, response) {
     }
 
     if (search && search.trim()) {
-      const q = search.trim()
+      const q = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       filter.$or = [
         { userName: { $regex: q, $options: 'i' } },
         { userMobile: { $regex: q, $options: 'i' } },
@@ -177,6 +181,10 @@ export async function getAdminChatsController(request, response) {
 export async function getAdminChatByIdController(request, response) {
   try {
     const { id } = request.params
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return response.status(400).json({ message: 'Invalid ticket ID', error: true, success: false })
+    }
+
     const chat = await SupportChatModel.findById(id)
 
     if (!chat) {
@@ -212,6 +220,10 @@ export async function getAdminChatByIdController(request, response) {
 export async function sendAdminMessageController(request, response) {
   try {
     const { id } = request.params
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return response.status(400).json({ message: 'Invalid ticket ID', error: true, success: false })
+    }
+
     const { text } = request.body
 
     if (!text || !text.trim()) {
@@ -251,6 +263,7 @@ export async function sendAdminMessageController(request, response) {
     const io = request.app?.get('io')
     if (io) {
       io.to(`support_chat_${chat._id}`).emit('new_support_message', {
+        _id: chat.messages[chat.messages.length - 1]._id,
         chatId: chat._id,
         message: chat.messages[chat.messages.length - 1],
       })
@@ -259,9 +272,12 @@ export async function sendAdminMessageController(request, response) {
         sender: adminName,
       })
       io.to('admin_support_channel').emit('admin_support_ticket_updated', {
+        _id: chat._id,
         chatId: chat._id,
+        userId: chat.userId,
         userName: chat.userName,
         userMobile: chat.userMobile,
+        userEmail: chat.userEmail,
         lastMessage: trimmedText,
         lastMessageAt: chat.lastMessageAt,
         unreadCountAdmin: 0,
@@ -288,6 +304,10 @@ export async function sendAdminMessageController(request, response) {
 export async function updateChatStatusController(request, response) {
   try {
     const { id } = request.params
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return response.status(400).json({ message: 'Invalid ticket ID', error: true, success: false })
+    }
+
     const { status } = request.body
 
     if (!['OPEN', 'RESOLVED', 'CLOSED'].includes(status)) {
@@ -316,12 +336,21 @@ export async function updateChatStatusController(request, response) {
 
     const io = request.app?.get('io')
     if (io) {
+      if (status === 'RESOLVED') {
+        const resolutionMsg = chat.messages[chat.messages.length - 1]
+        io.to(`support_chat_${chat._id}`).emit('new_support_message', {
+          _id: resolutionMsg._id,
+          chatId: chat._id,
+          message: resolutionMsg,
+        })
+      }
       io.to(`support_chat_${chat._id}`).emit('support_chat_status_changed', {
         chatId: chat._id,
         status: chat.status,
         lastMessage: chat.lastMessage,
       })
       io.to('admin_support_channel').emit('admin_support_ticket_updated', {
+        _id: chat._id,
         chatId: chat._id,
         status: chat.status,
         lastMessage: chat.lastMessage,

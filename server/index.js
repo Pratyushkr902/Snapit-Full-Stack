@@ -16,7 +16,7 @@ import cron from 'node-cron'
 import { abuseGuard, isAdminRequest } from './middleware/abuseGuard.js'
 
 // ─── PRE-REGISTER MODELS ──────────────────────────────────────────────────────
-import './models/user.model.js'
+import UserModel from './models/user.model.js'
 import './models/category.model.js'
 import './models/subCategory.model.js'
 import ProductModel from './models/product.model.js'
@@ -399,7 +399,20 @@ io.on('connection', (socket) => {
         socket.leave(`support_chat_${chatId}`)
     })
 
-    socket.on('join_admin_support', () => {
+    socket.on('join_admin_support', async () => {
+        const requestingUserId = socket.handshake.auth?.userId
+        if (requestingUserId) {
+            try {
+                const user = await UserModel.findById(requestingUserId).select('role').lean()
+                if (user && user.role !== 'ADMIN') {
+                    console.warn(`[Socket] Unauthorized admin support join attempt by user: ${requestingUserId}`)
+                    return
+                }
+            } catch (err) {
+                console.error('[Socket] join_admin_support auth check error:', err)
+                return
+            }
+        }
         socket.join('admin_support_channel')
         console.log(`[Socket] Admin ${socket.id} joined room: admin_support_channel`)
     })

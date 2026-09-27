@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { useSelector } from 'react-redux'
 import {
   IoSearch,
   IoSend,
@@ -59,6 +60,7 @@ const formatTimeAgo = (dateStr) => {
 }
 
 export default function AdminSupportDesk() {
+  const user = useSelector(state => state.user)
   const [chats, setChats] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedChatId, setSelectedChatId] = useState(null)
@@ -72,6 +74,11 @@ export default function AdminSupportDesk() {
   const messagesEndRef = useRef(null)
   const socketRef = useRef(null)
   const inputRef = useRef(null)
+  const selectedChatIdRef = useRef(selectedChatId)
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId
+  }, [selectedChatId])
 
   // Fetch all ticket threads
   const fetchChats = async (showLoading = true) => {
@@ -87,7 +94,7 @@ export default function AdminSupportDesk() {
       if (res.data?.success && Array.isArray(res.data.data)) {
         setChats(res.data.data)
         // If nothing selected, auto-select first thread on desktop
-        if (!selectedChatId && res.data.data.length > 0 && window.innerWidth >= 768) {
+        if (!selectedChatIdRef.current && res.data.data.length > 0 && window.innerWidth >= 768) {
           setSelectedChatId(res.data.data[0]._id)
         }
       }
@@ -131,39 +138,44 @@ export default function AdminSupportDesk() {
     }
   }, [selectedChatId])
 
-  // Socket.IO real-time subscriptions
+  // Socket.IO real-time subscriptions (established once on mount)
   useEffect(() => {
     const socket = io(baseURL, {
       path: '/socket.io/',
       transports: ['websocket', 'polling'],
+      auth: {
+        userId: user?._id,
+      },
     })
     socketRef.current = socket
 
     socket.emit('join_admin_support')
 
     socket.on('admin_support_ticket_updated', (updatedData) => {
+      const ticketId = updatedData._id || updatedData.chatId
       playChime()
       haptic.medium()
       setChats((prev) => {
-        const idx = prev.findIndex((c) => c._id === updatedData.chatId)
+        const idx = prev.findIndex((c) => (c._id || c.chatId) === ticketId)
         if (idx >= 0) {
           const updated = [...prev]
-          updated[idx] = { ...updated[idx], ...updatedData }
+          updated[idx] = { ...updated[idx], ...updatedData, _id: ticketId }
           // Bubble to top
           const [item] = updated.splice(idx, 1)
           return [item, ...updated]
         }
-        return [updatedData, ...prev]
+        return [{ ...updatedData, _id: ticketId }, ...prev]
       })
 
       // If this is the active open chat, append or refresh
-      if (selectedChatId === updatedData.chatId) {
-        fetchActiveChatDetail(updatedData.chatId)
+      if (selectedChatIdRef.current === ticketId) {
+        fetchActiveChatDetail(ticketId)
       }
     })
 
     socket.on('new_support_message', (payload) => {
-      if (payload.chatId === selectedChatId) {
+      const targetChatId = payload.chatId || payload._id
+      if (targetChatId && targetChatId === selectedChatIdRef.current) {
         setActiveChat((prev) => {
           if (!prev) return prev
           // Avoid duplicate insertion
@@ -183,7 +195,7 @@ export default function AdminSupportDesk() {
       socket.emit('leave_admin_support')
       socket.disconnect()
     }
-  }, [selectedChatId])
+  }, [])
 
   // Scroll to bottom on new messages
   useEffect(() => {

@@ -59,6 +59,7 @@ export default function ChatBox() {
   const navigate = useNavigate()
 
   const [open, setOpen] = useState(false)
+  const [hasUnread, setHasUnread] = useState(false)
   const [messages, setMessages] = useState([])
   const [inputText, setInputText] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -83,13 +84,13 @@ export default function ChatBox() {
     }
   }, [reduxOrders, user?._id])
 
-  // Setup initial conversation
-  const initGreeting = (orderId = null) => {
+  // Setup initial conversation template
+  const buildInitialGreeting = (orderId = null) => {
     const customerName = user?.name ? user.name.split(' ')[0] : 'there'
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
     if (orderId) {
-      setMessages([
+      return [
         {
           id: 'welcome_1',
           sender: 'bot',
@@ -104,24 +105,27 @@ export default function ChatBox() {
           cardType: 'order_status',
           cardData: { targetOrderId: orderId },
         },
-      ])
-    } else {
-      setMessages([
-        {
-          id: 'welcome_1',
-          sender: 'bot',
-          text: `Hi ${customerName}! 👋 Welcome to Snapit 24/7 Support Assistant.`,
-          time: now,
-        },
-        {
-          id: 'welcome_2',
-          sender: 'bot',
-          text: 'How can I help you today? Choose a quick topic below or type your question:',
-          time: now,
-          showChips: true,
-        },
-      ])
+      ]
     }
+    return [
+      {
+        id: 'welcome_1',
+        sender: 'bot',
+        text: `Hi ${customerName}! 👋 Welcome to Snapit 24/7 Support Assistant.`,
+        time: now,
+      },
+      {
+        id: 'welcome_2',
+        sender: 'bot',
+        text: 'How can I help you today? Choose a quick topic below or type your question:',
+        time: now,
+        showChips: true,
+      },
+    ]
+  }
+
+  const initGreeting = (orderId = null) => {
+    setMessages(buildInitialGreeting(orderId))
   }
 
   // Global event listener to open chat from anywhere (UserMenu, TrackingPage, Header, etc.)
@@ -131,7 +135,11 @@ export default function ChatBox() {
       setOpen(true)
       setHasUnread(false)
       haptic.medium()
-      initGreeting(detail.orderId || null)
+      if (detail.orderId) {
+        initGreeting(detail.orderId)
+      } else {
+        setMessages(prev => (prev.length === 0 ? buildInitialGreeting() : prev))
+      }
       setTimeout(() => inputRef.current?.focus(), 350)
     }
 
