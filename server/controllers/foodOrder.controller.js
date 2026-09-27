@@ -26,6 +26,8 @@ import {
 import { creditFirstOrderReferralBonus } from '../utils/referralBonus.js'
 import { validateCoupon } from '../utils/couponValidation.js'
 import { validateCoinRedemption } from '../utils/coinRedemption.js'
+import WalletModel from '../models/wallet.model.js'
+import { recordOrderForStreak } from '../utils/streakUtils.js'
 import { notifyAllRiders } from '../utils/firebaseNotify.js'
 import {
     notifyUserOrderPlaced,
@@ -539,6 +541,27 @@ const deductWallet = async (userId, amount, restaurantName) => {
     err.statusCode = 400
     throw err
   }
+  try {
+    await WalletModel.findOneAndUpdate(
+      { userId },
+      {
+        $inc:  { balance: -amount },
+        $push: {
+          transactions: {
+            $each: [{
+              type:        'debit',
+              amount,
+              description: `Food order at ${restaurantName || 'Restaurant'}`,
+              date:        new Date(),
+            }],
+            $position: 0,
+          },
+        },
+      }
+    )
+  } catch (mirrorErr) {
+    console.warn('[deductWallet] WalletModel sync failed (non-fatal):', mirrorErr.message)
+  }
   return true
 }
 
@@ -672,6 +695,7 @@ export async function foodOrderCOD(req, res) {
     }
 
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
+    recordOrderForStreak(req.userId).catch(() => {})
 
     console.log(`[foodOrderCOD] ✅ group=${groupOrderId} restaurants=${orders.length} orderIds=${orders.map(o => o.orderId).join(',')}`)
     return res.json({ success: true, message: 'Food order placed!', data: orders })
@@ -773,6 +797,7 @@ export async function foodOrderWallet(req, res) {
     }
 
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
+    recordOrderForStreak(req.userId).catch(() => {})
     console.log(`[foodOrderWallet] ✅ group=${groupOrderId} walletDeducted=₹${deductAmt} restaurants=${orders.length}`)
     return res.json({ success: true, message: 'Paid via wallet!', data: orders })
 
@@ -800,6 +825,24 @@ export async function foodOrderWallet(req, res) {
           },
         },
       }).catch(() => {})
+
+      WalletModel.findOneAndUpdate(
+        { userId: req.userId },
+        {
+          $inc: { balance: deductAmt },
+          $push: {
+            transactions: {
+              $each: [{
+                type: 'credit',
+                amount: deductAmt,
+                description: 'Refund for failed wallet food order',
+                date: new Date(),
+              }],
+              $position: 0,
+            },
+          },
+        }
+      ).catch(() => {})
     }
     console.error('[foodOrderWallet] ❌', err.message)
     return res.status(err.statusCode || 500).json({ success: false, message: err.message })
@@ -902,6 +945,8 @@ export async function foodOrderVerifyPayment(req, res) {
       await UserModel.findByIdAndUpdate(req.userId, { $inc: { coins: -validCoinsUsed } })
     }
 
+    recordOrderForStreak(req.userId).catch(() => {})
+
     console.log(`[foodOrderVerifyPayment] ✅ group=${groupOrderId} paymentId=${razorpay_payment_id} restaurants=${orders.length}`)
     return res.json({ success: true, message: 'Food order placed!', data: orders })
 
@@ -929,6 +974,24 @@ export async function foodOrderVerifyPayment(req, res) {
           },
         },
       }).catch(() => {})
+
+      WalletModel.findOneAndUpdate(
+        { userId: req.userId },
+        {
+          $inc: { balance: fields.walletAmountUsed },
+          $push: {
+            transactions: {
+              $each: [{
+                type: 'credit',
+                amount: fields.walletAmountUsed,
+                description: 'Refund for failed food order',
+                date: new Date(),
+              }],
+              $position: 0,
+            },
+          },
+        }
+      ).catch(() => {})
     }
     console.error('[foodOrderVerifyPayment] ❌', err.message)
     return res.status(err.statusCode || 500).json({ success: false, message: err.message })

@@ -137,23 +137,15 @@ export default function RewardsPage() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [coinsRes, checkinRes, streakRes] = await Promise.all([
-          Axios({ url:'/api/coins/balance',  method:'get' }),
-          Axios({ url:'/api/checkin/status', method:'get' }),
-          Axios({ url:'/api/streak/me',      method:'get' }),
-        ])
-        if (coinsRes.data.success)   setCoins(coinsRes.data.data.coins || 0)
-        if (checkinRes.data.success) {
-          const d = checkinRes.data.data
-          setCheckedIn(d.checkedInToday || false)
-          setCheckDays(d.weekStatus || Array(7).fill(false))
-        }
+        const streakRes = await Axios({ url:'/api/streak/me', method:'get' })
         if (streakRes.data.success) {
           const d = streakRes.data.data
-          setStreak(d.currentStreak    || 0)
+          setCoins(d.coins || 0)
+          setCheckedIn(Boolean(d.checkedInToday))
+          setStreak(d.currentStreak || 0)
           setClaimedRewards(d.claimedMilestones || [])
-          setStreakAlive(d.streakAlive   || false)
-          setOrderedToday(d.orderedToday || false)
+          setStreakAlive(Boolean(d.streakAlive))
+          setOrderedToday(Boolean(d.orderedToday))
         }
       } catch (err) {
         console.error('Rewards fetch error:', err)
@@ -169,17 +161,11 @@ export default function RewardsPage() {
     if (checkedIn || checkLoading) return
     setCheckLoading(true)
     try {
-      const res = await Axios({ url:'/api/checkin/claim', method:'post' })
+      const res = await Axios({ url:'/api/streak/checkin', method:'post' })
       if (res.data.success) {
         const earned = res.data.data?.coinsEarned || 5
         setCheckedIn(true)
-        setCoins(prev => prev + earned)
-        // mark today in weekly grid
-        const today = new Date().getDay()          // 0=Sun … 6=Sat
-        const idx   = today === 0 ? 6 : today - 1 // convert to Mon=0 index
-        setCheckDays(prev => {
-          const next = [...prev]; next[idx] = true; return next
-        })
+        setCoins(res.data.data?.coins || (prev => prev + earned))
         toast.success(`+${earned} coins earned! Keep coming back 🪙`)
         if (coinRef.current) coinRef.current.style.animation = 'pop .4s ease'
         setTimeout(() => { if (coinRef.current) coinRef.current.style.animation = '' }, 500)

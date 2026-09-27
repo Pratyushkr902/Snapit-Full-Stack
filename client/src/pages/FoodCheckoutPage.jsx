@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
+import { setUserDetails } from '../store/userSlice'
+import fetchUserDetails from '../utils/fetchUserDetails'
 import AddAddress from '../components/AddAddress'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
@@ -67,6 +69,7 @@ const VegDot = ({ isVeg }) => (
 )
 
 const FoodCheckoutPage = () => {
+  const dispatch  = useDispatch()
   const navigate  = useNavigate()
   const user      = useSelector(s => s.user)
   const addressList = useSelector(s => s.addresses.addressList)
@@ -429,6 +432,7 @@ const FoodCheckoutPage = () => {
       if (res.data?.success) {
         toast.success('Order placed!')
         clearAll()
+        fetchUserDetails().then(u => { if (u?.data) dispatch(setUserDetails(u.data)) }).catch(() => {})
         const chosenAddr = addressList[selectAddress]
         const orderData = chosenAddr?.recipient_name ? {
           recipient_name: chosenAddr.recipient_name,
@@ -456,6 +460,7 @@ const FoodCheckoutPage = () => {
       if (res.data?.success) {
         toast.success('Paid via wallet!')
         clearAll()
+        fetchUserDetails().then(u => { if (u?.data) dispatch(setUserDetails(u.data)) }).catch(() => {})
         const chosenAddr = addressList[selectAddress]
         const orderData = chosenAddr?.recipient_name ? {
           recipient_name: chosenAddr.recipient_name,
@@ -514,6 +519,7 @@ const FoodCheckoutPage = () => {
             if (vRes.data?.success) {
               toast.success('Order placed!')
               clearAll()
+              fetchUserDetails().then(u => { if (u?.data) dispatch(setUserDetails(u.data)) }).catch(() => {})
               const chosenAddr = addressList[selectAddress]
               const orderData = chosenAddr?.recipient_name ? {
                 recipient_name: chosenAddr.recipient_name,

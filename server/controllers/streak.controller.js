@@ -1,11 +1,5 @@
 import UserModel from '../models/user.model.js'
-
-const MILESTONES = {
-    3:  { reward: '₹20 off',                  type: 'discount',    amount: 20   },
-    7:  { reward: 'Free Delivery (3 orders)', type: 'delivery',    amount: 3    },
-    14: { reward: '₹100 wallet credit',        type: 'wallet',      amount: 100  },
-    30: { reward: 'Snapit Plus FREE',          type: 'snapitplus',  amount: 1    },
-}
+import { STREAK_MILESTONES, isSameISTDay, isYesterdayIST } from '../utils/streakUtils.js'
 
 export async function claimStreakReward(req, res) {
     try {
@@ -13,46 +7,38 @@ export async function claimStreakReward(req, res) {
         if (!user) return res.status(404).json({ message: "User not found", error: true, success: false })
 
         const milestone = parseInt(req.body.milestone)
-        if (!MILESTONES[milestone]) {
+        if (!STREAK_MILESTONES[milestone]) {
             return res.status(400).json({ message: "Invalid milestone", error: true, success: false })
         }
 
-        if (user.currentStreak < milestone) {
-            return res.status(400).json({ message: "Streak not reached yet", error: true, success: false })
+        const now = new Date()
+        const orderedToday = Boolean(user.lastOrderDate && isSameISTDay(user.lastOrderDate, now))
+        const streakAlive = orderedToday || Boolean(user.lastOrderDate && isYesterdayIST(user.lastOrderDate, now))
+        const effectiveStreak = streakAlive ? (user.currentStreak || 0) : 0
+
+        if (effectiveStreak < milestone) {
+            return res.status(400).json({ message: "Streak not reached yet or streak has ended", error: true, success: false })
         }
 
-        if (user.claimedMilestones.includes(milestone)) {
+        if (user.claimedMilestones?.includes(milestone)) {
             return res.status(400).json({ message: "Reward already claimed", error: true, success: false })
         }
 
-        const { type, amount, reward } = MILESTONES[milestone]
+        const coins = STREAK_MILESTONES[milestone]
 
-        // Apply the reward
-        if (type === 'wallet') {
-            user.walletBalance += amount
-            user.walletTransactions.push({
-                type: 'credit',
-                amount,
-                description: `${milestone}-day streak reward: ${reward}`,
-                date: new Date()
-            })
-        } else if (type === 'snapitplus') {
-            user.isSnapitPlusMember = true
-            user.snapitPlusExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-        }
-        // discount and delivery rewards are stored as claimed — apply at checkout
-
+        // Zero financial loss protection: Credits Snapit Loyalty Coins ONLY (user.coins)
+        user.coins = (user.coins || 0) + coins
         user.claimedMilestones.push(milestone)
         await user.save()
 
         return res.json({
-            message: `Reward claimed: ${reward}`,
+            message: `🎉 +${coins} Snapit Coins collected for your ${milestone}-day streak!`,
             error: false,
             success: true,
             data: {
-                reward,
-                type,
-                walletBalance: user.walletBalance
+                coins: user.coins,
+                walletBalance: user.walletBalance || 0,
+                claimedMilestones: user.claimedMilestones
             }
         })
     } catch (error) {

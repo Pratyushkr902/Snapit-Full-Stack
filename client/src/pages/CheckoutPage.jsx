@@ -2,7 +2,9 @@ import React, { useState } from 'react'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import AddAddress from '../components/AddAddress'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
+import { setUserDetails } from '../store/userSlice'
+import fetchUserDetails from '../utils/fetchUserDetails'
 import AxiosToastError from '../utils/AxiosToastError'
 import Axios, { SummaryApi } from '../utils/Axios'
 import toast from 'react-hot-toast'
@@ -31,6 +33,7 @@ const TIP_PRESETS = [
 // sync with server/utils/serviceArea.js and silently block valid zones.
 
 const CheckoutPage = () => {
+  const dispatch = useDispatch()
   const { fetchCartItem, fetchOrder, fetchAddress, totalPrice } = useGlobalContext() || {}
   const [openAddress, setOpenAddress]       = useState(false)
   const addressList                          = useSelector(state => state.addresses.addressList)
@@ -240,6 +243,7 @@ const CheckoutPage = () => {
         toast.success(response.data.message)
         if (fetchCartItem) fetchCartItem()
         if (fetchOrder) fetchOrder()
+        fetchUserDetails().then(u => { if (u?.data) dispatch(setUserDetails(u.data)) }).catch(() => {})
         navigateToSuccess(response.data.scratch_cards)
       }
     } catch (error) {
@@ -356,6 +360,7 @@ const CheckoutPage = () => {
                 toast.success('Order Placed Successfully! 🛒')
                 if (fetchCartItem) fetchCartItem()
                 if (fetchOrder) fetchOrder()
+                fetchUserDetails().then(u => { if (u?.data) dispatch(setUserDetails(u.data)) }).catch(() => {})
                 navigateToSuccess(verifyRes.data.scratch_cards)
               }
             } catch (err) { toast.dismiss(verificationToast); AxiosToastError(err) }

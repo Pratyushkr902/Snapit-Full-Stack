@@ -89,8 +89,9 @@ export default function StreakTracker({ isCardOnly = false }) {
   }, [streak])
 
   const claimableMilestones = useMemo(() => {
-    return MILESTONES.filter(m => m.days <= streak && !claimedRewards.includes(m.days))
-  }, [streak, claimedRewards])
+    const activeStreak = streakAlive ? streak : 0
+    return MILESTONES.filter(m => m.days <= activeStreak && !claimedRewards.includes(m.days))
+  }, [streak, streakAlive, claimedRewards])
 
   const progressPct = useMemo(() => {
     if (!nextMilestone) return 100
@@ -481,7 +482,8 @@ export default function StreakTracker({ isCardOnly = false }) {
 
         <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
           {MILESTONES.map(m => {
-            const isAchieved = streak >= m.days
+            const activeStreak = streakAlive ? streak : 0
+            const isAchieved = activeStreak >= m.days
             const isClaimed = claimedRewards.includes(m.days)
 
             return (

@@ -2,19 +2,16 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
 import UserModel from '../models/user.model.js';
+import {
+    STREAK_MILESTONES,
+    DAILY_CHECKIN_COINS,
+    isSameISTDay,
+    isYesterdayIST
+} from '../utils/streakUtils.js';
 
 const streakRouter = express.Router();
 
-const STREAK_MILESTONES = {
-    3:  20,
-    7:  50,
-    14: 120,
-    30: 300,
-};
-
-const DAILY_CHECKIN_COINS = 5;
-
-// GET /api/streak/me - Fetch user streak telemetry & coin balance
+// GET /api/streak/me - Fetch user streak telemetry & coin balance (IST Timezone Aware)
 streakRouter.get('/me', auth, async (req, res) => {
     try {
         const user = await UserModel.findById(req.userId).select(
@@ -22,28 +19,10 @@ streakRouter.get('/me', auth, async (req, res) => {
         );
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        const now     = new Date();
-        const today   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const lastOrder = user.lastOrderDate
-            ? new Date(user.lastOrderDate.getFullYear(), user.lastOrderDate.getMonth(), user.lastOrderDate.getDate())
-            : null;
-
-        const orderedToday = Boolean(lastOrder && lastOrder.getTime() === today.getTime());
-
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        const streakAlive =
-            orderedToday ||
-            Boolean(lastOrder && lastOrder.getTime() === yesterday.getTime());
-
-        // Check if user already claimed daily check-in today
-        const lastCheckin = user.lastCheckin ? new Date(user.lastCheckin) : null;
-        const checkedInToday = Boolean(
-            lastCheckin &&
-            lastCheckin.getFullYear() === now.getFullYear() &&
-            lastCheckin.getMonth() === now.getMonth() &&
-            lastCheckin.getDate() === now.getDate()
-        );
+        const now = new Date();
+        const orderedToday = Boolean(user.lastOrderDate && isSameISTDay(user.lastOrderDate, now));
+        const streakAlive = orderedToday || Boolean(user.lastOrderDate && isYesterdayIST(user.lastOrderDate, now));
+        const checkedInToday = Boolean(user.lastCheckin && isSameISTDay(user.lastCheckin, now));
 
         const milestoneKeys      = Object.keys(STREAK_MILESTONES).map(Number).sort((a, b) => a - b);
         const effectiveStreak    = streakAlive ? (user.currentStreak || 0) : 0;
@@ -79,13 +58,7 @@ streakRouter.post('/checkin', auth, async (req, res) => {
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         const now = new Date();
-        const lastCheckin = user.lastCheckin ? new Date(user.lastCheckin) : null;
-        const isAlreadyCheckedIn = Boolean(
-            lastCheckin &&
-            lastCheckin.getFullYear() === now.getFullYear() &&
-            lastCheckin.getMonth() === now.getMonth() &&
-            lastCheckin.getDate() === now.getDate()
-        );
+        const isAlreadyCheckedIn = Boolean(user.lastCheckin && isSameISTDay(user.lastCheckin, now));
 
         if (isAlreadyCheckedIn) {
             return res.status(400).json({
@@ -122,7 +95,7 @@ streakRouter.post('/checkin', auth, async (req, res) => {
     }
 });
 
-// POST /api/streak/claim - Claim milestone bonus coins (Snapit Loyalty Coins ONLY - Zero Wallet Cash Loss)
+// POST /api/streak/claim - Claim milestone bonus coins (Active streak verified, loyalty coins only)
 streakRouter.post('/claim', auth, async (req, res) => {
     try {
         const { milestone } = req.body;
@@ -134,12 +107,25 @@ streakRouter.post('/claim', auth, async (req, res) => {
 
         const coins = STREAK_MILESTONES[milestoneNum];
 
+        const user = await UserModel.findById(req.userId).select('currentStreak lastOrderDate claimedMilestones');
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const now = new Date();
+        const orderedToday = Boolean(user.lastOrderDate && isSameISTDay(user.lastOrderDate, now));
+        const streakAlive = orderedToday || Boolean(user.lastOrderDate && isYesterdayIST(user.lastOrderDate, now));
+        const effectiveStreak = streakAlive ? (user.currentStreak || 0) : 0;
+
+        if (effectiveStreak < milestoneNum) {
+            return res.status(400).json({
+                success: false,
+                message: `Active streak of ${milestoneNum} days required (Current streak: ${effectiveStreak} days).`
+            });
+        }
+
         // Zero financial loss protection: Credits Snapit Loyalty Coins ONLY (user.coins)
-        // Never mutates walletBalance and never creates wallet cash transactions
         const updatedUser = await UserModel.findOneAndUpdate(
             {
                 _id: req.userId,
-                currentStreak: { $gte: milestoneNum },
                 claimedMilestones: { $ne: milestoneNum }
             },
             {
@@ -152,7 +138,7 @@ streakRouter.post('/claim', auth, async (req, res) => {
         if (!updatedUser) {
             return res.status(400).json({
                 success: false,
-                message: 'Reward already claimed or streak milestone not reached yet.'
+                message: 'Reward already claimed for this milestone.'
             });
         }
 

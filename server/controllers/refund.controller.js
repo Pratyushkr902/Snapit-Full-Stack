@@ -1,6 +1,7 @@
 import RefundModel from "../models/refund.model.js";
 import OrderModel  from "../models/order.model.js";
 import UserModel   from "../models/user.model.js";
+import WalletModel from "../models/wallet.model.js";
 
 // Reasons that REQUIRE at least one photo as proof
 const PHOTO_REQUIRED_REASONS = ["damaged_product", "expired_product", "quality_issue", "wrong_product"];
@@ -241,6 +242,24 @@ export const resolveRefund = async (req, res) => {
                 $inc: { walletBalance: refund.refundAmount },
                 $push: { walletTransactions: { $each: [transaction], $position: 0 } }
             });
+            WalletModel.findOneAndUpdate(
+                { userId: refund.userId },
+                {
+                    $inc: { balance: refund.refundAmount },
+                    $push: {
+                        transactions: {
+                            $each: [{
+                                amount: refund.refundAmount,
+                                type: 'credit',
+                                description: `Refund for Order #${orderCode}`,
+                                referenceId: String(refund.orderId),
+                                date: new Date()
+                            }],
+                            $position: 0
+                        }
+                    }
+                }
+            ).catch(err => console.warn('[resolveRefund] WalletModel mirror sync failed (non-fatal):', err.message));
         } else if (refundMethod) {
             refund.refundMethod = refundMethod;
         }
