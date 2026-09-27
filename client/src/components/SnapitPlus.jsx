@@ -9,6 +9,7 @@ import { FaCrown, FaCheck, FaWallet, FaShieldAlt } from 'react-icons/fa'
 import { FiTruck, FiZap, FiPercent, FiGift, FiAward, FiChevronDown, FiAlertCircle } from 'react-icons/fi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import { haptic } from '../utils/haptics'
+import { getSnapitPaymentLogo } from '../utils/snapitBadge'
 
 const BENEFITS = [
   {
@@ -195,7 +196,7 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
         currency: currency || 'INR',
         name: 'Snapit Plus VIP',
         description: `Premium Grocery Access Pass — ${plan === 'yearly' ? '12 Months' : '30 Days'}`,
-        image: 'https://cdn-icons-png.flaticon.com/512/2972/2972185.png',
+        image: getSnapitPaymentLogo(),
         order_id: razorpay_order_id,
         prefill: {
           name: user.name || '',

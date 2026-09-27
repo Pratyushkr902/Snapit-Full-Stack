@@ -14,6 +14,7 @@ import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, get
 import { getCampusAdjustedPrice } from './RestaurantDetailPage'
 import FreeDeliveryProgressBar from '../components/FreeDeliveryProgressBar'
 import { haptic } from '../utils/haptics'
+import { getSnapitPaymentLogo } from '../utils/snapitBadge'
 
 const COOKING_PRESETS = [
   '🌶️ Less spicy',
@@ -484,7 +485,9 @@ const FoodCheckoutPage = () => {
         key:       RAZORPAY_KEY,
         amount:    rzpOrder.amount,
         currency:  'INR',
-        name:      restaurantNames || 'Snapit Food',
+        name:      restaurantNames ? `Snapit Food • ${restaurantNames}` : 'Snapit Food Delivery',
+        description: 'Instant Food & Restaurant Delivery',
+        image:     getSnapitPaymentLogo(),
         order_id:  rzpOrder.id,
         handler: async (rzpRes) => {
           const vt = toast.loading('Verifying payment...')

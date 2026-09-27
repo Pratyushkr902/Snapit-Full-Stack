@@ -522,7 +522,8 @@ app.use((err, req, res, next) => {
     })
 })
 
-// ─── SERVE FRONTEND ───────────────────────────────────────────────────────────
+// ─── SERVE PUBLIC ASSETS & FRONTEND ───────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public')))
 const clientDist = path.join(__dirname, '../client/dist')
 if (fs.existsSync(path.join(clientDist, 'index.html'))) {
     app.use(express.static(clientDist))

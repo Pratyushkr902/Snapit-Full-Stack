@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux'
 import { IoArrowBack } from 'react-icons/io5'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
+import { getSnapitPaymentLogo } from '../utils/snapitBadge'
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -195,8 +196,9 @@ const Wallet = () => {
         key:         razorKey,
         amount:      order.amount,
         currency:    order.currency,
-        name:        'Snapit',
-        description: 'Wallet Recharge',
+        name:        'Snapit Wallet',
+        description: 'Instant Wallet Balance Recharge',
+        image:       getSnapitPaymentLogo(),
         order_id:    order.id,
         redirect: false,
         theme:       { color: '#16a34a' },
@@ -305,8 +307,9 @@ const Wallet = () => {
         key:         razorKey,
         amount:      order.amount,
         currency:    order.currency,
-        name:        'Snapit Plus',
-        description: `${selectedPlan === 'yearly' ? 'Yearly' : 'Monthly'} Subscription`,
+        name:        'Snapit Plus VIP',
+        description: `${selectedPlan === 'yearly' ? 'Annual (12 Months)' : 'Monthly (30 Days)'} VIP Membership`,
+        image:       getSnapitPaymentLogo(),
         order_id:    order.id,
         redirect: false,
         theme:       { color: '#eab308' },

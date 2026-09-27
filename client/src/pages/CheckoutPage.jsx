@@ -14,6 +14,7 @@ import { isGenericPaliganjCentroid, getUserLocation, resolveVillageFromText, get
 import FreeDeliveryProgressBar from '../components/FreeDeliveryProgressBar'
 import CartQuickAddSuggestions from '../components/CartQuickAddSuggestions'
 import { haptic } from '../utils/haptics'
+import { getSnapitPaymentLogo } from '../utils/snapitBadge'
 
 const STORE_FALLBACK = { lat: 25.33121156659458, lng: 84.8006737574818 }
 
@@ -280,6 +281,8 @@ const CheckoutPage = () => {
           amount:   responseData.amount,
           currency: 'INR',
           name:     'Snapit Grocery',
+          description: '10-Minute Grocery Delivery',
+          image:    getSnapitPaymentLogo(),
           order_id: responseData.id,
           prefill: {
             name:    user?.name || '',
