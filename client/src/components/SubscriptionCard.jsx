@@ -1,98 +1,427 @@
-import React, { useState } from 'react';
-import { FaCalendarAlt, FaTruck, FaPause, FaPlay } from 'react-icons/fa';
-import Axios from '../utils/Axios';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from 'react'
+import {
+  FiCalendar,
+  FiTruck,
+  FiPause,
+  FiPlay,
+  FiMapPin,
+  FiCreditCard,
+  FiXCircle,
+  FiShoppingBag,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiHeadphones,
+  FiChevronRight
+} from 'react-icons/fi'
+import { FaCrown } from 'react-icons/fa'
+import { Link } from 'react-router-dom'
+import Axios from '../utils/Axios'
+import SummaryApi from '../common/SummaryApi'
+import toast from 'react-hot-toast'
+import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
+import { haptic } from '../utils/haptics'
 
-const SubscriptionCard = ({ subscription, onUpdate }) => {
-    const [isActive, setIsActive] = useState(subscription.status === 'Active'); // ✅ Capital A
-    const [isLoading, setIsLoading] = useState(false);
+const getFrequencyLabel = (freq) => {
+  const f = String(freq || '').toUpperCase()
+  if (f === 'DAILY') return 'Daily (Every Morning)'
+  if (f === 'WEEKLY') return 'Weekly Delivery'
+  if (f === 'ALTERNATIVE') return 'Alternate Days'
+  if (f === 'MONTHLY') return 'Monthly'
+  if (f === 'YEARLY') return 'Annual VIP'
+  return f || 'Recurring'
+}
 
-    // ✅ Use correct item from items array
-    const item = subscription.items?.[0];
-    const product = item?.productId;
-    const quantity = item?.quantity;
+const formatNextDelivery = (dateStr) => {
+  if (!dateStr) return 'Next delivery pending'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return 'Scheduled soon'
 
-    // ✅ Calculate price from product price × quantity
-    const totalPrice = product?.price ? product.price * quantity : (item?.price || 0);
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(date)
+  target.setHours(0, 0, 0, 0)
 
-    const handleStatusToggle = async () => {
-        setIsLoading(true);
-        const nextStatus = isActive ? 'Paused' : 'Active'; // ✅ Capital casing
+  const diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return 'Today (6:00 AM - 8:00 AM)'
+  if (diffDays === 1) return 'Tomorrow (6:00 AM - 8:00 AM)'
+  if (diffDays > 1 && diffDays < 7) {
+    return `In ${diffDays} days (${date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })})`
+  }
+  return date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+}
 
-        try {
-            const endpoint = isActive
-                ? `/api/subscription/pause/${subscription._id}`   // ✅ correct route
-                : `/api/subscription/resume/${subscription._id}`; // ✅ correct route
+export default function SubscriptionCard({ subscription, onUpdate }) {
+  const [currentStatus, setCurrentStatus] = useState(subscription.status || 'Active')
+  const [isLoading, setIsLoading] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
 
-            const response = await Axios({ method: 'PATCH', url: endpoint }); // ✅ PATCH not PUT
+  // Sync state whenever prop updates
+  useEffect(() => {
+    setCurrentStatus(subscription.status || 'Active')
+  }, [subscription.status])
 
-            if (response.data.success) {
-                setIsActive(!isActive);
-                toast.success(`Subscription ${nextStatus} successfully!`);
-                if (onUpdate) onUpdate();
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to update subscription status");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const isActive = currentStatus === 'Active'
+  const isPaused = currentStatus === 'Paused'
+  const isCancelled = currentStatus === 'Cancelled'
+
+  // Snapit Plus membership card
+  if (subscription.isSnapitPlus) {
+    const isYearly = subscription.planType === 'yearly'
+    const expiresDate = subscription.expiresAt
+      ? new Date(subscription.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      : 'Active'
 
     return (
-        <div className="bg-white border rounded-xl p-5 shadow-sm my-3 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4 w-full md:w-auto">
-                <img
-                    src={product?.image?.[0]}           // ✅ optional chaining
-                    alt={product?.name}
-                    className="w-16 h-16 object-cover rounded-lg bg-gray-50"
-                />
-                <div>
-                    <h3 className="font-semibold text-gray-800 text-lg">{product?.name}</h3>
-                    <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
-                        <FaCalendarAlt className="text-gray-400" /> Frequency:{' '}
-                        <span className="font-medium text-gray-700 capitalize">
-                            {subscription.frequency?.toLowerCase()}
-                        </span>
-                    </p>
-                    <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
-                        <FaTruck className="text-gray-400" /> Next Delivery:{' '}
-                        <span className="font-medium text-gray-700">
-                            {new Date(subscription.nextDeliveryDate).toLocaleDateString()}
-                        </span>
-                    </p>
-                </div>
-            </div>
+      <div className='relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-amber-600/10 border border-amber-300 dark:border-amber-700/60 p-5 shadow-xs transition-all'>
+        <div className='absolute -right-6 -bottom-6 w-28 h-28 bg-amber-400/10 rounded-full blur-xl pointer-events-none' />
 
-            <div className="flex items-center justify-between w-full md:w-auto md:gap-8 border-t md:border-t-0 pt-3 md:pt-0">
-                <div className="text-left md:text-center">
-                    <span className="text-xs text-gray-400 block uppercase font-bold tracking-wider">Qty</span>
-                    <span className="text-gray-800 font-semibold">{quantity} units</span>  {/* ✅ */}
-                </div>
-                <div className="text-right md:text-center">
-                    <span className="text-xs text-gray-400 block uppercase font-bold tracking-wider">Total</span>
-                    <span className="text-green-700 font-bold">₹{totalPrice}</span>  {/* ✅ */}
-                </div>
+        <div className='flex items-start justify-between gap-3 relative z-10'>
+          <div className='flex items-center gap-3'>
+            <div className='w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 flex items-center justify-center text-xl shadow-md shadow-amber-500/20 shrink-0'>
+              <FaCrown />
             </div>
+            <div>
+              <div className='flex items-center gap-2 flex-wrap'>
+                <h3 className='font-black text-slate-900 dark:text-white text-base leading-tight'>
+                  Snapit Plus VIP Membership
+                </h3>
+                <span className='px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'>
+                  {isYearly ? 'Annual VIP' : 'Monthly VIP'}
+                </span>
+              </div>
+              <p className='text-xs text-slate-500 dark:text-slate-400 font-medium mt-1'>
+                Valid until: <span className='font-bold text-slate-800 dark:text-slate-200'>{expiresDate}</span>
+              </p>
+            </div>
+          </div>
 
-            <div className="w-full md:w-auto border-t md:border-t-0 pt-3 md:pt-0">
-                <button
-                    disabled={isLoading}
-                    onClick={handleStatusToggle}
-                    className={`w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                        isActive
-                            ? "bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
-                            : "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
-                    }`}
-                >
-                    {isLoading ? 'Updating...' : isActive ? (
-                        <><FaPause className="text-xs" /> Pause Delivery</>
-                    ) : (
-                        <><FaPlay className="text-xs" /> Resume Delivery</>
-                    )}
-                </button>
-            </div>
+          <span className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0'>
+            <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse' />
+            Active
+          </span>
         </div>
-    );
-};
 
-export default SubscriptionCard;
+        <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3 border-t border-amber-200/50 dark:border-amber-800/40 relative z-10 text-[11px] font-bold text-amber-950 dark:text-amber-200'>
+          <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
+            <span>🚀 Free Delivery</span>
+          </div>
+          <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
+            <span>💰 5% Cashback</span>
+          </div>
+          <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
+            <span>⚡ Priority Pack</span>
+          </div>
+          <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
+            <span>🎧 VIP Support</span>
+          </div>
+        </div>
+
+        <div className='mt-4 flex items-center justify-between gap-3 pt-3 border-t border-amber-200/50 dark:border-amber-800/40'>
+          <Link
+            to='/snapit-plus'
+            className='text-xs font-extrabold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1'
+          >
+            <span>View all VIP benefits & savings</span>
+            <FiChevronRight size={14} />
+          </Link>
+          <span className='text-xs font-black text-slate-800 dark:text-slate-200'>
+            {DisplayPriceInRupees(subscription.items?.[0]?.price || (isYearly ? 499 : 49))}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // Regular Grocery Recurring Subscription
+  const items = Array.isArray(subscription.items) ? subscription.items : []
+  const firstItem = items[0] || {}
+  const product = firstItem.productId || {}
+  const quantity = Number(firstItem.quantity) || 1
+
+  // Safe total amount calculation
+  const totalAmount = items.reduce((sum, it) => {
+    const unitPrice = Number(it?.productId?.price) || Number(it?.price) || 0
+    const qty = Number(it?.quantity) || 1
+    return sum + (unitPrice * qty)
+  }, 0)
+
+  const address = subscription.delivery_address || null
+
+  const handleStatusToggle = async () => {
+    haptic.medium()
+    setIsLoading(true)
+    const nextStatus = isActive ? 'Paused' : 'Active'
+    try {
+      const endpoint = isActive
+        ? `/api/subscription/pause/${subscription._id}`
+        : `/api/subscription/resume/${subscription._id}`
+
+      const res = await Axios({ method: 'PATCH', url: endpoint })
+      if (res.data?.success) {
+        setCurrentStatus(nextStatus)
+        toast.success(`Subscription ${nextStatus.toLowerCase()} successfully!`)
+        if (onUpdate) onUpdate()
+      } else {
+        toast.error(res.data?.message || 'Failed to update subscription')
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update subscription')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleConfirmCancel = async () => {
+    haptic.heavy()
+    setIsCancelling(true)
+    try {
+      const res = await Axios({
+        method: 'DELETE',
+        url: `/api/subscription/cancel/${subscription._id}`
+      })
+      if (res.data?.success) {
+        setCurrentStatus('Cancelled')
+        toast.success('Subscription cancelled successfully')
+        setShowCancelModal(false)
+        if (onUpdate) onUpdate()
+      } else {
+        toast.error(res.data?.message || 'Failed to cancel subscription')
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel subscription')
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
+  const handleOpenHelp = () => {
+    haptic.light()
+    if (typeof window !== 'undefined' && window.openSnapitChat) {
+      window.openSnapitChat({ orderId: subscription._id })
+    }
+  }
+
+  return (
+    <>
+      <div className={`relative bg-white dark:bg-slate-900 border rounded-2xl p-4 sm:p-5 shadow-xs transition-all ${
+        isActive
+          ? 'border-emerald-200/90 dark:border-emerald-800/60'
+          : isPaused
+          ? 'border-amber-200/90 dark:border-amber-800/60 bg-amber-50/20 dark:bg-slate-900/90'
+          : 'border-slate-200/80 dark:border-slate-800 opacity-75'
+      }`}>
+        {/* Top Header Badge Row */}
+        <div className='flex items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80'>
+          <div className='flex items-center gap-2'>
+            <span className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-extrabold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'>
+              <FiCalendar className='text-emerald-600 dark:text-emerald-400' size={12} />
+              {getFrequencyLabel(subscription.frequency)}
+            </span>
+            {subscription.payment_method && (
+              <span className='hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'>
+                <FiCreditCard size={10} />
+                {subscription.payment_method}
+              </span>
+            )}
+          </div>
+
+          <div>
+            {isActive && (
+              <span className='inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'>
+                <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse' />
+                Active
+              </span>
+            )}
+            {isPaused && (
+              <span className='inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'>
+                <FiPause size={10} />
+                Paused
+              </span>
+            )}
+            {isCancelled && (
+              <span className='inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'>
+                <FiXCircle size={10} />
+                Cancelled
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Product & Quantity Section */}
+        <div className='py-3.5 flex items-start sm:items-center justify-between gap-4'>
+          <div className='flex items-center gap-3.5 min-w-0'>
+            <div className='relative w-16 h-16 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/60 flex items-center justify-center p-1.5 shrink-0 overflow-hidden'>
+              {product.image?.[0] ? (
+                <img
+                  src={product.image[0]}
+                  alt={product.name || 'Subscription item'}
+                  className='w-full h-full object-contain'
+                  loading='lazy'
+                />
+              ) : (
+                <FiShoppingBag className='text-slate-400' size={24} />
+              )}
+              {quantity > 1 && (
+                <span className='absolute bottom-1 right-1 bg-emerald-600 text-white font-black text-[9px] px-1.5 py-0.2 rounded-md shadow-xs'>
+                  x{quantity}
+                </span>
+              )}
+            </div>
+
+            <div className='min-w-0'>
+              <h3 className='font-bold text-slate-900 dark:text-white text-base leading-tight truncate'>
+                {product.name || firstItem.name || 'Subscribed Grocery Item'}
+              </h3>
+              <p className='text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5'>
+                {product.unit ? `${quantity} × ${product.unit}` : `${quantity} unit${quantity > 1 ? 's' : ''}`}
+                {items.length > 1 && (
+                  <span className='ml-2 text-emerald-600 dark:text-emerald-400 font-bold'>
+                    +{items.length - 1} more item{items.length > 2 ? 's' : ''}
+                  </span>
+                )}
+              </p>
+              <div className='flex items-center gap-2 mt-1.5'>
+                <span className='text-sm font-black text-emerald-600 dark:text-emerald-400'>
+                  {DisplayPriceInRupees(totalAmount)}
+                </span>
+                <span className='text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase'>
+                  / delivery
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className='text-right shrink-0'>
+            <span className='text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block'>
+              Total per cycle
+            </span>
+            <span className='text-base font-extrabold text-slate-900 dark:text-white'>
+              {DisplayPriceInRupees(totalAmount)}
+            </span>
+          </div>
+        </div>
+
+        {/* Next Delivery & Address Details Banner */}
+        <div className='bg-slate-50 dark:bg-slate-850/80 rounded-xl p-3 space-y-2 text-xs'>
+          <div className='flex items-center justify-between gap-2 text-slate-700 dark:text-slate-300'>
+            <div className='flex items-center gap-2 font-medium min-w-0'>
+              <FiTruck className='text-emerald-600 dark:text-emerald-400 shrink-0' size={14} />
+              <span className='font-bold text-slate-900 dark:text-white truncate'>
+                Next Delivery:
+              </span>
+              <span className='text-slate-600 dark:text-slate-300 truncate'>
+                {formatNextDelivery(subscription.nextDeliveryDate)}
+              </span>
+            </div>
+          </div>
+
+          {address && (
+            <div className='flex items-center gap-2 text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-800/50'>
+              <FiMapPin className='shrink-0 text-slate-400' size={13} />
+              <span className='truncate text-[11px]'>
+                Delivering to: <strong className='text-slate-700 dark:text-slate-200'>{address.address_line_1 || address.city || 'Saved Address'}</strong>
+                {address.city ? `, ${address.city}` : ''} {address.pincode ? `(${address.pincode})` : ''}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Action Controls Row */}
+        <div className='mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5'>
+          <button
+            onClick={handleOpenHelp}
+            className='inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors'
+          >
+            <FiHeadphones size={13} />
+            <span>Support</span>
+          </button>
+
+          <div className='flex items-center gap-2 ml-auto'>
+            {!isCancelled && (
+              <>
+                <button
+                  type='button'
+                  onClick={() => setShowCancelModal(true)}
+                  className='px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-800 transition-colors'
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type='button'
+                  disabled={isLoading}
+                  onClick={handleStatusToggle}
+                  className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl font-bold text-xs transition-all active:scale-95 ${
+                    isActive
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs shadow-emerald-600/20'
+                  }`}
+                >
+                  {isLoading ? (
+                    <span className='inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin' />
+                  ) : isActive ? (
+                    <>
+                      <FiPause size={12} />
+                      <span>Pause Delivery</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiPlay size={12} />
+                      <span>Resume Delivery</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Confirmation Modal for Subscription Cancellation */}
+      {showCancelModal && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150'>
+          <div className='bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4'>
+            <div className='w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto text-2xl'>
+              <FiAlertCircle />
+            </div>
+
+            <div className='text-center space-y-1.5'>
+              <h3 className='font-black text-slate-900 dark:text-white text-base'>
+                Cancel Recurring Delivery?
+              </h3>
+              <p className='text-xs text-slate-500 dark:text-slate-400'>
+                You will no longer receive automatic morning deliveries for{' '}
+                <strong className='text-slate-800 dark:text-slate-200'>
+                  {product.name || firstItem.name || 'this item'}
+                </strong>. You can also pause instead to skip upcoming dates.
+              </p>
+            </div>
+
+            <div className='grid grid-cols-2 gap-2.5 pt-2'>
+              <button
+                type='button'
+                onClick={() => setShowCancelModal(false)}
+                className='px-4 py-2.5 rounded-xl font-bold text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-750 transition-colors'
+              >
+                Keep Delivery
+              </button>
+              <button
+                type='button'
+                disabled={isCancelling}
+                onClick={handleConfirmCancel}
+                className='px-4 py-2.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all flex items-center justify-center'
+              >
+                {isCancelling ? (
+                  <span className='w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                ) : (
+                  'Yes, Cancel'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
