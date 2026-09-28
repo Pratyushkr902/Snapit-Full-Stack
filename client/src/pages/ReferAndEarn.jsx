@@ -12,7 +12,7 @@ import {
   IoInformationCircleOutline,
   IoSparkles
 } from 'react-icons/io5'
-import { FaWhatsapp, FaCoins, FaWallet, FaCheck } from 'react-icons/fa'
+import { FaWhatsapp, FaCoins, FaWallet, FaCheck, FaCrown } from 'react-icons/fa'
 import {
   FiUsers,
   FiAward,
@@ -21,14 +21,16 @@ import {
   FiTrendingUp,
   FiShield,
   FiCheckCircle,
-  FiClock
+  FiClock,
+  FiShare2,
+  FiShoppingBag
 } from 'react-icons/fi'
 
 const MILESTONES = [
   { count: 1,  reward: '50 Snapit Coins',   icon: FiGift,       label: 'Starter Tier', desc: '1st friend places first order' },
   { count: 5,  reward: '250 Snapit Coins',  icon: FiAward,      label: 'Bronze Tier',  desc: '5 friends ordered' },
   { count: 10, reward: '350 Snapit Coins',  icon: FiTrendingUp, label: 'Silver Tier',  desc: '10 friends ordered' },
-  { count: 25, reward: 'Snapit Plus VIP',   icon: FiShield,     label: 'Gold Legend',  desc: 'Top community ambassador' },
+  { count: 25, reward: 'Snapit Plus VIP',   icon: FaCrown,      label: 'Gold Legend',  desc: 'Top community ambassador' },
 ]
 
 export default function ReferAndEarn() {
@@ -217,18 +219,24 @@ export default function ReferAndEarn() {
             {/* Live Stats Row */}
             <div className='grid grid-cols-3 gap-2.5 w-full pt-2'>
               <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
-                <p className='text-xl sm:text-2xl font-black text-white leading-none'>{referralCount}</p>
+                <p className='text-xl sm:text-2xl font-black text-white leading-none flex items-center justify-center gap-1.5'>
+                  <FiUsers size={16} className='text-emerald-200' />
+                  <span>{referralCount}</span>
+                </p>
                 <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1.5'>Friends Joined</p>
               </div>
               <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
-                <p className='text-xl sm:text-2xl font-black text-amber-300 leading-none flex items-center justify-center gap-1'>
+                <p className='text-xl sm:text-2xl font-black text-amber-300 leading-none flex items-center justify-center gap-1.5'>
                   <FaCoins size={14} className='text-amber-300' />
                   <span>{coinsEarned}</span>
                 </p>
                 <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1.5'>Coins Earned</p>
               </div>
               <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
-                <p className='text-xl sm:text-2xl font-black text-white leading-none'>{claimedMilestones.length}</p>
+                <p className='text-xl sm:text-2xl font-black text-white leading-none flex items-center justify-center gap-1.5'>
+                  <FiAward size={16} className='text-amber-300' />
+                  <span>{claimedMilestones.length}</span>
+                </p>
                 <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1.5'>Tiers Unlocked</p>
               </div>
             </div>
@@ -252,13 +260,16 @@ export default function ReferAndEarn() {
         <div className='bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-2'>
-              <FiGift size={16} className='text-emerald-500' />
-              <p className='text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400'>
+              <div className='w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400'>
+                <FiGift size={13} />
+              </div>
+              <p className='text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300'>
                 Your Unique Invite Code
               </p>
             </div>
-            <span className='text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/60'>
-              Active &amp; Verified
+            <span className='inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/60'>
+              <FiCheckCircle size={10} />
+              <span>Active &amp; Verified</span>
             </span>
           </div>
 
@@ -319,36 +330,45 @@ export default function ReferAndEarn() {
           </div>
 
           <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
-            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2'>
-              <div className='w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-black shrink-0'>
-                01
+            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2.5'>
+              <div className='w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-black shrink-0'>
+                <FiShare2 size={16} />
               </div>
               <div>
-                <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Share Your Code</h4>
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-[10px] font-black text-blue-600 dark:text-blue-400 font-mono'>01</span>
+                  <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Share Your Code</h4>
+                </div>
                 <p className='text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 leading-relaxed'>
                   Send your unique code or invite link to friends &amp; family.
                 </p>
               </div>
             </div>
 
-            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2'>
-              <div className='w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-black shrink-0'>
-                02
+            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2.5'>
+              <div className='w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm font-black shrink-0'>
+                <FiShoppingBag size={16} />
               </div>
               <div>
-                <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Friend Places Order</h4>
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-[10px] font-black text-amber-600 dark:text-amber-400 font-mono'>02</span>
+                  <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Friend Places Order</h4>
+                </div>
                 <p className='text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 leading-relaxed'>
                   They register and complete their 1st qualifying order of ₹149+.
                 </p>
               </div>
             </div>
 
-            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2'>
-              <div className='w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-black shrink-0'>
-                03
+            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2.5'>
+              <div className='w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-black shrink-0'>
+                <FaCoins size={15} />
               </div>
               <div>
-                <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Both Get 50 Coins</h4>
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-[10px] font-black text-emerald-600 dark:text-emerald-400 font-mono'>03</span>
+                  <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Both Get 50 Coins</h4>
+                </div>
                 <p className='text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 leading-relaxed'>
                   Instant 50 Snapit Coins credited to both accounts upon 1st order.
                 </p>
@@ -443,9 +463,16 @@ export default function ReferAndEarn() {
                             type='button'
                             onClick={() => handleClaimMilestone(m.count)}
                             disabled={claimingMilestone === m.count}
-                            className='text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 transition active:scale-95 shadow-xs cursor-pointer'
+                            className='text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 transition active:scale-95 shadow-xs cursor-pointer flex items-center gap-1'
                           >
-                            {claimingMilestone === m.count ? 'Claiming…' : '🎁 Claim Perk'}
+                            {claimingMilestone === m.count ? (
+                              <span>Claiming…</span>
+                            ) : (
+                              <>
+                                <FiGift size={11} />
+                                <span>Claim Perk</span>
+                              </>
+                            )}
                           </button>
                         )
                       ) : (
@@ -456,8 +483,14 @@ export default function ReferAndEarn() {
                     </div>
 
                     <div className='mt-3 pt-2.5 border-t border-slate-200/50 dark:border-slate-800/60 flex items-center justify-between text-[11px] font-bold'>
-                      <span className='text-slate-500 dark:text-slate-400'>Reward</span>
-                      <span className='text-emerald-600 dark:text-emerald-400 font-black'>{m.reward}</span>
+                      <span className='text-slate-500 dark:text-slate-400 flex items-center gap-1'>
+                        <FiGift size={11} className='text-slate-400' />
+                        <span>Reward</span>
+                      </span>
+                      <span className='text-emerald-600 dark:text-emerald-400 font-black flex items-center gap-1'>
+                        {m.count < 25 ? <FaCoins size={11} className='text-amber-500' /> : <FaCrown size={11} className='text-amber-500' />}
+                        <span>{m.reward}</span>
+                      </span>
                     </div>
                   </div>
                 )
@@ -474,8 +507,9 @@ export default function ReferAndEarn() {
                 <h3 className='font-black text-sm text-slate-900 dark:text-white'>Invited Friends</h3>
                 <p className='text-[11px] text-slate-500 font-medium'>Track friends who signed up with your code</p>
               </div>
-              <span className='text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full'>
-                {friends.length} Total
+              <span className='inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full'>
+                <FiUsers size={11} />
+                <span>{friends.length} Total</span>
               </span>
             </div>
 
@@ -542,16 +576,25 @@ export default function ReferAndEarn() {
         )}
 
         {/* ── TRANSPARENT TERMS & CONDITIONS ── */}
-        <div className='bg-slate-100/70 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-200/60 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 space-y-1.5'>
+        <div className='bg-slate-100/70 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-200/60 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 space-y-2'>
           <p className='font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1.5'>
-            <IoInformationCircleOutline size={14} />
+            <IoInformationCircleOutline size={14} className='text-emerald-600 dark:text-emerald-400' />
             <span>Referral Program Terms</span>
           </p>
-          <ul className='list-disc pl-4 space-y-1'>
-            <li>Referral reward is credited when your referred friend completes their first successful order of ₹149 or more.</li>
-            <li>50 Snapit Coins are credited directly to both users' accounts upon order delivery.</li>
-            <li>Self-referrals and duplicate device accounts are automatically detected and blocked to protect store integrity.</li>
-          </ul>
+          <div className='space-y-1.5'>
+            <div className='flex items-start gap-2'>
+              <FiCheckCircle size={12} className='text-emerald-500 shrink-0 mt-0.5' />
+              <span>Referral reward is credited when your referred friend completes their first successful order of ₹149 or more.</span>
+            </div>
+            <div className='flex items-start gap-2'>
+              <FaCoins size={11} className='text-amber-500 shrink-0 mt-0.5' />
+              <span>50 Snapit Coins are credited directly to both users' accounts upon order delivery.</span>
+            </div>
+            <div className='flex items-start gap-2'>
+              <FiShield size={12} className='text-blue-500 shrink-0 mt-0.5' />
+              <span>Self-referrals and duplicate device accounts are automatically detected and blocked to protect store integrity.</span>
+            </div>
+          </div>
         </div>
 
       </main>
