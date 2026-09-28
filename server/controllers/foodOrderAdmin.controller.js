@@ -1,5 +1,6 @@
 import OrderModel from '../models/order.model.js'
 import RestaurantModel from '../models/restaurant.model.js'
+import UserModel from '../models/user.model.js'
 import { sendOrderDeliveredEmail } from '../utils/sendDeliveryEmail.js'
 
 // GET /api/order/admin/restaurant-orders  (admin — all food orders)
@@ -59,15 +60,43 @@ export async function updateFoodOrderStatusController(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid status' })
     }
 
+    const existingOrder = await OrderModel.findById(id)
+    if (!existingOrder) return res.status(404).json({ success: false, message: 'Order not found' })
+
+    const wasCancelled = existingOrder.delivery_status === 'Cancelled'
+
     const order = await OrderModel.findByIdAndUpdate(
       id,
       { delivery_status },
       { new: true }
     )
-    if (!order) return res.status(404).json({ success: false, message: 'Order not found' })
 
     if (delivery_status === 'Delivered') {
       sendOrderDeliveredEmail(order).catch(() => {})
+    } else if (delivery_status === 'Cancelled' && !wasCancelled) {
+      // Restore redeemed coins
+      if (order.coins_redeemed > 0) {
+        UserModel.findByIdAndUpdate(order.userId, {
+          $inc: { coins: order.coins_redeemed }
+        }).catch(err => console.warn('[Food Coin Restore Error]', err.message))
+      }
+      // Refund wallet balance if paid online or via wallet
+      if (order.payment_status === 'PAID') {
+        const refundAmount = Number(order.totalAmt || 0)
+        if (refundAmount > 0) {
+          UserModel.findByIdAndUpdate(order.userId, {
+            $inc: { walletBalance: refundAmount },
+            $push: {
+              walletTransactions: {
+                type: 'CREDIT',
+                amount: refundAmount,
+                description: `Instant refund for cancelled food order #${order.orderId}`,
+                date: new Date()
+              }
+            }
+          }).catch(err => console.warn('[Food Wallet Refund Error]', err.message))
+        }
+      }
     }
 
     return res.json({ success: true, data: order })

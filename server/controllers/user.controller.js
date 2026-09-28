@@ -760,6 +760,8 @@ export async function userDetails(request, response) {
         const user = await UserModel.findById(userId).select('-password -refresh_token').lean()
         if (user.isSnapitPlusMember === undefined) user.isSnapitPlusMember = false
         if (user.snapitPlusExpiresAt === undefined) user.snapitPlusExpiresAt = null
+        if (user.claimedReferralMilestones === undefined) user.claimedReferralMilestones = []
+        if (user.coins === undefined) user.coins = 0
 
         return response.json({
             message: 'user details',

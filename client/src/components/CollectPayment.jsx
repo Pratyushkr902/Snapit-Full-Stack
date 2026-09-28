@@ -8,7 +8,7 @@ const SNAPIT_UPI_ID = "00pr1199-1@oksbi"
 const SNAPIT_NAME = "Pratyush Kumar"
 
 const CollectPayment = ({ order, onSuccess, onClose }) => {
-    const isAlreadyPaid = Boolean(order?.payment_status && order.payment_status !== 'CASH ON DELIVERY');
+    const isAlreadyPaid = Boolean(order?.payment_status && !/CASH|COD/i.test(order.payment_status));
     const [method, setMethod] = useState(null)
     const [cashReceived, setCashReceived] = useState('')
     const [confirming, setConfirming] = useState(false)

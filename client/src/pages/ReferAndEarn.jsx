@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { setUserDetails } from '../store/userSlice'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
@@ -31,6 +33,7 @@ const MILESTONES = [
 
 export default function ReferAndEarn() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [info, setInfo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [copiedCode, setCopiedCode] = useState(false)
@@ -70,6 +73,10 @@ export default function ReferAndEarn() {
         try { haptic.success() } catch {}
         toast.success(res.data.message || 'Milestone reward unlocked!')
         fetchReferralInfo()
+        try {
+          const userRes = await Axios({ url: '/api/user/user-details', method: 'get' })
+          if (userRes.data?.success) dispatch(setUserDetails(userRes.data.data))
+        } catch (_) {}
       } else {
         toast.error(res.data?.message || 'Failed to claim milestone')
       }

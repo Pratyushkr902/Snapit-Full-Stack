@@ -593,7 +593,10 @@ export async function CashOnDeliveryOrderController(request, response) {
 
         // Deduct redeemed coins from user balance
         if (validCoinsUsed > 0) {
-            await UserModel.findByIdAndUpdate(userId, { $inc: { coins: -validCoinsUsed } })
+            await UserModel.findOneAndUpdate(
+                { _id: userId, coins: { $gte: validCoinsUsed } },
+                { $inc: { coins: -validCoinsUsed } }
+            )
         }
         sendOrderInvoiceEmail(generatedOrder, currentUser).catch(()=>{})
         notifyUserOrderPlaced(userId, generatedOrder.orderId, currentUser?.fcmToken).catch(() => {})
@@ -905,7 +908,10 @@ export async function WalletPaymentOrderController(request, response) {
 
         // Deduct redeemed coins from user balance
         if (validCoinsUsed > 0) {
-            await UserModel.findByIdAndUpdate(userId, { $inc: { coins: -validCoinsUsed } })
+            await UserModel.findOneAndUpdate(
+                { _id: userId, coins: { $gte: validCoinsUsed } },
+                { $inc: { coins: -validCoinsUsed } }
+            )
         }
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
@@ -1285,7 +1291,10 @@ export async function verifyPaymentController(request, response) {
 
         // Deduct redeemed coins from user balance
         if (validCoinsUsed > 0) {
-            await UserModel.findByIdAndUpdate(userId, { $inc: { coins: -validCoinsUsed } })
+            await UserModel.findOneAndUpdate(
+                { _id: userId, coins: { $gte: validCoinsUsed } },
+                { $inc: { coins: -validCoinsUsed } }
+            )
         }
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})

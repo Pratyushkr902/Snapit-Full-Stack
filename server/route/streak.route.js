@@ -5,6 +5,7 @@ import UserModel from '../models/user.model.js';
 import {
     STREAK_MILESTONES,
     DAILY_CHECKIN_COINS,
+    getISTDateInfo,
     isSameISTDay,
     isYesterdayIST
 } from '../utils/streakUtils.js';
@@ -54,23 +55,22 @@ streakRouter.get('/me', auth, async (req, res) => {
 // POST /api/streak/checkin - Instant 1-tap daily login reward (Snapit Loyalty Coins ONLY - Zero Wallet Cash Loss)
 streakRouter.post('/checkin', auth, async (req, res) => {
     try {
-        const user = await UserModel.findById(req.userId);
+        const user = await UserModel.findById(req.userId).select('lastCheckin coins walletBalance');
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         const now = new Date();
-        const isAlreadyCheckedIn = Boolean(user.lastCheckin && isSameISTDay(user.lastCheckin, now));
+        const istStartOfToday = new Date(getISTDateInfo(now).midnightTimestamp - (5.5 * 3600 * 1000));
 
-        if (isAlreadyCheckedIn) {
-            return res.status(400).json({
-                success: false,
-                message: "You've already collected today's check-in coins! Come back tomorrow."
-            });
-        }
-
-        // Zero financial loss protection: Credits Snapit Loyalty Coins ONLY (user.coins)
-        // Never mutates walletBalance and never creates wallet cash transactions
-        const updatedUser = await UserModel.findByIdAndUpdate(
-            req.userId,
+        // Atomic update with concurrency guard: only succeeds if user hasn't checked in yet today in IST
+        const updatedUser = await UserModel.findOneAndUpdate(
+            {
+                _id: req.userId,
+                $or: [
+                    { lastCheckin: null },
+                    { lastCheckin: { $exists: false } },
+                    { lastCheckin: { $lt: istStartOfToday } }
+                ]
+            },
             {
                 $inc: { coins: DAILY_CHECKIN_COINS },
                 $set: { lastCheckin: now },
@@ -81,12 +81,20 @@ streakRouter.post('/checkin', auth, async (req, res) => {
             { new: true, select: 'walletBalance coins lastCheckin' }
         );
 
+        if (!updatedUser) {
+            return res.status(400).json({
+                success: false,
+                message: "You've already collected today's check-in coins! Come back tomorrow."
+            });
+        }
+
         return res.json({
             success: true,
             message: `🎉 +${DAILY_CHECKIN_COINS} Snapit Coins collected!`,
             data: {
                 coins: updatedUser.coins || 0,
                 walletBalance: updatedUser.walletBalance || 0,
+                coinsEarned: DAILY_CHECKIN_COINS,
                 checkedInToday: true
             }
         });
@@ -163,10 +171,16 @@ streakRouter.post('/convert-to-wallet', auth, async (req, res) => {
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         const availableCoins = Math.max(0, Number(user.coins || 0));
-        let coinsToConvert = req.body?.coins
-            ? Math.floor(Number(req.body.coins) / 10) * 10
-            : Math.floor(availableCoins / 10) * 10;
+        const rawCoins = req.body?.coins !== undefined ? Number(req.body.coins) : availableCoins;
 
+        if (!Number.isFinite(rawCoins) || isNaN(rawCoins) || rawCoins <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid coins amount provided.'
+            });
+        }
+
+        const coinsToConvert = Math.floor(rawCoins / 10) * 10;
         if (coinsToConvert < 10) {
             return res.status(400).json({
                 success: false,
@@ -183,7 +197,7 @@ streakRouter.post('/convert-to-wallet', auth, async (req, res) => {
 
         // Conversion rate: 10 coins = ₹0.10 (₹0.01 per coin)
         const cashAmount = Math.round((coinsToConvert / 10) * 0.10 * 100) / 100;
-        if (cashAmount <= 0) {
+        if (!Number.isFinite(cashAmount) || isNaN(cashAmount) || cashAmount <= 0) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid conversion amount.'

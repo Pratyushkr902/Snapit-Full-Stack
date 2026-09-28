@@ -82,14 +82,17 @@ export const claimReferralMilestone = async (request, response) => {
         const user = await UserModel.findById(request.userId);
         if (!user) return response.status(404).json({ success: false, message: "User not found" });
 
-        // Qualifying referred friends count
-        const friendsCount = await UserModel.countDocuments({ referredBy: user.referralCode });
-        const effectiveCount = Math.max(Number(user.referralCount) || 0, friendsCount);
+        // Count friends who actually completed their first qualifying order (min ₹149)
+        const qualifyingFriendsCount = await UserModel.countDocuments({
+            referredBy: user.referralCode,
+            firstOrderBonusApplied: true
+        });
+        const effectiveCount = Math.max(Number(user.referralCount) || 0, qualifyingFriendsCount);
 
         if (effectiveCount < milestone) {
             return response.status(400).json({
                 success: false,
-                message: `You need at least ${milestone} referred friends to unlock this tier (Current: ${effectiveCount}).`
+                message: `You need at least ${milestone} friends with completed orders to unlock this tier (Current: ${effectiveCount}).`
             });
         }
 
@@ -139,10 +142,24 @@ export const claimReferralMilestone = async (request, response) => {
             successMessage = "👑 Legend Ambassador Perk - Snapit Plus VIP unlocked for 30 Days!";
         }
 
-        const updatedUser = await UserModel.findByIdAndUpdate(request.userId, updateQuery, {
-            new: true,
-            select: 'walletBalance isSnapitPlusMember snapitPlusExpiresAt claimedReferralMilestones'
-        });
+        const updatedUser = await UserModel.findOneAndUpdate(
+            {
+                _id: request.userId,
+                claimedReferralMilestones: { $ne: milestone }
+            },
+            updateQuery,
+            {
+                new: true,
+                select: 'walletBalance isSnapitPlusMember snapitPlusExpiresAt claimedReferralMilestones'
+            }
+        );
+
+        if (!updatedUser) {
+            return response.status(400).json({
+                success: false,
+                message: "You have already claimed the reward for this tier."
+            });
+        }
 
         return response.json({
             success: true,

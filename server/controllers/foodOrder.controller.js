@@ -691,7 +691,10 @@ export async function foodOrderCOD(req, res) {
 
     // Deduct redeemed coins from user balance
     if (validCoinsUsed > 0) {
-      await UserModel.findByIdAndUpdate(req.userId, { $inc: { coins: -validCoinsUsed } })
+      await UserModel.findOneAndUpdate(
+        { _id: req.userId, coins: { $gte: validCoinsUsed } },
+        { $inc: { coins: -validCoinsUsed } }
+      )
     }
 
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
@@ -793,7 +796,10 @@ export async function foodOrderWallet(req, res) {
 
     // Deduct redeemed coins from user balance
     if (validCoinsUsed > 0) {
-      await UserModel.findByIdAndUpdate(req.userId, { $inc: { coins: -validCoinsUsed } })
+      await UserModel.findOneAndUpdate(
+        { _id: req.userId, coins: { $gte: validCoinsUsed } },
+        { $inc: { coins: -validCoinsUsed } }
+      )
     }
 
     creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
@@ -942,9 +948,13 @@ export async function foodOrderVerifyPayment(req, res) {
 
     // Deduct redeemed coins from user balance
     if (validCoinsUsed > 0) {
-      await UserModel.findByIdAndUpdate(req.userId, { $inc: { coins: -validCoinsUsed } })
+      await UserModel.findOneAndUpdate(
+        { _id: req.userId, coins: { $gte: validCoinsUsed } },
+        { $inc: { coins: -validCoinsUsed } }
+      )
     }
 
+    creditFirstOrderReferralBonus(req.userId, grandTotal).catch(() => {})
     recordOrderForStreak(req.userId).catch(() => {})
 
     console.log(`[foodOrderVerifyPayment] ✅ group=${groupOrderId} paymentId=${razorpay_payment_id} restaurants=${orders.length}`)
