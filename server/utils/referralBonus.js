@@ -35,7 +35,7 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
         await UserModel.updateOne(
             { _id: referrer._id },
             {
-                $inc: { walletBalance: REFERRAL_BONUS_AMOUNT, referralCount: 1 },
+                $inc: { walletBalance: REFERRAL_BONUS_AMOUNT, coins: 50, referralCount: 1 },
                 $push: {
                     walletTransactions: {
                         type: 'credit',
@@ -51,7 +51,7 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
         await UserModel.updateOne(
             { _id: user._id },
             {
-                $inc: { walletBalance: REFERRAL_BONUS_AMOUNT },
+                $inc: { walletBalance: REFERRAL_BONUS_AMOUNT, coins: 50 },
                 $push: {
                     walletTransactions: {
                         type: 'credit',

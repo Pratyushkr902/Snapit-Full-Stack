@@ -35,7 +35,7 @@ export default function StreakTracker({ isCardOnly = false }) {
   const [orderedToday, setOrderedToday] = useState(false)
   const [streakAlive, setStreakAlive] = useState(false)
   const [checkedInToday, setCheckedInToday] = useState(false)
-  const [checkinCoins, setCheckinCoins] = useState(5)
+  const [checkinCoins, setCheckinCoins] = useState(10)
   const [coins, setCoins] = useState(Number(user?.coins || 0))
   const [walletBalance, setWalletBalance] = useState(Number(user?.walletBalance || 0))
   const [loading, setLoading] = useState(true)
@@ -626,7 +626,7 @@ export default function StreakTracker({ isCardOnly = false }) {
         </div>
         <ul className='space-y-1 list-disc list-inside text-[11px] leading-relaxed'>
           <li>Place at least 1 order each calendar day to maintain and increment your streak.</li>
-          <li>Check in daily to collect free Snapit Loyalty Coins (+5 coins every day).</li>
+          <li>Check in daily to collect free Snapit Loyalty Coins (+10 coins every day).</li>
           <li>Reach 3, 7, 14, and 30-day milestones to unlock exclusive streak badges and bonus coins!</li>
           <li>Redeem coins for instant discount at checkout (10 coins = ₹1 on ₹199+), or convert 10 coins to ₹0.10 wallet cash!</li>
           <li>Streak counts reset if a full calendar day passes without any orders.</li>

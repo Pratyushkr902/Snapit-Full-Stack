@@ -114,6 +114,7 @@ const Wallet = () => {
   const [tab,              setTab]              = useState('add')   // 'add' | 'plus' | 'history'
   const [upiId,            setUpiId]            = useState('')
   const [withdrawing,      setWithdrawing]      = useState(false)
+  const [convertingCoins,  setConvertingCoins]  = useState(false)
   const [razorKey,         setRazorKey]         = useState('')
   const [plusLoading,      setPlusLoading]      = useState(false)
   const [selectedPlan,     setSelectedPlan]     = useState('monthly')
@@ -282,6 +283,33 @@ const Wallet = () => {
       toast.error(err?.response?.data?.message || 'Withdrawal failed.')
     } finally {
       setWithdrawing(false)
+    }
+  }
+
+  // ── Convert Coins to Wallet Cash (10 coins = ₹0.10) ──────────────────────────
+  const handleConvertCoins = async () => {
+    if (coins < 10 || convertingCoins) return
+    const coinsToConvert = Math.floor(coins / 10) * 10
+    const rupees = ((coinsToConvert / 10) * 0.10).toFixed(2)
+    setConvertingCoins(true)
+    try {
+      const res = await Axios({
+        url: '/api/streak/convert-to-wallet',
+        method: 'post',
+        data: { coins: coinsToConvert }
+      })
+      if (res.data?.success) {
+        toast.success(res.data.message || `🎉 ₹${rupees} credited to your wallet!`)
+        setCoins(res.data.data?.coins ?? (coins - coinsToConvert))
+        setBalance(res.data.data?.walletBalance ?? (balance + Number(rupees)))
+        fetchWallet()
+      } else {
+        toast.error(res.data?.message || 'Coin conversion failed')
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to convert coins')
+    } finally {
+      setConvertingCoins(false)
     }
   }
 
@@ -734,17 +762,44 @@ const Wallet = () => {
                 ) : (
                   /* Coins Ledger */
                   <div>
-                    <div style={{ background:'linear-gradient(135deg,#fefce8,#fef9c3)', border:'1px solid #fde047', borderRadius:'14px', padding:'12px 14px', marginBottom:'14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                      <div>
-                        <p style={{ fontSize:'10px', fontWeight:'800', color:'#854d0e', textTransform:'uppercase', margin:'0 0 2px', letterSpacing:'.5px' }}>Current Balance</p>
-                        <p style={{ fontSize:'18px', fontWeight:'900', color:'#b45309', margin:0 }}>🪙 {Number(coins).toLocaleString('en-IN')} Snapit Coins</p>
+                    <div style={{ background:'linear-gradient(135deg,#fefce8,#fef9c3)', border:'1px solid #fde047', borderRadius:'14px', padding:'14px', marginBottom:'14px' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
+                        <div>
+                          <p style={{ fontSize:'10px', fontWeight:'800', color:'#854d0e', textTransform:'uppercase', margin:'0 0 2px', letterSpacing:'.5px' }}>Current Balance</p>
+                          <p style={{ fontSize:'20px', fontWeight:'900', color:'#b45309', margin:0 }}>🪙 {Number(coins).toLocaleString('en-IN')} Snapit Coins</p>
+                          <p style={{ fontSize:'10px', color:'#a16207', fontWeight:'600', margin:'2px 0 0' }}>10 Coins = ₹0.10 wallet cash</p>
+                        </div>
+                        <button
+                          onClick={() => navigate('/rewards')}
+                          style={{ background:'#fff', color:'#b45309', border:'1px solid #fde047', borderRadius:'10px', padding:'6px 10px', fontSize:'11px', fontWeight:'800', cursor:'pointer' }}
+                        >
+                          Earn More ✨
+                        </button>
                       </div>
-                      <button
-                        onClick={() => navigate('/rewards')}
-                        style={{ background:'#eab308', color:'#fff', border:'none', borderRadius:'10px', padding:'7px 12px', fontSize:'11px', fontWeight:'800', cursor:'pointer' }}
-                      >
-                        Earn More ✨
-                      </button>
+
+                      {coins >= 10 ? (
+                        <button
+                          type="button"
+                          onClick={handleConvertCoins}
+                          disabled={convertingCoins}
+                          style={{
+                            width:'100%', padding:'10px', borderRadius:'10px', border:'none',
+                            background:'linear-gradient(135deg,#d97706,#b45309)', color:'#fff',
+                            fontWeight:'800', fontSize:'12px', cursor: convertingCoins ? 'not-allowed' : 'pointer',
+                            display:'flex', alignItems:'center', justifyContent:'center', gap:'6px',
+                            boxShadow:'0 2px 6px rgba(217,119,6,.25)'
+                          }}
+                        >
+                          {convertingCoins
+                            ? 'Adding to wallet...'
+                            : `⚡ Add ₹${((Math.floor(coins / 10) * 10) * 0.01).toFixed(2)} to Wallet Cash (${Math.floor(coins / 10) * 10} Coins)`
+                          }
+                        </button>
+                      ) : (
+                        <p style={{ fontSize:'11px', color:'#854d0e', fontWeight:'600', margin:0, textAlign:'center' }}>
+                          💡 Collect 10 or more coins from daily check-ins &amp; referrals to convert into instant wallet cash!
+                        </p>
+                      )}
                     </div>
 
                     {coinTransactions.length === 0 ? (

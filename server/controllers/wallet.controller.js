@@ -25,10 +25,23 @@ export async function getWallet(req, res) {
             date: d
         }))
 
-        // Include referral and milestone bonuses
+        // Include referral, milestone bonuses, and coin conversions
         for (const t of (user.walletTransactions || [])) {
             const desc = String(t.description || '')
-            if (/coins/i.test(desc) || /referral/i.test(desc) || /milestone/i.test(desc)) {
+            const isConvert = /converted\s+(\d+)\s*(?:snapit\s*)?coins/i.test(desc)
+
+            if (isConvert) {
+                const match = desc.match(/converted\s+(\d+)\s*(?:snapit\s*)?coins/i)
+                const coinVal = match ? parseInt(match[1], 10) : 0
+                if (coinVal > 0) {
+                    coinTransactions.push({
+                        type: 'debit',
+                        coins: coinVal,
+                        description: `Converted to ₹${Number(t.amount || 0).toFixed(2)} Wallet Cash`,
+                        date: t.date
+                    })
+                }
+            } else if (/coins/i.test(desc) || /referral/i.test(desc) || /milestone/i.test(desc)) {
                 let coinVal = 50
                 const match = desc.match(/(\d+)\s*(?:snapit\s*)?coins/i)
                 if (match) {

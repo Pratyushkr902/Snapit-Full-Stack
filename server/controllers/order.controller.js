@@ -2513,30 +2513,33 @@ export const rateOrderDeliveryController = async (request, response) => {
         }
 
         const isHexId = mongoose.Types.ObjectId.isValid(orderId)
-        const order = await OrderModel.findOne({
+        const filter = {
             $or: [
                 { orderId },
                 ...(isHexId ? [{ _id: orderId }] : [])
             ],
             userId: request.userId,
             delivery_status: 'Delivered'
-        })
-
-        if (!order) {
-            return response.status(404).json({ success: false, message: 'Delivered order not found or unauthorized' })
         }
 
-        order.deliveryRating = {
+        const ratingData = {
             rating: numRating,
             feedback: String(feedback || '').trim(),
             ratedAt: new Date()
         }
-        await order.save()
+
+        const result = await OrderModel.updateMany(filter, {
+            $set: { deliveryRating: ratingData }
+        })
+
+        if (!result.matchedCount) {
+            return response.status(404).json({ success: false, message: 'Delivered order not found or unauthorized' })
+        }
 
         return response.json({
             success: true,
             message: 'Thank you for rating your delivery! ⭐',
-            data: order.deliveryRating
+            data: ratingData
         })
     } catch (err) {
         console.error('rateOrderDeliveryController error:', err.message)

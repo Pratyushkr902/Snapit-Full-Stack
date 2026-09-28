@@ -120,7 +120,7 @@ export const claimReferralMilestone = async (request, response) => {
         let successMessage = "";
 
         if (milestone === 5) {
-            updateQuery.$inc = { walletBalance: 5 };
+            updateQuery.$inc = { walletBalance: 5, coins: 250 };
             updateQuery.$push = {
                 walletTransactions: {
                     type: 'credit',
@@ -131,7 +131,7 @@ export const claimReferralMilestone = async (request, response) => {
             };
             successMessage = "🎉 Bronze Ambassador Perk - 250 Snapit Coins bonus unlocked!";
         } else if (milestone === 10) {
-            updateQuery.$inc = { walletBalance: 7 };
+            updateQuery.$inc = { walletBalance: 7, coins: 350 };
             updateQuery.$push = {
                 walletTransactions: {
                     type: 'credit',
@@ -161,7 +161,7 @@ export const claimReferralMilestone = async (request, response) => {
             updateQuery,
             {
                 new: true,
-                select: 'walletBalance isSnapitPlusMember snapitPlusExpiresAt claimedReferralMilestones'
+                select: 'walletBalance coins isSnapitPlusMember snapitPlusExpiresAt claimedReferralMilestones'
             }
         );
 
@@ -178,6 +178,7 @@ export const claimReferralMilestone = async (request, response) => {
             data: {
                 claimedReferralMilestones: updatedUser.claimedReferralMilestones || [],
                 walletBalance: updatedUser.walletBalance || 0,
+                coins: updatedUser.coins || 0,
                 isSnapitPlusMember: updatedUser.isSnapitPlusMember,
                 snapitPlusExpiresAt: updatedUser.snapitPlusExpiresAt
             }

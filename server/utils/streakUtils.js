@@ -12,7 +12,7 @@ export const STREAK_MILESTONES = {
     30: 300,  // 30-day streak → 300 coins
 };
 
-export const DAILY_CHECKIN_COINS = 5;
+export const DAILY_CHECKIN_COINS = 10;
 
 /**
  * Normalizes any Date or timestamp to Indian Standard Time (IST) calendar info.

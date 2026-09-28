@@ -20,7 +20,7 @@ import SummaryApi from '../common/SummaryApi'
 //  SNAPIT REWARDS PAGE
 //  Sections:
 //    1. Coin Wallet Card  (balance + earn rate hint)
-//    2. Daily Check-in    (claim 5 coins/day, 7-day grid)
+//    2. Daily Check-in    (claim 10 coins/day, 7-day grid)
 //    3. Streak Tracker    (milestone rewards from StreakTracker)
 //    4. Promo Code        (apply discount, max 5% off cart)
 // ─────────────────────────────────────────────────────────────
