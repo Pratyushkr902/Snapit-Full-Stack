@@ -218,6 +218,7 @@ export default function StreakTracker({ isCardOnly = false }) {
               >
                 <FaCoins size={12} className='text-amber-300' />
                 <span>{coins.toLocaleString('en-IN')} Coins</span>
+                <span className='text-[10px] text-amber-300/80 font-bold'>(10 = ₹1)</span>
               </div>
 
               {/* Real Money Wallet Link */}
@@ -576,6 +577,7 @@ export default function StreakTracker({ isCardOnly = false }) {
           <li>Place at least 1 order each calendar day to maintain and increment your streak.</li>
           <li>Check in daily to collect free Snapit Loyalty Coins (+5 coins every day).</li>
           <li>Reach 3, 7, 14, and 30-day milestones to unlock exclusive streak badges and bonus coins!</li>
+          <li>Redeem coins for instant discount at checkout: 10 coins = ₹1 discount on orders ₹199+ (up to ₹10 off).</li>
           <li>Streak counts reset if a full calendar day passes without any orders.</li>
         </ul>
       </div>

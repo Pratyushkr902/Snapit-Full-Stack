@@ -270,8 +270,8 @@ export default function RewardsPage() {
             </span>
             <span style={{ color:'rgba(255,255,255,.7)', fontSize:'14px', fontWeight:'700', marginBottom:'4px' }}>coins</span>
           </div>
-          <p style={{ color:'rgba(255,255,255,.75)', fontSize:'12px', fontWeight:'600', margin:'8px 0 0' }}>
-            Collect coins to unlock streak badges &amp; exclusive member rewards
+          <p style={{ color:'rgba(255,255,255,.9)', fontSize:'12px', fontWeight:'700', margin:'8px 0 0' }}>
+            10 Snapit Coins = ₹1.00 Value • Redeemable at checkout on orders ₹199+
           </p>
 
           <div style={{ display:'flex', gap:'8px', marginTop:'14px', flexWrap:'wrap' }}>

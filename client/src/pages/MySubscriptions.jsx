@@ -195,7 +195,7 @@ export default function MySubscriptions() {
                   Get Snapit Plus VIP Access
                 </h4>
                 <p className='text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate'>
-                  Unlimited Free Delivery (₹99+) & 5% Cashback on every grocery order
+                  Unlimited Free Delivery (₹99+) & 2% Cashback on every grocery order
                 </p>
               </div>
             </div>

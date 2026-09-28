@@ -181,8 +181,8 @@ const AdminReferrals = () => {
                                 <span className='text-[10px] font-black uppercase tracking-wider'>Reward Scheme</span>
                                 <span className='p-2 bg-purple-500/10 text-purple-400 rounded-xl'><IoGift size={18} /></span>
                             </div>
-                            <p className='text-lg font-black text-purple-400'>₹5 (10 Coins)</p>
-                            <p className='text-[11px] text-slate-500 font-semibold mt-1'>Per 1st Order (Min ₹149)</p>
+                            <p className='text-lg font-black text-purple-400'>₹5 Cash (50 Coins)</p>
+                            <p className='text-[11px] text-slate-500 font-semibold mt-1'>Per 1st Order (Min ₹149 • 10 Coins = ₹1)</p>
                         </div>
                     </div>
 

@@ -20,8 +20,8 @@ const BENEFITS = [
   },
   {
     icon: <FiPercent className='text-amber-500' size={20} />,
-    title: '5% Instant Wallet Cashback',
-    desc: '5% auto-credited back to your Snapit Wallet after every delivered grocery order.',
+    title: '2% Instant Wallet Cashback',
+    desc: '2% auto-credited back to your Snapit Wallet after every delivered grocery order (up to ₹25/order).',
     badge: 'Auto-credited'
   },
   {
@@ -44,8 +44,8 @@ const BENEFITS = [
   },
   {
     icon: <FaCrown className='text-yellow-500' size={18} />,
-    title: '₹200 Birthday Bonus Credit',
-    desc: 'A complimentary ₹200 free wallet gift credited automatically during your birthday month.',
+    title: '₹25 Birthday Bonus Credit',
+    desc: 'A complimentary ₹25 free wallet gift credited automatically during your birthday month.',
     badge: 'Annual gift'
   }
 ]
@@ -64,8 +64,8 @@ const FAQS = [
     a: 'Yes, you can easily cancel your membership anytime from the My Subscriptions page or from this membership tab.'
   },
   {
-    q: 'How is the 5% cashback calculated and credited?',
-    a: '5% cashback is calculated on the order total (excluding taxes/fees) and credited directly to your Snapit Wallet upon successful delivery.'
+    q: 'How is the 2% cashback calculated and credited?',
+    a: '2% cashback is calculated on the grocery item subtotal (up to ₹25 per order, max ₹150/month) and credited directly to your Snapit Wallet upon successful delivery.'
   }
 ]
 
@@ -341,7 +341,7 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
             </h2>
 
             <p className='text-xs sm:text-sm text-emerald-100/90 font-medium max-w-sm mx-auto'>
-              The ultimate pass for daily grocery shoppers. Enjoy unlimited free deliveries and 5% cashbacks.
+              The ultimate pass for daily grocery shoppers. Enjoy unlimited free deliveries and 2% cashbacks.
             </p>
 
             <div className='pt-1'>
@@ -732,7 +732,7 @@ export default function SnapitPlus({ isAlreadyMember = false, onSuccess }) {
                 Cancel Snapit Plus VIP?
               </h3>
               <p className='text-xs text-slate-500 dark:text-slate-400 leading-relaxed'>
-                Are you sure you want to cancel? You will immediately lose free delivery on orders ₹99+, 5% grocery cashback, and VIP priority pack benefits.
+                Are you sure you want to cancel? You will immediately lose free delivery on orders ₹99+, 2% grocery cashback, and VIP priority pack benefits.
               </p>
             </div>
 

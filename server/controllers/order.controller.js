@@ -264,7 +264,7 @@ const SNAPIT_PLUS_MAX_CASHBACK_PER_ORDER = 25 // ₹ cap per order
 const SNAPIT_PLUS_MAX_CASHBACK_PER_MONTH = 150 // ₹ cap per member per month
 
 // ── New reward configs (kept low to avoid margin loss) ──────────────────────
-const BIRTHDAY_BONUS_AMOUNT      = 50    // reduced from 200
+const BIRTHDAY_BONUS_AMOUNT      = 25    // reduced from 200/50 to ₹25
 const SURPRISE_BOX_MIN           = 10
 const SURPRISE_BOX_MAX           = 30
 const SURPRISE_BOX_COOLDOWN_DAYS = 7
