@@ -8,13 +8,14 @@ const SNAPIT_UPI_ID = "00pr1199-1@oksbi"
 const SNAPIT_NAME = "Pratyush Kumar"
 
 const CollectPayment = ({ order, onSuccess, onClose }) => {
+    const isAlreadyPaid = Boolean(order?.payment_status && order.payment_status !== 'CASH ON DELIVERY');
     const [method, setMethod] = useState(null)
     const [cashReceived, setCashReceived] = useState('')
     const [confirming, setConfirming] = useState(false)
     const [upiConfirmed, setUpiConfirmed] = useState(false)
 
     // ── Delivery confirmation step state ────────────
-    const [showOtpStep, setShowOtpStep] = useState(false)
+    const [showOtpStep, setShowOtpStep] = useState(isAlreadyPaid)
     const [otpError, setOtpError] = useState('')
     const [verifyingOtp, setVerifyingOtp] = useState(false)
 
@@ -148,9 +149,11 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                 <div className='p-5 border-b border-slate-100 flex items-start justify-between'>
                     <div>
                         <p className='text-[11px] font-bold text-slate-400 uppercase tracking-widest'>
-                            {showOtpStep ? 'Verify Delivery' : 'Collect Payment'}
+                            {isAlreadyPaid ? 'Confirm Delivery (Prepaid)' : (showOtpStep ? 'Verify Delivery' : 'Collect Payment')}
                         </p>
-                        <p className='text-2xl font-black text-slate-900 mt-1'>{DisplayPriceInRupees(amount)}</p>
+                        <p className={`text-2xl font-black mt-1 ${isAlreadyPaid ? 'text-emerald-600' : 'text-slate-900'}`}>
+                            {isAlreadyPaid ? '₹0 (Paid Online)' : DisplayPriceInRupees(amount)}
+                        </p>
                         <p className='text-xs text-slate-400 font-mono mt-0.5'>#{order?.orderId?.slice(-8)}</p>
                     </div>
                     <button onClick={onClose} className='text-slate-400 hover:text-slate-700 font-bold text-lg mt-1'>✕</button>
@@ -179,9 +182,13 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
                 {/* ── OTP VERIFICATION STEP (with photo proof) ── */}
                 {!showDispute && showOtpStep && (
                     <div className='p-5 flex flex-col gap-4'>
-                        <div className='bg-blue-50 border-2 border-blue-100 rounded-2xl p-4 text-center'>
-                            <p className='text-sm font-bold text-blue-700'>Payment recorded ✅</p>
-                            <p className='text-xs text-blue-500 mt-1'>Take a photo of the order at the doorstep to confirm delivery.</p>
+                        <div className={`border-2 rounded-2xl p-4 text-center ${isAlreadyPaid ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
+                            <p className='text-sm font-bold'>
+                                {isAlreadyPaid ? '🛡️ Prepaid Order — ₹0 to collect' : 'Payment recorded ✅'}
+                            </p>
+                            <p className='text-xs mt-1 text-slate-600'>
+                                {isAlreadyPaid ? 'Customer already paid online. Take a doorstep photo to complete handover.' : 'Take a photo of the order at the doorstep to confirm delivery.'}
+                            </p>
                         </div>
 
                         {!proofPhoto ? (

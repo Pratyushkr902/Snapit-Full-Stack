@@ -19,8 +19,11 @@ export const getReferralInfo = async (request, response) => {
         }
 
         const totalEarned = (user.walletTransactions || [])
-            .filter(t => t.type === 'credit' && t.description?.startsWith('Referral bonus'))
-            .reduce((sum, t) => sum + (t.amount || 0), 0);
+            .filter(t => 
+                String(t.type || '').toUpperCase() === 'CREDIT' && 
+                /referral/i.test(String(t.description || ''))
+            )
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
         // Fetch real referred friends who signed up using this referral code
         const friendsDocs = await UserModel.find({ referredBy: referralCode })

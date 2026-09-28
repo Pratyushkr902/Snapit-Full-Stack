@@ -334,8 +334,8 @@ export default function RewardsPage() {
         <div style={{ padding:'14px 18px' }}>
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'14px' }}>
             {DAYS_SHORT.map((day, i) => {
-              const isDone    = checkDays[i]
               const isToday   = i === todayIdx
+              const isDone    = isToday ? checkedIn : (i < todayIdx && streak >= (todayIdx - i))
               const dotClass  = isDone ? 'day-dot done' : isToday ? 'day-dot today' : 'day-dot future'
               return (
                 <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px' }}>
