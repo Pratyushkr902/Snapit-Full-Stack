@@ -15,14 +15,14 @@ import {
   IoInformationCircleOutline,
   IoTimeOutline
 } from 'react-icons/io5'
-import { FaCrown, FaCoins, FaWallet } from 'react-icons/fa'
-import { FiShoppingBag, FiArrowRight, FiCheck, FiLock } from 'react-icons/fi'
+import { FaCrown, FaCoins, FaWallet, FaFire } from 'react-icons/fa'
+import { FiShoppingBag, FiArrowRight, FiCheck, FiLock, FiGift, FiZap, FiAward } from 'react-icons/fi'
 
 const MILESTONES = [
-  { days: 3,  coins: 20,  icon: '🌱', label: 'Sprout',   desc: 'First spark of consistency' },
-  { days: 7,  coins: 50,  icon: '🔥', label: 'On Fire',  desc: '1 Full week of daily shopping' },
-  { days: 14, coins: 120, icon: '⚡', label: 'Electric', desc: 'Two weeks non-stop momentum' },
-  { days: 30, coins: 300, icon: '👑', label: 'Legend',   desc: 'A full month of VIP loyalty' },
+  { days: 3,  coins: 20,  icon: FiGift,   label: 'Sprout',   desc: 'First spark of consistency' },
+  { days: 7,  coins: 50,  icon: FaFire,   label: 'On Fire',  desc: '1 Full week of daily shopping' },
+  { days: 14, coins: 120, icon: FiZap,    label: 'Electric', desc: 'Two weeks non-stop momentum' },
+  { days: 30, coins: 300, icon: FiAward,  label: 'Legend',   desc: 'A full month of VIP loyalty' },
 ]
 
 export default function StreakTracker({ isCardOnly = false }) {
@@ -277,7 +277,10 @@ export default function StreakTracker({ isCardOnly = false }) {
           {nextMilestone ? (
             <div className='mt-5 pt-4 border-t border-white/20'>
               <div className='flex justify-between items-center text-[11px] font-bold text-white/90 mb-1.5'>
-                <span>Next Milestone: {nextMilestone.icon} {nextMilestone.days} Days ({nextMilestone.label})</span>
+                <span className='inline-flex items-center gap-1.5'>
+                  {React.createElement(nextMilestone.icon, { size: 13, className: 'text-amber-300' })}
+                  <span>Next Milestone: {nextMilestone.days} Days ({nextMilestone.label})</span>
+                </span>
                 <span className='text-amber-200 font-black'>+{nextMilestone.coins} Snapit Coins</span>
               </div>
 
@@ -441,7 +444,9 @@ export default function StreakTracker({ isCardOnly = false }) {
                 className='flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800/60 shadow-xs'
               >
                 <div className='flex items-center gap-3'>
-                  <span className='text-2xl'>{m.icon}</span>
+                  <div className='w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0'>
+                    {React.createElement(m.icon, { size: 18 })}
+                  </div>
                   <div>
                     <h4 className='font-black text-xs sm:text-sm text-slate-900 dark:text-white'>
                       {m.days}-Day Streak Milestone · {m.label}
@@ -500,14 +505,14 @@ export default function StreakTracker({ isCardOnly = false }) {
               >
                 <div className='flex items-start justify-between gap-2'>
                   <div className='flex items-center gap-2.5'>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       isClaimed
                         ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200'
                         : isAchieved
                         ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200'
                         : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
                     }`}>
-                      {m.icon}
+                      {React.createElement(m.icon, { size: 18 })}
                     </div>
 
                     <div>

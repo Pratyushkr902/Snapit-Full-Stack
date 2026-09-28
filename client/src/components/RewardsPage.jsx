@@ -2,6 +2,18 @@ import { useState, useEffect, useRef } from 'react'
 import Axios from '../utils/Axios'
 import toast from 'react-hot-toast'
 import { useGlobalContext } from '../provider/GlobalProvider'
+import {
+  FiZap,
+  FiAward,
+  FiGift,
+  FiCalendar,
+  FiShoppingBag,
+  FiCheckCircle,
+  FiTag,
+  FiCheck,
+  FiLock
+} from 'react-icons/fi'
+import { FaCoins, FaFire } from 'react-icons/fa'
 
 // ─────────────────────────────────────────────────────────────
 //  SNAPIT REWARDS PAGE
@@ -95,10 +107,10 @@ const STYLES = `
 `
 
 const MILESTONES = [
-  { days:3,  coins:20,  icon:'🌱', label:'Sprout'   },
-  { days:7,  coins:50,  icon:'🔥', label:'On Fire'  },
-  { days:14, coins:120, icon:'⚡', label:'Electric' },
-  { days:30, coins:300, icon:'👑', label:'Legend'   },
+  { days:3,  coins:20,  icon:FiGift,  label:'Sprout'   },
+  { days:7,  coins:50,  icon:FaFire,  label:'On Fire'  },
+  { days:14, coins:120, icon:FiZap,   label:'Electric' },
+  { days:30, coins:300, icon:FiAward, label:'Legend'   },
 ]
 const DAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 
@@ -275,11 +287,13 @@ export default function RewardsPage() {
           </p>
 
           <div style={{ display:'flex', gap:'8px', marginTop:'14px', flexWrap:'wrap' }}>
-            <div style={{ background:'rgba(255,255,255,.15)', borderRadius:'50px', padding:'5px 12px', fontSize:'11px', fontWeight:'700', color:'#fef3c7', border:'1px solid rgba(255,255,255,.2)' }}>
-              🪙 Check-in daily → +5 coins
+            <div style={{ background:'rgba(255,255,255,.15)', borderRadius:'50px', padding:'6px 14px', fontSize:'11px', fontWeight:'700', color:'#fef3c7', border:'1px solid rgba(255,255,255,.2)', display:'inline-flex', alignItems:'center', gap:'6px' }}>
+              <FiCalendar size={13} className='text-amber-200' />
+              <span>Check-in daily → +5 coins</span>
             </div>
-            <div style={{ background:'rgba(255,255,255,.12)', borderRadius:'50px', padding:'5px 12px', fontSize:'11px', fontWeight:'700', color:'#fef3c7', border:'1px solid rgba(255,255,255,.15)' }}>
-              🛒 Order → earn coins
+            <div style={{ background:'rgba(255,255,255,.12)', borderRadius:'50px', padding:'6px 14px', fontSize:'11px', fontWeight:'700', color:'#fef3c7', border:'1px solid rgba(255,255,255,.15)', display:'inline-flex', alignItems:'center', gap:'6px' }}>
+              <FiShoppingBag size={13} className='text-amber-200' />
+              <span>Order → earn coins</span>
             </div>
           </div>
         </div>
@@ -287,16 +301,21 @@ export default function RewardsPage() {
         {/* How coins work */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', borderTop:'1px solid #f8fafc' }}>
           {[
-            { icon:'📅', label:'Check-in',  val:'+5/day'  },
-            { icon:'🛒', label:'Per order', val:'+10–50'  },
-            { icon:'🎯', label:'Milestone', val:'+20–300' },
-          ].map(item => (
-            <div key={item.label} style={{ padding:'12px 8px', textAlign:'center', borderRight:'1px solid #f8fafc' }}>
-              <div style={{ fontSize:'18px', marginBottom:'3px' }}>{item.icon}</div>
-              <div style={{ fontSize:'11px', color:'#94a3b8', fontWeight:'700' }}>{item.label}</div>
-              <div style={{ fontSize:'12px', color:'#EF9F27', fontWeight:'800' }}>{item.val}</div>
-            </div>
-          ))}
+            { icon: FiCalendar,    label:'Check-in',  val:'+5/day'  },
+            { icon: FiShoppingBag, label:'Per order', val:'+10–50'  },
+            { icon: FiAward,       label:'Milestone', val:'+20–300' },
+          ].map(item => {
+            const IconComp = item.icon
+            return (
+              <div key={item.label} style={{ padding:'12px 8px', textAlign:'center', borderRight:'1px solid #f8fafc' }}>
+                <div style={{ display:'flex', justifyContent:'center', marginBottom:'4px', color:'#EF9F27' }}>
+                  <IconComp size={17} />
+                </div>
+                <div style={{ fontSize:'11px', color:'#94a3b8', fontWeight:'700' }}>{item.label}</div>
+                <div style={{ fontSize:'12px', color:'#EF9F27', fontWeight:'800' }}>{item.val}</div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -304,8 +323,9 @@ export default function RewardsPage() {
       <div className="rw-card">
         <div className="section-head">
           <div className="section-title">
-            📅 Daily Check-in
-            {checkedIn && <span className="section-badge" style={{ background:'#dcfce7', color:'#166534' }}>✓ Done today</span>}
+            <FiCalendar size={16} className='text-amber-500' />
+            <span>Daily Check-in</span>
+            {checkedIn && <span className="section-badge" style={{ background:'#dcfce7', color:'#166534', display:'inline-flex', alignItems:'center', gap:'4px' }}><FiCheckCircle size={11} /> Done today</span>}
           </div>
           <span style={{ fontSize:'12px', fontWeight:'700', color:'#EF9F27' }}>+5 coins/day</span>
         </div>
@@ -342,8 +362,8 @@ export default function RewardsPage() {
                   Claiming...
                 </span>
               : checkedIn
-                ? '✅ Checked in — come back tomorrow!'
-                : '🌟 Claim 5 Coins — Daily Check-in'
+                ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}><FiCheckCircle size={15} /> Checked in — come back tomorrow!</span>
+                : <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}><FaCoins size={14} /> Claim 5 Coins — Daily Check-in</span>
             }
           </button>
         </div>
@@ -353,7 +373,8 @@ export default function RewardsPage() {
       <div className="rw-card">
         <div className="section-head">
           <div className="section-title">
-            {streakAlive ? '🔥' : '💤'} Streak — {streak} day{streak !== 1 ? 's' : ''}
+            <FaFire size={15} style={{ color: streakAlive ? '#f97316' : '#94a3b8' }} />
+            <span>Streak — {streak} day{streak !== 1 ? 's' : ''}</span>
           </div>
           {streakAlive && !orderedToday && (
             <span className="section-badge" style={{ background:'#fef9c3', color:'#854d0e' }}>Order today!</span>
@@ -361,39 +382,51 @@ export default function RewardsPage() {
         </div>
 
         {/* Progress bar */}
-        {nextMilestone && (
-          <div style={{ padding:'10px 18px 14px' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', fontWeight:'700', color:'#94a3b8', marginBottom:'6px' }}>
-              <span>{streak} days</span>
-              <span>{nextMilestone.icon} {nextMilestone.days}d → +{nextMilestone.coins} coins</span>
+        {nextMilestone && (() => {
+          const NextIcon = nextMilestone.icon
+          return (
+            <div style={{ padding:'10px 18px 14px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', fontWeight:'700', color:'#94a3b8', marginBottom:'6px' }}>
+                <span>{streak} days</span>
+                <span style={{ display:'inline-flex', alignItems:'center', gap:'4px' }}>
+                  <NextIcon size={12} className='text-amber-500' />
+                  <span>{nextMilestone.days}d → +{nextMilestone.coins} coins</span>
+                </span>
+              </div>
+              <div style={{ height:'8px', background:'#f1f5f9', borderRadius:'99px', overflow:'hidden' }}>
+                <div style={{ height:'100%', width:`${progressPct}%`, background:'linear-gradient(90deg,#EF9F27,#BA7517)', borderRadius:'99px', transition:'width .7s ease' }} />
+              </div>
+              <p style={{ fontSize:'10px', color:'#94a3b8', fontWeight:'600', marginTop:'5px', textAlign:'right' }}>
+                {nextMilestone.days - streak} more day{nextMilestone.days - streak !== 1 ? 's' : ''} to next reward
+              </p>
             </div>
-            <div style={{ height:'8px', background:'#f1f5f9', borderRadius:'99px', overflow:'hidden' }}>
-              <div style={{ height:'100%', width:`${progressPct}%`, background:'linear-gradient(90deg,#EF9F27,#BA7517)', borderRadius:'99px', transition:'width .7s ease' }} />
-            </div>
-            <p style={{ fontSize:'10px', color:'#94a3b8', fontWeight:'600', marginTop:'5px', textAlign:'right' }}>
-              {nextMilestone.days - streak} more day{nextMilestone.days - streak !== 1 ? 's' : ''} to next reward
-            </p>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Claimable banner */}
         {claimable.length > 0 && (
           <div style={{ margin:'0 14px 10px', background:'#fefce8', border:'1px solid #fde68a', borderRadius:'14px', padding:'10px 14px' }}>
-            <p style={{ fontSize:'11px', fontWeight:'800', color:'#92400e', margin:'0 0 6px', textTransform:'uppercase', letterSpacing:'.05em' }}>
-              🎁 Ready to claim!
+            <p style={{ fontSize:'11px', fontWeight:'800', color:'#92400e', margin:'0 0 6px', textTransform:'uppercase', letterSpacing:'.05em', display:'flex', alignItems:'center', gap:'6px' }}>
+              <FiGift size={14} />
+              <span>Ready to claim!</span>
             </p>
-            {claimable.map(m => (
-              <div key={m.days} style={{ display:'flex', alignItems:'center', gap:'10px', paddingBottom:'6px' }}>
-                <span style={{ fontSize:'20px' }}>{m.icon}</span>
-                <div style={{ flex:1 }}>
-                  <p style={{ fontSize:'13px', fontWeight:'800', color:'#1e293b', margin:0 }}>{m.coins} Coins — {m.label}</p>
-                  <p style={{ fontSize:'10px', color:'#64748b', margin:'1px 0 0' }}>{m.days}-day milestone</p>
+            {claimable.map(m => {
+              const ClaimIcon = m.icon
+              return (
+                <div key={m.days} style={{ display:'flex', alignItems:'center', gap:'10px', paddingBottom:'6px' }}>
+                  <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:'#fef3c7', color:'#b45309', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <ClaimIcon size={15} />
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <p style={{ fontSize:'13px', fontWeight:'800', color:'#1e293b', margin:0 }}>{m.coins} Coins — {m.label}</p>
+                    <p style={{ fontSize:'10px', color:'#64748b', margin:'1px 0 0' }}>{m.days}-day milestone</p>
+                  </div>
+                  <button className="claim-btn" onClick={() => handleClaim(m.days)} disabled={claimingMs === m.days}>
+                    {claimingMs === m.days ? '...' : 'CLAIM'}
+                  </button>
                 </div>
-                <button className="claim-btn" onClick={() => handleClaim(m.days)} disabled={claimingMs === m.days}>
-                  {claimingMs === m.days ? '...' : 'CLAIM'}
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -401,9 +434,12 @@ export default function RewardsPage() {
         {MILESTONES.map(m => {
           const achieved = streak >= m.days
           const claimed  = claimedRewards.includes(m.days)
+          const MIcon    = m.icon
           return (
             <div className="milestone-row" key={m.days}>
-              <span style={{ fontSize:'20px' }}>{m.icon}</span>
+              <div style={{ width:'32px', height:'32px', borderRadius:'10px', background: achieved ? '#fef3c7' : '#f1f5f9', color: achieved ? '#b45309' : '#94a3b8', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <MIcon size={16} />
+              </div>
               <div style={{ flex:1 }}>
                 <p style={{ fontSize:'13px', fontWeight:'800', color: achieved ? '#1e293b' : '#94a3b8', margin:0 }}>
                   {m.days} Days · {m.label}
@@ -416,8 +452,9 @@ export default function RewardsPage() {
                 fontSize:'11px', fontWeight:'800', padding:'4px 10px', borderRadius:'10px',
                 background: claimed ? '#dcfce7' : achieved ? '#fef9c3' : '#f8fafc',
                 color:      claimed ? '#166534' : achieved ? '#92400e' : '#cbd5e1',
+                display: 'inline-flex', alignItems: 'center', gap: '4px'
               }}>
-                {claimed ? '✅ Done' : achieved ? '🎁 Claim' : `🔒 ${m.days - streak}d`}
+                {claimed ? <><FiCheckCircle size={12} /> Done</> : achieved ? <><FiGift size={12} /> Claim</> : <><FiLock size={11} /> {m.days - streak}d</>}
               </span>
             </div>
           )
@@ -427,7 +464,12 @@ export default function RewardsPage() {
       {/* ── 4. PROMO CODE ───────────────────────────────────── */}
       <div className="rw-card">
         <div className="section-head">
-          <div className="section-title">🏷️ Promo Code</div>
+          <div className="section-title">
+            <FiTag size={15} className='text-slate-600' />
+            <span>Promo Code</span>
+          </div>
+          <span style={{ fontSize:'11px', color:'#94a3b8', fontWeight:'600' }}>up to 50% off</span>
+        </div>
           <span style={{ fontSize:'11px', color:'#94a3b8', fontWeight:'600' }}>up to 50% off</span>
         </div>
 
@@ -511,8 +553,9 @@ export default function RewardsPage() {
       </div>
 
       {/* ── Footer note ─────────────────────────────────────── */}
-      <p style={{ textAlign:'center', fontSize:'11px', color:'#94a3b8', fontWeight:'600', marginTop:'8px' }}>
-        🪙 Coins credited instantly · Promo codes are single-use
+      <p style={{ textAlign:'center', fontSize:'11px', color:'#94a3b8', fontWeight:'600', marginTop:'8px', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
+        <FaCoins size={12} className='text-amber-500' />
+        <span>Coins credited instantly · Promo codes are single-use</span>
       </p>
     </div>
   )
