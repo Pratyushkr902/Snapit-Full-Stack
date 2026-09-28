@@ -40,7 +40,7 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
                     walletTransactions: {
                         type: 'credit',
                         amount: REFERRAL_BONUS_AMOUNT,
-                        description: `Referral bonus - ₹${REFERRAL_BONUS_AMOUNT} (50 Coins) for inviting ${user.name}!`,
+                        description: `Referral bonus - 50 Snapit Coins for inviting ${user.name}!`,
                         date: new Date()
                     }
                 }
@@ -56,7 +56,7 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
                     walletTransactions: {
                         type: 'credit',
                         amount: REFERRAL_BONUS_AMOUNT,
-                        description: `Referral welcome bonus - ₹${REFERRAL_BONUS_AMOUNT} (50 Coins) for your first order!`,
+                        description: `Referral welcome bonus - 50 Snapit Coins for your first order!`,
                         date: new Date()
                     }
                 },

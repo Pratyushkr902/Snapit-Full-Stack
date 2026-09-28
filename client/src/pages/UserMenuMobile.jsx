@@ -592,7 +592,7 @@ const UserMenuMobile = () => {
                 <div className='flex items-center gap-2'>
                   <span className='font-semibold text-sm text-slate-800 dark:text-slate-200'>Refer &amp; Earn</span>
                   <span className='text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 px-1.5 py-0.5 rounded-full'>
-                    10 Coins
+                    50 Coins
                   </span>
                 </div>
               </div>

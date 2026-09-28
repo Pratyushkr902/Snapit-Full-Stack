@@ -372,7 +372,7 @@ const UserMenu = ({ close }) => {
             <span>Refer &amp; Earn</span>
           </div>
           <span className='text-[9px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 px-1.5 py-0.5 rounded-full'>
-            10 Coins
+            50 Coins
           </span>
         </Link>
         <Link onClick={handleClose} to="/deals" className='flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold transition-colors'>

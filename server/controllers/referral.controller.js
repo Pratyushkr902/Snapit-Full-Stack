@@ -32,13 +32,19 @@ export const getReferralInfo = async (request, response) => {
             .limit(30)
             .lean();
 
+        const qualifyingFriendsCount = friendsDocs.filter(f => f.firstOrderBonusApplied).length;
+        let milestoneCoins = 0;
+        if (user.claimedReferralMilestones?.includes(5)) milestoneCoins += 250;
+        if (user.claimedReferralMilestones?.includes(10)) milestoneCoins += 350;
+        const totalCoinsEarned = (qualifyingFriendsCount * 50) + milestoneCoins;
+
         const referredFriends = friendsDocs.map(f => ({
             id: f._id,
             name: f.name || 'Friend',
             joinedAt: f.createdAt,
             hasOrdered: Boolean(f.firstOrderBonusApplied),
-            earnedAmount: f.firstOrderBonusApplied ? 1 : 0,
-            statusText: f.firstOrderBonusApplied ? 'Completed (₹1 Credited)' : 'First Order Pending'
+            earnedAmount: f.firstOrderBonusApplied ? 50 : 0,
+            statusText: f.firstOrderBonusApplied ? 'Completed (+50 Coins)' : 'First Order Pending'
         }));
 
         return response.json({
@@ -48,6 +54,7 @@ export const getReferralInfo = async (request, response) => {
                 referralCode,
                 referralCount: Math.max(user.referralCount || 0, friendsDocs.length),
                 totalEarned,
+                coinsEarned: totalCoinsEarned,
                 referredFriends,
                 claimedReferralMilestones: user.claimedReferralMilestones || [],
                 referralLink: `https://snapit.pages.dev/#/register?ref=${referralCode}`,
@@ -114,22 +121,22 @@ export const claimReferralMilestone = async (request, response) => {
                 walletTransactions: {
                     type: 'credit',
                     amount: 5,
-                    description: 'Bronze Ambassador Perk - ₹5 Wallet Bonus (5 Friends)',
+                    description: 'Bronze Ambassador Perk - 250 Snapit Coins Bonus (5 Friends)',
                     date: new Date()
                 }
             };
-            successMessage = "🎉 ₹5 Bronze Ambassador bonus credited to your wallet!";
+            successMessage = "🎉 Bronze Ambassador Perk - 250 Snapit Coins bonus unlocked!";
         } else if (milestone === 10) {
             updateQuery.$inc = { walletBalance: 7 };
             updateQuery.$push = {
                 walletTransactions: {
                     type: 'credit',
                     amount: 7,
-                    description: 'Silver Ambassador Perk - ₹7 Wallet Bonus (10 Friends)',
+                    description: 'Silver Ambassador Perk - 350 Snapit Coins Bonus (10 Friends)',
                     date: new Date()
                 }
             };
-            successMessage = "🎉 ₹7 Silver Ambassador bonus credited to your wallet!";
+            successMessage = "🎉 Silver Ambassador Perk - 350 Snapit Coins bonus unlocked!";
         } else if (milestone === 25) {
             const currentExpiry = user.snapitPlusExpiresAt && new Date(user.snapitPlusExpiresAt) > new Date()
                 ? new Date(user.snapitPlusExpiresAt)

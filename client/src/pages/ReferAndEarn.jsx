@@ -25,9 +25,9 @@ import {
 } from 'react-icons/fi'
 
 const MILESTONES = [
-  { count: 1,  reward: '50 Coins (₹1)',     icon: FiGift,       label: 'Starter Tier', desc: '1st friend places first order' },
-  { count: 5,  reward: '₹5 Wallet Bonus',   icon: FiAward,      label: 'Bronze Tier',  desc: '5 friends ordered' },
-  { count: 10, reward: '₹7 Wallet Bonus',   icon: FiTrendingUp, label: 'Silver Tier',  desc: '10 friends ordered' },
+  { count: 1,  reward: '50 Snapit Coins',   icon: FiGift,       label: 'Starter Tier', desc: '1st friend places first order' },
+  { count: 5,  reward: '250 Snapit Coins',  icon: FiAward,      label: 'Bronze Tier',  desc: '5 friends ordered' },
+  { count: 10, reward: '350 Snapit Coins',  icon: FiTrendingUp, label: 'Silver Tier',  desc: '10 friends ordered' },
   { count: 25, reward: 'Snapit Plus VIP',   icon: FiShield,     label: 'Gold Legend',  desc: 'Top community ambassador' },
 ]
 
@@ -110,8 +110,8 @@ export default function ReferAndEarn() {
     try { haptic.medium() } catch {}
 
     const shareData = {
-      title: 'Order on Snapit & Get 50 Coins (₹1) Cash!',
-      text: `Join me on Snapit! Get fresh groceries & food delivered in 10 minutes. Use my referral code: ${info.referralCode} to get 50 Snapit Coins (₹1) welcome cash on your 1st order! (50 coins = ₹1)`,
+      title: 'Order on Snapit & Get 50 Snapit Coins!',
+      text: `Join me on Snapit! Get fresh groceries & food delivered in 10 minutes. Use my referral code: ${info.referralCode} to get 50 Snapit Coins welcome bonus on your 1st order!`,
       url: info.referralLink
     }
 
@@ -129,14 +129,14 @@ export default function ReferAndEarn() {
   const handleWhatsAppShare = () => {
     if (!info?.referralCode) return toast.error('Log in to share your referral link')
     try { haptic.medium() } catch {}
-    const msg = `Hey! Order fresh groceries & food on Snapit (10-Min Fast Delivery in Paliganj)!\n\nSign up with my invite code: *${info.referralCode}* and get 50 Snapit Coins (₹1) welcome cash credited on your 1st order! (50 coins = ₹1)\n\nJoin here: ${info.referralLink}`
+    const msg = `Hey! Order fresh groceries & food on Snapit (10-Min Fast Delivery in Paliganj)!\n\nSign up with my invite code: *${info.referralCode}* and get 50 Snapit Coins welcome reward credited on your 1st order!\n\nJoin here: ${info.referralLink}`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   const referralCount = Number(info?.referralCount || 0)
   const totalEarned   = Number(info?.totalEarned || 0)
-  // 50 coins = ₹1.00 Value
-  const coinsEarned   = totalEarned * 50
+  // Backend returns exact coinsEarned, with fallback to totalEarned * 50
+  const coinsEarned   = Number(info?.coinsEarned ?? (totalEarned * 50))
   const friends       = info?.referredFriends || []
   const claimedMilestones = info?.claimedReferralMilestones || []
   const nextMilestone = useMemo(() => MILESTONES.find(m => m.count > referralCount), [referralCount])
@@ -179,9 +179,9 @@ export default function ReferAndEarn() {
           </div>
 
           <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60'>
-            <FaWallet size={12} className='text-emerald-600 dark:text-emerald-400' />
+            <FaCoins size={12} className='text-amber-500' />
             <span className='text-xs font-black text-emerald-700 dark:text-emerald-300'>
-              ₹{totalEarned} Earned
+              {coinsEarned} Coins Earned
             </span>
           </div>
         </div>
@@ -204,16 +204,13 @@ export default function ReferAndEarn() {
             <div className='space-y-1 max-w-md'>
               <div className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-[11px] font-bold uppercase tracking-wider text-emerald-100'>
                 <IoSparkles className='text-amber-300' />
-                <span>Invite Friends &amp; Get 50 Coins (₹1)</span>
+                <span>Invite Friends &amp; Get 50 Snapit Coins</span>
               </div>
               <h2 className='text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight pt-1'>
-                Share Snapit, Earn Cash!
+                Share Snapit, Earn Coins!
               </h2>
               <p className='text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed'>
-                Give your friends fast 10-minute deliveries. Both of you receive <strong className='text-white'>50 Snapit Coins (₹1 instant cash)</strong> in your wallet on their 1st qualifying order (min ₹149).
-              </p>
-              <p className='text-[11px] text-emerald-200/90 font-semibold'>
-                Exchange Rate: 50 Snapit Coins = ₹1.00 Value
+                Give your friends fast 10-minute deliveries. Both of you receive <strong className='text-white'>50 Snapit Coins</strong> directly on their 1st qualifying order (min ₹149).
               </p>
             </div>
 
@@ -224,15 +221,15 @@ export default function ReferAndEarn() {
                 <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1.5'>Friends Joined</p>
               </div>
               <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
-                <p className='text-xl sm:text-2xl font-black text-amber-300 leading-none'>₹{totalEarned}</p>
-                <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1.5'>Cash Earned</p>
-              </div>
-              <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
-                <p className='text-xl sm:text-2xl font-black text-white leading-none flex items-center justify-center gap-1'>
+                <p className='text-xl sm:text-2xl font-black text-amber-300 leading-none flex items-center justify-center gap-1'>
                   <FaCoins size={14} className='text-amber-300' />
                   <span>{coinsEarned}</span>
                 </p>
-                <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1.5'>Coins Value</p>
+                <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1.5'>Coins Earned</p>
+              </div>
+              <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
+                <p className='text-xl sm:text-2xl font-black text-white leading-none'>{claimedMilestones.length}</p>
+                <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1.5'>Tiers Unlocked</p>
               </div>
             </div>
 
@@ -351,9 +348,9 @@ export default function ReferAndEarn() {
                 03
               </div>
               <div>
-                <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Both Get ₹1 Cash</h4>
+                <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Both Get 50 Coins</h4>
                 <p className='text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 leading-relaxed'>
-                  Instant ₹1 cash (50 coins) credited to both wallets (50 coins = ₹1).
+                  Instant 50 Snapit Coins credited to both accounts upon 1st order.
                 </p>
               </div>
             </div>
@@ -527,7 +524,7 @@ export default function ReferAndEarn() {
                         {f.hasOrdered ? (
                           <>
                             <FiCheckCircle size={10} />
-                            <span>₹1 Credited</span>
+                            <span>+50 Coins</span>
                           </>
                         ) : (
                           <>
@@ -551,8 +548,8 @@ export default function ReferAndEarn() {
             <span>Referral Program Terms</span>
           </p>
           <ul className='list-disc pl-4 space-y-1'>
-            <li>Cash reward is credited when your referred friend places their first successful order of ₹149 or more.</li>
-            <li>₹1 wallet cash (50 Snapit Coins) is credited directly to both users' wallets. (Exchange rate: 50 Snapit Coins = ₹1).</li>
+            <li>Referral reward is credited when your referred friend completes their first successful order of ₹149 or more.</li>
+            <li>50 Snapit Coins are credited directly to both users' accounts upon order delivery.</li>
             <li>Self-referrals and duplicate device accounts are automatically detected and blocked to protect store integrity.</li>
           </ul>
         </div>
