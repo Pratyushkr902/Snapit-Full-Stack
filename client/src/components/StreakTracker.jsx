@@ -57,7 +57,7 @@ export default function StreakTracker({ isCardOnly = false }) {
         setOrderedToday(Boolean(d.orderedToday))
         setStreakAlive(Boolean(d.streakAlive))
         setCheckedInToday(Boolean(d.checkedInToday))
-        setCheckinCoins(d.checkinRewardCoins || 5)
+        setCheckinCoins(d.checkinRewardCoins || 10)
         setCoins(Number(d.coins || 0))
         if (typeof d.walletBalance === 'number') {
           setWalletBalance(d.walletBalance)

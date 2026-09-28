@@ -25,14 +25,17 @@ export const getReferralInfo = async (request, response) => {
             )
             .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-        // Fetch real referred friends who signed up using this referral code
-        const friendsDocs = await UserModel.find({ referredBy: referralCode })
-            .select('name createdAt firstOrderBonusApplied')
-            .sort({ createdAt: -1 })
-            .limit(30)
-            .lean();
+        // Fetch exact total count, qualifying count, and latest 30 friend docs
+        const [totalReferredCount, qualifyingFriendsCount, friendsDocs] = await Promise.all([
+            UserModel.countDocuments({ referredBy: referralCode }),
+            UserModel.countDocuments({ referredBy: referralCode, firstOrderBonusApplied: true }),
+            UserModel.find({ referredBy: referralCode })
+                .select('name createdAt firstOrderBonusApplied')
+                .sort({ createdAt: -1 })
+                .limit(30)
+                .lean()
+        ]);
 
-        const qualifyingFriendsCount = friendsDocs.filter(f => f.firstOrderBonusApplied).length;
         let milestoneCoins = 0;
         if (user.claimedReferralMilestones?.includes(5)) milestoneCoins += 250;
         if (user.claimedReferralMilestones?.includes(10)) milestoneCoins += 350;
@@ -52,7 +55,8 @@ export const getReferralInfo = async (request, response) => {
             message: "Referral info fetched",
             data: {
                 referralCode,
-                referralCount: Math.max(user.referralCount || 0, friendsDocs.length),
+                referralCount: Math.max(user.referralCount || 0, totalReferredCount),
+                qualifyingCount: qualifyingFriendsCount,
                 totalEarned,
                 coinsEarned: totalCoinsEarned,
                 referredFriends,

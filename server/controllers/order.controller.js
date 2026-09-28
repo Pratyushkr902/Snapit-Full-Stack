@@ -1468,12 +1468,25 @@ export const updateOrderStatusController = async (request, response) => {
                     notifyUserOrderDelivered(updatedOrder.userId, orderId, token).catch(() => {})
                     sendOrderDeliveredEmail(updatedOrder).catch(() => {})
                 } else if (status === 'Cancelled' && order.delivery_status !== 'Cancelled') {
-                    const refund = updatedOrder.payment_status === 'PAID' ? updatedOrder.totalAmt : 0
+                    const refund = updatedOrder.payment_status === 'PAID' ? Number(updatedOrder.totalAmt || 0) : 0
                     notifyUserOrderCancelled(updatedOrder.userId, orderId, refund, token).catch(() => {})
                     if (updatedOrder.coins_redeemed > 0) {
                         UserModel.findByIdAndUpdate(updatedOrder.userId, {
                             $inc: { coins: updatedOrder.coins_redeemed }
                         }).catch(err => console.warn('[Coin Restore Error on Status Cancel]', err.message))
+                    }
+                    if (refund > 0) {
+                        UserModel.findByIdAndUpdate(updatedOrder.userId, {
+                            $inc: { walletBalance: refund },
+                            $push: {
+                                walletTransactions: {
+                                    type:        'CREDIT',
+                                    amount:      refund,
+                                    description: `Instant refund for cancelled order #${orderId}`,
+                                    date:        new Date()
+                                }
+                            }
+                        }).catch(err => console.warn('[Wallet Refund Error on Status Cancel]', err.message))
                     }
                 }
             }

@@ -177,7 +177,7 @@ export default function RewardsPage() {
     try {
       const res = await Axios({ url:'/api/streak/checkin', method:'post' })
       if (res.data.success) {
-        const earned = res.data.data?.coinsEarned || 5
+        const earned = res.data.data?.coinsEarned || 10
         setCheckedIn(true)
         setCoins(res.data.data?.coins || (prev => prev + earned))
         toast.success(`+${earned} coins earned! Keep coming back 🪙`)
@@ -352,7 +352,7 @@ export default function RewardsPage() {
 
             <div style={{ background:'rgba(255,255,255,.15)', borderRadius:'50px', padding:'6px 12px', fontSize:'11px', fontWeight:'700', color:'#fef3c7', border:'1px solid rgba(255,255,255,.2)', display:'inline-flex', alignItems:'center', gap:'5px' }}>
               <FiCalendar size={12} className='text-amber-200' />
-              <span>+5 coins/day</span>
+              <span>+10 coins/day</span>
             </div>
           </div>
         </div>
@@ -360,7 +360,7 @@ export default function RewardsPage() {
         {/* How coins work */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', borderTop:'1px solid #f8fafc' }}>
           {[
-            { icon: FiCalendar,    label:'Check-in',  val:'+5/day'  },
+            { icon: FiCalendar,    label:'Check-in',  val:'+10/day'  },
             { icon: FiShoppingBag, label:'Per order', val:'+10–50'  },
             { icon: FiAward,       label:'Milestone', val:'+20–300' },
           ].map(item => {
@@ -386,7 +386,7 @@ export default function RewardsPage() {
             <span>Daily Check-in</span>
             {checkedIn && <span className="section-badge" style={{ background:'#dcfce7', color:'#166534', display:'inline-flex', alignItems:'center', gap:'4px' }}><FiCheckCircle size={11} /> Done today</span>}
           </div>
-          <span style={{ fontSize:'12px', fontWeight:'700', color:'#EF9F27' }}>+5 coins/day</span>
+          <span style={{ fontSize:'12px', fontWeight:'700', color:'#EF9F27' }}>+10 coins/day</span>
         </div>
 
         {/* 7-day grid */}
@@ -422,7 +422,7 @@ export default function RewardsPage() {
                 </span>
               : checkedIn
                 ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}><FiCheckCircle size={15} /> Checked in — come back tomorrow!</span>
-                : <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}><FaCoins size={14} /> Claim 5 Coins — Daily Check-in</span>
+                : <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}><FaCoins size={14} /> Claim 10 Coins — Daily Check-in</span>
             }
           </button>
         </div>

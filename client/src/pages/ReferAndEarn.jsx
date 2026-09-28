@@ -135,14 +135,15 @@ export default function ReferAndEarn() {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
-  const referralCount = Number(info?.referralCount || 0)
-  const totalEarned   = Number(info?.totalEarned || 0)
+  const referralCount   = Number(info?.referralCount || 0)
+  const qualifyingCount = Math.max(Number(info?.qualifyingCount || 0), referralCount)
+  const totalEarned     = Number(info?.totalEarned || 0)
   // Backend returns exact coinsEarned, with fallback to totalEarned * 50
-  const coinsEarned   = Number(info?.coinsEarned ?? (totalEarned * 50))
-  const friends       = info?.referredFriends || []
+  const coinsEarned     = Number(info?.coinsEarned ?? (totalEarned * 50))
+  const friends         = info?.referredFriends || []
   const claimedMilestones = info?.claimedReferralMilestones || []
-  const nextMilestone = useMemo(() => MILESTONES.find(m => m.count > referralCount), [referralCount])
-  const toNext        = nextMilestone ? nextMilestone.count - referralCount : 0
+  const nextMilestone   = useMemo(() => MILESTONES.find(m => m.count > qualifyingCount), [qualifyingCount])
+  const toNext          = nextMilestone ? nextMilestone.count - qualifyingCount : 0
 
   if (loading) {
     return (
@@ -249,7 +250,7 @@ export default function ReferAndEarn() {
                   <span>Invite <strong>{toNext} more</strong> to reach <strong>{nextMilestone.label} ({nextMilestone.reward})</strong></span>
                 </span>
                 <span className='px-2.5 py-0.5 rounded-full bg-white/20 text-white font-mono font-black text-[10px] shrink-0'>
-                  {referralCount}/{nextMilestone.count}
+                  {qualifyingCount}/{nextMilestone.count}
                 </span>
               </div>
             )}
@@ -419,7 +420,7 @@ export default function ReferAndEarn() {
 
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
               {MILESTONES.map(m => {
-                const isAchieved = referralCount >= m.count
+                const isAchieved = qualifyingCount >= m.count
                 const IconComp = m.icon
                 return (
                   <div
