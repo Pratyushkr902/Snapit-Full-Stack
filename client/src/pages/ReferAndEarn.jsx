@@ -1,465 +1,496 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import toast from 'react-hot-toast'
-
-// ─────────────────────────────────────────────────────────────
-//  SNAPIT  –  Refer & Earn  (Enhanced)
-//  ✅ All original API calls preserved
-//  New:
-//    • Animated hero card with confetti burst on share
-//    • Milestone rewards timeline (₹20 → ₹50 → ₹100 → Plus FREE)
-//    • Referred friends list with status badges
-//    • WhatsApp / Copy Link share options
-//    • Sora font + green brand aesthetic
-// ─────────────────────────────────────────────────────────────
-
-const STYLES = `
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&display=swap');
-
-.refer-page * { font-family: 'Sora', sans-serif; box-sizing: border-box; }
-
-@keyframes fadeUp   { from { opacity:0; transform:translateY(22px) } to { opacity:1; transform:translateY(0) } }
-@keyframes popIn    { 0%{ transform:scale(.7); opacity:0 } 70%{ transform:scale(1.08) } 100%{ transform:scale(1); opacity:1 } }
-@keyframes shimmer  { 0%{ background-position:-400px 0 } 100%{ background-position:400px 0 } }
-@keyframes float    { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-8px) } }
-@keyframes spin     { to{ transform:rotate(360deg) } }
-
-.hero-card  { animation: fadeUp .5s ease both; }
-.gift-icon  { animation: float 3s ease-in-out infinite; display:inline-block; }
-.pop-in     { animation: popIn .4s cubic-bezier(.34,1.56,.64,1) both; }
-
-.shimmer-box {
-  background: linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
-  background-size: 400px 100%;
-  animation: shimmer 1.4s infinite linear;
-  border-radius: 12px;
-}
-
-.share-btn {
-  flex:1; padding:14px 8px; border-radius:18px; border:none;
-  font-weight:800; font-size:13px; cursor:pointer;
-  transition:all .18s; font-family:'Sora',sans-serif;
-}
-.share-btn:hover { transform:translateY(-2px); }
-
-.copy-code-btn {
-  padding:12px 20px; border-radius:14px; border:none;
-  background:#16a34a; color:white; font-weight:800; font-size:14px;
-  cursor:pointer; transition:all .2s; font-family:'Sora',sans-serif;
-  white-space:nowrap;
-}
-.copy-code-btn:hover { background:#15803d; transform:scale(1.04); }
-.copy-code-btn.copied { background:#0f766e; }
-
-.milestone-item {
-  display:flex; align-items:center; gap:12px;
-  padding:12px 0; border-bottom:1px solid #f1f5f9;
-}
-.milestone-item:last-child { border-bottom:none; }
-
-.friend-row {
-  display:flex; align-items:center; gap:12px;
-  padding:12px 0; border-bottom:1px solid #f8fafc;
-  transition:background .15s;
-}
-.friend-row:last-child { border-bottom:none; }
-.friend-row:hover { background:#fafafa; border-radius:10px; padding-left:8px; }
-
-.status-badge {
-  font-size:11px; font-weight:700; padding:4px 10px;
-  border-radius:20px; white-space:nowrap;
-}
-`
+import { haptic } from '../utils/haptics'
+import {
+  IoArrowBack,
+  IoCopyOutline,
+  IoCheckmarkCircle,
+  IoShareSocialOutline,
+  IoGiftOutline,
+  IoSparkles,
+  IoInformationCircleOutline,
+  IoChevronForward
+} from 'react-icons/io5'
+import { FaWhatsapp, FaCoins, FaUserFriends, FaWallet, FaCheck, FaCrown } from 'react-icons/fa'
+import { FiUsers, FiAward, FiGift, FiCopy } from 'react-icons/fi'
 
 const MILESTONES = [
-  { count:1,  reward:'10 coins',     icon:'🎁', label:'First Referral' },
-  { count:5,  reward:'₹50 Bonus',    icon:'🔥', label:'5 Friends'      },
-  { count:10, reward:'₹100 Credit',  icon:'💎', label:'10 Friends'     },
-  { count:15, reward:'Plus FREE',    icon:'⭐', label:'15 Friends'     },
+  { count: 1,  reward: '10 Coins (₹5)',   icon: '🌱', label: 'Sprout',   desc: 'First successful invite' },
+  { count: 5,  reward: '₹25 Bonus',       icon: '🔥', label: 'Bronze',   desc: '5 friends ordered' },
+  { count: 10, reward: '₹50 Credit',      icon: '💎', label: 'Silver',   desc: '10 friends ordered' },
+  { count: 25, reward: 'Snapit Plus VIP', icon: '👑', label: 'Legend',   desc: 'Top community ambassador' },
 ]
 
-const Skeleton = () => (
-  <div style={{ padding:'16px', maxWidth:'480px', margin:'0 auto' }}>
-    <div className="shimmer-box" style={{ height:'220px', marginBottom:'16px' }} />
-    <div className="shimmer-box" style={{ height:'100px', marginBottom:'12px' }} />
-    <div className="shimmer-box" style={{ height:'160px' }} />
-  </div>
-)
-
-// ─────────────────────────────────────────────────────────────
-const ReferAndEarn = () => {
-  const [info,    setInfo]    = useState(null)
+export default function ReferAndEarn() {
+  const navigate = useNavigate()
+  const [info, setInfo] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [copied,  setCopied]  = useState(false)
-  const [tab,     setTab]     = useState('share') // 'share' | 'friends' | 'milestones'
+  const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
+  const [activeTab, setActiveTab] = useState('share') // 'share' | 'history'
 
-  useEffect(() => { fetchReferralInfo() }, [])
-
-  // ── Original API call preserved ──
   const fetchReferralInfo = async () => {
     try {
       const res = await Axios({ ...SummaryApi.getReferralInfo })
-      if (res.data?.success) setInfo(res.data.data)
+      if (res.data?.success) {
+        setInfo(res.data.data)
+      }
     } catch (err) {
-      console.log(err)
+      console.error('[ReferAndEarn] fetch error:', err)
+      toast.error('Failed to load referral details')
     } finally {
       setLoading(false)
     }
   }
 
-  // ── Original handlers preserved ──
+  useEffect(() => {
+    fetchReferralInfo()
+  }, [])
+
   const handleCopyCode = () => {
     if (!info?.referralCode) return toast.error('Log in to view your referral code')
+    try { haptic.selection() } catch {}
     navigator.clipboard?.writeText?.(info.referralCode)
-    setCopied(true)
+    setCopiedCode(true)
     toast.success('Referral code copied! 🎉')
-    setTimeout(() => setCopied(false), 2500)
+    setTimeout(() => setCopiedCode(false), 2200)
   }
 
   const handleCopyLink = () => {
     if (!info?.referralLink) return toast.error('Log in to view your referral link')
+    try { haptic.selection() } catch {}
     navigator.clipboard?.writeText?.(info.referralLink)
-    toast.success('Link copied to clipboard!')
+    setCopiedLink(true)
+    toast.success('Invite link copied! Share anywhere 🚀')
+    setTimeout(() => setCopiedLink(false), 2200)
   }
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!info?.referralCode) return toast.error('Log in to share your referral link')
+    try { haptic.medium() } catch {}
+
+    const shareData = {
+      title: 'Order on Snapit & Get ₹5 Cash!',
+      text: `🛒 Join me on Snapit! Get fresh groceries & food delivered in 10 minutes. Use my referral code: *${info.referralCode}* to get ₹5 instant cashback!`,
+      url: info.referralLink
+    }
+
     if (navigator.share) {
-      navigator.share({
-        title: 'Join Snapit!',
-        text:  `Join Snapit with my referral code ${info.referralCode}!`,
-        url:   info.referralLink
-      })
+      try {
+        await navigator.share(shareData)
+      } catch (err) {
+        if (err.name !== 'AbortError') handleCopyLink()
+      }
     } else {
       handleCopyLink()
     }
   }
 
-  // ── WhatsApp share (new) ──
-  const handleWhatsApp = () => {
+  const handleWhatsAppShare = () => {
     if (!info?.referralCode) return toast.error('Log in to share your referral link')
-    const msg = `🛒 Come order fresh groceries on *Snapit*!\n\nSign up with my code: *${info?.referralCode}*\n\n👉 ${info?.referralLink}`
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+    try { haptic.medium() } catch {}
+    const msg = `🛒 Hey! Order fresh groceries & delicious food on *Snapit* (10-Min Fast Delivery in Paliganj)!\n\nSign up with my invite code: *${info.referralCode}* and get instant bonus rewards on your 1st order! 🎁\n\n👉 Join here: ${info.referralLink}`
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
-  // ── Derived ──
-  const referralCount = info?.referralCount || 0
-  const totalEarned   = info?.totalEarned   || 0
-  const friends       = info?.referredFriends || []   // optional array from backend
-  const nextMilestone = MILESTONES.find(m => m.count > referralCount)
+  const referralCount = Number(info?.referralCount || 0)
+  const totalEarned   = Number(info?.totalEarned || 0)
+  const friends       = info?.referredFriends || []
+  const nextMilestone = useMemo(() => MILESTONES.find(m => m.count > referralCount), [referralCount])
   const toNext        = nextMilestone ? nextMilestone.count - referralCount : 0
 
-  if (loading) return (
-    <div className="refer-page" style={{ minHeight:'100vh', background:'#f9fafb' }}>
-      <style>{STYLES}</style>
-      <Skeleton />
-    </div>
-  )
+  const progressPct = useMemo(() => {
+    if (!nextMilestone) return 100
+    const prevDays = MILESTONES.filter(m => m.count < nextMilestone.count).pop()?.count || 0
+    const span = nextMilestone.count - prevDays
+    const progress = Math.max(0, referralCount - prevDays)
+    return Math.min(100, Math.max(8, Math.round((progress / span) * 100)))
+  }, [referralCount, nextMilestone])
+
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-slate-50 dark:bg-slate-950 p-4 flex flex-col items-center justify-center space-y-4'>
+        <div className='w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-3xl animate-bounce'>
+          🎁
+        </div>
+        <p className='text-xs font-black text-slate-500 uppercase tracking-widest animate-pulse'>
+          Loading Referral Hub…
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <div className="refer-page" style={{ minHeight:'100vh', background:'#f9fafb', paddingBottom:'100px' }}>
-      <style>{STYLES}</style>
-
-      <div style={{ maxWidth:'480px', margin:'0 auto', padding:'16px' }}>
-
-        {/* ── Hero Card ── */}
-        <div className="hero-card" style={{
-          background:   'linear-gradient(135deg, #15803d 0%, #166534 60%, #14532d 100%)',
-          borderRadius: '28px',
-          padding:      '32px 24px',
-          marginBottom: '20px',
-          textAlign:    'center',
-          color:        '#fff',
-          position:     'relative',
-          overflow:     'hidden',
-          boxShadow:    '0 12px 32px -4px rgba(21,128,61,.45)',
-        }}>
-          {/* decorative blobs */}
-          <div style={{ position:'absolute', top:'-40px', right:'-40px', width:'160px', height:'160px', borderRadius:'50%', background:'rgba(255,255,255,.06)' }} />
-          <div style={{ position:'absolute', bottom:'-30px', left:'-20px', width:'110px', height:'110px', borderRadius:'50%', background:'rgba(255,255,255,.04)' }} />
-
-          <div className="gift-icon" style={{ fontSize:'52px', marginBottom:'10px' }}>🎁</div>
-          <h1 style={{ fontSize:'26px', fontWeight:'900', margin:'0 0 6px', letterSpacing:'-0.5px' }}>
-            Refer & Earn
-          </h1>
-          <p style={{ fontSize:'14px', opacity:.85, margin:'0 0 20px', lineHeight:1.5 }}>
-            Invite friends to Snapit.<br />
-            <strong>You earn 10 coins (₹5)</strong> when they place their first order of ₹149+!
-          </p>
-
-          {/* Stats row */}
-          <div style={{ display:'flex', gap:'10px', justifyContent:'center' }}>
-            <div style={{ background:'rgba(255,255,255,.15)', backdropFilter:'blur(6px)', borderRadius:'16px', padding:'12px 20px', border:'1px solid rgba(255,255,255,.2)' }}>
-              <p style={{ fontSize:'26px', fontWeight:'900', margin:0, lineHeight:1 }}>{referralCount}</p>
-              <p style={{ fontSize:'11px', opacity:.8, margin:'4px 0 0', fontWeight:'600' }}>Friends Referred</p>
-            </div>
-            <div style={{ background:'rgba(255,255,255,.15)', backdropFilter:'blur(6px)', borderRadius:'16px', padding:'12px 20px', border:'1px solid rgba(255,255,255,.2)' }}>
-              <p style={{ fontSize:'26px', fontWeight:'900', margin:0, lineHeight:1 }}>🪙{totalEarned * 2}</p>
-              <p style={{ fontSize:'11px', opacity:.8, margin:'4px 0 0', fontWeight:'600' }}>Coins Earned (₹{totalEarned})</p>
+    <div className='min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white pb-20'>
+      
+      {/* ── STICKY TOP HEADER ── */}
+      <header className='sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-3 shadow-xs'>
+        <div className='max-w-2xl mx-auto flex items-center justify-between'>
+          <div className='flex items-center gap-3'>
+            <button
+              onClick={() => navigate(-1)}
+              className='w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 transition active:scale-95'
+            >
+              <IoArrowBack size={18} />
+            </button>
+            <div>
+              <h1 className='text-base font-black text-slate-900 dark:text-white leading-tight'>
+                Refer &amp; Earn
+              </h1>
+              <p className='text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider'>
+                Snapit Ambassador Club
+              </p>
             </div>
           </div>
 
-          {/* Next milestone hint */}
-          {nextMilestone && (
-            <div style={{ marginTop:'14px', background:'rgba(255,255,255,.12)', borderRadius:'12px', padding:'8px 14px', fontSize:'12px', fontWeight:'700', border:'1px solid rgba(255,255,255,.2)' }}>
-              🎯 Refer <strong>{toNext} more</strong> friend{toNext !== 1 ? 's' : ''} → Unlock <strong>{nextMilestone.reward}</strong> {nextMilestone.icon}
+          <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60'>
+            <FaWallet size={12} className='text-emerald-600 dark:text-emerald-400' />
+            <span className='text-xs font-black text-emerald-700 dark:text-emerald-300'>
+              ₹{totalEarned} Earned
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main className='max-w-2xl mx-auto px-4 py-5 space-y-4'>
+
+        {/* ── HERO BANNER CARD ── */}
+        <div className='relative rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-900 text-white p-6 shadow-xl shadow-emerald-700/20'>
+          
+          {/* Subtle Ambient Decorative Glow */}
+          <div className='absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none' />
+          <div className='absolute -left-8 -bottom-8 w-36 h-36 bg-amber-400/15 rounded-full blur-2xl pointer-events-none' />
+
+          <div className='relative z-10 flex flex-col items-center text-center space-y-3'>
+            <div className='w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-3xl shadow-inner animate-pulse'>
+              🎁
             </div>
-          )}
+
+            <div className='space-y-1 max-w-md'>
+              <div className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-[11px] font-black uppercase tracking-wider text-emerald-100'>
+                <IoSparkles className='text-amber-300' />
+                <span>Invite Friends &amp; Get ₹5 Every Time</span>
+              </div>
+              <h2 className='text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight pt-1'>
+                Share Snapit, Earn Cash!
+              </h2>
+              <p className='text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed'>
+                Give your friends fast 10-minute deliveries. Both of you receive <strong className='text-white'>₹5 (10 Snapit Coins)</strong> directly in your wallet on their 1st order!
+              </p>
+            </div>
+
+            {/* Live Stats Row */}
+            <div className='grid grid-cols-3 gap-2.5 w-full pt-2'>
+              <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
+                <p className='text-xl sm:text-2xl font-black text-white leading-none'>{referralCount}</p>
+                <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1'>Friends Invited</p>
+              </div>
+              <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
+                <p className='text-xl sm:text-2xl font-black text-amber-300 leading-none'>₹{totalEarned}</p>
+                <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1'>Cash Earned</p>
+              </div>
+              <div className='bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center'>
+                <p className='text-xl sm:text-2xl font-black text-white leading-none'>🪙{totalEarned * 2}</p>
+                <p className='text-[10px] font-bold text-emerald-100 uppercase tracking-wider mt-1'>Coins Earned</p>
+              </div>
+            </div>
+
+            {/* Milestone Unlock Indicator */}
+            {nextMilestone && (
+              <div className='w-full mt-2 pt-3 border-t border-white/15 flex items-center justify-between text-[11px] font-bold text-emerald-100'>
+                <span className='flex items-center gap-1.5 truncate'>
+                  <span>{nextMilestone.icon}</span>
+                  <span>Invite <strong>{toNext} more</strong> to unlock <strong>{nextMilestone.reward}</strong></span>
+                </span>
+                <span className='px-2 py-0.5 rounded-full bg-white/20 text-white font-mono font-black text-[10px] shrink-0'>
+                  {referralCount}/{nextMilestone.count}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* ── Referral Code Card ── */}
-        <div style={{ background:'white', borderRadius:'24px', border:'1px solid #f1f5f9', padding:'20px', marginBottom:'16px', boxShadow:'0 4px 6px -1px rgba(0,0,0,.05)' }}>
-          <p style={{ fontSize:'12px', color:'#64748b', fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px', margin:'0 0 12px' }}>
-            Your Referral Code
-          </p>
-          <div style={{ display:'flex', gap:'10px', alignItems:'center', marginBottom:'14px' }}>
-            <div style={{
-              flex:1, background:'#f0fdf4', border:'2px dashed #22c55e',
-              borderRadius:'16px', padding:'14px', textAlign:'center'
-            }}>
-              <span style={{ fontSize:'26px', fontWeight:'900', color:'#16a34a', letterSpacing:'6px' }}>
-                {info?.referralCode}
+        {/* ── REFERRAL CODE & 1-TAP SHARING BOX ── */}
+        <div className='bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <span className='text-lg'>🎟️</span>
+              <p className='text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400'>
+                Your Unique Invite Code
+              </p>
+            </div>
+            <span className='text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md'>
+              Active &amp; Verified
+            </span>
+          </div>
+
+          {/* Coupon Cutout Box */}
+          <div className='relative rounded-2xl bg-emerald-50/60 dark:bg-slate-950 border-2 border-dashed border-emerald-500/50 p-4 flex items-center justify-between gap-3'>
+            <div className='min-w-0'>
+              <span className='text-xs text-slate-400 uppercase tracking-widest font-bold block'>
+                Tap to copy code
+              </span>
+              <span className='font-mono font-black text-2xl sm:text-3xl text-emerald-600 dark:text-emerald-400 tracking-wider truncate block'>
+                {info?.referralCode || 'SNAPIT50'}
               </span>
             </div>
+
             <button
-              className={`copy-code-btn${copied ? ' copied' : ''}`}
               onClick={handleCopyCode}
+              className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all active:scale-95 flex items-center gap-1.5 shadow-sm shrink-0 ${
+                copiedCode
+                  ? 'bg-emerald-600 text-white shadow-emerald-500/20'
+                  : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 hover:text-white'
+              }`}
             >
-              {copied ? '✓ Copied!' : '📋 Copy'}
+              {copiedCode ? <FaCheck size={12} /> : <FiCopy size={13} />}
+              <span>{copiedCode ? 'Copied!' : 'Copy Code'}</span>
             </button>
           </div>
 
-          {/* Share buttons row */}
-          <div style={{ display:'flex', gap:'10px' }}>
+          {/* 1-Tap Viral Sharing Buttons */}
+          <div className='grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1'>
             <button
-              className="share-btn"
-              onClick={handleWhatsApp}
-              style={{ background:'#dcfce7', color:'#15803d', border:'1.5px solid #bbf7d0' }}
+              onClick={handleWhatsAppShare}
+              className='w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-black text-sm transition shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2'
             >
-              📱 WhatsApp
+              <FaWhatsapp size={18} className='text-white' />
+              <span>Share on WhatsApp</span>
             </button>
+
             <button
-              className="share-btn"
-              onClick={handleCopyLink}
-              style={{ background:'#f1f5f9', color:'#475569', border:'1.5px solid #e2e8f0' }}
-            >
-              🔗 Copy Link
-            </button>
-            <button
-              className="share-btn"
               onClick={handleShare}
-              style={{ background:'#f0fdf4', color:'#15803d', border:'1.5px solid #bbf7d0' }}
+              className='w-full py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-[0.98] text-white font-black text-sm transition flex items-center justify-center gap-2 border border-slate-700/50 shadow-sm'
             >
-              ↗ Share
+              <IoShareSocialOutline size={18} />
+              <span>{copiedLink ? 'Link Copied! ✓' : 'Share Invite Link'}</span>
             </button>
           </div>
         </div>
 
-        {/* ── Tabs ── */}
-        <div style={{ background:'white', borderRadius:'24px', border:'1px solid #f1f5f9', overflow:'hidden', boxShadow:'0 4px 6px -1px rgba(0,0,0,.05)' }}>
-          {/* Tab bar */}
-          <div style={{ display:'flex', borderBottom:'1px solid #f1f5f9' }}>
-            {[
-              { key:'share',      label:'📋 How It Works'  },
-              { key:'milestones', label:'🏆 Milestones'    },
-              { key:'friends',    label:'👥 My Friends'    },
-            ].map(t => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                style={{
-                  flex:1, padding:'12px 4px', border:'none', background:'transparent',
-                  fontWeight:'700', fontSize:'11px', cursor:'pointer', fontFamily:'Sora,sans-serif',
-                  color: tab === t.key ? '#16a34a' : '#94a3b8',
-                  borderBottom: tab === t.key ? '3px solid #16a34a' : '3px solid transparent',
-                  transition:'all .2s'
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
+        {/* ── 3-STEP "HOW IT WORKS" FLOW ── */}
+        <div className='bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4'>
+          <div className='flex items-center justify-between'>
+            <h3 className='font-black text-sm text-slate-900 dark:text-white flex items-center gap-2'>
+              <span>⚡</span> How It Works
+            </h3>
+            <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
+              3 Easy Steps
+            </span>
           </div>
 
-          <div style={{ padding:'20px' }}>
-
-            {/* ── HOW IT WORKS ── */}
-            {tab === 'share' && (
+          <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2'>
+              <div className='w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-black shrink-0'>
+                1️⃣
+              </div>
               <div>
-                {[
-                  { icon:'📤', step:'1', title:'Share your code', desc:'Send your unique code to friends via WhatsApp, SMS, or any app.' },
-                  { icon:'📲', step:'2', title:'Friend signs up', desc:'They create their Snapit account using your referral code.' },
-                  { icon:'🛒', step:'3', title:'They order ₹149+', desc:'Your friend places their first qualifying order.' },
-                  { icon:'💰', step:'4', title:'You both earn 10 coins!', desc:'Worth ₹5 each, credited to your wallets instantly!' },
-                ].map((s, i) => (
-                  <div key={i} style={{ display:'flex', gap:'14px', alignItems:'flex-start', marginBottom: i < 3 ? '18px' : 0 }}>
-                    <div style={{
-                      width:'40px', height:'40px', borderRadius:'14px', flexShrink:0,
-                      background:'#f0fdf4', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px'
-                    }}>
-                      {s.icon}
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'3px' }}>
-                        <span style={{ fontSize:'10px', fontWeight:'800', background:'#16a34a', color:'#fff', borderRadius:'20px', padding:'2px 8px' }}>
-                          STEP {s.step}
-                        </span>
-                        <p style={{ fontSize:'14px', fontWeight:'700', color:'#1e293b', margin:0 }}>{s.title}</p>
+                <h4 className='font-black text-xs text-slate-900 dark:text-white'>Share Your Code</h4>
+                <p className='text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5'>
+                  Send your unique code or link to friends on WhatsApp.
+                </p>
+              </div>
+            </div>
+
+            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2'>
+              <div className='w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg font-black shrink-0'>
+                2️⃣
+              </div>
+              <div>
+                <h4 className='font-black text-xs text-slate-900 dark:text-white'>Friend Places Order</h4>
+                <p className='text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5'>
+                  They register and complete their 1st order of ₹149+.
+                </p>
+              </div>
+            </div>
+
+            <div className='bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2'>
+              <div className='w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg font-black shrink-0'>
+                3️⃣
+              </div>
+              <div>
+                <h4 className='font-black text-xs text-slate-900 dark:text-white'>Both Get ₹5 Cash</h4>
+                <p className='text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5'>
+                  Instant ₹5 cash + 10 coins credited to both wallets!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── TAB SELECTOR: MILESTONES VS REFERRED FRIENDS ── */}
+        <div className='flex gap-2 bg-slate-200/70 dark:bg-slate-900 rounded-2xl p-1 border border-slate-200/80 dark:border-slate-800'>
+          <button
+            onClick={() => { haptic.selection(); setActiveTab('share') }}
+            className={`flex-1 py-2.5 rounded-xl font-black text-xs transition flex items-center justify-center gap-1.5 ${
+              activeTab === 'share'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <FiAward size={14} />
+            <span>Milestones &amp; Tiers</span>
+          </button>
+
+          <button
+            onClick={() => { haptic.selection(); setActiveTab('history') }}
+            className={`flex-1 py-2.5 rounded-xl font-black text-xs transition flex items-center justify-center gap-1.5 ${
+              activeTab === 'history'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <FiUsers size={14} />
+            <span>Referred Friends ({friends.length})</span>
+          </button>
+        </div>
+
+        {/* ── TAB 1: MILESTONES SHOWCASE ── */}
+        {activeTab === 'share' && (
+          <div className='bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <h3 className='font-black text-sm text-slate-900 dark:text-white'>Ambassador Tiers</h3>
+                <p className='text-[11px] text-slate-500 font-medium'>Unlock extra perks as your invited network grows</p>
+              </div>
+              <span className='text-[10px] font-bold text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-200/60 dark:border-amber-800/60'>
+                VIP Rewards
+              </span>
+            </div>
+
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+              {MILESTONES.map(m => {
+                const isAchieved = referralCount >= m.count
+                return (
+                  <div
+                    key={m.count}
+                    className={`rounded-2xl p-4 border transition-all ${
+                      isAchieved
+                        ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/80 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200/70 dark:border-slate-800 opacity-80'
+                    }`}
+                  >
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center gap-2.5'>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+                          isAchieved
+                            ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                        }`}>
+                          {m.icon}
+                        </div>
+                        <div>
+                          <h4 className='font-black text-xs text-slate-900 dark:text-white'>
+                            {m.label} · {m.count} Friend{m.count > 1 ? 's' : ''}
+                          </h4>
+                          <p className='text-[10px] text-slate-500 dark:text-slate-400 font-medium'>
+                            {m.desc}
+                          </p>
+                        </div>
                       </div>
-                      <p style={{ fontSize:'12px', color:'#64748b', margin:0, lineHeight:1.5 }}>{s.desc}</p>
+
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        isAchieved
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}>
+                        {isAchieved ? 'Unlocked ✓' : `${Math.max(0, m.count - referralCount)} left`}
+                      </span>
+                    </div>
+
+                    <div className='mt-3 pt-2.5 border-t border-slate-200/50 dark:border-slate-800/60 flex items-center justify-between text-[11px] font-bold'>
+                      <span className='text-slate-500 dark:text-slate-400'>Reward</span>
+                      <span className='text-emerald-600 dark:text-emerald-400 font-black'>{m.reward}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 2: REFERRED FRIENDS LIST ── */}
+        {activeTab === 'history' && (
+          <div className='bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <h3 className='font-black text-sm text-slate-900 dark:text-white'>Invited Friends</h3>
+                <p className='text-[11px] text-slate-500 font-medium'>Track friends who signed up with your code</p>
+              </div>
+              <span className='text-[10px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full'>
+                {friends.length} Total
+              </span>
+            </div>
+
+            {friends.length === 0 ? (
+              <div className='py-12 text-center space-y-3 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6'>
+                <div className='w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 text-2xl flex items-center justify-center mx-auto'>
+                  👥
+                </div>
+                <div>
+                  <h4 className='font-black text-sm text-slate-900 dark:text-white'>No Referrals Yet</h4>
+                  <p className='text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-1'>
+                    Share your invite code with friends, neighbors, and campus buddies to start collecting wallet cash!
+                  </p>
+                </div>
+                <button
+                  onClick={handleWhatsAppShare}
+                  className='px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs rounded-xl shadow-md transition'
+                >
+                  Invite on WhatsApp
+                </button>
+              </div>
+            ) : (
+              <div className='divide-y divide-slate-100 dark:divide-slate-800'>
+                {friends.map((f, idx) => (
+                  <div key={f.id || idx} className='py-3 flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-3 min-w-0'>
+                      <div className='w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-black text-sm flex items-center justify-center shrink-0 uppercase'>
+                        {f.name ? f.name.charAt(0) : 'F'}
+                      </div>
+                      <div className='min-w-0'>
+                        <h4 className='font-bold text-xs text-slate-900 dark:text-white truncate'>
+                          {f.name}
+                        </h4>
+                        <p className='text-[10px] text-slate-400 font-medium'>
+                          Joined {f.joinedAt ? new Date(f.joinedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recently'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className='text-right shrink-0'>
+                      <span className={`inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full ${
+                        f.hasOrdered
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                          : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                      }`}>
+                        {f.hasOrdered ? '🎉 ₹5 Credited' : '⏳ Order Pending'}
+                      </span>
                     </div>
                   </div>
                 ))}
-
-                {/* T&C note */}
-                <div style={{ background:'#f8fafc', borderRadius:'12px', padding:'10px 12px', marginTop:'18px' }}>
-                  <p style={{ fontSize:'11px', color:'#94a3b8', margin:0, lineHeight:1.6 }}>
-                    * 10 coins (₹5) credited to both your wallets when your friend places their first order of ₹149 or more. 1 coin = ₹0.5. One reward per friend. Snapit reserves the right to reverse fraudulent referrals.
-                  </p>
-                </div>
               </div>
             )}
-
-            {/* ── MILESTONES ── */}
-            {tab === 'milestones' && (
-              <div>
-                <p style={{ fontSize:'13px', color:'#64748b', fontWeight:'600', marginBottom:'16px' }}>
-                  Unlock bigger rewards as you refer more friends!
-                </p>
-                {MILESTONES.map((m, i) => {
-                  const achieved = referralCount >= m.count
-                  const isNext   = nextMilestone?.count === m.count
-                  return (
-                    <div key={i} className="milestone-item">
-                      <div style={{
-                        width:'46px', height:'46px', borderRadius:'16px', flexShrink:0,
-                        background: achieved ? '#f0fdf4' : isNext ? '#fefce8' : '#f8fafc',
-                        border: `2px solid ${achieved ? '#22c55e' : isNext ? '#facc15' : '#e2e8f0'}`,
-                        display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px'
-                      }}>
-                        {achieved ? '✅' : m.icon}
-                      </div>
-                      <div style={{ flex:1 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                          <p style={{ fontSize:'14px', fontWeight:'700', color:'#1e293b', margin:0 }}>{m.label}</p>
-                          {isNext && <span style={{ fontSize:'10px', background:'#fef08a', color:'#713f12', fontWeight:'700', padding:'2px 8px', borderRadius:'20px' }}>NEXT</span>}
-                          {achieved && <span style={{ fontSize:'10px', background:'#dcfce7', color:'#166534', fontWeight:'700', padding:'2px 8px', borderRadius:'20px' }}>UNLOCKED</span>}
-                        </div>
-                        <p style={{ fontSize:'12px', color:'#64748b', margin:'2px 0 0' }}>{m.count} friends referred</p>
-                      </div>
-                      <div style={{ textAlign:'right' }}>
-                        <p style={{ fontSize:'16px', fontWeight:'900', color: achieved ? '#16a34a' : '#94a3b8', margin:0 }}>{m.reward}</p>
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {/* Progress bar to next */}
-                {nextMilestone && (
-                  <div style={{ marginTop:'16px', background:'#f8fafc', borderRadius:'14px', padding:'14px 16px' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'8px' }}>
-                      <span style={{ fontSize:'13px', fontWeight:'700', color:'#475569' }}>Progress to next reward</span>
-                      <span style={{ fontSize:'13px', fontWeight:'700', color:'#16a34a' }}>{referralCount}/{nextMilestone.count}</span>
-                    </div>
-                    <div style={{ height:'10px', background:'#e2e8f0', borderRadius:'5px', overflow:'hidden' }}>
-                      <div style={{
-                        height:'100%',
-                        width: `${Math.min((referralCount / nextMilestone.count) * 100, 100)}%`,
-                        background: 'linear-gradient(90deg, #16a34a, #22c55e)',
-                        borderRadius:'5px',
-                        transition:'width .6s ease'
-                      }} />
-                    </div>
-                    <p style={{ fontSize:'12px', color:'#94a3b8', margin:'6px 0 0', textAlign:'right' }}>
-                      {toNext} more friend{toNext !== 1 ? 's' : ''} to unlock {nextMilestone.reward} {nextMilestone.icon}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── FRIENDS LIST ── */}
-            {tab === 'friends' && (
-              <div>
-                {friends.length === 0 ? (
-                  <div style={{ textAlign:'center', padding:'40px 0' }}>
-                    <div style={{ fontSize:'52px', marginBottom:'12px', opacity:.35 }}>👥</div>
-                    <p style={{ fontSize:'15px', fontWeight:'700', color:'#94a3b8' }}>No referrals yet</p>
-                    <p style={{ fontSize:'13px', color:'#cbd5e1', fontWeight:'600' }}>Share your code and see friends here</p>
-                    <button
-                      onClick={handleWhatsApp}
-                      style={{
-                        marginTop:'16px', padding:'12px 24px', borderRadius:'14px',
-                        border:'none', background:'#16a34a', color:'white',
-                        fontWeight:'800', fontSize:'14px', cursor:'pointer',
-                        fontFamily:'Sora, sans-serif'
-                      }}
-                    >
-                      📱 Invite via WhatsApp
-                    </button>
-                  </div>
-                ) : (
-                  friends.map((friend, i) => {
-                    const statusMap = {
-                      signed_up:   { label:'Signed Up',    bg:'#f1f5f9', color:'#64748b' },
-                      first_order: { label:'1st Order ✅', bg:'#dcfce7', color:'#166534' },
-                      active:      { label:'Active 🟢',    bg:'#d1fae5', color:'#065f46' },
-                    }
-                    const s = statusMap[friend.status] || statusMap['signed_up']
-                    return (
-                      <div key={i} className="friend-row">
-                        <div style={{
-                          width:'40px', height:'40px', borderRadius:'14px', background:'#f0fdf4',
-                          display:'flex', alignItems:'center', justifyContent:'center',
-                          fontSize:'18px', fontWeight:'800', color:'#16a34a', flexShrink:0
-                        }}>
-                          {friend.name?.[0]?.toUpperCase() || '?'}
-                        </div>
-                        <div style={{ flex:1 }}>
-                          <p style={{ fontSize:'14px', fontWeight:'700', color:'#1e293b', margin:0 }}>{friend.name || 'Friend'}</p>
-                          <p style={{ fontSize:'11px', color:'#94a3b8', margin:'2px 0 0', fontWeight:'600' }}>
-                            Joined {new Date(friend.joinedAt || Date.now()).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}
-                          </p>
-                        </div>
-                        <div style={{ textAlign:'right', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'4px' }}>
-                          <span className="status-badge" style={{ background:s.bg, color:s.color }}>
-                            {s.label}
-                          </span>
-                          {friend.earned > 0 && (
-                            <span style={{ fontSize:'13px', fontWeight:'800', color:'#16a34a' }}>+₹{friend.earned}</span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            )}
-
           </div>
+        )}
+
+        {/* ── TRANSPARENT TERMS & CONDITIONS ── */}
+        <div className='bg-slate-100/70 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-200/60 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 space-y-1.5'>
+          <p className='font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1.5'>
+            <IoInformationCircleOutline size={14} />
+            <span>Referral Program Terms</span>
+          </p>
+          <ul className='list-disc pl-4 space-y-1'>
+            <li>Cashback is credited when your referred friend places their first successful order of ₹149 or more.</li>
+            <li>₹5 cash + 10 Snapit Loyalty Coins credited directly into both users' wallets.</li>
+            <li>Self-referrals and duplicate device accounts are automatically detected and blocked to protect store integrity.</li>
+          </ul>
         </div>
 
-        {/* ── Bottom CTA ── */}
-        <button
-          onClick={handleWhatsApp}
-          style={{
-            width:'100%', marginTop:'16px', padding:'17px',
-            borderRadius:'20px', border:'none',
-            background:'linear-gradient(135deg, #16a34a, #15803d)',
-            color:'white', fontWeight:'900', fontSize:'16px',
-            cursor:'pointer', fontFamily:'Sora, sans-serif',
-            boxShadow:'0 6px 20px rgba(22,163,74,.35)',
-            transition:'all .2s'
-          }}
-          onMouseOver={e => e.currentTarget.style.transform='translateY(-2px)'}
-          onMouseOut={e  => e.currentTarget.style.transform='translateY(0)'}
-        >
-          📱 Invite Friends on WhatsApp → Earn 10 Coins
-        </button>
-
-      </div>
+      </main>
     </div>
   )
 }
-
-export default ReferAndEarn

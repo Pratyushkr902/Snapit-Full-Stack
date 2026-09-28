@@ -331,7 +331,8 @@ const RiderDashboard = () => {
         const rawStorePhone = String(store.phone || store.contactNumber || store.mobile || '');
         const cleanStorePhone = rawStorePhone.replace(/\D/g, '');
 
-        const message = `*Snapit Order #${order.orderId?.slice(-8) || order.orderId}* ⚡\n\n*Store:* ${storeName}\n*Customer:* ${order.delivery_address?.recipient_name || order.userId?.name || 'Customer'}\n\n*Items to Prepare:*\n${itemsList}\n\n*Total Amount:* ₹${order.totalAmt || 0}\n*Payment Mode:* ${order.payment_status || 'CASH ON DELIVERY'}\n\n*Rider:* Manish Kumar (Snapit)\nPlease start preparing and keep packed. Rider reaching in 5-10 minutes! 🛵💨`;
+        const riderName = user?.name ? `${user.name} (Snapit)` : 'Snapit Delivery Partner';
+        const message = `*Snapit Order #${order.orderId?.slice(-8) || order.orderId}* ⚡\n\n*Store:* ${storeName}\n*Customer:* ${order.delivery_address?.recipient_name || order.userId?.name || 'Customer'}\n\n*Items to Prepare:*\n${itemsList}\n\n*Total Amount:* ₹${order.totalAmt || 0}\n*Payment Mode:* ${order.payment_status || 'CASH ON DELIVERY'}\n\n*Rider:* ${riderName}\nPlease start preparing and keep packed. Rider reaching in 5-10 minutes! 🛵💨`;
 
         const waUrl = cleanStorePhone.length >= 10
             ? `https://api.whatsapp.com/send?phone=91${cleanStorePhone.slice(-10)}&text=${encodeURIComponent(message)}`
@@ -350,9 +351,10 @@ const RiderDashboard = () => {
         const lat = order.delivery_lat || order.delivery_address?.lat;
         const lng = order.delivery_lng || order.delivery_address?.lng;
         const isCentroid = isGenericPaliganjCentroid(lat, lng);
+        const riderFirstName = user?.name ? user.name.split(' ')[0] : 'Snapit partner';
         const message = isCentroid
-            ? `Namaste! Main Snapit delivery partner yahan se. Aapka order #${order.orderId?.slice(-6) || ''} leke nikal raha hoon. Kripya apni live WhatsApp location share kar dijiye taki main seedhe aapke gate pe pahunch sakoon! 📍🛵`
-            : `Hello! Snapit delivery partner Manish yahan se. Aapka order #${order.orderId?.slice(-6) || ''} leke main nikal raha hoon. Doorstep pe 10-15 min mein pahunch raha hoon! 🛵`;
+            ? `Namaste! Main Snapit delivery partner (${riderFirstName}) yahan se. Aapka order #${order.orderId?.slice(-6) || ''} leke nikal raha hoon. Kripya apni live WhatsApp location share kar dijiye taki main seedhe aapke gate pe pahunch sakoon! 📍🛵`
+            : `Hello! Snapit delivery partner ${riderFirstName} yahan se. Aapka order #${order.orderId?.slice(-6) || ''} leke main nikal raha hoon. Doorstep pe 10-15 min mein pahunch raha hoon! 🛵`;
         window.open(`https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(message)}`, '_blank');
     };
 
@@ -877,14 +879,14 @@ const RiderDashboard = () => {
                             <button
                                 onClick={handleToggleDuty}
                                 disabled={togglingDuty}
-                                className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-md ${
+                                className={`min-h-[40px] px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-md ${
                                     isDutyOn
-                                        ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/25 ring-2 ring-emerald-400/40 animate-pulse'
-                                        : 'bg-rose-950/60 text-rose-300 border border-rose-800/60 hover:bg-rose-900/60'
+                                        ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30 ring-2 ring-emerald-400/50 font-black'
+                                        : 'bg-rose-950/80 text-rose-300 border border-rose-700/60 hover:bg-rose-900'
                                 }`}
                             >
-                                <FaPowerOff size={10} />
-                                <span>{togglingDuty ? 'Updating…' : isDutyOn ? '🟢 ON DUTY' : '🔴 OFF DUTY'}</span>
+                                <FaPowerOff size={11} />
+                                <span>{togglingDuty ? 'Updating…' : isDutyOn ? '🟢 ON DUTY' : '🔴 GO ON DUTY'}</span>
                             </button>
 
                             <button
@@ -1397,19 +1399,56 @@ const RiderDashboard = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Financial Summary */}
-                                            <div className='flex items-center justify-between pt-1 border-t border-slate-800'>
-                                                <div>
-                                                    <p className='text-[9px] font-black text-slate-500 uppercase'>Payment Mode</p>
-                                                    <p className='text-xs font-bold text-slate-300 mt-0.5'>
-                                                        {order.payment_status === 'CASH ON DELIVERY' ? '💵 Cash on Delivery' : '✅ Online Paid'}
-                                                    </p>
-                                                </div>
-                                                <div className='text-right'>
-                                                    <p className='text-[9px] font-black text-slate-500 uppercase'>Collect Amount</p>
-                                                    <p className='text-xl font-black text-white'>{fmtINR(order.totalAmt)}</p>
-                                                </div>
-                                            </div>
+                                            {/* Financial & Rider Payout Summary */}
+                                            {(() => {
+                                                const isCOD = order.payment_status === 'CASH ON DELIVERY';
+                                                const riderFee = getDeliveryFee(order);
+                                                return (
+                                                    <div className='p-3 bg-slate-950/70 rounded-2xl border border-slate-800/90 flex flex-col gap-2.5'>
+                                                        <div className='flex items-center justify-between'>
+                                                            <div className='flex items-center gap-1.5'>
+                                                                <span className='text-[10px] font-black uppercase text-slate-400'>Payment:</span>
+                                                                {isCOD ? (
+                                                                    <span className='px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1'>
+                                                                        💵 Cash On Delivery
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className='px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1'>
+                                                                        ✅ Paid Online (Prepaid)
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className='flex items-center gap-1'>
+                                                                <span className='text-[10px] font-black uppercase text-slate-400'>Your Payout:</span>
+                                                                <span className='text-xs font-black text-emerald-400 bg-emerald-950/70 px-2 py-0.5 rounded-lg border border-emerald-500/40'>
+                                                                    +{fmtINR(riderFee)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                                                            isCOD 
+                                                                ? 'bg-amber-950/30 border-amber-500/40 text-amber-200' 
+                                                                : 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                                                        }`}>
+                                                            <div>
+                                                                <p className='text-[9px] font-black uppercase tracking-wider text-slate-400'>
+                                                                    {isCOD ? '⚠️ Collect Cash At Door' : '🛡️ Prepaid Order'}
+                                                                </p>
+                                                                <p className='text-[11px] font-bold mt-0.5'>
+                                                                    {isCOD ? 'Collect exact cash upon delivery' : 'Already paid online • Do NOT collect cash'}
+                                                                </p>
+                                                            </div>
+                                                            <div className='text-right pl-3'>
+                                                                <p className='text-[9px] font-black uppercase text-slate-400'>Collect Amount</p>
+                                                                <p className={`text-xl font-black ${isCOD ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                                                    {isCOD ? fmtINR(order.totalAmt) : '₹0'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             {/* Primary Action Buttons */}
                                             {(order.delivery_status === 'Confirmed') && (
