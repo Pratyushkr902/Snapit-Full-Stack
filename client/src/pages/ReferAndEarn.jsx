@@ -23,10 +23,10 @@ import {
 } from 'react-icons/fi'
 
 const MILESTONES = [
-  { count: 1,  reward: '₹5 Cash (50 Coins)', icon: FiGift,       label: 'Starter Tier', desc: '1st friend places first order' },
-  { count: 5,  reward: '₹25 Wallet Bonus',   icon: FiAward,      label: 'Bronze Tier',  desc: '5 friends ordered' },
-  { count: 10, reward: '₹50 Wallet Bonus',   icon: FiTrendingUp, label: 'Silver Tier',  desc: '10 friends ordered' },
-  { count: 25, reward: 'Snapit Plus VIP',    icon: FiShield,     label: 'Gold Legend',  desc: 'Top community ambassador' },
+  { count: 1,  reward: '50 Coins (₹1)',     icon: FiGift,       label: 'Starter Tier', desc: '1st friend places first order' },
+  { count: 5,  reward: '₹5 Wallet Bonus',   icon: FiAward,      label: 'Bronze Tier',  desc: '5 friends ordered' },
+  { count: 10, reward: '₹7 Wallet Bonus',   icon: FiTrendingUp, label: 'Silver Tier',  desc: '10 friends ordered' },
+  { count: 25, reward: 'Snapit Plus VIP',   icon: FiShield,     label: 'Gold Legend',  desc: 'Top community ambassador' },
 ]
 
 export default function ReferAndEarn() {
@@ -36,6 +36,7 @@ export default function ReferAndEarn() {
   const [copiedCode, setCopiedCode] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [activeTab, setActiveTab] = useState('share') // 'share' | 'history'
+  const [claimingMilestone, setClaimingMilestone] = useState(null)
 
   const fetchReferralInfo = async () => {
     try {
@@ -54,6 +55,30 @@ export default function ReferAndEarn() {
   useEffect(() => {
     fetchReferralInfo()
   }, [])
+
+  const handleClaimMilestone = async (count) => {
+    if (claimingMilestone || count === 1) return
+    try { haptic.selection() } catch {}
+    setClaimingMilestone(count)
+    try {
+      const res = await Axios({
+        url: SummaryApi.claimReferralMilestone?.url || '/api/referral/claim-milestone',
+        method: SummaryApi.claimReferralMilestone?.method || 'post',
+        data: { milestone: count }
+      })
+      if (res.data?.success) {
+        try { haptic.success() } catch {}
+        toast.success(res.data.message || 'Milestone reward unlocked!')
+        fetchReferralInfo()
+      } else {
+        toast.error(res.data?.message || 'Failed to claim milestone')
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to claim milestone')
+    } finally {
+      setClaimingMilestone(null)
+    }
+  }
 
   const handleCopyCode = () => {
     if (!info?.referralCode) return toast.error('Log in to view your referral code')
@@ -78,8 +103,8 @@ export default function ReferAndEarn() {
     try { haptic.medium() } catch {}
 
     const shareData = {
-      title: 'Order on Snapit & Get ₹5 Cash!',
-      text: `Join me on Snapit! Get fresh groceries & food delivered in 10 minutes. Use my referral code: ${info.referralCode} to get ₹5 instant welcome cash! (10 coins = ₹1)`,
+      title: 'Order on Snapit & Get 50 Coins (₹1) Cash!',
+      text: `Join me on Snapit! Get fresh groceries & food delivered in 10 minutes. Use my referral code: ${info.referralCode} to get 50 Snapit Coins (₹1) welcome cash on your 1st order! (50 coins = ₹1)`,
       url: info.referralLink
     }
 
@@ -97,15 +122,16 @@ export default function ReferAndEarn() {
   const handleWhatsAppShare = () => {
     if (!info?.referralCode) return toast.error('Log in to share your referral link')
     try { haptic.medium() } catch {}
-    const msg = `Hey! Order fresh groceries & food on Snapit (10-Min Fast Delivery in Paliganj)!\n\nSign up with my invite code: *${info.referralCode}* and get ₹5 welcome cash credited on your 1st order! (10 coins = ₹1)\n\nJoin here: ${info.referralLink}`
+    const msg = `Hey! Order fresh groceries & food on Snapit (10-Min Fast Delivery in Paliganj)!\n\nSign up with my invite code: *${info.referralCode}* and get 50 Snapit Coins (₹1) welcome cash credited on your 1st order! (50 coins = ₹1)\n\nJoin here: ${info.referralLink}`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   const referralCount = Number(info?.referralCount || 0)
   const totalEarned   = Number(info?.totalEarned || 0)
-  // 10 coins = ₹1.00 (hence ₹1 = 10 coins)
-  const coinsEarned   = totalEarned * 10
+  // 50 coins = ₹1.00 Value
+  const coinsEarned   = totalEarned * 50
   const friends       = info?.referredFriends || []
+  const claimedMilestones = info?.claimedReferralMilestones || []
   const nextMilestone = useMemo(() => MILESTONES.find(m => m.count > referralCount), [referralCount])
   const toNext        = nextMilestone ? nextMilestone.count - referralCount : 0
 
@@ -171,16 +197,16 @@ export default function ReferAndEarn() {
             <div className='space-y-1 max-w-md'>
               <div className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-[11px] font-bold uppercase tracking-wider text-emerald-100'>
                 <IoSparkles className='text-amber-300' />
-                <span>Invite Friends &amp; Get ₹5 Cash</span>
+                <span>Invite Friends &amp; Get 50 Coins (₹1)</span>
               </div>
               <h2 className='text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight pt-1'>
                 Share Snapit, Earn Cash!
               </h2>
               <p className='text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed'>
-                Give your friends fast 10-minute deliveries. Both of you receive <strong className='text-white'>₹5 instant cash</strong> in your wallet on their 1st qualifying order (min ₹149).
+                Give your friends fast 10-minute deliveries. Both of you receive <strong className='text-white'>50 Snapit Coins (₹1 instant cash)</strong> in your wallet on their 1st qualifying order (min ₹149).
               </p>
               <p className='text-[11px] text-emerald-200/90 font-semibold'>
-                Exchange Rate: 10 Snapit Coins = ₹1.00 Value
+                Exchange Rate: 50 Snapit Coins = ₹1.00 Value
               </p>
             </div>
 
@@ -318,9 +344,9 @@ export default function ReferAndEarn() {
                 03
               </div>
               <div>
-                <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Both Get ₹5 Cash</h4>
+                <h4 className='font-bold text-xs text-slate-900 dark:text-white'>Both Get ₹1 Cash</h4>
                 <p className='text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 leading-relaxed'>
-                  Instant ₹5 cash credited to both wallets (10 coins = ₹1).
+                  Instant ₹1 cash (50 coins) credited to both wallets (50 coins = ₹1).
                 </p>
               </div>
             </div>
@@ -399,13 +425,30 @@ export default function ReferAndEarn() {
                         </div>
                       </div>
 
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isAchieved
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                      }`}>
-                        {isAchieved ? 'Unlocked ✓' : `${Math.max(0, m.count - referralCount)} left`}
-                      </span>
+                      {isAchieved ? (
+                        m.count === 1 ? (
+                          <span className='text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white'>
+                            Auto-Credited ✓
+                          </span>
+                        ) : claimedMilestones.includes(m.count) ? (
+                          <span className='text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white'>
+                            Claimed ✓
+                          </span>
+                        ) : (
+                          <button
+                            type='button'
+                            onClick={() => handleClaimMilestone(m.count)}
+                            disabled={claimingMilestone === m.count}
+                            className='text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 transition active:scale-95 shadow-xs cursor-pointer'
+                          >
+                            {claimingMilestone === m.count ? 'Claiming…' : '🎁 Claim Perk'}
+                          </button>
+                        )
+                      ) : (
+                        <span className='text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'>
+                          {Math.max(0, m.count - referralCount)} left
+                        </span>
+                      )}
                     </div>
 
                     <div className='mt-3 pt-2.5 border-t border-slate-200/50 dark:border-slate-800/60 flex items-center justify-between text-[11px] font-bold'>
@@ -477,7 +520,7 @@ export default function ReferAndEarn() {
                         {f.hasOrdered ? (
                           <>
                             <FiCheckCircle size={10} />
-                            <span>₹5 Credited</span>
+                            <span>₹1 Credited</span>
                           </>
                         ) : (
                           <>
@@ -502,7 +545,7 @@ export default function ReferAndEarn() {
           </p>
           <ul className='list-disc pl-4 space-y-1'>
             <li>Cash reward is credited when your referred friend places their first successful order of ₹149 or more.</li>
-            <li>₹5 wallet cash is credited directly to both users' wallets. (Exchange rate: 10 Snapit Coins = ₹1).</li>
+            <li>₹1 wallet cash (50 Snapit Coins) is credited directly to both users' wallets. (Exchange rate: 50 Snapit Coins = ₹1).</li>
             <li>Self-referrals and duplicate device accounts are automatically detected and blocked to protect store integrity.</li>
           </ul>
         </div>

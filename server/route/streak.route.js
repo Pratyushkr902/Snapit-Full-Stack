@@ -156,4 +156,79 @@ streakRouter.post('/claim', auth, async (req, res) => {
     }
 });
 
+// POST /api/streak/convert-to-wallet - Convert Snapit Coins to Wallet Cash (10 coins = ₹0.10)
+streakRouter.post('/convert-to-wallet', auth, async (req, res) => {
+    try {
+        const user = await UserModel.findById(req.userId).select('coins walletBalance');
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const availableCoins = Math.max(0, Number(user.coins || 0));
+        let coinsToConvert = req.body?.coins
+            ? Math.floor(Number(req.body.coins) / 10) * 10
+            : Math.floor(availableCoins / 10) * 10;
+
+        if (coinsToConvert < 10) {
+            return res.status(400).json({
+                success: false,
+                message: 'At least 10 Snapit Coins required to convert to wallet cash (10 Coins = ₹0.10).'
+            });
+        }
+
+        if (coinsToConvert > availableCoins) {
+            return res.status(400).json({
+                success: false,
+                message: `Insufficient coins. You have ${availableCoins} coins available.`
+            });
+        }
+
+        // Conversion rate: 10 coins = ₹0.10 (₹0.01 per coin)
+        const cashAmount = Math.round((coinsToConvert / 10) * 0.10 * 100) / 100;
+        if (cashAmount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid conversion amount.'
+            });
+        }
+
+        const updatedUser = await UserModel.findOneAndUpdate(
+            { _id: req.userId, coins: { $gte: coinsToConvert } },
+            {
+                $inc: {
+                    coins: -coinsToConvert,
+                    walletBalance: cashAmount
+                },
+                $push: {
+                    walletTransactions: {
+                        type: 'credit',
+                        amount: cashAmount,
+                        description: `Converted ${coinsToConvert} Snapit Coins to Wallet Cash (10 Coins = ₹0.10)`,
+                        date: new Date()
+                    }
+                }
+            },
+            { new: true, select: 'walletBalance coins' }
+        );
+
+        if (!updatedUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'Coin conversion could not be completed. Please try again.'
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: `🎉 ₹${cashAmount.toFixed(2)} added to your wallet from ${coinsToConvert} Snapit Coins!`,
+            data: {
+                coins: updatedUser.coins || 0,
+                walletBalance: updatedUser.walletBalance || 0,
+                convertedCoins: coinsToConvert,
+                creditedAmount: cashAmount
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 export default streakRouter;

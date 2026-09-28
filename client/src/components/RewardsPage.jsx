@@ -13,7 +13,8 @@ import {
   FiCheck,
   FiLock
 } from 'react-icons/fi'
-import { FaCoins, FaFire } from 'react-icons/fa'
+import { FaCoins, FaFire, FaWallet } from 'react-icons/fa'
+import SummaryApi from '../common/SummaryApi'
 
 // ─────────────────────────────────────────────────────────────
 //  SNAPIT REWARDS PAGE
@@ -135,6 +136,7 @@ export default function RewardsPage() {
   const [streakAlive,    setStreakAlive]     = useState(false)
   const [orderedToday,   setOrderedToday]   = useState(false)
   const [claimingMs,     setClaimingMs]     = useState(null)
+  const [convertingCoins, setConvertingCoins] = useState(false)
   // ── Promo ────────────────────────────────────────────────────
   const [promoInput,   setPromoInput]   = useState('')
   const [promoResult,  setPromoResult]  = useState(null)   // { success, message, pct }
@@ -211,6 +213,32 @@ export default function RewardsPage() {
     }
   }
 
+  // ── Convert coins to real money in wallet (10 coins = ₹0.10) ────
+  const handleConvertCoins = async () => {
+    if (coins < 10 || convertingCoins) return
+    const coinsToConvert = Math.floor(coins / 10) * 10
+    const rupees = ((coinsToConvert / 10) * 0.10).toFixed(2)
+    setConvertingCoins(true)
+    try {
+      const res = await Axios({
+        url: SummaryApi.convertCoinsToWallet?.url || '/api/streak/convert-to-wallet',
+        method: SummaryApi.convertCoinsToWallet?.method || 'post',
+        data: { coins: coinsToConvert }
+      })
+      if (res.data?.success) {
+        toast.success(res.data?.message || `🎉 ₹${rupees} credited to your wallet!`)
+        setCoins(res.data.data?.coins ?? (coins - coinsToConvert))
+        if (fetchUser) fetchUser()
+      } else {
+        toast.error(res.data?.message || 'Coin conversion failed')
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to convert coins')
+    } finally {
+      setConvertingCoins(false)
+    }
+  }
+
   // ── Apply promo code ─────────────────────────────────────────
   const handlePromo = async () => {
     const code = promoInput.trim().toUpperCase()
@@ -283,17 +311,48 @@ export default function RewardsPage() {
             <span style={{ color:'rgba(255,255,255,.7)', fontSize:'14px', fontWeight:'700', marginBottom:'4px' }}>coins</span>
           </div>
           <p style={{ color:'rgba(255,255,255,.9)', fontSize:'12px', fontWeight:'700', margin:'8px 0 0' }}>
-            10 Snapit Coins = ₹1.00 Value • Redeemable at checkout on orders ₹199+
+            10 Snapit Coins = ₹0.10 Wallet Cash • Redeemable or Convertible to Wallet
           </p>
 
-          <div style={{ display:'flex', gap:'8px', marginTop:'14px', flexWrap:'wrap' }}>
-            <div style={{ background:'rgba(255,255,255,.15)', borderRadius:'50px', padding:'6px 14px', fontSize:'11px', fontWeight:'700', color:'#fef3c7', border:'1px solid rgba(255,255,255,.2)', display:'inline-flex', alignItems:'center', gap:'6px' }}>
-              <FiCalendar size={13} className='text-amber-200' />
-              <span>Check-in daily → +5 coins</span>
-            </div>
-            <div style={{ background:'rgba(255,255,255,.12)', borderRadius:'50px', padding:'6px 14px', fontSize:'11px', fontWeight:'700', color:'#fef3c7', border:'1px solid rgba(255,255,255,.15)', display:'inline-flex', alignItems:'center', gap:'6px' }}>
-              <FiShoppingBag size={13} className='text-amber-200' />
-              <span>Order → earn coins</span>
+          <div style={{ marginTop:'14px', display:'flex', flexWrap:'wrap', gap:'8px', alignItems:'center' }}>
+            {coins >= 10 ? (
+              <button
+                type='button'
+                onClick={handleConvertCoins}
+                disabled={convertingCoins}
+                style={{
+                  padding:'8px 16px',
+                  borderRadius:'14px',
+                  border:'none',
+                  background:'#fff',
+                  color:'#BA7517',
+                  fontSize:'12px',
+                  fontWeight:'800',
+                  cursor:'pointer',
+                  display:'inline-flex',
+                  alignItems:'center',
+                  gap:'6px',
+                  boxShadow:'0 3px 10px rgba(0,0,0,.18)',
+                  transition:'all .2s'
+                }}
+              >
+                <FaWallet size={12} />
+                <span>
+                  {convertingCoins
+                    ? 'Transferring…'
+                    : `Add ₹${((Math.floor(coins / 10) * 10) * 0.01).toFixed(2)} to Wallet (${Math.floor(coins / 10) * 10} Coins)`}
+                </span>
+              </button>
+            ) : (
+              <div style={{ fontSize:'11px', color:'rgba(255,255,255,.8)', fontWeight:'600', display:'inline-flex', alignItems:'center', gap:'5px' }}>
+                <FaWallet size={11} />
+                <span>Need 10+ coins to convert to wallet cash</span>
+              </div>
+            )}
+
+            <div style={{ background:'rgba(255,255,255,.15)', borderRadius:'50px', padding:'6px 12px', fontSize:'11px', fontWeight:'700', color:'#fef3c7', border:'1px solid rgba(255,255,255,.2)', display:'inline-flex', alignItems:'center', gap:'5px' }}>
+              <FiCalendar size={12} className='text-amber-200' />
+              <span>+5 coins/day</span>
             </div>
           </div>
         </div>

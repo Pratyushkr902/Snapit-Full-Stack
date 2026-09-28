@@ -381,6 +381,10 @@ const SummaryApi = {
         url: '/api/referral/first-order-bonus',
         method: 'post'
     },
+    claimReferralMilestone: {
+        url: '/api/referral/claim-milestone',
+        method: 'post'
+    },
     addReview: {
         url: '/api/review/add',
         method: 'post'
@@ -429,6 +433,10 @@ const SummaryApi = {
     },
     claimStreakMilestone: {
         url: '/api/streak/claim',
+        method: 'post'
+    },
+    convertCoinsToWallet: {
+        url: '/api/streak/convert-to-wallet',
         method: 'post'
     },
     validatePromo: {

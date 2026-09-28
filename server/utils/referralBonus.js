@@ -13,7 +13,7 @@
 import UserModel from '../models/user.model.js'
 import { normalizeEmail } from './emailNormalize.js'
 
-const REFERRAL_BONUS_AMOUNT = 5      // ₹5 wallet cash (50 coins at 10 coins = ₹1)
+const REFERRAL_BONUS_AMOUNT = 1      // ₹1 wallet cash (50 coins at 50 coins = ₹1)
 const MIN_ORDER_AMOUNT      = 149    // friend's order must be >= this
 
 export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
@@ -31,7 +31,7 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
         if (normalizeEmail(referrer.email) === normalizeEmail(user.email)) return
         if (referrer.mobile && user.mobile && String(referrer.mobile) === String(user.mobile)) return
 
-        // Credit the referrer (₹5 cash, unlimited per day)
+        // Credit the referrer (50 coins = ₹1 cash, unlimited per day)
         await UserModel.updateOne(
             { _id: referrer._id },
             {
@@ -40,14 +40,14 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
                     walletTransactions: {
                         type: 'credit',
                         amount: REFERRAL_BONUS_AMOUNT,
-                        description: `Referral bonus - ₹${REFERRAL_BONUS_AMOUNT} wallet credit for inviting ${user.name}!`,
+                        description: `Referral bonus - ₹${REFERRAL_BONUS_AMOUNT} (50 Coins) for inviting ${user.name}!`,
                         date: new Date()
                     }
                 }
             }
         )
 
-        // Credit the referred friend too (₹5 welcome bonus on 1st order >= ₹149)
+        // Credit the referred friend too (50 coins = ₹1 welcome bonus on 1st order >= ₹149)
         await UserModel.updateOne(
             { _id: user._id },
             {
@@ -56,7 +56,7 @@ export async function creditFirstOrderReferralBonus(userId, orderTotalAmt) {
                     walletTransactions: {
                         type: 'credit',
                         amount: REFERRAL_BONUS_AMOUNT,
-                        description: `Referral welcome bonus - ₹${REFERRAL_BONUS_AMOUNT} for your first order!`,
+                        description: `Referral welcome bonus - ₹${REFERRAL_BONUS_AMOUNT} (50 Coins) for your first order!`,
                         date: new Date()
                     }
                 },

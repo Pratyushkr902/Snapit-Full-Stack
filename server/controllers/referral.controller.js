@@ -4,7 +4,7 @@ import UserModel from "../models/user.model.js";
 export const getReferralInfo = async (request, response) => {
     try {
         let user = await UserModel.findById(request.userId)
-            .select('name email referralCode referralCount walletTransactions')
+            .select('name email referralCode referralCount walletTransactions claimedReferralMilestones')
             .lean();
         if (!user) {
             return response.status(404).json({ success: false, message: "User not found" });
@@ -37,8 +37,8 @@ export const getReferralInfo = async (request, response) => {
             name: f.name || 'Friend',
             joinedAt: f.createdAt,
             hasOrdered: Boolean(f.firstOrderBonusApplied),
-            earnedAmount: f.firstOrderBonusApplied ? 5 : 0,
-            statusText: f.firstOrderBonusApplied ? 'Completed (₹5 Credited)' : 'First Order Pending'
+            earnedAmount: f.firstOrderBonusApplied ? 1 : 0,
+            statusText: f.firstOrderBonusApplied ? 'Completed (₹1 Credited)' : 'First Order Pending'
         }));
 
         return response.json({
@@ -49,6 +49,7 @@ export const getReferralInfo = async (request, response) => {
                 referralCount: Math.max(user.referralCount || 0, friendsDocs.length),
                 totalEarned,
                 referredFriends,
+                claimedReferralMilestones: user.claimedReferralMilestones || [],
                 referralLink: `https://snapit.pages.dev/#/register?ref=${referralCode}`,
             }
         });
@@ -67,5 +68,94 @@ export const applyFirstOrderBonus = async (request, response) => {
         });
     } catch (error) {
         return response.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Claim milestone perk (5 friends -> ₹5, 10 friends -> ₹7, 25 friends -> Snapit Plus VIP)
+export const claimReferralMilestone = async (request, response) => {
+    try {
+        const milestone = Number(request.body.milestone);
+        if (![5, 10, 25].includes(milestone)) {
+            return response.status(400).json({ success: false, message: "Invalid milestone level" });
+        }
+
+        const user = await UserModel.findById(request.userId);
+        if (!user) return response.status(404).json({ success: false, message: "User not found" });
+
+        // Qualifying referred friends count
+        const friendsCount = await UserModel.countDocuments({ referredBy: user.referralCode });
+        const effectiveCount = Math.max(Number(user.referralCount) || 0, friendsCount);
+
+        if (effectiveCount < milestone) {
+            return response.status(400).json({
+                success: false,
+                message: `You need at least ${milestone} referred friends to unlock this tier (Current: ${effectiveCount}).`
+            });
+        }
+
+        if (user.claimedReferralMilestones?.includes(milestone)) {
+            return response.status(400).json({
+                success: false,
+                message: "You have already claimed the reward for this tier."
+            });
+        }
+
+        let updateQuery = {
+            $addToSet: { claimedReferralMilestones: milestone }
+        };
+        let successMessage = "";
+
+        if (milestone === 5) {
+            updateQuery.$inc = { walletBalance: 5 };
+            updateQuery.$push = {
+                walletTransactions: {
+                    type: 'credit',
+                    amount: 5,
+                    description: 'Bronze Ambassador Perk - ₹5 Wallet Bonus (5 Friends)',
+                    date: new Date()
+                }
+            };
+            successMessage = "🎉 ₹5 Bronze Ambassador bonus credited to your wallet!";
+        } else if (milestone === 10) {
+            updateQuery.$inc = { walletBalance: 7 };
+            updateQuery.$push = {
+                walletTransactions: {
+                    type: 'credit',
+                    amount: 7,
+                    description: 'Silver Ambassador Perk - ₹7 Wallet Bonus (10 Friends)',
+                    date: new Date()
+                }
+            };
+            successMessage = "🎉 ₹7 Silver Ambassador bonus credited to your wallet!";
+        } else if (milestone === 25) {
+            const currentExpiry = user.snapitPlusExpiresAt && new Date(user.snapitPlusExpiresAt) > new Date()
+                ? new Date(user.snapitPlusExpiresAt)
+                : new Date();
+            const newExpiry = new Date(currentExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+            updateQuery.$set = {
+                isSnapitPlusMember: true,
+                snapitPlusExpiresAt: newExpiry
+            };
+            successMessage = "👑 Legend Ambassador Perk - Snapit Plus VIP unlocked for 30 Days!";
+        }
+
+        const updatedUser = await UserModel.findByIdAndUpdate(request.userId, updateQuery, {
+            new: true,
+            select: 'walletBalance isSnapitPlusMember snapitPlusExpiresAt claimedReferralMilestones'
+        });
+
+        return response.json({
+            success: true,
+            message: successMessage,
+            data: {
+                claimedReferralMilestones: updatedUser.claimedReferralMilestones || [],
+                walletBalance: updatedUser.walletBalance || 0,
+                isSnapitPlusMember: updatedUser.isSnapitPlusMember,
+                snapitPlusExpiresAt: updatedUser.snapitPlusExpiresAt
+            }
+        });
+    } catch (error) {
+        console.error('[claimReferralMilestone]', error.message);
+        return response.status(500).json({ success: false, message: error.message || "Failed to claim tier perk" });
     }
 };

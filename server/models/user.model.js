@@ -151,6 +151,10 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    claimedReferralMilestones: {
+        type: [Number],
+        default: []
+    },
     currentStreak: {
         type: Number,
         default: 0

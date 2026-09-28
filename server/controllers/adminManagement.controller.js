@@ -220,7 +220,7 @@ export async function listReferralsController(request, response) {
             const code = (r.referralCode || '').trim().toUpperCase()
             const invited = referredByCode[code] || []
             const earned = (r.walletTransactions || [])
-                .filter(t => t.type === 'credit' && (t.description || '').toLowerCase().includes('referral'))
+                .filter(t => String(t.type || '').toUpperCase() === 'CREDIT' && /referral/i.test(String(t.description || '')))
                 .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
             return {

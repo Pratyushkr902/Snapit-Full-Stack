@@ -41,6 +41,7 @@ export default function StreakTracker({ isCardOnly = false }) {
   const [loading, setLoading] = useState(true)
   const [claimingMilestone, setClaimingMilestone] = useState(null)
   const [checkingIn, setCheckingIn] = useState(false)
+  const [convertingCoins, setConvertingCoins] = useState(false)
 
   // Fetch streak & rewards telemetry
   const fetchStreakData = async () => {
@@ -193,6 +194,38 @@ export default function StreakTracker({ isCardOnly = false }) {
     }
   }
 
+  // Convert loyalty coins to real wallet cash (10 coins = ₹0.10)
+  const handleConvertCoins = async () => {
+    if (coins < 10 || convertingCoins) return
+    try { haptic.selection() } catch {}
+    const coinsToConvert = Math.floor(coins / 10) * 10
+    const rupees = ((coinsToConvert / 10) * 0.10).toFixed(2)
+    setConvertingCoins(true)
+    try {
+      const res = await Axios({
+        url: SummaryApi.convertCoinsToWallet?.url || '/api/streak/convert-to-wallet',
+        method: SummaryApi.convertCoinsToWallet?.method || 'post',
+        data: { coins: coinsToConvert }
+      })
+      if (res.data?.success) {
+        try { haptic.success() } catch {}
+        toast.success(res.data.message || `🎉 ₹${rupees} added to your wallet!`)
+        setCoins(res.data.data?.coins ?? (coins - coinsToConvert))
+        setWalletBalance(res.data.data?.walletBalance ?? (walletBalance + Number(rupees)))
+        try {
+          const userRes = await Axios({ url: '/api/user/user-details', method: 'get' })
+          if (userRes.data?.success) dispatch(setUserDetails(userRes.data.data))
+        } catch (_) {}
+      } else {
+        toast.error(res.data?.message || 'Coin conversion failed')
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to convert coins')
+    } finally {
+      setConvertingCoins(false)
+    }
+  }
+
   // Embeddable Card content
   const cardBody = (
     <div className='space-y-4'>
@@ -210,7 +243,7 @@ export default function StreakTracker({ isCardOnly = false }) {
               <span>Daily Order Streak</span>
             </span>
 
-            <div className='flex items-center gap-2'>
+            <div className='flex items-center gap-2 flex-wrap'>
               {/* Snapit Loyalty Coins */}
               <div
                 className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/25 backdrop-blur-md text-xs font-black text-amber-200 border border-white/15 shadow-xs'
@@ -218,8 +251,21 @@ export default function StreakTracker({ isCardOnly = false }) {
               >
                 <FaCoins size={12} className='text-amber-300' />
                 <span>{coins.toLocaleString('en-IN')} Coins</span>
-                <span className='text-[10px] text-amber-300/80 font-bold'>(10 = ₹1)</span>
+                <span className='text-[10px] text-amber-300/80 font-bold'>(10 = ₹0.10)</span>
               </div>
+
+              {coins >= 10 && (
+                <button
+                  type='button'
+                  onClick={handleConvertCoins}
+                  disabled={convertingCoins}
+                  className='inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] font-black shadow-xs transition active:scale-95 cursor-pointer'
+                  title='Convert Coins to Real Wallet Cash'
+                >
+                  <FaWallet size={10} />
+                  <span>{convertingCoins ? 'Adding…' : `+₹${((Math.floor(coins / 10) * 10) * 0.01).toFixed(2)} to Wallet`}</span>
+                </button>
+              )}
 
               {/* Real Money Wallet Link */}
               <Link
@@ -582,7 +628,7 @@ export default function StreakTracker({ isCardOnly = false }) {
           <li>Place at least 1 order each calendar day to maintain and increment your streak.</li>
           <li>Check in daily to collect free Snapit Loyalty Coins (+5 coins every day).</li>
           <li>Reach 3, 7, 14, and 30-day milestones to unlock exclusive streak badges and bonus coins!</li>
-          <li>Redeem coins for instant discount at checkout: 10 coins = ₹1 discount on orders ₹199+ (up to ₹10 off).</li>
+          <li>Redeem coins for instant discount at checkout (10 coins = ₹1 on ₹199+), or convert 10 coins to ₹0.10 wallet cash!</li>
           <li>Streak counts reset if a full calendar day passes without any orders.</li>
         </ul>
       </div>
