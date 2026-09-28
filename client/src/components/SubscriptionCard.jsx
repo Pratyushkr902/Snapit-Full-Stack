@@ -143,7 +143,7 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
             <span>🚀 Free Delivery (₹99+)</span>
           </div>
           <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
-            <span>💰 5% Cashbacks</span>
+            <span>💰 1% Cashback</span>
           </div>
           <div className='flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-amber-200/40 dark:border-amber-800/30'>
             <span>⚡ Priority Pack</span>
@@ -197,7 +197,7 @@ export default function SubscriptionCard({ subscription, onUpdate }) {
                   Cancel Snapit Plus VIP?
                 </h3>
                 <p className='text-xs text-slate-500 dark:text-slate-400 leading-relaxed'>
-                  Are you sure you want to cancel your VIP membership? You will lose free delivery on orders ₹99+, 5% cashback on all groceries, and priority VIP support immediately.
+                  Are you sure you want to cancel your VIP membership? You will lose free delivery on orders ₹99+, 1% cashback on all groceries, and priority VIP support immediately.
                 </p>
               </div>
 

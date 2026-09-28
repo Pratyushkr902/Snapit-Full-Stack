@@ -2500,3 +2500,46 @@ export const settleCashController = async (req, res) => {
         return res.status(500).json({ message: 'Settlement failed.', error: true, success: false })
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RATE ORDER DELIVERY
+// ─────────────────────────────────────────────────────────────────────────────
+export const rateOrderDeliveryController = async (request, response) => {
+    try {
+        const { orderId, rating, feedback } = request.body
+        const numRating = Number(rating)
+        if (!numRating || numRating < 1 || numRating > 5) {
+            return response.status(400).json({ success: false, message: 'Rating must be between 1 and 5 stars' })
+        }
+
+        const isHexId = mongoose.Types.ObjectId.isValid(orderId)
+        const order = await OrderModel.findOne({
+            $or: [
+                { orderId },
+                ...(isHexId ? [{ _id: orderId }] : [])
+            ],
+            userId: request.userId,
+            delivery_status: 'Delivered'
+        })
+
+        if (!order) {
+            return response.status(404).json({ success: false, message: 'Delivered order not found or unauthorized' })
+        }
+
+        order.deliveryRating = {
+            rating: numRating,
+            feedback: String(feedback || '').trim(),
+            ratedAt: new Date()
+        }
+        await order.save()
+
+        return response.json({
+            success: true,
+            message: 'Thank you for rating your delivery! ⭐',
+            data: order.deliveryRating
+        })
+    } catch (err) {
+        console.error('rateOrderDeliveryController error:', err.message)
+        return response.status(500).json({ success: false, message: err.message })
+    }
+}

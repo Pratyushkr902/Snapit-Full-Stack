@@ -255,6 +255,21 @@ const MyOrders = () => {
                     )}
 
                     {order.delivery_status === 'Delivered' && (
+                      order.deliveryRating?.rating ? (
+                        <span className='px-3 py-2.5 rounded-xl text-xs font-black bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center gap-1 shadow-xs'>
+                          ⭐ {order.deliveryRating.rating}/5 Rated
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => navigate(`/dashboard/order-tracking/${order.orderId}`)}
+                          className='flex-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-xs'
+                        >
+                          ⭐ Rate Delivery
+                        </button>
+                      )
+                    )}
+
+                    {order.delivery_status === 'Delivered' && (
                       alreadyRefunded(order._id) ? (
                         <span className='flex-1 text-center py-2.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200'>
                           ✅ Refund Submitted

@@ -193,6 +193,13 @@ const orderSchema = new mongoose.Schema(
             longitude:  { type: Number,  default: null },
             isUploaded: { type: Boolean, default: false }, // false = rider skipped (not allowed)
         },
+
+        // ── Delivery Feedback / Rating ────────────────────────────────
+        deliveryRating: {
+            rating:   { type: Number, min: 1, max: 5, default: null },
+            feedback: { type: String, default: "" },
+            ratedAt:  { type: Date,   default: null }
+        },
         // ─────────────────────────────────────────────────────────────
     },
     { timestamps: true }

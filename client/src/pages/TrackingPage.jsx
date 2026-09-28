@@ -94,6 +94,11 @@ const TrackingPage = () => {
   const [cancelling, setCancelling]           = useState(false)
   const [cancelSecondsLeft, setCancelSecondsLeft] = useState(null)
 
+  // ── Delivery rating state ──
+  const [selectedRating, setSelectedRating]   = useState(5)
+  const [ratingFeedback, setRatingFeedback]   = useState('')
+  const [ratingSubmitting, setRatingSubmitting] = useState(false)
+
   // ── 60-Second cancellation window countdown (Zepto / Blinkit) ─
   useEffect(() => {
     if (!order?.createdAt || order.delivery_status !== 'Pending' || (order.seller_status && order.seller_status !== 'Pending')) {
@@ -151,6 +156,42 @@ const TrackingPage = () => {
       toast.error(err?.response?.data?.message || 'Error cancelling order')
     } finally {
       setCancelling(false)
+    }
+  }
+
+  // ── Delivery rating handler ──────────────────────────────────
+  const handleRateDelivery = async () => {
+    if (!selectedRating || selectedRating < 1 || selectedRating > 5) {
+      return toast.error('Please select a star rating')
+    }
+    try {
+      setRatingSubmitting(true)
+      const res = await Axios({
+        ...SummaryApi.rateDelivery,
+        data: {
+          orderId: order?.orderId || order?._id,
+          rating: selectedRating,
+          feedback: ratingFeedback.trim()
+        }
+      })
+      if (res.data.success) {
+        haptic.success ? haptic.success() : haptic()
+        toast.success(res.data.message || 'Thanks for rating!')
+        setOrder(prev => prev ? ({
+          ...prev,
+          deliveryRating: {
+            rating: selectedRating,
+            feedback: ratingFeedback.trim(),
+            ratedAt: new Date()
+          }
+        }) : prev)
+      } else {
+        toast.error(res.data.message || 'Could not save rating')
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Error submitting rating')
+    } finally {
+      setRatingSubmitting(false)
     }
   }
 
@@ -534,6 +575,103 @@ const TrackingPage = () => {
           <span>Share</span>
         </button>
       </div>
+
+      {/* Delivery Rating Card (When Delivered) */}
+      {order.delivery_status === 'Delivered' && (
+        <div className='bg-white mx-4 mt-3 rounded-2xl p-4 shadow-sm border border-slate-100'>
+          <div className='flex items-center justify-between mb-3'>
+            <div>
+              <h3 className='font-black text-slate-800 text-sm uppercase tracking-wider'>
+                {order.deliveryRating?.rating ? 'Your Delivery Rating' : 'Rate Your Delivery'}
+              </h3>
+              <p className='text-xs text-slate-500 mt-0.5'>
+                {order.deliveryRating?.rating
+                  ? 'Thank you! Your feedback helps us improve rider service.'
+                  : `How was your delivery by ${order.rider_name || 'Snapit Rider'}?`}
+              </p>
+            </div>
+            <span className='text-2xl'>⭐</span>
+          </div>
+
+          {order.deliveryRating?.rating ? (
+            <div className='bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <div className='flex items-center text-amber-500 text-lg'>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <span key={s}>{s <= order.deliveryRating.rating ? '★' : '☆'}</span>
+                  ))}
+                </div>
+                <span className='font-black text-slate-800 text-sm'>
+                  {order.deliveryRating.rating}/5
+                </span>
+              </div>
+              {order.deliveryRating.feedback && (
+                <p className='text-xs text-slate-600 font-medium italic truncate max-w-[180px]'>
+                  &ldquo;{order.deliveryRating.feedback}&rdquo;
+                </p>
+              )}
+            </div>
+          ) : (
+            <div>
+              {/* Star selector */}
+              <div className='flex items-center justify-center gap-3 py-2'>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type='button'
+                    onClick={() => {
+                      haptic.light ? haptic.light() : haptic()
+                      setSelectedRating(star)
+                    }}
+                    className={`text-3xl transition-transform active:scale-125 cursor-pointer ${
+                      star <= selectedRating ? 'text-amber-400 scale-110' : 'text-slate-200'
+                    }`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+
+              {/* Feedback quick chips */}
+              <div className='flex flex-wrap gap-1.5 justify-center my-3'>
+                {['⚡ Lightning fast', '😊 Friendly rider', '📦 Perfect packaging', '🍎 Fresh items'].map((chip) => (
+                  <button
+                    key={chip}
+                    type='button'
+                    onClick={() => setRatingFeedback(chip)}
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all ${
+                      ratingFeedback === chip
+                        ? 'bg-amber-100 border-amber-400 text-amber-900'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+
+              {/* Optional comments input */}
+              <input
+                type='text'
+                placeholder='Leave a note for the rider (optional)...'
+                value={ratingFeedback}
+                onChange={(e) => setRatingFeedback(e.target.value)}
+                maxLength={200}
+                className='w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-amber-400 mb-3'
+              />
+
+              <button
+                type='button'
+                disabled={ratingSubmitting}
+                onClick={handleRateDelivery}
+                className='w-full bg-amber-500 hover:bg-amber-600 text-white font-black text-xs py-2.5 rounded-xl active:scale-95 transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer'
+              >
+                {ratingSubmitting ? 'Saving...' : 'Submit Rating ⭐'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Order Summary */}
       <div className='bg-white mx-4 mt-3 rounded-2xl p-4 shadow-sm border border-slate-100 mb-6'>

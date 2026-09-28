@@ -103,19 +103,22 @@ const PLUS_FEATURES = [
 // ─── Main Component ────────────────────────────────────────────────────────────
 const Wallet = () => {
   const navigate = useNavigate()
-  const [balance,      setBalance]      = useState(0)
-  const [transactions, setTransactions] = useState([])
-  const [amount,       setAmount]       = useState('')
-  const [loading,      setLoading]      = useState(false)
-  const [fetching,     setFetching]     = useState(true)
-  const [tab,          setTab]          = useState('add')   // 'add' | 'plus' | 'history'
-  const [upiId,        setUpiId]        = useState('')
-  const [withdrawing,  setWithdrawing]  = useState(false)
-  const [razorKey,     setRazorKey]     = useState('')
-  const [plusLoading,  setPlusLoading]  = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState('monthly')
-  const [isPlusMember, setIsPlusMember] = useState(false)
-  const [plusExpiry,   setPlusExpiry]   = useState(null)
+  const [balance,          setBalance]          = useState(0)
+  const [coins,            setCoins]            = useState(0)
+  const [transactions,     setTransactions]     = useState([])
+  const [coinTransactions, setCoinTransactions] = useState([])
+  const [historyType,      setHistoryType]      = useState('cash') // 'cash' | 'coins'
+  const [amount,           setAmount]           = useState('')
+  const [loading,          setLoading]          = useState(false)
+  const [fetching,         setFetching]         = useState(true)
+  const [tab,              setTab]              = useState('add')   // 'add' | 'plus' | 'history'
+  const [upiId,            setUpiId]            = useState('')
+  const [withdrawing,      setWithdrawing]      = useState(false)
+  const [razorKey,         setRazorKey]         = useState('')
+  const [plusLoading,      setPlusLoading]      = useState(false)
+  const [selectedPlan,     setSelectedPlan]     = useState('monthly')
+  const [isPlusMember,     setIsPlusMember]     = useState(false)
+  const [plusExpiry,       setPlusExpiry]       = useState(null)
   const user = useSelector(state => state.user)
   const userRole = (user?.role || '').replace(/['"]/g, '').trim().toUpperCase()
   const canWithdraw = ['RIDER', 'SELLER', 'RESTO_SELLER', 'ADMIN', 'SUPER_ADMIN'].includes(userRole)
@@ -127,7 +130,9 @@ const Wallet = () => {
       const res = await Axios({ url: '/api/wallet/get', method: 'get' })
       if (res.data.success) {
         setBalance(res.data.data.balance)
+        setCoins(res.data.data.coins || 0)
         setTransactions(res.data.data.transactions || [])
+        setCoinTransactions(res.data.data.coinTransactions || [])
       }
     } catch (err) {
       console.error('Wallet fetch:', err?.response?.data)
@@ -160,7 +165,7 @@ const Wallet = () => {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const numAmount   = Number(amount)
-  const bonus       = numAmount >= 500 ? Math.floor(numAmount * 0.05) : 0
+  const bonus       = numAmount >= 500 ? Math.floor(numAmount * 0.01) : 0
   const total       = numAmount + bonus
   const thisMonth   = new Date().getMonth()
   const monthlySpend = transactions
@@ -419,9 +424,16 @@ const Wallet = () => {
             )}
           </div>
 
-          <div style={{ display:'flex', gap:'8px', marginTop:'12px', flexWrap:'wrap' }}>
+          <div style={{ display:'flex', gap:'8px', marginTop:'12px', flexWrap:'wrap', alignItems:'center' }}>
             <div style={{ background:'rgba(255,255,255,.15)', borderRadius:'50px', padding:'5px 12px', fontSize:'11px', fontWeight:'700', border:'1px solid rgba(255,255,255,.2)' }}>
               📉 This month: ₹{monthlySpend.toLocaleString('en-IN')} spent
+            </div>
+            <div 
+              onClick={() => { setTab('history'); setHistoryType('coins'); }}
+              style={{ background:'rgba(234,179,8,.25)', borderRadius:'50px', padding:'5px 12px', fontSize:'11px', fontWeight:'700', border:'1px solid rgba(234,179,8,.4)', color:'#fef08a', cursor:'pointer' }}
+              title="View coins ledger"
+            >
+              🪙 {Number(coins).toLocaleString('en-IN')} Coins
             </div>
             {isPlusMember && plusExpiry && (
               <div style={{ background:'rgba(234,179,8,.3)', borderRadius:'50px', padding:'5px 12px', fontSize:'11px', fontWeight:'700', border:'1px solid rgba(234,179,8,.4)', color:'#fef08a' }}>
@@ -474,7 +486,7 @@ const Wallet = () => {
                   <div style={{ background:'#f0fdf4', border:'1px dashed #22c55e', borderRadius:'12px', padding:'10px 14px', display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
                     <span style={{ fontSize:'18px' }}>⚡</span>
                     <div>
-                      <p style={{ color:'#15803d', fontSize:'13px', fontWeight:'700', margin:0 }}>5% Bonus Applied!</p>
+                      <p style={{ color:'#15803d', fontSize:'13px', fontWeight:'700', margin:0 }}>1% Bonus Applied!</p>
                       <p style={{ color:'#16a34a', fontSize:'12px', margin:'2px 0 0' }}>₹{numAmount} + ₹{bonus} bonus = <strong>₹{total} total</strong></p>
                     </div>
                   </div>
@@ -485,7 +497,7 @@ const Wallet = () => {
                 </button>
 
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px' }}>
-                  {[{label:'Add ₹100',value:100},{label:'Add ₹200',value:200},{label:'₹500 +5%',value:500}].map(item => (
+                  {[{label:'Add ₹100',value:100},{label:'Add ₹200',value:200},{label:'₹500 +1%',value:500}].map(item => (
                     <button key={item.value} className="w-preset" onClick={() => handleAddMoney(item.value)} disabled={loading} style={{ fontSize:'12px', padding:'11px 4px' }}>
                       {item.label}
                     </button>
@@ -637,54 +649,137 @@ const Wallet = () => {
             {/* ── HISTORY ── */}
             {tab === 'history' && (
               <div>
-                {transactions.length === 0 ? (
-                  <div style={{ textAlign:'center', padding:'36px 0' }}>
-                    <div style={{ fontSize:'44px', marginBottom:'10px', opacity:.35 }}>🏜️</div>
-                    <p style={{ color:'#94a3b8', fontSize:'14px', fontWeight:'700' }}>No transactions yet</p>
-                    <p style={{ color:'#cbd5e1', fontSize:'12px', fontWeight:'600' }}>Add money to get started</p>
-                  </div>
+                {/* Ledger Toggle: Cash vs Coins */}
+                <div style={{ display:'flex', background:'#f1f5f9', borderRadius:'14px', padding:'4px', marginBottom:'16px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryType('cash')}
+                    style={{
+                      flex:1, padding:'8px 10px', borderRadius:'10px', border:'none',
+                      background: historyType==='cash' ? '#fff' : 'transparent',
+                      fontWeight:'800', fontSize:'12px',
+                      color: historyType==='cash' ? '#0f172a' : '#64748b',
+                      boxShadow: historyType==='cash' ? '0 2px 6px rgba(0,0,0,.08)' : 'none',
+                      cursor:'pointer', transition:'all .15s', fontFamily:'Sora,sans-serif'
+                    }}
+                  >
+                    💵 Wallet Cash ({transactions.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryType('coins')}
+                    style={{
+                      flex:1, padding:'8px 10px', borderRadius:'10px', border:'none',
+                      background: historyType==='coins' ? '#fff' : 'transparent',
+                      fontWeight:'800', fontSize:'12px',
+                      color: historyType==='coins' ? '#d97706' : '#64748b',
+                      boxShadow: historyType==='coins' ? '0 2px 6px rgba(0,0,0,.08)' : 'none',
+                      cursor:'pointer', transition:'all .15s', fontFamily:'Sora,sans-serif'
+                    }}
+                  >
+                    🪙 Snapit Coins ({coinTransactions.length})
+                  </button>
+                </div>
+
+                {historyType === 'cash' ? (
+                  transactions.length === 0 ? (
+                    <div style={{ textAlign:'center', padding:'36px 0' }}>
+                      <div style={{ fontSize:'44px', marginBottom:'10px', opacity:.35 }}>🏜️</div>
+                      <p style={{ color:'#94a3b8', fontSize:'14px', fontWeight:'700' }}>No cash transactions yet</p>
+                      <p style={{ color:'#cbd5e1', fontSize:'12px', fontWeight:'600' }}>Add money to get started</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display:'flex', gap:'8px', marginBottom:'14px' }}>
+                        <div style={{ flex:1, background:'#f0fdf4', borderRadius:'12px', padding:'10px', textAlign:'center' }}>
+                          <p style={{ fontSize:'10px', color:'#166534', fontWeight:'700', margin:'0 0 2px' }}>ADDED</p>
+                          <p style={{ fontSize:'15px', fontWeight:'900', color:'#16a34a', margin:0 }}>
+                            ₹{transactions.filter(t=>t.type==='credit').reduce((s,t)=>s+t.amount,0).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                        <div style={{ flex:1, background:'#fef2f2', borderRadius:'12px', padding:'10px', textAlign:'center' }}>
+                          <p style={{ fontSize:'10px', color:'#991b1b', fontWeight:'700', margin:'0 0 2px' }}>SPENT</p>
+                          <p style={{ fontSize:'15px', fontWeight:'900', color:'#ef4444', margin:0 }}>
+                            ₹{transactions.filter(t=>t.type==='debit').reduce((s,t)=>s+t.amount,0).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+
+                      {transactions.map((txn, i) => (
+                        <div key={i} className="txn-row">
+                          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                            <div style={{
+                              width:'38px', height:'38px', borderRadius:'12px', flexShrink:0,
+                              background: txn.type==='credit' ? '#dcfce7' : '#fee2e2',
+                              display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px'
+                            }}>
+                              {txn.type==='credit' ? '💰' : '🛒'}
+                            </div>
+                            <div>
+                              <p style={{ fontSize:'12px', fontWeight:'700', color:'#1e293b', margin:'0 0 2px' }}>{txn.description}</p>
+                              <p style={{ fontSize:'11px', color:'#94a3b8', fontWeight:'600', margin:0 }}>
+                                {new Date(txn.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}
+                                {' · '}
+                                {new Date(txn.date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
+                              </p>
+                            </div>
+                          </div>
+                          <span style={{ fontWeight:'800', fontSize:'14px', color:txn.type==='credit'?'#16a34a':'#ef4444', flexShrink:0, marginLeft:'8px' }}>
+                            {txn.type==='credit'?'+':'-'}₹{Number(txn.amount).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )
                 ) : (
-                  <>
-                    <div style={{ display:'flex', gap:'8px', marginBottom:'14px' }}>
-                      <div style={{ flex:1, background:'#f0fdf4', borderRadius:'12px', padding:'10px', textAlign:'center' }}>
-                        <p style={{ fontSize:'10px', color:'#166534', fontWeight:'700', margin:'0 0 2px' }}>ADDED</p>
-                        <p style={{ fontSize:'15px', fontWeight:'900', color:'#16a34a', margin:0 }}>
-                          ₹{transactions.filter(t=>t.type==='credit').reduce((s,t)=>s+t.amount,0).toLocaleString('en-IN')}
-                        </p>
+                  /* Coins Ledger */
+                  <div>
+                    <div style={{ background:'linear-gradient(135deg,#fefce8,#fef9c3)', border:'1px solid #fde047', borderRadius:'14px', padding:'12px 14px', marginBottom:'14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                      <div>
+                        <p style={{ fontSize:'10px', fontWeight:'800', color:'#854d0e', textTransform:'uppercase', margin:'0 0 2px', letterSpacing:'.5px' }}>Current Balance</p>
+                        <p style={{ fontSize:'18px', fontWeight:'900', color:'#b45309', margin:0 }}>🪙 {Number(coins).toLocaleString('en-IN')} Snapit Coins</p>
                       </div>
-                      <div style={{ flex:1, background:'#fef2f2', borderRadius:'12px', padding:'10px', textAlign:'center' }}>
-                        <p style={{ fontSize:'10px', color:'#991b1b', fontWeight:'700', margin:'0 0 2px' }}>SPENT</p>
-                        <p style={{ fontSize:'15px', fontWeight:'900', color:'#ef4444', margin:0 }}>
-                          ₹{transactions.filter(t=>t.type==='debit').reduce((s,t)=>s+t.amount,0).toLocaleString('en-IN')}
-                        </p>
-                      </div>
+                      <button
+                        onClick={() => navigate('/rewards')}
+                        style={{ background:'#eab308', color:'#fff', border:'none', borderRadius:'10px', padding:'7px 12px', fontSize:'11px', fontWeight:'800', cursor:'pointer' }}
+                      >
+                        Earn More ✨
+                      </button>
                     </div>
 
-                    {transactions.map((txn, i) => (
-                      <div key={i} className="txn-row">
-                        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                          <div style={{
-                            width:'38px', height:'38px', borderRadius:'12px', flexShrink:0,
-                            background: txn.type==='credit' ? '#dcfce7' : '#fee2e2',
-                            display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px'
-                          }}>
-                            {txn.type==='credit' ? '💰' : '🛒'}
-                          </div>
-                          <div>
-                            <p style={{ fontSize:'12px', fontWeight:'700', color:'#1e293b', margin:'0 0 2px' }}>{txn.description}</p>
-                            <p style={{ fontSize:'11px', color:'#94a3b8', fontWeight:'600', margin:0 }}>
-                              {new Date(txn.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}
-                              {' · '}
-                              {new Date(txn.date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
-                            </p>
-                          </div>
-                        </div>
-                        <span style={{ fontWeight:'800', fontSize:'14px', color:txn.type==='credit'?'#16a34a':'#ef4444', flexShrink:0, marginLeft:'8px' }}>
-                          {txn.type==='credit'?'+':'-'}₹{Number(txn.amount).toLocaleString('en-IN')}
-                        </span>
+                    {coinTransactions.length === 0 ? (
+                      <div style={{ textAlign:'center', padding:'36px 0' }}>
+                        <div style={{ fontSize:'44px', marginBottom:'10px', opacity:.4 }}>🪙</div>
+                        <p style={{ color:'#94a3b8', fontSize:'14px', fontWeight:'700' }}>No coin activity yet</p>
+                        <p style={{ color:'#cbd5e1', fontSize:'12px', fontWeight:'600' }}>Earn coins by checking in daily or referring friends!</p>
                       </div>
-                    ))}
-                  </>
+                    ) : (
+                      coinTransactions.map((c, i) => (
+                        <div key={i} className="txn-row">
+                          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                            <div style={{
+                              width:'38px', height:'38px', borderRadius:'12px', flexShrink:0,
+                              background: c.type==='credit' ? '#fef3c7' : '#fee2e2',
+                              display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px'
+                            }}>
+                              {c.type==='credit' ? '🪙' : '🛍️'}
+                            </div>
+                            <div>
+                              <p style={{ fontSize:'12px', fontWeight:'700', color:'#1e293b', margin:'0 0 2px' }}>{c.description}</p>
+                              <p style={{ fontSize:'11px', color:'#94a3b8', fontWeight:'600', margin:0 }}>
+                                {new Date(c.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}
+                                {' · '}
+                                {new Date(c.date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
+                              </p>
+                            </div>
+                          </div>
+                          <span style={{ fontWeight:'800', fontSize:'14px', color:c.type==='credit'?'#d97706':'#ef4444', flexShrink:0, marginLeft:'8px' }}>
+                            {c.type==='credit'?'+':'-'}{c.coins} Coins
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
               </div>
             )}

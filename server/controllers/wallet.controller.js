@@ -1,13 +1,14 @@
 import UserModel from '../models/user.model.js'
 import WithdrawalModel from '../models/withdrawal.model.js'
 import WalletModel from '../models/wallet.model.js'
+import OrderModel from '../models/order.model.js'
 
 // --- 1. Get Wallet Balance and Transactions ---
 export async function getWallet(req, res) {
     try {
         // Ensure req.userId exists (passed from auth middleware)
         const user = await UserModel.findById(req.userId)
-            .select('walletBalance walletTransactions')
+            .select('walletBalance walletTransactions coins checkinHistory')
 
         if (!user) {
             return res.status(404).json({
@@ -16,14 +17,65 @@ export async function getWallet(req, res) {
             })
         }
 
+        // Build structured coin history
+        const coinTransactions = (user.checkinHistory || []).map(d => ({
+            type: 'credit',
+            coins: 10,
+            description: 'Daily Check-in Reward (10 Coins)',
+            date: d
+        }))
+
+        // Include referral and milestone bonuses
+        for (const t of (user.walletTransactions || [])) {
+            const desc = String(t.description || '')
+            if (/coins/i.test(desc) || /referral/i.test(desc) || /milestone/i.test(desc)) {
+                let coinVal = 50
+                const match = desc.match(/(\d+)\s*(?:snapit\s*)?coins/i)
+                if (match) {
+                    coinVal = parseInt(match[1], 10)
+                } else if (/milestone/i.test(desc)) {
+                    coinVal = Math.round(Number(t.amount || 0) * 50)
+                }
+                coinTransactions.push({
+                    type: t.type === 'debit' ? 'debit' : 'credit',
+                    coins: coinVal,
+                    description: t.description,
+                    date: t.date
+                })
+            }
+        }
+
+        // Include coin redemptions from orders
+        try {
+            const orderRedemptions = await OrderModel.find({
+                userId: req.userId,
+                coins_redeemed: { $gt: 0 }
+            }).select('orderId coins_redeemed createdAt').sort({ createdAt: -1 }).limit(20)
+
+            for (const ord of orderRedemptions) {
+                coinTransactions.push({
+                    type: 'debit',
+                    coins: ord.coins_redeemed,
+                    description: `Redeemed on Order #${(ord.orderId || '').slice(-6)}`,
+                    date: ord.createdAt
+                })
+            }
+        } catch (e) {
+            // Non-critical, continue
+        }
+
         return res.json({
             success: true,
             data: {
                 balance: user.walletBalance || 0,
-                // Sort by newest date and limit to 20 for performance
+                coins: user.coins || 0,
+                // Sort by newest date and limit to 30 for performance
                 transactions: (user.walletTransactions || [])
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
-                    .slice(0, 20)
+                    .slice(0, 30),
+                coinTransactions: coinTransactions
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 40)
             }
         })
     } catch (err) {
@@ -55,8 +107,8 @@ export async function addMoneyToWallet(req, res) {
             })
         }
 
-        // Snapit Loyalty: 5% bonus for deposits >= 500
-        const bonus = amount >= 500 ? Math.floor(amount * 0.05) : 0
+        // Snapit Loyalty: 1% bonus for deposits >= 500
+        const bonus = amount >= 500 ? Math.floor(amount * 0.01) : 0
         const totalCredit = amount + bonus
 
         const transaction = {

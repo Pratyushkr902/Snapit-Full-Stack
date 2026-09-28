@@ -104,8 +104,8 @@ export const verifyPayment = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid amount' })
         }
 
-        // 5% bonus for ₹500+
-        const bonus       = numAmount >= 500 ? Math.floor(numAmount * 0.05) : 0
+        // 1% bonus for ₹500+
+        const bonus       = numAmount >= 500 ? Math.floor(numAmount * 0.01) : 0
         const totalCredit = numAmount + bonus
 
         const transaction = {

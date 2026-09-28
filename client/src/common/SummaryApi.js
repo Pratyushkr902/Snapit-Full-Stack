@@ -277,6 +277,10 @@ const SummaryApi = {
         url: '/api/order/report-dispute',
         method: 'post'
     },
+    rateDelivery: {
+        url: '/api/order/rate-delivery',
+        method: 'post'
+    },
     getNearestStore: {
         url: '/api/store/nearest',
         method: 'post'
