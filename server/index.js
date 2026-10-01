@@ -467,7 +467,9 @@ app.use('/api/admin',           adminRouter)
 app.use('/api/admin',           sellerAdminRouter)
 app.use('/api/notification',    notificationRouter)
 app.use('/api/restaurant',      restaurantRouter)
-app.use('/api/support',         supportRouter)
+app.use('/api/support',           supportChatRouter)        // 🎧 24/7 Live Support Chat & Helpdesk (Primary)
+app.use('/api/support',           supportRouter)            // ✉️ Static Contact/Feedback Form routes
+app.use('/api/support-email',     supportRouter)            // ✉️ Dedicated email support route
 app.use('/api/otp',             otpRouter)
 app.use('/api/scheduled-order', scheduledOrderRouter)
 app.use('/api/refund',          refundRouter)
@@ -486,7 +488,6 @@ app.use('/api/public-tracking',  publicTrackingRouter)     // ✅ Public Live Tr
 app.use('/api/marketing',        marketingRouter)          // ✅ Automated Marketing Engine
 app.use('/api/prescription',     prescriptionRouter)       // 💊 Pharmacy Prescription Orders
 app.use('/api/rider-application', riderApplicationRouter)   // 🛵 Rider Onboarding Application & Approval
-app.use('/api/support',           supportChatRouter)        // 🎧 24/7 Live Support Chat & Helpdesk
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

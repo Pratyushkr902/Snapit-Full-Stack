@@ -6,7 +6,13 @@ import { createSupportMessage, getSupportMessages } from '../controllers/support
 
 const supportRouter = Router()
 
-supportRouter.post('/message', optionalAuth, createSupportMessage) // guests + logged-in users
-supportRouter.get('/messages', auth, admin, getSupportMessages)     // admin-only
+// Static Contact & Feedback Form endpoints (email-based)
+supportRouter.post('/contact-form', optionalAuth, createSupportMessage)
+supportRouter.post('/email-message', optionalAuth, createSupportMessage)
+supportRouter.get('/email-messages', auth, admin, getSupportMessages)
+
+// Backwards-compatible aliases (for /api/support-email/message)
+supportRouter.post('/message', optionalAuth, createSupportMessage)
+supportRouter.get('/messages', auth, admin, getSupportMessages)
 
 export default supportRouter

@@ -210,11 +210,11 @@ const SummaryApi = {
         method : 'get'
     },
     createSupportMessage : {
-        url : '/api/support/message',
+        url : '/api/support-email/message',
         method : 'post'
     },
     getSupportMessages : {
-        url : '/api/support/messages',
+        url : '/api/support-email/messages',
         method : 'get'
     },
     updateAddress : {

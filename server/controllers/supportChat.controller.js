@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import SupportChatModel from '../models/supportChat.model.js'
 import UserModel from '../models/user.model.js'
+import sendEmail from './sendEmail.js'
 
 export async function getMyChatController(request, response) {
   try {
@@ -58,11 +59,12 @@ export async function sendUserMessageController(request, response) {
     const userId = request.userId
     const { text, orderId, cardType, cardData } = request.body
 
-    if (!text || !text.trim()) {
+    const rawContent = text || request.body.message
+    if (!rawContent || !String(rawContent).trim()) {
       return response.status(400).json({ message: 'Message text is required', error: true, success: false })
     }
 
-    const trimmedText = text.trim()
+    const trimmedText = String(rawContent).trim()
 
     let chat = await SupportChatModel.findOne({ userId })
     const user = await UserModel.findById(userId).select('name email mobile').lean()
@@ -96,7 +98,7 @@ export async function sendUserMessageController(request, response) {
 
     await chat.save()
 
-    // Real-time Socket.IO emission
+    // Real-time Socket.IO emission to client chat & admin desk
     const io = request.app?.get('io')
     if (io) {
       io.to(`support_chat_${chat._id}`).emit('new_support_message', {
@@ -115,6 +117,30 @@ export async function sendUserMessageController(request, response) {
         unreadCountAdmin: chat.unreadCountAdmin,
         status: chat.status,
       })
+    }
+
+    // Email notification backup to admin so urgent customer chats are never missed
+    if (process.env.SUPPORT_NOTIFY_EMAIL) {
+      sendEmail({
+        sendTo: process.env.SUPPORT_NOTIFY_EMAIL,
+        subject: `💬 Snapit Live Support: ${user?.name || 'Customer'} messaged${chat.activeOrderId ? ` (Order #${chat.activeOrderId})` : ''}`,
+        html: `
+          <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;">
+            <h2 style="color:#059669;margin-top:0;">New Live Support Message 💬</h2>
+            <p><strong>Customer:</strong> ${user?.name || 'Customer'} (${user?.mobile || 'No phone'})</p>
+            <p><strong>Email:</strong> ${user?.email || 'N/A'}</p>
+            <p><strong>Order ID:</strong> ${chat.activeOrderId || 'General Inquiry'}</p>
+            <div style="background:#f8fafc;padding:14px;border-left:4px solid #10b981;border-radius:6px;margin:16px 0;">
+              <p style="margin:0;color:#1e293b;font-size:15px;line-height:1.5;">${trimmedText.replace(/\n/g, '<br/>')}</p>
+            </div>
+            <p style="margin-top:20px;">
+              <a href="https://snapit.pages.dev/admin/support-desk" style="display:inline-block;padding:12px 22px;background:#059669;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:14px;">
+                Open Live Support Desk & Reply →
+              </a>
+            </p>
+          </div>
+        `,
+      }).catch(err => console.warn('[LiveChat Email Alert Error]', err.message))
     }
 
     return response.json({

@@ -136,7 +136,7 @@ export default function SmartRatingModal() {
       try {
         await Axios({
           method: 'POST',
-          url: '/api/support/message',
+          url: '/api/support-email/message',
           data: {
             name: user?.name || 'Customer',
             phone: user?.mobile ? String(user.mobile) : '',

@@ -415,23 +415,28 @@ export default function ChatBox() {
 
       // 7. TALK TO AGENT / HUMAN / WHATSAPP / CALL
       if (text.includes('agent') || text.includes('human') || text.includes('person') || text.includes('executive') || text.includes('whatsapp') || text.includes('call') || text.includes('contact')) {
-        // Fire support message to backend
-        Axios({
-          ...SummaryApi.createSupportMessage,
-          data: {
-            name: user?.name || 'Customer',
-            phone: user?.mobile || '',
-            orderId: latestOrders[0] ? (latestOrders[0].orderId || latestOrders[0]._id) : '',
-            message: `[ChatBox Escalation] User requested human agent: "${rawText}"`,
-          }
-        }).catch(() => {})
+        // Sync escalation to Live Support Desk thread
+        if (user?._id) {
+          Axios({
+            ...SummaryApi.sendUserSupportMessage,
+            data: {
+              text: `[Live Agent Request] ${rawText}`,
+              orderId: latestOrders[0] ? (latestOrders[0].orderId || latestOrders[0]._id) : '',
+              cardType: 'agent_card',
+            },
+          }).then((res) => {
+            if (res.data?.chat?._id && !serverChatId) {
+              setServerChatId(res.data.chat._id)
+            }
+          }).catch(() => {})
+        }
 
         setMessages(prev => [
           ...prev,
           {
             id: Date.now(),
             sender: 'bot',
-            text: `I've notified our Paliganj support desk! You can instantly connect with our executive right now via WhatsApp or Direct Phone:`,
+            text: `I've connected you with our Live Support Desk! A support executive has been notified. You can also connect directly:`,
             time: now,
             cardType: 'agent_card',
           }
