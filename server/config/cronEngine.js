@@ -87,6 +87,29 @@ export const initSubscriptionCron = () => {
                     const deliveryFee = subTotalAmt >= 399 ? 0 : 12;
                     const totalAmt = subTotalAmt + deliveryFee;
 
+                    // Calculate next delivery schedule
+                    const nextSchedule = new Date(sub.nextDeliveryDate || new Date());
+                    if (sub.frequency === 'DAILY') {
+                        nextSchedule.setDate(nextSchedule.getDate() + 1);
+                    } else if (sub.frequency === 'ALTERNATIVE') {
+                        nextSchedule.setDate(nextSchedule.getDate() + 2);
+                    } else if (sub.frequency === 'WEEKLY') {
+                        nextSchedule.setDate(nextSchedule.getDate() + 7);
+                    } else {
+                        nextSchedule.setDate(nextSchedule.getDate() + 1);
+                    }
+
+                    // Atomic distributed claim: advance nextDeliveryDate so no concurrent worker can double-process
+                    const claimed = await SubscriptionModel.findOneAndUpdate(
+                        { _id: sub._id, nextDeliveryDate: { $lte: todayStart } },
+                        { $set: { nextDeliveryDate: nextSchedule } },
+                        { new: true }
+                    );
+                    if (!claimed) {
+                        console.log(`ℹ️ [Cron Engine] Subscription ${sub._id} was already claimed by another worker. Skipping duplicate run.`);
+                        continue;
+                    }
+
                     // 4. Fund check handling: Process Wallet Deductions if configured
                     if (sub.payment_method === 'WALLET') {
                         const wallet = await WalletModel.findOne({ userId: sub.userId });
@@ -147,20 +170,6 @@ export const initSubscriptionCron = () => {
                     });
 
                     await deliveryOrder.save();
-
-                    // 7. Recalculate and update the subscriber's next target execution timeline date
-                    const nextSchedule = new Date(sub.nextDeliveryDate);
-                    if (sub.frequency === 'DAILY') {
-                        nextSchedule.setDate(nextSchedule.getDate() + 1);
-                    } else if (sub.frequency === 'ALTERNATIVE') {
-                        nextSchedule.setDate(nextSchedule.getDate() + 2);
-                    } else if (sub.frequency === 'WEEKLY') {
-                        nextSchedule.setDate(nextSchedule.getDate() + 7);
-                    }
-
-                    sub.nextDeliveryDate = nextSchedule;
-                    await sub.save();
-
                     console.log(`✅ [Cron Engine] Order generated successfully for User: ${sub.userId} -> Order ID: ${orderTrackingId}`);
 
                 } catch (subError) {
