@@ -2020,8 +2020,9 @@ export async function getOrderItems(request, response) {
             filter = { userId }
         }
 
+        const queryLimit = parseInt(request.query?.limit) || ((cleanRole === 'ADMIN' || cleanRole === 'SUPER_ADMIN') ? 5000 : 100)
         const orders = await populateOrder(
-            OrderModel.find(filter).sort({ createdAt: -1 }).limit(100)
+            OrderModel.find(filter).sort({ createdAt: -1 }).limit(queryLimit)
         )
 
         return response.json({ message: 'Orders fetched.', error: false, success: true, data: orders.map(toSafeOrder) })

@@ -3,9 +3,10 @@ import SuperAdminPermision from '../layouts/SuperAdminPermision'
 import AdminLiveFleetWidget from '../components/AdminLiveFleetWidget'
 import AdminSundayFlashWidget from '../components/AdminSundayFlashWidget'
 import AdminMarketingHub from '../components/AdminMarketingHub'
-import AdminResetPinModal from '../components/AdminResetPinModal'
 import AdminPendingWithdrawalsWidget from '../components/AdminPendingWithdrawalsWidget'
+import AdminResetPinModal from '../components/AdminResetPinModal'
 import AdminStoreControlWidget from '../components/AdminStoreControlWidget'
+import AdminVerifiedAuditWidget from '../components/AdminVerifiedAuditWidget'
 
 const CARDS = [
   {
@@ -136,6 +137,9 @@ const SuperAdminDashboard = () => {
 
         {/* 🏪 STORE OPERATING STATUS (1-Click Emergency / Day Closure Control) */}
         <AdminStoreControlWidget />
+
+        {/* 🛡️ VERIFIED BUSINESS PERFORMANCE & VALUATION AUDIT */}
+        <AdminVerifiedAuditWidget />
 
         {/* 🏦 PENDING WALLET WITHDRAWALS ALERT */}
         <AdminPendingWithdrawalsWidget />
