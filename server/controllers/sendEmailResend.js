@@ -23,11 +23,14 @@ const sendEmailResend = async ({ sendTo, subject, html }) => {
             return null;
         }
 
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'Snapit <otp@jovialflames.com>'
+        const replyToEmail = process.env.RESEND_REPLY_TO || 'snapitxpress@gmail.com'
+
         const client = getResendClient()
         const { data, error } = await client.emails.send({
-            from: 'Snapit <otp@jovialflames.com>',
+            from: fromEmail,
             to: [sendTo],
-            replyTo: 'snapitxpress@gmail.com',
+            replyTo: replyToEmail,
             subject,
             html,
         })
