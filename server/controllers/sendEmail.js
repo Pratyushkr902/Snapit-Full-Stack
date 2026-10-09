@@ -28,8 +28,8 @@ const sendEmail = async ({ sendTo, subject, html }) => {
             console.error('🚨 Brevo error:', JSON.stringify(data));
             return null;
         }
-        console.log('✅ Email sent:', data.messageId);
-        return data;
+        console.log('✅ Email sent via Brevo:', data.messageId);
+        return { id: data.messageId, messageId: data.messageId, ...data };
     } catch (error) {
         console.error('🚨 Email failed:', error.message);
         return null; // don't throw — registration succeeds even if email fails
