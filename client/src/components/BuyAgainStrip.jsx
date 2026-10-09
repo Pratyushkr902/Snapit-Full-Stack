@@ -27,11 +27,32 @@ const BuyAgainStrip = ({ type = 'grocery' }) => {
 
       if (Array.isArray(order.cartItems) && order.cartItems.length > 0) {
         for (const ci of order.cartItems) {
-          const p = ci?.productId
-          const isRestaurantItem = Boolean(ci.restaurantId || order.restaurantId || ci.seller_store_name?.toLowerCase().includes('resto') || ci.seller_store_name?.toLowerCase().includes('garden') || ci.seller_store_name?.toLowerCase().includes('tafri'))
+          const storeName = String(ci.seller_store_name || order.store_details?.name || '').toLowerCase()
+          const isRestaurantItem = Boolean(
+            order.isRestaurantOrder ||
+            order.restaurantId ||
+            order.restaurant_id ||
+            order.orderType === 'food' ||
+            ci.restaurantId ||
+            ci.restaurant_id ||
+            ci.menuItemId ||
+            ci.isRestaurantItem ||
+            p?.isRestaurantItem ||
+            storeName.includes('resto') ||
+            storeName.includes('restaurant') ||
+            storeName.includes('garden') ||
+            storeName.includes('tafri') ||
+            storeName.includes('pizza') ||
+            storeName.includes('biryani') ||
+            storeName.includes('chowmein') ||
+            storeName.includes('sweets') ||
+            storeName.includes('momos') ||
+            storeName.includes('paratha')
+          )
 
+          // Strictly isolate: grocery page only shows grocery items; food page only shows restaurant items
           if (type === 'grocery' && isRestaurantItem) continue
-          if (type === 'food' && !isRestaurantItem && orders.some(o => o.restaurantId)) continue
+          if (type === 'food' && !isRestaurantItem) continue
 
           const itemId = String(p?._id || ci._id || ci.productId || '')
           if (!itemId || seenIds.has(itemId)) continue
