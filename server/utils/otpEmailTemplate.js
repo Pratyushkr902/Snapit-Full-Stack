@@ -5,7 +5,6 @@ export function otpEmailTemplate({ otp, purpose = 'login', name = 'Customer', ex
     ? 'Use the One-Time Password (OTP) below to reset your Snapit account password.'
     : 'Use the One-Time Password (OTP) below to securely log in to your Snapit account.';
 
-  // Format OTP with clean spaced layout
   const formattedOtp = String(otp || '').trim();
 
   return `<!DOCTYPE html>
@@ -20,31 +19,20 @@ export function otpEmailTemplate({ otp, purpose = 'login', name = 'Customer', ex
     <tr>
       <td align="center">
         <!-- Main Card Container -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 500px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04); border: 1px solid #e2e8f0;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 480px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04); border: 1px solid #e2e8f0;">
           
-          <!-- Top Brand Header Bar -->
+          <!-- Top Minimal Brand Header (Clean Zomato/Blinkit style - No Banner) -->
           <tr>
-            <td style="padding: 28px 32px 20px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); text-align: left;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                  <td>
-                    <span style="display: inline-block; background-color: #ffffff; color: #059669; font-size: 14px; font-weight: 900; letter-spacing: 1px; padding: 6px 14px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-                      ⚡ SNAPIT
-                    </span>
-                  </td>
-                  <td align="right">
-                    <span style="font-size: 11px; font-weight: 700; color: #d1fae5; text-transform: uppercase; letter-spacing: 0.8px;">
-                      10-Min Delivery
-                    </span>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding: 28px 32px 0; text-align: left;">
+              <span style="font-size: 26px; font-weight: 900; color: #10b981; letter-spacing: -0.6px;">
+                Snapit
+              </span>
             </td>
           </tr>
 
           <!-- Main Email Content -->
           <tr>
-            <td style="padding: 32px 32px 24px;">
+            <td style="padding: 24px 32px;">
               <h1 style="margin: 0 0 10px; font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.4px;">
                 ${title}
               </h1>
@@ -88,14 +76,14 @@ export function otpEmailTemplate({ otp, purpose = 'login', name = 'Customer', ex
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Clean Global Footer -->
           <tr>
             <td style="padding: 20px 32px 28px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center;">
               <p style="margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #334155;">
-                Snapit Express · Paliganj & Campus Delivery
+                Snapit
               </p>
               <p style="margin: 0; font-size: 11px; color: #94a3b8;">
-                Need help? Contact support at <a href="mailto:snapitxpress@gmail.com" style="color: #059669; text-decoration: none; font-weight: 600;">snapitxpress@gmail.com</a>
+                Need help? Contact support at <a href="mailto:snapitxpress@gmail.com" style="color: #10b981; text-decoration: none; font-weight: 600;">snapitxpress@gmail.com</a>
               </p>
             </td>
           </tr>
