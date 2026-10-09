@@ -6,15 +6,15 @@ export const getAppVersionController = async (req, res) => {
       error: false,
       data: {
         enabled: true,
-        latestVersion: "2.6.64",
-        latestVersionCode: 104,
+        latestVersion: "2.6.65",
+        latestVersionCode: 105,
         minRequiredVersionCode: 100,
         forceUpdate: false,
         remindIntervalHours: 1,
         playStoreUrl: "https://play.google.com/store/apps/details?id=com.snapit.grocery",
         directApkUrl: "https://snapit-ashy.vercel.app/app-release.apk",
         title: "New Snapit Update Available! 🚀",
-        message: "A new version of Snapit (v2.6.64) is available with Refer & Earn enhancements, Coins rewards, and speed improvements!",
+        message: "A new version of Snapit (v2.6.65) is available with Refer & Earn enhancements, Coins rewards, and speed improvements!",
         releaseNotes: [
           "🎁 Refer & Earn with instant coin rewards & tracker",
           "🪙 Daily check-in coins & 1-tap wallet conversion",
