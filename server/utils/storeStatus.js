@@ -12,9 +12,9 @@ const ADMIN_LIKE_ROLES = ['ADMIN', 'SELLER', 'RESTO_SELLER', 'RIDER', 'SUPER_ADM
 
 // Dynamic in-memory store config synced with MongoDB
 let cachedStoreConfig = {
-  isClosedForToday: true,
-  closedReason: 'Snapit is closed for today. Deliveries will resume tomorrow at 8:30 AM IST!',
-  reopenTime: '8:30 AM Tomorrow',
+  isClosedForToday: false,
+  closedReason: '',
+  reopenTime: '',
   updatedAt: new Date(),
   updatedByName: 'Super Admin'
 }
@@ -30,8 +30,8 @@ export async function initStoreStatus() {
     if (doc && doc.value) {
       cachedStoreConfig = {
         isClosedForToday: Boolean(doc.value.isClosedForToday),
-        closedReason: doc.value.closedReason || 'Snapit is closed for today. Deliveries will resume tomorrow at 8:30 AM IST!',
-        reopenTime: doc.value.reopenTime || '8:30 AM Tomorrow',
+        closedReason: doc.value.closedReason || '',
+        reopenTime: doc.value.reopenTime || '',
         updatedAt: doc.updatedAt || new Date(),
         updatedByName: doc.updatedByName || 'Super Admin'
       }

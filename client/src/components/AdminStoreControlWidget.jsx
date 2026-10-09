@@ -9,9 +9,9 @@ const AdminStoreControlWidget = () => {
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
   const [storeStatus, setStoreStatus] = useState({
-    isClosedForToday: true,
-    closedReason: 'Snapit is closed for today. Deliveries will resume tomorrow at 8:30 AM IST!',
-    reopenTime: '8:30 AM Tomorrow',
+    isClosedForToday: false,
+    closedReason: '',
+    reopenTime: '',
     updatedAt: new Date(),
     updatedByName: 'Super Admin'
   })

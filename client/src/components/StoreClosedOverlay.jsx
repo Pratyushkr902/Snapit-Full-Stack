@@ -15,8 +15,8 @@ export const OPEN_HOUR = 8;   // 8:30 AM IST (08:30)
 export const OPEN_MINUTE = 30;
 
 // ✅ DYNAMIC STORE CLOSURE TOGGLE CONTROLLED VIA SUPER ADMIN PANEL
-export let IS_CLOSED_FOR_TODAY = true;
-export let DYNAMIC_CLOSED_REASON = 'Snapit is closed for today. We are resting and packing fresh stock. Deliveries will resume tomorrow at 8:30 AM IST!';
+export let IS_CLOSED_FOR_TODAY = false;
+export let DYNAMIC_CLOSED_REASON = '';
 
 export function setDynamicStoreClosed(isClosed, reason = '') {
   IS_CLOSED_FOR_TODAY = Boolean(isClosed);
