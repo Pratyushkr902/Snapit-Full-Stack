@@ -6,6 +6,7 @@ import generatedAccessToken from '../utils/generatedAccessToken.js'
 import genertedRefreshToken from '../utils/generatedRefreshToken.js'
 import sendEmailResend from './sendEmailResend.js'
 import { normalizeEmail, isDisposableEmail } from '../utils/emailNormalize.js'
+import otpEmailTemplate from '../utils/otpEmailTemplate.js'
 
 const cookiesOption = {
     httpOnly: true,
@@ -51,15 +52,8 @@ export async function sendOtpController(request, response) {
 
         const emailResult = await sendEmailResend({
             sendTo: email,
-            subject: 'Your Snapit login code',
-            html: `
-                <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-                    <h2 style="color: #f97316;">Your Snapit login code</h2>
-                    <p>Use this code to log in. It expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-                    <p style="font-size: 32px; font-weight: 800; letter-spacing: 6px;">${otp}</p>
-                    <p style="color: #888; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p>
-                </div>
-            `,
+            subject: `${otp} is your Snapit verification code`,
+            html: otpEmailTemplate({ otp, purpose: 'login', expiryMinutes: OTP_EXPIRY_MINUTES }),
         })
 
         if (!emailResult) {
