@@ -58,14 +58,23 @@ const UserMenuMobile = () => {
   })
 
   const checkAppVersion = async () => {
+    // Only check for Play Store updates if running as native Android APK
+    const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+    if (!isAndroidNative) {
+      setVersionInfo({
+        hasUpdate: false,
+        latestVersion: CURRENT_APP_VERSION,
+        playStoreUrl: PLAY_STORE_URL
+      })
+      return
+    }
+
     let installedCode = CURRENT_VERSION_CODE
     try {
-      if (Capacitor.isNativePlatform()) {
-        const appInfo = await CapacitorApp.getInfo()
-        if (appInfo?.build) {
-          const parsed = parseInt(appInfo.build, 10)
-          if (!isNaN(parsed) && parsed > 0) installedCode = parsed
-        }
+      const appInfo = await CapacitorApp.getInfo()
+      if (appInfo?.build) {
+        const parsed = parseInt(appInfo.build, 10)
+        if (!isNaN(parsed) && parsed > 0) installedCode = parsed
       }
     } catch {
       // fallback to CURRENT_VERSION_CODE
@@ -316,50 +325,32 @@ const UserMenuMobile = () => {
 
         {/* ── APP STATUS & APPEARANCE STRIP ── */}
         <div className='bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 divide-y divide-slate-100 dark:divide-slate-800/80 shadow-xs overflow-hidden'>
-          {/* App Update Row (Blinkit style dynamic state) */}
-          <div
-            onClick={handleUpdateClick}
-            className={`flex items-center justify-between p-3 cursor-pointer transition-colors select-none ${
-              versionInfo.hasUpdate
-                ? 'bg-amber-50/80 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/50'
-                : 'hover:bg-slate-50 dark:hover:bg-slate-850'
-            }`}
-          >
-            <div className='flex items-center gap-3'>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                versionInfo.hasUpdate
-                  ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-300'
-                  : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400'
-              }`}>
-                {versionInfo.hasUpdate ? (
+          {/* App Update Row (Shown ONLY on native Android Play Store APK) */}
+          {Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && versionInfo.hasUpdate && (
+            <div
+              onClick={handleUpdateClick}
+              className='flex items-center justify-between p-3 cursor-pointer transition-colors select-none bg-amber-50/80 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/50'
+            >
+              <div className='flex items-center gap-3'>
+                <div className='w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-300'>
                   <FiRefreshCw className='animate-spin' style={{ animationDuration: '4s' }} size={16} />
-                ) : (
-                  <FiCheck size={16} />
-                )}
+                </div>
+                <div>
+                  <p className='text-xs font-bold leading-none text-amber-900 dark:text-amber-200'>
+                    App Update Available
+                  </p>
+                  <p className='text-[10px] text-slate-400 mt-0.5 font-medium'>
+                    Tap to update from Play Store
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className={`text-xs font-bold leading-none ${
-                  versionInfo.hasUpdate
-                    ? 'text-amber-900 dark:text-amber-200'
-                    : 'text-slate-900 dark:text-white'
-                }`}>
-                  {versionInfo.hasUpdate ? 'App Update Available' : 'App is Up to Date'}
-                </p>
-                <p className='text-[10px] text-slate-400 mt-0.5 font-medium'>
-                  {versionInfo.hasUpdate ? 'Tap to update from Play Store' : 'Snapit Latest Release'}
-                </p>
-              </div>
-            </div>
 
-            {versionInfo.hasUpdate ? (
               <div className='flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-950 px-2.5 py-1 rounded-lg text-xs font-bold shadow-xs active:scale-95 transition-all'>
                 <span>Update</span>
                 <FiChevronRight size={13} />
               </div>
-            ) : (
-              <FiChevronRight className='text-slate-400' size={16} />
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Theme Row */}
           <div className='p-2'>

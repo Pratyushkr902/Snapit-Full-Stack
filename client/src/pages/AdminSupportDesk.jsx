@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useSelector } from 'react-redux'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   IoSearch,
   IoSend,
@@ -76,6 +76,7 @@ const copyToClipboard = (text, label = 'Information') => {
 }
 
 export default function AdminSupportDesk() {
+  const navigate = useNavigate()
   const user = useSelector(state => state.user)
   const [chats, setChats] = useState([])
   const [loading, setLoading] = useState(true)
@@ -323,53 +324,61 @@ export default function AdminSupportDesk() {
   }, [chats])
 
   return (
-    <div className='min-h-[calc(100vh-80px)] bg-slate-100 dark:bg-slate-950 p-2 sm:p-4'>
-      <div className='max-w-7xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl overflow-hidden flex flex-col h-[calc(100vh-100px)]'>
+    <div className='min-h-[100dvh] bg-slate-100 dark:bg-slate-950 p-2 sm:p-4 pt-[max(env(safe-area-inset-top),20px)] sm:pt-4 pb-[max(env(safe-area-inset-bottom),16px)] sm:pb-4 flex flex-col justify-start'>
+      <div className='max-w-7xl mx-auto w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden flex flex-col h-[calc(100dvh-max(env(safe-area-inset-top),20px)-max(env(safe-area-inset-bottom),16px)-1.5rem)] sm:h-[calc(100vh-100px)]'>
         {/* ── TOP APP BAR ── */}
-        <div className='bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-700 text-white px-5 py-3.5 flex items-center justify-between flex-shrink-0'>
-          <div className='flex items-center gap-3'>
-            <div className='w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white'>
-              <RiCustomerService2Fill size={22} />
+        <div className='bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-700 text-white px-3 sm:px-5 py-2.5 sm:py-3.5 flex items-center justify-between flex-shrink-0'>
+          <div className='flex items-center gap-2 sm:gap-3 min-w-0'>
+            <button
+              onClick={() => navigate(-1)}
+              className='p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all active:scale-95 shrink-0'
+              title='Back to Dashboard'
+              aria-label='Back'
+            >
+              <IoChevronBack size={18} />
+            </button>
+            <div className='w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0'>
+              <RiCustomerService2Fill size={20} />
             </div>
-            <div>
-              <div className='flex items-center gap-2'>
-                <h1 className='text-base font-black tracking-tight'>Snapit Live Support Desk</h1>
-                <span className='bg-emerald-400/20 text-emerald-200 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-300/30'>
+            <div className='min-w-0'>
+              <div className='flex items-center gap-1.5 sm:gap-2 flex-wrap'>
+                <h1 className='text-sm sm:text-base font-black tracking-tight truncate'>Support Desk</h1>
+                <span className='bg-emerald-400/20 text-emerald-200 text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-300/30 shrink-0'>
                   24/7 Operations
                 </span>
               </div>
-              <p className='text-xs text-emerald-100/90 font-medium'>
-                Real-time two-way customer communication & incident resolution
+              <p className='text-[10px] sm:text-xs text-emerald-100/90 font-medium truncate hidden xs:block'>
+                Real-time two-way customer communication
               </p>
             </div>
           </div>
 
-          <div className='flex items-center gap-2'>
+          <div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
             <button
               onClick={() => {
                 haptic.selection()
                 setIsMuted(!isMuted)
                 toast.success(!isMuted ? 'Sound alerts MUTED' : 'Sound alerts turned ON')
               }}
-              className={`p-2 rounded-xl border transition-all active:scale-95 ${
+              className={`p-1.5 sm:p-2 rounded-xl border transition-all active:scale-95 ${
                 isMuted
                   ? 'bg-rose-500/25 text-rose-200 border-rose-400/40'
                   : 'bg-white/10 hover:bg-white/20 text-white border-white/15'
               }`}
               title={isMuted ? 'Sound Muted (Click to Unmute)' : 'Sound Enabled (Click to Mute)'}
             >
-              {isMuted ? <IoVolumeMuteOutline size={18} /> : <IoVolumeHighOutline size={18} />}
+              {isMuted ? <IoVolumeMuteOutline size={17} /> : <IoVolumeHighOutline size={17} />}
             </button>
             <button
               onClick={() => fetchChats(true)}
-              className='p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all active:scale-95'
+              className='p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all active:scale-95'
               title='Refresh'
             >
-              <IoRefreshOutline size={18} />
+              <IoRefreshOutline size={17} />
             </button>
             {totalUnreadCount > 0 && (
-              <span className='bg-rose-500 text-white text-xs font-black px-2.5 py-1 rounded-full animate-pulse shadow-sm'>
-                {totalUnreadCount} Unread
+              <span className='bg-rose-500 text-white text-[10px] sm:text-xs font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full animate-pulse shadow-sm'>
+                {totalUnreadCount}
               </span>
             )}
           </div>

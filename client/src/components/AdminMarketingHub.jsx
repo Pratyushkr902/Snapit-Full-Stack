@@ -363,21 +363,21 @@ const AdminMarketingHub = () => {
             type='button'
             onClick={handleBroadcast}
             disabled={sending}
-            className='mt-2 flex items-center justify-center gap-2 py-3 px-6 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-98 text-white font-black text-sm rounded-xl shadow-lg shadow-orange-500/25 transition-all'
+            className='mt-2 flex items-center justify-center gap-2 py-3 px-4 sm:px-6 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-98 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-orange-500/25 transition-all text-center w-full'
           >
-            <IoSendOutline size={18} />
-            {sending ? 'Dispatched In Progress...' : '🚀 Broadcast Live Notification to All Users'}
+            <IoSendOutline size={18} className='shrink-0' />
+            <span>{sending ? 'Dispatched In Progress...' : '🚀 Broadcast Live Notification to All Users'}</span>
           </button>
         </div>
 
         {/* Live Phone Mockup Preview (5 Cols) */}
-        <div className='lg:col-span-5 flex flex-col items-center justify-center p-4 bg-slate-900 rounded-2xl text-white shadow-inner'>
-          <p className='text-[11px] font-bold text-slate-400 mb-3 uppercase tracking-wider'>
+        <div className='lg:col-span-5 flex flex-col items-center justify-center p-3.5 sm:p-4 bg-slate-900 rounded-2xl text-white shadow-inner w-full min-w-0'>
+          <p className='text-[11px] font-bold text-slate-400 mb-3 uppercase tracking-wider text-center'>
             📱 Live Lock Screen Preview
           </p>
 
           {/* iOS / Android Card Mockup */}
-          <div className='w-full bg-slate-800/90 backdrop-blur border border-slate-700 rounded-2xl p-4 shadow-xl'>
+          <div className='w-full bg-slate-800/90 backdrop-blur border border-slate-700 rounded-2xl p-3.5 sm:p-4 shadow-xl'>
             <div className='flex items-center justify-between text-[11px] text-slate-400 mb-1.5'>
               <div className='flex items-center gap-1.5 font-bold text-white'>
                 <span className='w-4 h-4 bg-green-500 rounded-md flex items-center justify-center text-[10px]'>⚡</span>
@@ -385,13 +385,13 @@ const AdminMarketingHub = () => {
               </div>
               <span>now</span>
             </div>
-            <p className='font-bold text-xs text-white leading-tight'>{formData.title}</p>
+            <p className='font-bold text-xs text-white leading-tight break-words'>{formData.title}</p>
             {formData.shayari && (
-              <p className='text-[11px] text-amber-300 font-medium mt-1 whitespace-pre-line italic leading-tight'>
+              <p className='text-[11px] text-amber-300 font-medium mt-1 whitespace-pre-line italic leading-tight break-words'>
                 {formData.shayari}
               </p>
             )}
-            <p className='text-[11px] text-slate-300 mt-1 leading-snug'>
+            <p className='text-[11px] text-slate-300 mt-1 leading-snug break-words'>
               {formData.body}
             </p>
           </div>
@@ -405,10 +405,10 @@ const AdminMarketingHub = () => {
       </div>
 
       {/* 🛒 Automated Abandoned Cart Recovery Command Center */}
-      <div className='mt-8 pt-6 border-t border-slate-200'>
+      <div className='mt-8 pt-6 border-t border-slate-200 min-w-0'>
         <div className='flex flex-wrap items-center justify-between gap-3 mb-4'>
-          <div>
-            <div className='flex items-center gap-2'>
+          <div className='min-w-0'>
+            <div className='flex items-center gap-2 flex-wrap'>
               <span className='p-2 bg-blue-500 text-white rounded-xl shadow-sm'>
                 <IoCartOutline size={20} />
               </span>
@@ -427,7 +427,7 @@ const AdminMarketingHub = () => {
             type='button'
             disabled={loadingAbandoned}
             onClick={fetchAbandonedCarts}
-            className='flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition active:scale-95 disabled:opacity-50'
+            className='flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition active:scale-95 disabled:opacity-50 shrink-0'
           >
             <IoReloadOutline className={loadingAbandoned ? 'animate-spin' : ''} />
             Refresh Carts
@@ -445,72 +445,148 @@ const AdminMarketingHub = () => {
             <p className='text-[11px] text-slate-400'>All active customers have completed their orders or checked out.</p>
           </div>
         ) : (
-          <div className='overflow-x-auto border border-slate-200 rounded-2xl'>
-            <table className='w-full text-left text-xs border-collapse'>
-              <thead>
-                <tr className='bg-slate-50 text-slate-600 font-bold border-b border-slate-200'>
-                  <th className='py-3 px-4'>Customer</th>
-                  <th className='py-3 px-4'>Cart Items</th>
-                  <th className='py-3 px-4'>Total Value</th>
-                  <th className='py-3 px-4'>Abandoned</th>
-                  <th className='py-3 px-4 text-right'>Quick Actions</th>
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-slate-100'>
-                {abandonedCarts.map((cart, idx) => {
-                  const waLink = getWhatsAppLink(cart)
-                  return (
-                    <tr key={cart.userId || idx} className='hover:bg-slate-50/80 transition'>
-                      <td className='py-3 px-4'>
-                        <p className='font-bold text-slate-900'>{cart.userName}</p>
-                        <p className='text-[11px] text-slate-500 font-mono'>{cart.userMobile || 'No phone'}</p>
-                      </td>
-                      <td className='py-3 px-4 max-w-xs'>
-                        <p className='font-medium text-slate-800 truncate'>
+          <>
+            {/* Mobile Cards Layout (sm:hidden) - Zero horizontal overflow */}
+            <div className='block sm:hidden space-y-3'>
+              {abandonedCarts.map((cart, idx) => {
+                const waLink = getWhatsAppLink(cart)
+                return (
+                  <div
+                    key={cart.userId || idx}
+                    className='bg-slate-50/70 border border-slate-200 rounded-2xl p-3.5 shadow-2xs space-y-2.5'
+                  >
+                    {/* Customer Info & Abandoned Time */}
+                    <div className='flex items-start justify-between gap-2'>
+                      <div>
+                        <p className='font-bold text-slate-900 text-sm leading-tight'>{cart.userName}</p>
+                        <p className='text-[11px] text-slate-500 font-mono mt-0.5'>{cart.userMobile || 'No phone'}</p>
+                      </div>
+                      <span className='text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-full shrink-0'>
+                        {cart.minutesAgo > 60
+                          ? `${Math.floor(cart.minutesAgo / 60)}h ${cart.minutesAgo % 60}m ago`
+                          : `${cart.minutesAgo}m ago`}
+                      </span>
+                    </div>
+
+                    {/* Cart Items & Total */}
+                    <div className='flex items-center justify-between gap-2 bg-white border border-slate-100 p-2.5 rounded-xl'>
+                      <div className='min-w-0 flex-1'>
+                        <p className='text-xs font-semibold text-slate-800 truncate'>
                           {cart.itemsSummary.join(', ') || `${cart.itemCount} items`}
                         </p>
-                        <p className='text-[10px] text-slate-400'>{cart.itemCount} item{cart.itemCount > 1 ? 's' : ''}</p>
-                      </td>
-                      <td className='py-3 px-4'>
-                        <span className='font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200'>
-                          ₹{cart.cartTotal}
-                        </span>
-                      </td>
-                      <td className='py-3 px-4 text-slate-500'>
-                        <span className='font-medium'>{cart.minutesAgo > 60 ? `${Math.floor(cart.minutesAgo / 60)}h ${cart.minutesAgo % 60}m ago` : `${cart.minutesAgo}m ago`}</span>
-                      </td>
-                      <td className='py-3 px-4 text-right'>
-                        <div className='flex items-center justify-end gap-2'>
-                          {waLink ? (
-                            <a
-                              href={waLink}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95'
-                            >
-                              <FaWhatsapp size={14} />
-                              <span>WhatsApp Link</span>
-                            </a>
-                          ) : (
-                            <span className='text-[10px] text-slate-400 italic'>No WhatsApp</span>
-                          )}
-                          <button
-                            type='button'
-                            disabled={nudgingUser === cart.userId}
-                            onClick={() => handleSinglePushNudge(cart.userId)}
-                            className='inline-flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition active:scale-95 disabled:opacity-50'
-                          >
-                            <IoSendOutline size={12} />
-                            <span>{nudgingUser === cart.userId ? 'Sending...' : 'Push'}</span>
-                          </button>
+                        <p className='text-[10px] text-slate-400 mt-0.5'>
+                          {cart.itemCount} item{cart.itemCount > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <span className='font-black text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shrink-0'>
+                        ₹{cart.cartTotal}
+                      </span>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className='flex items-center gap-2 pt-0.5'>
+                      {waLink ? (
+                        <a
+                          href={waLink}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95'
+                        >
+                          <FaWhatsapp size={15} />
+                          <span>WhatsApp</span>
+                        </a>
+                      ) : (
+                        <div className='flex-1 text-center py-2 text-[11px] text-slate-400 italic bg-white rounded-xl border border-slate-200'>
+                          No Phone
                         </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                      )}
+                      <button
+                        type='button'
+                        disabled={nudgingUser === cart.userId}
+                        onClick={() => handleSinglePushNudge(cart.userId)}
+                        className='flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition active:scale-95 disabled:opacity-50'
+                      >
+                        <IoSendOutline size={13} />
+                        <span>{nudgingUser === cart.userId ? 'Sending...' : 'Send Push'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop Table Layout (hidden sm:block) */}
+            <div className='hidden sm:block overflow-x-auto border border-slate-200 rounded-2xl'>
+              <table className='w-full text-left text-xs border-collapse min-w-full'>
+                <thead>
+                  <tr className='bg-slate-50 text-slate-600 font-bold border-b border-slate-200'>
+                    <th className='py-3 px-4'>Customer</th>
+                    <th className='py-3 px-4'>Cart Items</th>
+                    <th className='py-3 px-4'>Total Value</th>
+                    <th className='py-3 px-4'>Abandoned</th>
+                    <th className='py-3 px-4 text-right'>Quick Actions</th>
+                  </tr>
+                </thead>
+                <tbody className='divide-y divide-slate-100'>
+                  {abandonedCarts.map((cart, idx) => {
+                    const waLink = getWhatsAppLink(cart)
+                    return (
+                      <tr key={cart.userId || idx} className='hover:bg-slate-50/80 transition'>
+                        <td className='py-3 px-4'>
+                          <p className='font-bold text-slate-900'>{cart.userName}</p>
+                          <p className='text-[11px] text-slate-500 font-mono'>{cart.userMobile || 'No phone'}</p>
+                        </td>
+                        <td className='py-3 px-4 max-w-xs'>
+                          <p className='font-medium text-slate-800 truncate'>
+                            {cart.itemsSummary.join(', ') || `${cart.itemCount} items`}
+                          </p>
+                          <p className='text-[10px] text-slate-400'>{cart.itemCount} item{cart.itemCount > 1 ? 's' : ''}</p>
+                        </td>
+                        <td className='py-3 px-4'>
+                          <span className='font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200'>
+                            ₹{cart.cartTotal}
+                          </span>
+                        </td>
+                        <td className='py-3 px-4 text-slate-500'>
+                          <span className='font-medium'>
+                            {cart.minutesAgo > 60
+                              ? `${Math.floor(cart.minutesAgo / 60)}h ${cart.minutesAgo % 60}m ago`
+                              : `${cart.minutesAgo}m ago`}
+                          </span>
+                        </td>
+                        <td className='py-3 px-4 text-right'>
+                          <div className='flex items-center justify-end gap-2'>
+                            {waLink ? (
+                              <a
+                                href={waLink}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95'
+                              >
+                                <FaWhatsapp size={14} />
+                                <span>WhatsApp Link</span>
+                              </a>
+                            ) : (
+                              <span className='text-[10px] text-slate-400 italic'>No WhatsApp</span>
+                            )}
+                            <button
+                              type='button'
+                              disabled={nudgingUser === cart.userId}
+                              onClick={() => handleSinglePushNudge(cart.userId)}
+                              className='inline-flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition active:scale-95 disabled:opacity-50'
+                            >
+                              <IoSendOutline size={12} />
+                              <span>{nudgingUser === cart.userId ? 'Sending...' : 'Push'}</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

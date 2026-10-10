@@ -13,17 +13,9 @@ const AppUpdateModal = () => {
   const [isForced, setIsForced] = useState(false)
 
   const checkVersion = useCallback(async () => {
-    // Only skip on actual web browser domains (snapit.pages.dev, winkkr.com, etc.)
-    // All native Android / iOS APK runs (localhost, capacitor://, ionic://) will run the update check
-    const isWebDomain = 
-      typeof window !== 'undefined' &&
-      window.location.hostname !== 'localhost' &&
-      !window.location.hostname.startsWith('127.0.0.1') &&
-      !window.location.protocol.includes('capacitor') &&
-      !window.location.protocol.includes('ionic') &&
-      !Capacitor.isNativePlatform()
-
-    if (isWebDomain) return
+    // Only check and show update popup on native Android Play Store app
+    const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+    if (!isAndroidNative) return
 
     try {
       let installedVersionCode = CURRENT_VERSION_CODE
