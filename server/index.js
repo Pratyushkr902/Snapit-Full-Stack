@@ -132,28 +132,51 @@ const allowedOrigins = [
                 "wss://snapit-api-production.up.railway.app",
 ]
 
+const isAllowedOrigin = (origin) => {
+    if (!origin) return true
+    if (allowedOrigins.includes(origin)) return true
+    try {
+        const url = new URL(origin)
+        const host = url.hostname
+        if (host === 'localhost' || host === '127.0.0.1') return true
+        if (host.endsWith('.vercel.app')) return true
+        if (host.endsWith('.pages.dev')) return true
+        if (host.endsWith('.up.railway.app')) return true
+        if (url.protocol === 'capacitor:' || url.protocol === 'android:') return true
+    } catch {
+        return false
+    }
+    return false
+}
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin) return callback(null, true)
-        // Reflect origin for full credential support across all domains & webviews
-        callback(null, origin)
+        if (isAllowedOrigin(origin)) {
+            callback(null, origin || true)
+        } else {
+            callback(new Error(`CORS blocked: Origin '${origin}' is not authorized.`))
+        }
     },
     credentials: true,
     methods:        ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept", "Origin"],
 }))
 
-// Universal 200 OK preflight interceptor to guarantee zero CORS failures
+// Universal 200 OK preflight interceptor for verified origins
 app.use((req, res, next) => {
     if (req.method === 'OPTIONS') {
         const origin = req.headers.origin
-        if (origin) {
+        if (origin && isAllowedOrigin(origin)) {
             res.header('Access-Control-Allow-Origin', origin)
             res.header('Access-Control-Allow-Credentials', 'true')
             res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH')
             res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,Cookie,X-Requested-With,Accept,Origin')
+            return res.status(200).end()
         }
-        return res.status(200).end()
+        if (!origin) {
+            return res.status(200).end()
+        }
+        return res.status(403).json({ error: true, message: 'CORS forbidden' })
     }
     next()
 })
