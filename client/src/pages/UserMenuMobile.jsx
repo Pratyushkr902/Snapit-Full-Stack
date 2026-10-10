@@ -83,8 +83,8 @@ const UserMenuMobile = () => {
     try {
       const res = await Axios({ url: '/api/app-version', method: 'GET' })
       if (res.data?.success && res.data?.data) {
-        const { latestVersionCode, latestVersion, playStoreUrl } = res.data.data
-        const isNewer = Number(latestVersionCode) > installedCode
+        const { latestVersionCode, latestVersion, playStoreUrl, enabled } = res.data.data
+        const isNewer = enabled !== false && Number(latestVersionCode) > installedCode
         setVersionInfo({
           hasUpdate: isNewer,
           latestVersion: latestVersion || CURRENT_APP_VERSION,
