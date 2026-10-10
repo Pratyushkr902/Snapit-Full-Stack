@@ -148,6 +148,21 @@ export async function sendPushNotification({ token, title, body, data = {} }) {
             error.message?.includes('Device unregistered') ||
             error.message?.includes('registration-token-not-registered')
         
+        if (isUnregistered && token) {
+            try {
+                const { default: DeviceTokenModel } = await import('../models/deviceToken.model.js')
+                const { default: UserModel } = await import('../models/user.model.js')
+                await Promise.allSettled([
+                    DeviceTokenModel.deleteOne({ token }),
+                    UserModel.updateMany({ fcmToken: token }, { $unset: { fcmToken: 1 } }),
+                    UserModel.updateMany({ fcmTokens: token }, { $pull: { fcmTokens: token } })
+                ])
+                console.log(`🧹 [Auto-Clean] Purged unregistered token from DB: ${token.slice(0, 14)}...`)
+            } catch (cleanErr) {
+                // Ignore cleanup errors
+            }
+        }
+
         console.error('❌ Notification failed:', error.message, isUnregistered ? '(Unregistered)' : '')
         return { success: false, isUnregistered, error: error.message }
     }

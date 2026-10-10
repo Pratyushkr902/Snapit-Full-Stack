@@ -44,6 +44,8 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
 
     const [users, deviceDocs] = await Promise.all([
       UserModel.find({
+        status: 'Active',
+        role: { $in: ['USER', 'user', undefined, null] },
         $or: [
           { fcmToken: { $exists: true, $ne: null, $ne: '' } },
           { 'fcmTokens.0': { $exists: true } }
