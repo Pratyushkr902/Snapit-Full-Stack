@@ -736,6 +736,7 @@ const RiderDashboard = () => {
             if (response.data.success) {
                 toast.success('Order picked up — now Out for Delivery!');
                 setIsTracking(true);
+                setFilter('Out for Delivery');
                 fetchRiderOrders(true);
                 handleRequestGps().catch(() => {});
             }
@@ -1100,8 +1101,35 @@ const RiderDashboard = () => {
                             </div>
                         )}
 
+                        {/* 🛵 Active Out for Delivery Prominent Banner */}
+                        {safeOrders.filter(o => o.delivery_status === 'Out for Delivery').length > 0 && (
+                            <div className='mb-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white flex items-center justify-between gap-3 shadow-xl border border-blue-400/40 animate-in fade-in'>
+                                <div className='flex items-center gap-3 min-w-0'>
+                                    <span className='text-2xl sm:text-3xl animate-bounce shrink-0'>🛵</span>
+                                    <div className='min-w-0'>
+                                        <p className='font-black text-xs sm:text-sm uppercase tracking-wider truncate'>
+                                            Active Delivery in Progress
+                                        </p>
+                                        <p className='text-[11px] text-blue-100 truncate'>
+                                            {safeOrders.filter(o => o.delivery_status === 'Out for Delivery').length} order(s) Out for Delivery — GPS Streaming Live
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setFilter('Out for Delivery')}
+                                    className={`px-3.5 py-2 font-black text-xs rounded-xl shadow-md transition shrink-0 active:scale-95 ${
+                                        filter === 'Out for Delivery'
+                                            ? 'bg-emerald-400 text-slate-950 ring-2 ring-emerald-300'
+                                            : 'bg-white text-blue-900 hover:bg-blue-50'
+                                    }`}
+                                >
+                                    {filter === 'Out for Delivery' ? 'Viewing Active' : 'View Orders →'}
+                                </button>
+                            </div>
+                        )}
+
                         {/* Filter Chips */}
-                        <div className='flex gap-1.5 sm:gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide w-full'>
+                        <div className='flex gap-1.5 sm:gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none w-full max-w-full touch-pan-x select-none'>
                             {[
                                 { key: 'Confirmed', label: '📦 Ready for Pickup', count: safeOrders.filter(o => o.delivery_status === 'Confirmed' || o.delivery_status === 'Pending').length },
                                 { key: 'Out for Delivery', label: '🛵 Out for Delivery', count: safeOrders.filter(o => o.delivery_status === 'Out for Delivery').length },
@@ -1109,7 +1137,7 @@ const RiderDashboard = () => {
                                 { key: 'All', label: '📋 All Orders', count: safeOrders.length },
                             ].map(t => (
                                 <button key={t.key} onClick={() => setFilter(t.key)}
-                                    className={`px-3.5 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+                                    className={`px-3.5 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0 active:scale-95 ${
                                         filter === t.key
                                             ? 'bg-white text-slate-900 border-white shadow-md'
                                             : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'

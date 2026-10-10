@@ -144,7 +144,7 @@ const CollectPayment = ({ order, onSuccess, onClose }) => {
 
     return (
         <div className='fixed inset-0 bg-black/60 z-50 flex items-end lg:items-center justify-center'>
-            <div className='bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-md max-h-[92vh] overflow-y-auto'>
+            <div className='bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-md max-h-[92vh] overflow-y-auto pb-[max(env(safe-area-inset-bottom),16px)] lg:pb-0'>
 
                 <div className='p-5 border-b border-slate-100 flex items-start justify-between'>
                     <div>

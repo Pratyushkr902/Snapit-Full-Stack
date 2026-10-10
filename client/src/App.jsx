@@ -342,7 +342,43 @@ function App() {
           {!isDashboard && !isAuthPage && !isSelectLocation && !isCartPage && !isUserPage && <Footer />}
           {/* {!isDashboard && <WhatsAppButton />} */}
           
-          <Toaster position="top-center" reverseOrder={false} />
+          <Toaster
+            position="top-center"
+            reverseOrder={false}
+            containerStyle={{
+              top: 'max(env(safe-area-inset-top, 0px) + 16px, 64px)',
+              left: '16px',
+              right: '16px',
+              zIndex: 999999,
+            }}
+            toastOptions={{
+              duration: 3500,
+              className: 'text-xs sm:text-sm font-bold shadow-2xl',
+              style: {
+                background: '#0f172a',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '16px',
+                padding: '12px 18px',
+                maxWidth: 'min(92vw, 420px)',
+                margin: '0 auto',
+                wordBreak: 'break-word',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#0f172a',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#0f172a',
+                },
+              },
+            }}
+          />
 
           {showCart && !isCheckoutOrCartPage && !isFoodPage && !isAuthPage && (
             <DisplayCartItem close={() => setShowCart(false)} />
