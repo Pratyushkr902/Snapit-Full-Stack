@@ -1,4 +1,4 @@
-import { broadcastToAllUsers, triggerMarketingSchedule, MORNING_TEMPLATES, EVENING_TEMPLATES, DINNER_TEMPLATES, WINBACK_TEMPLATES } from '../utils/marketingCron.js'
+import { broadcastToAllUsers, triggerMarketingSchedule, MORNING_TEMPLATES, LUNCH_TEMPLATES, EVENING_TEMPLATES, DINNER_TEMPLATES, WINBACK_TEMPLATES } from '../utils/marketingCron.js'
 import UserModel from '../models/user.model.js'
 import CartProductModel from '../models/cartproduct.model.js'
 import OrderModel from '../models/order.model.js'
@@ -90,6 +90,7 @@ export const getCampaignTemplatesController = async (request, response) => {
         body: 'Cold drinks, chips, samosa aur popcorn ready hain! TV ke samne se uthna mat — bas 9 minute mein delivered! 🥤🍕'
       },
       ...MORNING_TEMPLATES.map(t => ({ ...t, category: 'Morning Breakfast' })),
+      ...LUNCH_TEMPLATES.map(t => ({ ...t, category: 'Afternoon Lunch' })),
       ...EVENING_TEMPLATES.map(t => ({ ...t, category: 'Evening Chai Time' })),
       ...DINNER_TEMPLATES.map(t => ({ ...t, category: 'Dinner Rush' })),
       {

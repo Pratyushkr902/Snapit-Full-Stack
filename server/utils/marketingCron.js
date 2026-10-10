@@ -202,34 +202,51 @@ export async function broadcastToAllUsers({ title, shayari, body, type, promoTag
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. DAILY MORNING BREAKFAST & MILK CRON (08:30 AM IST)
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. DAILY MORNING BREAKFAST & MILK CRON (08:00 AM IST)
 // ─────────────────────────────────────────────────────────────────────────────
 export const MORNING_TEMPLATES = [
   {
-    title: '🥛 Nashta ready hai? Ya doodh khatam?',
-    shayari: '"Chai ki patti ho ya Amul ka taaza doodh,\nSnapit pahunchega 10 min mein, banao mast mood!" ☕🍳',
-    body: 'Fresh milk, bread, butter, eggs aur chai patti 10 minute mein aapke kitchen mein! ⚡'
+    title: '🥛 Taaza Sudha Doodh & Chai Nashta — 15 Min Mein!',
+    shayari: '"Subah ki chai ho ya Sudha ka taaza doodh,\nSnapit pahunchega 15 min mein, banao mast mood!" ☕🍳',
+    body: 'Sudha Milk, Bread, Butter, Anda aur Chai Patti 10-15 minute mein aapke darwaze par! ⚡'
   },
   {
-    title: '🍳 Subah ki shuruat, taza nashte ke sath!',
-    shayari: '"Subah ka suraj aaya, nayi umang laya,\nSnapit 10 minute mein garam nashta laya!" 🍞☕',
-    body: 'Bread, dahi, biscuits aur breakfast essentials bas 9 minute mein delivered!'
+    title: '🍳 Subah ki shuruat, taaze nashte aur Sudha Doodh ke sath!',
+    shayari: '"Subah ka suraj aaya, nayi umang laya,\nSnapit ghar baithe garam nashta aur doodh laya!" 🍞☕',
+    body: 'Sudha Doodh, Rusk, Biscuits aur breakfast essentials FREE DELIVERY ke sath mangwayein!'
   }
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. EVENING CHAI & SNACK TIME (05:00 PM IST)
+// 1.5 DAILY AFTERNOON LUNCH RUSH (01:00 PM IST)
+// ─────────────────────────────────────────────────────────────────────────────
+export const LUNCH_TEMPLATES = [
+  {
+    title: '🍛 Dopahar ka Lazeez Lunch — Garam Biryani & Thali!',
+    shayari: '"Bhookh lagi hai tez wali, khane ka hai plan?\nAlka aur Pali Paradise ki Biryani layega Snapit van!" 🍗🍚',
+    body: 'Alka Restaurant & Pali Paradise se garma-garam Chicken Biryani, Paneer Masala aur Thali mangwayein! ⚡🛵'
+  },
+  {
+    title: '🍱 Ghar jaisa khana ya Restro ki Biryani?',
+    shayari: '"Dopahar ka waqt hai, lazeez swaad paana hai,\nSnapit se order karo, 20 minute mein khana hai!" 🍛✨',
+    body: 'Special Veg & Non-Veg Lunch options Paliganj ke best restaurants se seedhe aapke ghar!'
+  }
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. EVENING CHAI & SNACK TIME (05:30 PM IST)
 // ─────────────────────────────────────────────────────────────────────────────
 export const EVENING_TEMPLATES = [
   {
-    title: '☕ Sham ki chai bina Maggi & Biscuits ke adhoori hai!',
-    shayari: '"Thandi thandi sham ho, haath mein garam pyali,\nSnapit se mangwa lo snacks, na rahe koi plate khali!" 🍪🥟',
-    body: 'Maggi, Kurkure, chips, namkeen aur cold drinks manga lo sirf 9 minute mein! 🚀'
+    title: '🥟 Momos Point & Satish Chowmein — Shaam ka Super Snack!',
+    shayari: '"Garam-garam Momos ho ya spicy Chowmein ka bowl,\nSnapit se mangwao snacks, dil karega rock and roll!" 🥟🥢',
+    body: 'Momos Point, Satish Chowmein Center aur MGD Pizza se garma-garam snacks 15 min mein deliver! 🚀'
   },
   {
-    title: '🥟 Chai Time Craving? 10 Min Mein Delivered!',
-    shayari: '"Bhookh lagi hai choti wali? Ya chai ka hai plan?\nSnapit deliver karega fatfat, sit back and enjoy man!" ☕✨',
-    body: 'Parle-G, Oreo, Lays, samosa snacks aur chai patti ready for 10-minute dispatch!'
+    title: '☕ Sham ki chai bina Maggi & Biscuits ke adhoori hai!',
+    shayari: '"Thandi thandi sham ho, haath mein garam pyali,\nSnapit se mangwa lo snacks, na rahe koi plate khali!" 🍪🥟',
+    body: 'Maggi, Kurkure, chips, namkeen, biscuit aur cold drinks manga lo sirf 10 minute mein! ⚡'
   }
 ]
 
@@ -380,6 +397,10 @@ export async function triggerMarketingSchedule(type) {
     const template = MORNING_TEMPLATES[Math.floor(Math.random() * MORNING_TEMPLATES.length)]
     return await broadcastToAllUsers({ ...template, type: 'BREAKFAST_PROMO', promoTag: 'MORNING_RUSH' })
   }
+  if (type === 'LUNCH') {
+    const template = LUNCH_TEMPLATES[Math.floor(Math.random() * LUNCH_TEMPLATES.length)]
+    return await broadcastToAllUsers({ ...template, type: 'LUNCH_PROMO', promoTag: 'LUNCH_RUSH' })
+  }
   if (type === 'CHAI_TIME') {
     const template = EVENING_TEMPLATES[Math.floor(Math.random() * EVENING_TEMPLATES.length)]
     return await broadcastToAllUsers({ ...template, type: 'CHAI_TIME_PROMO', promoTag: 'EVENING_SNACKS' })
@@ -421,36 +442,47 @@ export const initMarketingCron = () => {
 
   console.log('🚀 [Marketing Cron] Initializing Blinkit/Swiggy-style smart marketing schedules...')
 
-  // 1. Morning Breakfast Rush (08:30 AM IST)
-  cron.schedule('30 8 * * *', async () => {
+  // 1. Morning Breakfast Rush (08:00 AM IST)
+  cron.schedule('0 8 * * *', async () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
     const lockKey = `CRON_BREAKFAST_${today}`
     const acquired = await acquireCronLock(lockKey)
     if (!acquired) return
 
-    console.log('⏰ [Cron] Triggering Morning Breakfast Rush Notification...')
+    console.log('⏰ [Cron] Triggering Morning Breakfast Rush Notification (08:00 AM)...')
     await triggerMarketingSchedule('BREAKFAST')
   }, { timezone: 'Asia/Kolkata' })
 
-  // 2. Evening Chai & Snack Time (05:00 PM IST)
-  cron.schedule('0 17 * * *', async () => {
+  // 1.5 Lunch Rush (01:00 PM IST)
+  cron.schedule('0 13 * * *', async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+    const lockKey = `CRON_LUNCH_${today}`
+    const acquired = await acquireCronLock(lockKey)
+    if (!acquired) return
+
+    console.log('⏰ [Cron] Triggering Lunch Rush Notification (01:00 PM)...')
+    await triggerMarketingSchedule('LUNCH')
+  }, { timezone: 'Asia/Kolkata' })
+
+  // 2. Evening Chai & Snack Time (05:30 PM IST)
+  cron.schedule('30 17 * * *', async () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
     const lockKey = `CRON_CHAI_TIME_${today}`
     const acquired = await acquireCronLock(lockKey)
     if (!acquired) return
 
-    console.log('⏰ [Cron] Triggering Evening Chai Time Notification...')
+    console.log('⏰ [Cron] Triggering Evening Chai Time Notification (05:30 PM)...')
     await triggerMarketingSchedule('CHAI_TIME')
   }, { timezone: 'Asia/Kolkata' })
 
-  // 3. Dinner Rush (07:00 PM IST)
-  cron.schedule('0 19 * * *', async () => {
+  // 3. Dinner Rush (07:30 PM IST)
+  cron.schedule('30 19 * * *', async () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
     const lockKey = `CRON_DINNER_${today}`
     const acquired = await acquireCronLock(lockKey)
     if (!acquired) return
 
-    console.log('⏰ [Cron] Triggering Dinner Rush Notification (07:00 PM)...')
+    console.log('⏰ [Cron] Triggering Dinner Rush Notification (07:30 PM)...')
     await triggerMarketingSchedule('DINNER')
   }, { timezone: 'Asia/Kolkata' })
 
@@ -464,5 +496,5 @@ export const initMarketingCron = () => {
     await checkAbandonedCarts()
   })
 
-  console.log('✅ [Marketing Cron] Morning (8:30 AM), Chai Time (5:00 PM), Dinner (7:00 PM), and Cart Recovery (every 10m) active!')
+  console.log('✅ [Marketing Cron] Breakfast (8:00 AM), Lunch (1:00 PM), Chai Time (5:30 PM), Dinner (7:30 PM), and Cart Recovery (every 10m) active!')
 }
