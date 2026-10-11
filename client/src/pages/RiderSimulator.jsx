@@ -212,6 +212,16 @@ const RiderDashboard = () => {
                                             <h2 className='text-sm font-bold text-slate-800 mt-3 leading-tight'>
                                                 {order.delivery_address?.address_line || order.address_details?.address_line || "📍 Address not provided"}
                                             </h2>
+                                            {(order.delivery_address?.pincode || order.address_details?.pincode) && (
+                                                <div className='flex items-center gap-1.5 mt-1'>
+                                                    <span className='px-1.5 py-0.5 bg-blue-50 text-blue-700 font-mono text-[10px] font-bold rounded border border-blue-200'>
+                                                        PIN: {order.delivery_address?.pincode || order.address_details?.pincode}
+                                                    </span>
+                                                    <span className='text-[11px] text-slate-500 font-medium'>
+                                                        {[order.delivery_address?.city || order.address_details?.city || 'Paliganj', order.delivery_address?.state || 'Bihar'].filter(Boolean).join(', ')}
+                                                    </span>
+                                                </div>
+                                            )}
                                             <p className='text-xs text-slate-500 font-medium mt-1'>
                                                 {order.userId?.name || order.address_details?.name || "Snapit User"}
                                             </p>

@@ -47,6 +47,7 @@ const getDeliveryFee = (o) => {
         return Math.round(dist * 7);
     }
     const addr = `${o.delivery_address?.address_line || ''} ${o.delivery_address?.city || ''}`;
+    if (/kinjar|kinjhar/i.test(addr)) return 99;
     if (/himalaya|hmch|bams|mbbs/i.test(addr)) return 49;
     if (/chiksi|chikasi/i.test(addr)) return 49;
     return 15; // Minimum guaranteed drop fee
@@ -806,6 +807,7 @@ const RiderDashboard = () => {
     const deliveredTodayDistance = deliveredTodayOrders.reduce((sum, o) => {
         if (Number(o?.delivery_distance_km) > 0) return sum + Number(o.delivery_distance_km);
         const addrText = `${o?.delivery_address?.address_line || ''} ${o?.delivery_address?.city || ''}`;
+        if (/kinjar|kinjhar/i.test(addrText)) return sum + 18.0;
         if (/himalaya|hmch|bams|mbbs/i.test(addrText)) return sum + 9.5;
         if (/chiksi|chikasi/i.test(addrText)) return sum + 7.2;
         return sum + 1.8;
@@ -1250,19 +1252,53 @@ const RiderDashboard = () => {
                                                             : order.userId?.name || order.recipient_name || "Snapit Customer"}
                                                     </h3>
 
-                                                    <p className='text-xs text-slate-400 font-medium mt-0.5'>
-                                                        {order.delivery_address?.address_line || "📍 Address not provided"}
-                                                    </p>
+                                                    {/* Full Delivery Address Card for Rider */}
+                                                    <div className='mt-2 p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 space-y-1.5 shadow-inner'>
+                                                        <div className='flex items-center justify-between gap-1.5 flex-wrap'>
+                                                            <span className='text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1'>
+                                                                📍 Delivery Address
+                                                            </span>
+                                                            <span className='px-2 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/40 font-mono font-black text-xs rounded-lg tracking-wider shadow-sm'>
+                                                                📮 PIN: {order.delivery_address?.pincode || '801110'}
+                                                            </span>
+                                                        </div>
 
-                                                    {(order.delivery_address?.floor_door || order.delivery_address?.landmark) && (
-                                                        <p className='text-[11px] text-slate-500 mt-0.5'>
-                                                            {[order.delivery_address?.floor_door, order.delivery_address?.landmark].filter(Boolean).join(' • ')}
+                                                        {/* House / Flat / Floor */}
+                                                        {order.delivery_address?.floor_door && (
+                                                            <p className='text-xs font-bold text-slate-200 flex items-start gap-1 leading-snug'>
+                                                                <span className='flex-shrink-0'>🏠</span>
+                                                                <span>{order.delivery_address.floor_door}</span>
+                                                            </p>
+                                                        )}
+
+                                                        {/* Main Street / Village / Colony */}
+                                                        <p className='text-xs font-semibold text-white leading-snug break-words'>
+                                                            {order.delivery_address?.address_line || "📍 Address not provided"}
                                                         </p>
-                                                    )}
+
+                                                        {/* Landmark */}
+                                                        {order.delivery_address?.landmark && (
+                                                            <p className='text-[11px] font-medium text-amber-300/90 flex items-start gap-1 leading-snug'>
+                                                                <span className='flex-shrink-0'>🚩 Near:</span>
+                                                                <span>{order.delivery_address.landmark}</span>
+                                                            </p>
+                                                        )}
+
+                                                        {/* City & State with PINCODE */}
+                                                        <div className='text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-800/80'>
+                                                            <span className='font-semibold text-slate-300'>
+                                                                {[order.delivery_address?.city || 'Paliganj', order.delivery_address?.state || 'Bihar'].filter(Boolean).join(', ')}
+                                                            </span>
+                                                            <span className='text-slate-600'>•</span>
+                                                            <span className='text-amber-300 font-mono font-black'>
+                                                                PIN: {order.delivery_address?.pincode || '801110'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
 
                                                     {/* Precise Customer GPS Pin Badge */}
                                                     {(order.delivery_lat || order.delivery_address?.lat) && (order.delivery_lng || order.delivery_address?.lng) && (
-                                                        <div className='inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-black text-emerald-400'>
+                                                        <div className='inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-black text-emerald-400'>
                                                             <span className='w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse'></span>
                                                             <span>🎯 Precise GPS Pin: {Number(order.delivery_lat || order.delivery_address?.lat).toFixed(5)}, {Number(order.delivery_lng || order.delivery_address?.lng).toFixed(5)}</span>
                                                         </div>
@@ -1284,7 +1320,8 @@ const RiderDashboard = () => {
                                                             order.delivery_address?.address_line,
                                                             order.delivery_address?.landmark,
                                                             order.delivery_address?.city || 'Paliganj',
-                                                            'Bihar'
+                                                            order.delivery_address?.pincode,
+                                                            order.delivery_address?.state || 'Bihar'
                                                         ].filter(Boolean).join(', ');
 
                                                         const navUrl = isCentroid && textAddr
@@ -1354,12 +1391,20 @@ const RiderDashboard = () => {
                                                         (() => {
                                                             const lat = order.delivery_lat || order.delivery_address?.lat;
                                                             const lng = order.delivery_lng || order.delivery_address?.lng;
+                                                            const queryParts = [
+                                                                order.delivery_address?.floor_door,
+                                                                order.delivery_address?.address_line,
+                                                                order.delivery_address?.landmark,
+                                                                order.delivery_address?.city || 'Paliganj',
+                                                                order.delivery_address?.pincode,
+                                                                order.delivery_address?.state || 'Bihar'
+                                                            ].filter(Boolean).join(', ');
+
                                                             if (isGenericPaliganjCentroid(lat, lng)) {
-                                                                const queryParts = [order.delivery_address?.floor_door, order.delivery_address?.address_line, order.delivery_address?.landmark, order.delivery_address?.city || 'Paliganj', 'Bihar'].filter(Boolean).join(', ');
                                                                 return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts || 'Paliganj, Bihar')}`;
                                                             }
                                                             if (lat && lng) return `https://www.google.com/maps?q=${lat},${lng}`;
-                                                            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address?.address_line || "Paliganj, Bihar")}`;
+                                                            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts || "Paliganj, Bihar")}`;
                                                         })()
                                                     }
                                                         target="_blank" rel="noreferrer"
