@@ -93,6 +93,9 @@ export const resolveVillageFromText = (text) => {
   if (/rakasiya/i.test(clean)) {
     return { lat: 25.357181306430718, lng: 84.83059257743433, name: 'Rakasiya' }
   }
+  if (/kinjar/i.test(clean)) {
+    return { lat: 25.2186, lng: 84.8286, name: 'Kinjar' }
+  }
   return null
 }
 
@@ -223,6 +226,16 @@ export const addAddressController = async (request, response) => {
         let finalLng = null
         let exactGpsFlag = Boolean(isExactGps)
 
+        // Strict Regional Boundary: Snapit only operates in Paliganj & surrounding Bihar service areas (80xxxx)
+        const cleanPincode = String(pincode || '').trim()
+        if (!cleanPincode.startsWith('80')) {
+            return response.status(400).json({
+                message: `Sorry, Snapit is currently only operational in Paliganj & surrounding areas in Bihar. We cannot deliver to pincode ${cleanPincode}.`,
+                error:   true,
+                success: false,
+            })
+        }
+
         const villageMatch = resolveVillageFromText(combinedText)
 
         // 1. If user provided coordinates
@@ -254,26 +267,28 @@ export const addAddressController = async (request, response) => {
         }
 
         if (finalLat == null || finalLng == null) {
-            // Default safe fallback to Paliganj center
-            finalLat = 25.2921
-            finalLng = 84.8170
-            exactGpsFlag = false
-        }
-
-        const zoneCheck = isInDeliveryZone(finalLat, finalLng)
-        if (!zoneCheck.serviceable) {
-            const isLocal = String(pincode || '').includes('801110') || /pali|akhtiyarpur|dih|bihar/i.test(combinedText)
-            if (isLocal) {
+            // Only allow Paliganj center fallback if address explicitly belongs to Paliganj local hub
+            const isLocalPaliganj = cleanPincode === '801110' && /paliganj|pali\s*bazar|purani\s*bazar|main\s*market|pali|akhtiyarpur|dih/i.test(combinedText)
+            if (isLocalPaliganj) {
                 finalLat = 25.2921
                 finalLng = 84.8170
                 exactGpsFlag = false
             } else {
                 return response.status(400).json({
-                    message: "Sorry, this address location is outside our delivery service area.",
+                    message: "Sorry, this address location could not be verified within our Paliganj delivery service area.",
                     error:   true,
                     success: false,
                 })
             }
+        }
+
+        const zoneCheck = isInDeliveryZone(finalLat, finalLng)
+        if (!zoneCheck.serviceable) {
+            return response.status(400).json({
+                message: `Sorry, this address is located outside our 16 km delivery service area in Paliganj.`,
+                error:   true,
+                success: false,
+            })
         }
 
         const createAddress = new AddressModel({
@@ -362,6 +377,15 @@ export const updateAddressController = async (request, response) => {
         let finalLat = null
         let finalLng = null
         let exactGpsFlag = Boolean(isExactGps)
+
+        const cleanPincode = String(pincode || '').trim()
+        if (cleanPincode && !cleanPincode.startsWith('80')) {
+            return response.status(400).json({
+                message: `Sorry, Snapit is currently only operational in Paliganj & surrounding areas in Bihar. We cannot deliver to pincode ${cleanPincode}.`,
+                error:   true,
+                success: false,
+            })
+        }
 
         const villageMatch = resolveVillageFromText(combinedText)
 
