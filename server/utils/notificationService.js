@@ -201,7 +201,7 @@ const saveAndSend = async ({
 }) => {
   let fcmMessageId = null;
 
-  // Auto-resolve single primary active FCM token (prioritizing native mobile app)
+  // Auto-resolve all active FCM tokens for this user across all their devices
   let targetTokens = [];
   if (recipientId && mongoose.Types.ObjectId.isValid(String(recipientId))) {
     try {
@@ -211,31 +211,33 @@ const saveAndSend = async ({
         lastActiveAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
       }).sort({ lastActiveAt: -1 }).select("token platform lastActiveAt").lean();
       
-      const androidDev = deviceDocs.find(d => d.platform === 'android');
-      const iosDev = deviceDocs.find(d => d.platform === 'ios');
-      const webDev = deviceDocs.find(d => d.platform === 'web');
-
-      if (androidDev?.token) targetTokens.push(androidDev.token.trim());
-      if (iosDev?.token) targetTokens.push(iosDev.token.trim());
-      if (webDev?.token && !androidDev && !iosDev) targetTokens.push(webDev.token.trim());
-      if (targetTokens.length === 0 && deviceDocs[0]?.token) {
-        targetTokens.push(deviceDocs[0].token.trim());
-      }
-
-      if (targetTokens.length === 0) {
-        const UserModel = mongoose.models.User || mongoose.model("User");
-        const userDoc = await UserModel.findById(recipientId).select("fcmToken fcmTokens").lean();
-        if (userDoc?.fcmToken && typeof userDoc.fcmToken === 'string' && userDoc.fcmToken.trim().length > 10) {
-          targetTokens.push(userDoc.fcmToken.trim());
+      // Include all active platform tokens (Android, iOS, Web)
+      deviceDocs.forEach(d => {
+        if (d?.token && typeof d.token === 'string' && d.token.trim().length > 10) {
+          targetTokens.push(d.token.trim());
         }
+      });
+
+      // Also include user's primary fcmToken and any fcmTokens from UserModel
+      const UserModel = mongoose.models.User || mongoose.model("User");
+      const userDoc = await UserModel.findById(recipientId).select("fcmToken fcmTokens").lean();
+      if (userDoc?.fcmToken && typeof userDoc.fcmToken === 'string' && userDoc.fcmToken.trim().length > 10) {
+        targetTokens.push(userDoc.fcmToken.trim());
+      }
+      if (Array.isArray(userDoc?.fcmTokens)) {
+        userDoc.fcmTokens.forEach(t => {
+          if (t && typeof t === 'string' && t.trim().length > 10) {
+            targetTokens.push(t.trim());
+          }
+        });
       }
     } catch (e) {
       console.warn(`[FCM Token Lookup Error] recipientId=${recipientId}:`, e.message);
     }
   }
 
-  // Fallback to explicitly passed fcmToken if no device resolved
-  if (targetTokens.length === 0 && fcmToken && typeof fcmToken === 'string' && fcmToken.trim().length > 10) {
+  // Fallback to explicitly passed fcmToken
+  if (fcmToken && typeof fcmToken === 'string' && fcmToken.trim().length > 10) {
     targetTokens.push(fcmToken.trim());
   }
 
@@ -384,6 +386,32 @@ export const notifySellersOfNewOrder = async (order) => {
     );
   } catch (error) {
     console.error("[notifySellersOfNewOrder] failed:", error.message);
+  }
+};
+
+export const notifyAdminsOfNewOrder = async (order) => {
+  try {
+    const { default: UserModel } = await import("../models/user.model.js");
+    const admins = await UserModel.find({ role: { $in: ["SUPER_ADMIN", "ADMIN"] } }).select("_id fcmToken fcmTokens").lean();
+    if (!admins || admins.length === 0) return;
+    await Promise.allSettled(
+      admins.map(admin => {
+        return saveAndSend({
+          recipientId: admin._id,
+          recipientType: "admin",
+          type: "NEW_ORDER",
+          payload: {
+            title: `🚨 New Order Alert! #${order.orderId}`,
+            body: `New order for ₹${order.totalAmt || order.subTotalAmt} from ${order.recipient_name || 'Customer'}. Start packing!`,
+            shayari: `New order #${order.orderId} received for ₹${order.totalAmt || order.subTotalAmt}!`
+          },
+          metadata: { orderId: order.orderId, amount: order.totalAmt || order.subTotalAmt },
+          fcmToken: admin.fcmToken
+        });
+      })
+    );
+  } catch (err) {
+    console.error("[notifyAdminsOfNewOrder] error:", err.message);
   }
 };
 

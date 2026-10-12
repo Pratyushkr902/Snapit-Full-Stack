@@ -52,6 +52,7 @@ import {
     notifyUserOrderCancelled,
     notifySellersOfNewOrder,
     notifySellersOfOrderCancelled,
+    notifyAdminsOfNewOrder,
 } from '../utils/notificationService.js'
 import sendEmail        from './sendEmail.js'
 import { sendOrderDeliveredEmail } from '../utils/sendDeliveryEmail.js'
@@ -601,11 +602,19 @@ export async function CashOnDeliveryOrderController(request, response) {
         sendOrderInvoiceEmail(generatedOrder, currentUser).catch(()=>{})
         notifyUserOrderPlaced(userId, generatedOrder.orderId, currentUser?.fcmToken).catch(() => {})
         notifySellersOfNewOrder(generatedOrder).catch(() => {})
+        notifyAdminsOfNewOrder(generatedOrder).catch(() => {})
         notifyAllRiders({
             title: '🛵 New Order!',
             body:  `Order ${generatedOrder.orderId} is ready for pickup — ₹${generatedOrder.totalAmt}`,
             data:  { orderId: generatedOrder.orderId, type: 'NEW_ORDER' }
         }).catch(() => {})
+        try {
+            const { getIO } = await import('../index.js')
+            const io = getIO ? getIO() : global.io
+            if (io) {
+                io.emit('new_order', generatedOrder)
+            }
+        } catch(sErr) {}
         // Deduct product inventory stock atomically
         for (const item of taggedCartItems) {
             const pId = item.productId?._id || item.productId
@@ -916,11 +925,19 @@ export async function WalletPaymentOrderController(request, response) {
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
         notifySellersOfNewOrder(newOrder).catch(() => {})
+        notifyAdminsOfNewOrder(newOrder).catch(() => {})
         notifyAllRiders({
             title: '🛵 New Order!',
             body:  `Order ${newOrder.orderId} is ready for pickup — ₹${newOrder.totalAmt}`,
             data:  { orderId: newOrder.orderId, type: 'NEW_ORDER' }
         }).catch(() => {})
+        try {
+            const { getIO } = await import('../index.js')
+            const io = getIO ? getIO() : global.io
+            if (io) {
+                io.emit('new_order', newOrder)
+            }
+        } catch(sErr) {}
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
         await CartProductModel.deleteMany({ userId })
@@ -1299,11 +1316,19 @@ export async function verifyPaymentController(request, response) {
         sendOrderInvoiceEmail(newOrder, user).catch(()=>{})
         notifyUserOrderPlaced(userId, newOrder.orderId, user?.fcmToken).catch(() => {})
         notifySellersOfNewOrder(newOrder).catch(() => {})
+        notifyAdminsOfNewOrder(newOrder).catch(() => {})
         notifyAllRiders({
             title: '🛵 New Order!',
             body:  `Order ${newOrder.orderId} is ready for pickup — ₹${newOrder.totalAmt}`,
             data:  { orderId: newOrder.orderId, type: 'NEW_ORDER' }
         }).catch(() => {})
+        try {
+            const { getIO } = await import('../index.js')
+            const io = getIO ? getIO() : global.io
+            if (io) {
+                io.emit('new_order', newOrder)
+            }
+        } catch(sErr) {}
         await updateStreak(userId)
         await giveSnapitPlusCashback(userId, Number(subTotalAmt))
 

@@ -1,9 +1,39 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
 import { DisplayPriceInRupees } from '../utils/DisplayPriceInRupees'
 import toast from 'react-hot-toast'
+import { io } from 'socket.io-client'
+
+export const playOrderAlertSound = () => {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    if (!AudioContextClass) return
+    const ctx = new AudioContextClass()
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+    const now = ctx.currentTime
+
+    // Two-tone bell / chime (D5 -> A5) repeating twice like Zomato/Blinkit
+    ;[0, 0.35].forEach((offset) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(587.33, now + offset)
+      osc.frequency.setValueAtTime(880, now + offset + 0.12)
+      gain.gain.setValueAtTime(0.4, now + offset)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.3)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(now + offset)
+      osc.stop(now + offset + 0.3)
+    })
+  } catch (e) {
+    console.warn('[Order Chime Error]', e.message)
+  }
+}
 
 const getAmt = (o) => {
   const val =
@@ -36,6 +66,8 @@ const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50, 
   const [expandedOrderId, setExpandedOrderId] = useState(null)
   const [updatingOrderId, setUpdatingOrderId] = useState(null)
   const [lastRefreshed, setLastRefreshed] = useState(null)
+  const knownOrderIdsRef = useRef(new Set())
+  const isInitialLoadRef = useRef(true)
 
   const fetchOrders = useCallback(async (silent = false) => {
     try {
@@ -43,6 +75,21 @@ const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50, 
       const res = await Axios({ ...SummaryApi.getOrderItems })
       if (res.data?.success) {
         const all = Array.isArray(res.data.data) ? res.data.data : []
+        
+        // Detect newly arrived orders in polling
+        if (!isInitialLoadRef.current && all.length > 0) {
+          const newIncoming = all.filter(o => 
+            !knownOrderIdsRef.current.has(String(o._id || o.orderId)) &&
+            ['Pending', 'Confirmed', 'Out for Delivery'].includes(o.delivery_status)
+          )
+          if (newIncoming.length > 0) {
+            playOrderAlertSound()
+            toast.success(`🚨 New Order #${newIncoming[0].orderId} Received! (₹${newIncoming[0].totalAmt || 0})`, { duration: 6000 })
+          }
+        }
+        isInitialLoadRef.current = false
+        all.forEach(o => knownOrderIdsRef.current.add(String(o._id || o.orderId)))
+
         setOrders(all)
         setLastRefreshed(new Date())
         if (typeof onOrdersLoaded === 'function') {
@@ -64,6 +111,28 @@ const AdminLiveOrdersWidget = ({ onOrdersLoaded = null, maxInitialDisplay = 50, 
     const interval = setInterval(() => fetchOrders(true), 15000)
     return () => clearInterval(interval)
   }, [fetchOrders])
+
+  // Instant Socket.io real-time order listener
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_API_URL || 'https://snapit-full-stack-production.up.railway.app'
+    const socket = io(socketUrl, { transports: ['websocket', 'polling'], withCredentials: true })
+
+    socket.on('new_order', (newOrder) => {
+      if (!newOrder) return
+      playOrderAlertSound()
+      toast.success(`🚨 New Order #${newOrder.orderId} (₹${newOrder.totalAmt || 0}) Just Placed!`, { duration: 8000 })
+      setOrders(prev => {
+        const exists = prev.some(o => (o.orderId === newOrder.orderId || o._id === newOrder._id))
+        if (exists) return prev
+        return [newOrder, ...prev]
+      })
+      knownOrderIdsRef.current.add(String(newOrder._id || newOrder.orderId))
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [])
 
   const handleAdminUpdateStatus = async (orderId, status) => {
     if (status === 'Cancelled' && !window.confirm(`Are you sure you want to cancel order ${orderId}?`)) {
